@@ -1,38 +1,96 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
+import { CalendarModel } from "../db/models/Calendar.js";
 
 export const calendarsRouter = Router();
 
-calendarsRouter.use(requireAuth);
-
-calendarsRouter.get("/", (_request, response) => {
-  response.json({ message: "Hämta tillgängliga kalendrar — ej implementerat" });
+calendarsRouter.get("/", async (_request, response) => {
+  const calendars = await CalendarModel.find({}, { _id: 0, __v: 0 });
+  response.json(calendars);
 });
 
-calendarsRouter.post("/", (_request, response) => {
-  response.status(201).json({ message: "Skapa kalender — ej implementerat" });
+calendarsRouter.post("/", requireAuth, async (request, response) => {
+  const calendar = new CalendarModel(request.body);
+  await calendar.save();
+  response.status(201).json({ id: calendar.id });
 });
 
-calendarsRouter.post("/:id/events", (_request, response) => {
-  response.status(201).json({ message: "Lägg till kalenderhändelse — ej implementerat" });
+calendarsRouter.post("/:id/events", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) {
+    response.status(404).json({ error: "Kalender hittades inte" });
+    return;
+  }
+  calendar.events.push(request.body);
+  await calendar.save();
+  response.status(201).json({ ok: true });
 });
 
-calendarsRouter.post("/:id/share", (_request, response) => {
-  response.json({ message: "Dela kalender — ej implementerat" });
+calendarsRouter.post("/:id/share", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) {
+    response.status(404).json({ error: "Kalender hittades inte" });
+    return;
+  }
+  const { memberId, access } = request.body;
+  const existing = calendar.sharedWith.find((s) => s.memberId === memberId);
+  if (existing) {
+    existing.access = access;
+  } else {
+    calendar.sharedWith.push({ memberId, access });
+  }
+  calendar.markModified("sharedWith");
+  await calendar.save();
+  response.json({ ok: true });
 });
 
-calendarsRouter.delete("/:id/share/:memberId", (_request, response) => {
-  response.json({ message: "Ta bort kalenderdelning — ej implementerat" });
+calendarsRouter.delete("/:id/share/:memberId", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) {
+    response.status(404).json({ error: "Kalender hittades inte" });
+    return;
+  }
+  calendar.sharedWith = calendar.sharedWith.filter((s) => s.memberId !== request.params.memberId);
+  calendar.markModified("sharedWith");
+  await calendar.save();
+  response.json({ ok: true });
 });
 
-calendarsRouter.post("/:id/import", (_request, response) => {
-  response.json({ message: "Importera ICS-fil — ej implementerat" });
+calendarsRouter.post("/:id/import", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) {
+    response.status(404).json({ error: "Kalender hittades inte" });
+    return;
+  }
+  const { source, events } = request.body;
+  calendar.importedSources.push(source);
+  for (const event of events) {
+    calendar.events.push(event);
+  }
+  await calendar.save();
+  response.json({ ok: true });
 });
 
-calendarsRouter.delete("/:id", (_request, response) => {
-  response.json({ message: "Flytta kalender till papperskorg — ej implementerat" });
+calendarsRouter.delete("/:id", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) {
+    response.status(404).json({ error: "Kalender hittades inte" });
+    return;
+  }
+  calendar.deletedAt = new Date().toISOString();
+  calendar.deletedBy = request.memberId ?? null;
+  await calendar.save();
+  response.json({ ok: true });
 });
 
-calendarsRouter.patch("/:id/restore", (_request, response) => {
-  response.json({ message: "Återställ kalender — ej implementerat" });
+calendarsRouter.patch("/:id/restore", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) {
+    response.status(404).json({ error: "Kalender hittades inte" });
+    return;
+  }
+  calendar.deletedAt = null;
+  calendar.deletedBy = null;
+  await calendar.save();
+  response.json({ ok: true });
 });

@@ -1,25 +1,16 @@
 import {
   BriefcaseBusiness,
   CalendarDays,
-  CheckCircle2,
   ChevronRight,
-  ListTodo,
-  Pencil,
-  Save,
   Settings,
-  ShoppingCart,
-  Sparkles,
-  Star,
-  Trash2,
-  Users,
-  XCircle
+  Users
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { setApiMemberId } from "./api";
 
 import { AccountSettings } from "./features/accounts/AccountSettings";
 import { AccountSetup } from "./features/accounts/AccountSetup";
 import { useAccountState } from "./features/accounts/useAccountState";
-import { CalendarPanel } from "./features/calendars/CalendarPanel";
 import { useCalendarsState } from "./features/calendars/useCalendarsState";
 import { MemberAvatar } from "./features/members/MemberAvatar";
 import { useMembersState } from "./features/members/useMembersState";
@@ -29,17 +20,15 @@ import {
   hasPermission
 } from "./features/roles/permissions";
 import { RoleEditor } from "./features/roles/RoleEditor";
-import { ShoppingListsPanel } from "./features/shopping/ShoppingListsPanel";
 import { useShoppingState } from "./features/shopping/useShoppingState";
 import { TrashView } from "./features/trash/TrashView";
-import { TodoCreator } from "./features/todos/TodoCreator";
 import { useTodosState } from "./features/todos/useTodosState";
 import { getRewardPathProgress, getVisibleTodos } from "./features/todos/selectors";
+import { useRewardsState } from "./features/rewards/useRewardsState";
+import { AdultDashboard } from "./features/adults/AdultDashboard";
+import { ChildDashboard } from "./features/children/ChildDashboard";
 import { ThemePicker } from "./components/ThemePicker";
-import { rewards } from "./data/sampleData";
 import type { DashboardThemeId, Id } from "@shared/types";
-
-type AdultDashboardTab = "calendar" | "todo" | "shopping";
 
 export function App() {
   const { activeAccount, setActiveAccount } = useAccountState();
@@ -92,8 +81,8 @@ export function App() {
     toggleShoppingItem,
     softDeleteShoppingForMember
   } = useShoppingState();
+  const { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish } = useRewardsState();
 
-  const [adultTab, setAdultTab] = useState<AdultDashboardTab>("calendar");
   const [selectedDashboardMemberId, setSelectedDashboardMemberId] =
     useState<Id | null>(null);
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
@@ -101,6 +90,17 @@ export function App() {
 
   const activeMembers = members.filter((member) => member.deletedAt === null);
   const currentMember = activeMembers[0];
+
+  useEffect(() => {
+    if (currentMember) {
+      setApiMemberId(currentMember.id);
+    }
+  }, [currentMember?.id]);
+
+  if (!currentMember) {
+    return null;
+  }
+
   const selectedDashboardMember =
     activeMembers.find((member) => member.id === selectedDashboardMemberId) ??
     currentMember;
@@ -110,10 +110,15 @@ export function App() {
   const selectedChild = selectedDashboardMember.isChild
     ? selectedDashboardMember
     : activeMembers.find((member) => member.isChild);
-  const activeReward = rewards[0];
-  const rewardProgress = selectedChild
+  const activeReward = selectedChild
+    ? (rewards.find((r) => r.wishedBy === selectedChild.id && r.status === "active") ?? null)
+    : null;
+  const rewardProgress = selectedChild && activeReward
     ? getRewardPathProgress(selectedChild, activeReward, todos)
     : null;
+  const suggestedRewards = selectedChild
+    ? rewards.filter((r) => r.wishedBy === selectedChild.id && r.status === "suggested")
+    : [];
   const adultTodos = getVisibleTodos(selectedAdultDashboardMember, roles, todos);
   const now = Date.now();
   const activeChildTodos = selectedChild
@@ -128,6 +133,7 @@ export function App() {
       })
     : [];
   const approvalTodos = todos.filter((todo) => todo.status === "done");
+  const allSuggestedRewards = rewards.filter((r) => r.status === "suggested" && r.deletedAt === null);
   const canCurrentMemberApprove =
     selectedChild !== undefined &&
     canManageChildAccount(currentMember, selectedChild, roles) &&
@@ -156,14 +162,6 @@ export function App() {
     softDeleteTodosForMember(memberId, deletedAt);
     softDeleteCalendarsForMember(memberId, deletedAt);
     softDeleteShoppingForMember(memberId, deletedAt);
-  }
-
-  function handleDashboardPointerDown(memberId: Id) {
-    const timeoutId = window.setTimeout(() => {
-      setThemePickerMemberId(memberId);
-    }, 650);
-
-    return () => window.clearTimeout(timeoutId);
   }
 
   function handleThemeSelect(memberId: Id, themeId: DashboardThemeId) {
@@ -286,315 +284,58 @@ export function App() {
       </section>
 
       <section className="dashboard-grid">
-        <article
-          className={`adult-dashboard theme-${
-            selectedAdultDashboardMember.dashboardTheme ?? "clear"
-          }`}
-          onPointerDown={(event) => {
-            if ((event.target as HTMLElement).closest("button, input, select")) {
-              return;
-            }
+        <AdultDashboard
+          member={selectedAdultDashboardMember}
+          members={activeMembers}
+          roles={roles}
+          todos={adultTodos}
+          editingTodoId={editingTodoId}
+          editingTodoTitle={editingTodoTitle}
+          approvalTodos={approvalTodos}
+          allSuggestedRewards={allSuggestedRewards}
+          wishStars={wishStars}
+          canApprove={canCurrentMemberApprove}
+          calendars={calendars}
+          shoppingLists={shoppingLists}
+          onSetEditingTodoTitle={setEditingTodoTitle}
+          onStartEditingTodo={(todo) => startEditingTodo(todo, selectedAdultDashboardMember, roles)}
+          onSaveTodoTitle={(todoId) => saveTodoTitle(todoId, selectedAdultDashboardMember, roles)}
+          onCancelEditingTodo={cancelEditingTodo}
+          onCreateTodo={createTodo}
+          onSoftDeleteTodo={(todoId) => softDeleteTodo(todoId, selectedAdultDashboardMember, roles)}
+          onApproveTodo={(todoId) => approveTodo(todoId, currentMember.id)}
+          onRejectTodo={(todoId) => rejectTodo(todoId, currentMember.id)}
+          onApproveWish={(rewardId) => approveWish(rewardId, currentMember.id)}
+          onRejectWish={(rewardId) => rejectWish(rewardId, currentMember.id)}
+          onSetWishStars={(rewardId, stars) => setWishStars((prev) => ({ ...prev, [rewardId]: stars }))}
+          onAddCalendarEvent={(calendarId, event) => addCalendarEvent(calendarId, event, selectedAdultDashboardMember.id)}
+          onCreateCalendar={(name) => createCalendar(name, selectedAdultDashboardMember.id)}
+          onImportCalendar={(calendarId, sourceName, events) => importCalendarEvents(calendarId, sourceName, events, selectedAdultDashboardMember.id)}
+          onRemoveCalendarShare={removeCalendarShare}
+          onShareCalendar={shareCalendar}
+          onAddShoppingItem={(listId, title) => addShoppingItem(listId, title, selectedAdultDashboardMember.id)}
+          onCreateShoppingList={(name) => createShoppingList(name, selectedAdultDashboardMember.id)}
+          onDeleteShoppingList={(listId) => softDeleteShoppingList(listId, selectedAdultDashboardMember.id)}
+          onRemoveShoppingListShare={removeShoppingListShare}
+          onShareShoppingList={shareShoppingList}
+          onToggleShoppingItem={toggleShoppingItem}
+          onThemePickerOpen={setThemePickerMemberId}
+        />
 
-            const cancel = handleDashboardPointerDown(selectedAdultDashboardMember.id);
-            event.currentTarget.onpointerup = cancel;
-            event.currentTarget.onpointerleave = cancel;
-          }}
-        >
-          <header className="section-header">
-            <div>
-              <p className="eyebrow">Vuxen-dashboard</p>
-              <h2>{selectedAdultDashboardMember.name}</h2>
-            </div>
-          </header>
-
-          <nav className="tab-row" aria-label="Vuxen-dashboard vyer">
-            <button
-              className={`tab ${adultTab === "calendar" ? "active" : ""}`}
-              onClick={() => setAdultTab("calendar")}
-              type="button"
-            >
-              <CalendarDays size={16} />
-              Kalender
-            </button>
-            <button
-              className={`tab ${adultTab === "todo" ? "active" : ""}`}
-              onClick={() => setAdultTab("todo")}
-              type="button"
-            >
-              <ListTodo size={16} />
-              Todo
-            </button>
-            <button
-              className={`tab ${adultTab === "shopping" ? "active" : ""}`}
-              onClick={() => setAdultTab("shopping")}
-              type="button"
-            >
-              <ShoppingCart size={16} />
-              Inköp
-            </button>
-          </nav>
-
-          {adultTab === "calendar" ? (
-            <CalendarPanel
-              calendars={calendars}
-              currentMember={selectedAdultDashboardMember}
-              members={activeMembers}
-              roles={roles}
-              onAddEvent={(calendarId, event) =>
-                addCalendarEvent(calendarId, event, selectedAdultDashboardMember.id)
-              }
-              onCreateCalendar={(name) =>
-                createCalendar(name, selectedAdultDashboardMember.id)
-              }
-              onImportCalendar={(calendarId, sourceName, events) =>
-                importCalendarEvents(calendarId, sourceName, events, selectedAdultDashboardMember.id)
-              }
-              onRemoveCalendarShare={removeCalendarShare}
-              onShareCalendar={shareCalendar}
-            />
-          ) : null}
-
-          {adultTab === "todo" ? (
-            <div className="dashboard-list">
-              <TodoCreator
-                currentMember={selectedAdultDashboardMember}
-                members={activeMembers}
-                roles={roles}
-                onCreateTodo={createTodo}
-              />
-
-              {adultTodos.map((todo) => {
-                const isEditing = editingTodoId === todo.id;
-
-                return (
-                  <div className="dashboard-row todo-dashboard-row" key={todo.id}>
-                    <CheckCircle2 size={18} />
-
-                    {isEditing ? (
-                      <input
-                        className="text-input todo-title-input"
-                        onChange={(event) => setEditingTodoTitle(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            saveTodoTitle(todo.id, selectedAdultDashboardMember, roles);
-                          }
-
-                          if (event.key === "Escape") {
-                            cancelEditingTodo();
-                          }
-                        }}
-                        value={editingTodoTitle}
-                      />
-                    ) : (
-                      <span>{todo.title}</span>
-                    )}
-
-                    <strong>{getTodoSummary(todo)}</strong>
-
-                    <div className="todo-row-actions">
-                      {isEditing ? (
-                        <>
-                          <button
-                            className="icon-button"
-                            onClick={() =>
-                              saveTodoTitle(todo.id, selectedAdultDashboardMember, roles)
-                            }
-                            title="Spara todo"
-                            type="button"
-                          >
-                            <Save size={16} />
-                          </button>
-                          <button
-                            className="icon-button"
-                            onClick={cancelEditingTodo}
-                            title="Avbryt"
-                            type="button"
-                          >
-                            <XCircle size={16} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="icon-button"
-                            onClick={() =>
-                              startEditingTodo(todo, selectedAdultDashboardMember, roles)
-                            }
-                            title="Redigera todo"
-                            type="button"
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            className="icon-button danger"
-                            onClick={() =>
-                              softDeleteTodo(todo.id, selectedAdultDashboardMember, roles)
-                            }
-                            title="Flytta todo till papperskorg"
-                            type="button"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {approvalTodos.length > 0 ? (
-                <section className="approval-panel" aria-label="Uppgifter att godkänna">
-                  <div className="approval-header">
-                    <strong>Väntar på godkännande</strong>
-                    <span>{approvalTodos.length}</span>
-                  </div>
-
-                  {approvalTodos.map((todo) => (
-                    <div className="approval-row" key={todo.id}>
-                      <div>
-                        <strong>{todo.title}</strong>
-                        <small>{todo.starValue} stjärnor om den godkänns</small>
-                      </div>
-                      <div className="approval-actions">
-                        <button
-                          className="icon-button"
-                          disabled={!canCurrentMemberApprove}
-                          onClick={() => approveTodo(todo.id, currentMember.id)}
-                          title="Godkänn"
-                          type="button"
-                        >
-                          <CheckCircle2 size={16} />
-                        </button>
-                        <button
-                          className="icon-button danger"
-                          disabled={!canCurrentMemberApprove}
-                          onClick={() => rejectTodo(todo.id, currentMember.id)}
-                          title="Neka"
-                          type="button"
-                        >
-                          <XCircle size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </section>
-              ) : null}
-            </div>
-          ) : null}
-
-          {adultTab === "shopping" ? (
-            <ShoppingListsPanel
-              currentMember={selectedAdultDashboardMember}
-              members={activeMembers}
-              roles={roles}
-              shoppingLists={shoppingLists}
-              onAddItem={(listId, title) =>
-                addShoppingItem(listId, title, selectedAdultDashboardMember.id)
-              }
-              onCreateList={(name) =>
-                createShoppingList(name, selectedAdultDashboardMember.id)
-              }
-              onDeleteList={(listId) =>
-                softDeleteShoppingList(listId, selectedAdultDashboardMember.id)
-              }
-              onRemoveListShare={removeShoppingListShare}
-              onShareList={shareShoppingList}
-              onToggleItem={toggleShoppingItem}
-            />
-          ) : null}
-        </article>
-
-        {activeAccount.type === "family" && selectedChild && rewardProgress ? (
-          <article
-            className={`child-dashboard theme-${selectedChild.dashboardTheme ?? "space"}`}
-            onPointerDown={(event) => {
-              if ((event.target as HTMLElement).closest("button, input, select")) {
-                return;
-              }
-
-              const cancel = handleDashboardPointerDown(selectedChild.id);
-              event.currentTarget.onpointerup = cancel;
-              event.currentTarget.onpointerleave = cancel;
-            }}
-          >
-            <header className="section-header">
-              <div>
-                <p className="eyebrow">Barn-dashboard</p>
-                <h2>{selectedChild.name}</h2>
-              </div>
-              <Sparkles size={24} />
-            </header>
-
-            <div className="reward-card">
-              <span className="reward-label">{activeReward.title}</span>
-              <strong>{rewardProgress.starsLeft} stjärnor kvar</strong>
-            </div>
-
-            <section className="falling-todos" aria-label="Aktiva uppgifter">
-              {activeChildTodos.length === 0 ? (
-                <p className="empty-note">Inga aktiva uppgifter just nu.</p>
-              ) : (
-                activeChildTodos.map((todo, index) => (
-                  <button
-                    className="falling-todo-card"
-                    key={todo.id}
-                    style={{ animationDelay: `${index * 120}ms` }}
-                    onClick={() => completeTodo(selectedChild, todo.id, roles)}
-                    type="button"
-                  >
-                    <span>{todo.visual.value.slice(0, 1)}</span>
-                    <strong>{todo.title}</strong>
-                    <small>Tryck när du är klar: {todo.starValue} stjärnor</small>
-                  </button>
-                ))
-              )}
-            </section>
-
-            {rewardProgress.rejectedTodos.length > 0 && (
-              <section className="rejected-notice" aria-label="Nekade uppgifter">
-                {rewardProgress.rejectedTodos.map((todo) => (
-                  <div className="rejected-todo-card" key={todo.id}>
-                    <span>{todo.visual.value.slice(0, 1)}</span>
-                    <div>
-                      <strong>{todo.title}</strong>
-                      <small>Den här gick inte igenom – prova igen!</small>
-                    </div>
-                    <button
-                      className="rejected-dismiss"
-                      type="button"
-                      onClick={() => dismissRejectedTodo(todo.id, selectedChild.id)}
-                      aria-label="Stäng"
-                    >
-                      Okej
-                    </button>
-                  </div>
-                ))}
-              </section>
-            )}
-
-            <div className="reward-path" aria-label="Belöningsbana">
-              {Array.from({ length: 10 }).map((_, index) => {
-                const item = rewardProgress.pathItems[index];
-                const isApproved = item?.type === "approved-star";
-                const pendingTodo = item?.type === "pending-task" ? item.todo : null;
-
-                return (
-                  <span
-                    className={`path-step ${isApproved ? "approved" : ""} ${pendingTodo ? "pending" : ""}`}
-                    key={index}
-                  >
-                    {isApproved ? (
-                      <Star size={18} fill="currentColor" />
-                    ) : pendingTodo ? (
-                      pendingTodo.visual.value.slice(0, 1)
-                    ) : (
-                      ""
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-          </article>
+        {activeAccount.type === "family" && selectedChild ? (
+          <ChildDashboard
+            child={selectedChild}
+            activeReward={activeReward}
+            rewardProgress={rewardProgress}
+            suggestedRewards={suggestedRewards}
+            activeChildTodos={activeChildTodos}
+            wishTitle={wishTitle}
+            onSetWishTitle={setWishTitle}
+            onCreateWish={createWish}
+            onCompleteTodo={(todoId) => completeTodo(selectedChild, todoId, roles)}
+            onDismissRejectedTodo={(todoId) => dismissRejectedTodo(todoId, selectedChild.id)}
+            onThemePickerOpen={setThemePickerMemberId}
+          />
         ) : (
           <article className="workplace-dashboard">
             <header className="section-header">
@@ -648,18 +389,6 @@ function isTodoVisibleNow(todo: { visibleFrom: string | null; expiresAt: string 
     : Number.POSITIVE_INFINITY;
 
   return visibleFromTime <= now && now < expiresAtTime;
-}
-
-function getTodoSummary(todo: { status: string; starValue: number }) {
-  if (todo.status === "expired") {
-    return "Utgången";
-  }
-
-  if (todo.status === "done") {
-    return "Väntar";
-  }
-
-  return `${todo.starValue} stjärnor`;
 }
 
 function formatTimeRange(startsAt: string, endsAt: string) {

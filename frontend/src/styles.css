@@ -635,6 +635,18 @@ h3 {
 
 .approval-row small {
   color: #6d7f79;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stars-input {
+  width: 52px;
+  padding: 2px 6px;
+  border: 1px solid #c5d4cf;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  text-align: center;
 }
 
 .child-dashboard {

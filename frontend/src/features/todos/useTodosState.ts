@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { todos as initialTodos } from "../../data/sampleData";
+import { todosApi } from "../../api";
 import { canCompleteTodo, canDeleteTodo, canEditTodo } from "../roles/permissions";
 import { getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
 
 export function useTodosState() {
-  const [todos, setTodos] = useLocalStorageState<Todo[]>(
-    "family-team-app:todos",
-    initialTodos
-  );
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [editingTodoId, setEditingTodoId] = useState<Id | null>(null);
   const [editingTodoTitle, setEditingTodoTitle] = useState("");
+
+  useEffect(() => {
+    todosApi.getAll().then(setTodos).catch(console.error);
+  }, []);
 
   useEffect(() => {
     function syncScheduledTodos() {
@@ -44,6 +44,7 @@ export function useTodosState() {
   }, []);
 
   function createTodo(todo: Todo) {
+    todosApi.create(todo).catch(console.error);
     setTodos((current) => [...current, todo]);
   }
 
@@ -54,6 +55,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.complete(todoId).catch(console.error);
         return {
           ...todo,
           status: "done" as const,
@@ -104,6 +106,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.remove(todoId).catch(console.error);
         return {
           ...todo,
           deletedAt: new Date().toISOString(),
@@ -124,6 +127,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.restore(todoId).catch(console.error);
         return { ...todo, deletedAt: null, deletedBy: null };
       })
     );
@@ -136,6 +140,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.approve(todoId).catch(console.error);
         return {
           ...todo,
           status: "approved" as const,
@@ -153,6 +158,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.reject(todoId).catch(console.error);
         return {
           ...todo,
           status: "rejected" as const,
@@ -170,6 +176,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.remove(todoId).catch(console.error);
         return {
           ...todo,
           deletedAt: new Date().toISOString(),
@@ -186,6 +193,7 @@ export function useTodosState() {
           return todo;
         }
 
+        todosApi.remove(todo.id).catch(console.error);
         return { ...todo, deletedAt, deletedBy: memberId };
       })
     );

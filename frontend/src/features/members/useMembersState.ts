@@ -1,14 +1,16 @@
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { members as initialMembers } from "../../data/sampleData";
+import { useEffect, useState } from "react";
+import { membersApi } from "../../api";
 import type { DashboardThemeId, Id, Member } from "@shared/types";
 
 export function useMembersState() {
-  const [members, setMembers] = useLocalStorageState<Member[]>(
-    "family-team-app:members",
-    initialMembers
-  );
+  const [members, setMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    membersApi.getAll().then(setMembers).catch(console.error);
+  }, []);
 
   function createMember(member: Member) {
+    membersApi.create(member).catch(console.error);
     setMembers((current) => [...current, member]);
   }
 
@@ -19,6 +21,7 @@ export function useMembersState() {
           return member;
         }
 
+        membersApi.remove(memberId).catch(console.error);
         return {
           ...member,
           deletedAt: new Date().toISOString(),
@@ -35,6 +38,7 @@ export function useMembersState() {
           return member;
         }
 
+        membersApi.restore(memberId).catch(console.error);
         return { ...member, deletedAt: null, deletedBy: null };
       })
     );
@@ -47,6 +51,7 @@ export function useMembersState() {
           return member;
         }
 
+        membersApi.update(memberId, { dashboardTheme }).catch(console.error);
         return { ...member, dashboardTheme };
       })
     );
@@ -59,6 +64,7 @@ export function useMembersState() {
           return member;
         }
 
+        membersApi.update(memberId, { avatarUrl }).catch(console.error);
         return { ...member, avatarUrl };
       })
     );
@@ -71,6 +77,7 @@ export function useMembersState() {
           return member;
         }
 
+        membersApi.update(memberId, { roleId }).catch(console.error);
         return { ...member, roleId };
       })
     );

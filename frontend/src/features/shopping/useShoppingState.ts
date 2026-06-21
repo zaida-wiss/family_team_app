@@ -1,56 +1,55 @@
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { shoppingLists as initialShoppingLists } from "../../data/sampleData";
+import { useEffect, useState } from "react";
+import { shoppingApi } from "../../api";
 import type { AccessLevel, Id, ShoppingList } from "@shared/types";
 
 export function useShoppingState() {
-  const [shoppingLists, setShoppingLists] = useLocalStorageState<ShoppingList[]>(
-    "family-team-app:shopping-lists",
-    initialShoppingLists
-  );
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
+
+  useEffect(() => {
+    shoppingApi.getAll().then(setShoppingLists).catch(console.error);
+  }, []);
 
   function createShoppingList(name: string, memberId: Id) {
-    setShoppingLists((current) => [
-      ...current,
-      {
-        id: `shopping-${crypto.randomUUID()}`,
-        name,
-        ownerId: memberId,
-        color: "#2f7d6d",
-        icon: "ShoppingCart",
-        sharedWith: [],
-        deletedAt: null,
-        deletedBy: null,
-        items: []
-      }
-    ]);
+    const newList: ShoppingList = {
+      id: `shopping-${crypto.randomUUID()}`,
+      name,
+      ownerId: memberId,
+      color: "#2f7d6d",
+      icon: "ShoppingCart",
+      sharedWith: [],
+      deletedAt: null,
+      deletedBy: null,
+      items: []
+    };
+
+    shoppingApi.create(newList).catch(console.error);
+    setShoppingLists((current) => [...current, newList]);
   }
 
   function addShoppingItem(listId: Id, title: string, memberId: Id) {
+    const newItem: ShoppingList["items"][number] = {
+      id: `shopping-item-${crypto.randomUUID()}`,
+      title,
+      createdBy: memberId,
+      done: false,
+      deletedAt: null,
+      deletedBy: null
+    };
+
+    shoppingApi.addItem(listId, newItem).catch(console.error);
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {
           return list;
         }
 
-        return {
-          ...list,
-          items: [
-            ...list.items,
-            {
-              id: `shopping-item-${crypto.randomUUID()}`,
-              title,
-              createdBy: memberId,
-              done: false,
-              deletedAt: null,
-              deletedBy: null
-            }
-          ]
-        };
+        return { ...list, items: [...list.items, newItem] };
       })
     );
   }
 
   function shareShoppingList(listId: Id, memberId: Id, access: AccessLevel) {
+    shoppingApi.share(listId, memberId, access).catch(console.error);
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {
@@ -72,6 +71,7 @@ export function useShoppingState() {
   }
 
   function removeShoppingListShare(listId: Id, memberId: Id) {
+    shoppingApi.unshare(listId, memberId).catch(console.error);
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {
@@ -87,6 +87,7 @@ export function useShoppingState() {
   }
 
   function softDeleteShoppingList(listId: Id, memberId: Id) {
+    shoppingApi.remove(listId).catch(console.error);
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {
@@ -103,6 +104,7 @@ export function useShoppingState() {
   }
 
   function restoreShoppingList(listId: Id) {
+    shoppingApi.restore(listId).catch(console.error);
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {
@@ -115,6 +117,7 @@ export function useShoppingState() {
   }
 
   function toggleShoppingItem(listId: Id, itemId: Id) {
+    shoppingApi.toggleItem(listId, itemId).catch(console.error);
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {
@@ -139,6 +142,10 @@ export function useShoppingState() {
     setShoppingLists((current) =>
       current.map((list) => {
         const ownsList = list.ownerId === memberId;
+
+        if (ownsList) {
+          shoppingApi.remove(list.id).catch(console.error);
+        }
 
         return {
           ...list,

@@ -1,14 +1,16 @@
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { roles as initialRoles } from "../../data/sampleData";
+import { useEffect, useState } from "react";
+import { rolesApi } from "../../api";
 import type { Id, PermissionKey, Role } from "@shared/types";
 
 export function useRolesState() {
-  const [roles, setRoles] = useLocalStorageState<Role[]>(
-    "family-team-app:roles",
-    initialRoles
-  );
+  const [roles, setRoles] = useState<Role[]>([]);
+
+  useEffect(() => {
+    rolesApi.getAll().then(setRoles).catch(console.error);
+  }, []);
 
   function createRole(role: Role) {
+    rolesApi.create(role).catch(console.error);
     setRoles((current) => [...current, role]);
   }
 
@@ -19,13 +21,13 @@ export function useRolesState() {
           return role;
         }
 
-        return {
-          ...role,
-          permissions: {
-            ...role.permissions,
-            [permission]: !role.permissions[permission]
-          }
+        const newPermissions = {
+          ...role.permissions,
+          [permission]: !role.permissions[permission]
         };
+
+        rolesApi.updatePermissions(roleId, newPermissions).catch(console.error);
+        return { ...role, permissions: newPermissions };
       })
     );
   }

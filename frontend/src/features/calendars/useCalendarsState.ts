@@ -1,5 +1,5 @@
-import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import { calendars as initialCalendars } from "../../data/sampleData";
+import { useEffect, useState } from "react";
+import { calendarsApi } from "../../api";
 import type { AccessLevel, Calendar, Id } from "@shared/types";
 
 type AddEventInput = {
@@ -17,52 +17,50 @@ type ImportEventInput = {
 };
 
 export function useCalendarsState() {
-  const [calendars, setCalendars] = useLocalStorageState<Calendar[]>(
-    "family-team-app:calendars",
-    initialCalendars
-  );
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
+
+  useEffect(() => {
+    calendarsApi.getAll().then(setCalendars).catch(console.error);
+  }, []);
 
   function createCalendar(name: string, memberId: Id) {
-    setCalendars((current) => [
-      ...current,
-      {
-        id: `calendar-${crypto.randomUUID()}`,
-        name,
-        ownerId: memberId,
-        color: "#2f7d6d",
-        sharedWith: [],
-        importedSources: [],
-        deletedAt: null,
-        deletedBy: null,
-        events: []
-      }
-    ]);
+    const newCalendar: Calendar = {
+      id: `calendar-${crypto.randomUUID()}`,
+      name,
+      ownerId: memberId,
+      color: "#2f7d6d",
+      sharedWith: [],
+      importedSources: [],
+      deletedAt: null,
+      deletedBy: null,
+      events: []
+    };
+
+    calendarsApi.create(newCalendar).catch(console.error);
+    setCalendars((current) => [...current, newCalendar]);
   }
 
   function addCalendarEvent(calendarId: Id, event: AddEventInput, memberId: Id) {
+    const newEvent: Calendar["events"][number] = {
+      id: `event-${crypto.randomUUID()}`,
+      calendarId,
+      title: event.title,
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      notes: event.notes ?? null,
+      createdBy: memberId,
+      deletedAt: null,
+      deletedBy: null
+    };
+
+    calendarsApi.addEvent(calendarId, newEvent).catch(console.error);
     setCalendars((current) =>
       current.map((calendar) => {
         if (calendar.id !== calendarId) {
           return calendar;
         }
 
-        return {
-          ...calendar,
-          events: [
-            ...calendar.events,
-            {
-              id: `event-${crypto.randomUUID()}`,
-              calendarId,
-              title: event.title,
-              startsAt: event.startsAt,
-              endsAt: event.endsAt,
-              notes: event.notes ?? null,
-              createdBy: memberId,
-              deletedAt: null,
-              deletedBy: null
-            }
-          ]
-        };
+        return { ...calendar, events: [...calendar.events, newEvent] };
       })
     );
   }
@@ -73,6 +71,26 @@ export function useCalendarsState() {
     events: ImportEventInput[],
     memberId: Id
   ) {
+    const source = {
+      id: `import-${crypto.randomUUID()}`,
+      type: "ics-file" as const,
+      name: sourceName,
+      importedAt: new Date().toISOString()
+    };
+    const newEvents = events.map((event) => ({
+      id: `event-${crypto.randomUUID()}`,
+      calendarId,
+      title: event.title,
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      notes: event.notes,
+      createdBy: memberId,
+      deletedAt: null,
+      deletedBy: null
+    }));
+
+    calendarsApi.importEvents(calendarId, source, newEvents).catch(console.error);
+
     setCalendars((current) =>
       current.map((calendar) => {
         if (calendar.id !== calendarId) {
@@ -81,35 +99,15 @@ export function useCalendarsState() {
 
         return {
           ...calendar,
-          importedSources: [
-            ...calendar.importedSources,
-            {
-              id: `import-${crypto.randomUUID()}`,
-              type: "ics-file" as const,
-              name: sourceName,
-              importedAt: new Date().toISOString()
-            }
-          ],
-          events: [
-            ...calendar.events,
-            ...events.map((event) => ({
-              id: `event-${crypto.randomUUID()}`,
-              calendarId,
-              title: event.title,
-              startsAt: event.startsAt,
-              endsAt: event.endsAt,
-              notes: event.notes,
-              createdBy: memberId,
-              deletedAt: null,
-              deletedBy: null
-            }))
-          ]
+          importedSources: [...calendar.importedSources, source],
+          events: [...calendar.events, ...newEvents]
         };
       })
     );
   }
 
   function shareCalendar(calendarId: Id, memberId: Id, access: AccessLevel) {
+    calendarsApi.share(calendarId, memberId, access).catch(console.error);
     setCalendars((current) =>
       current.map((calendar) => {
         if (calendar.id !== calendarId) {
@@ -133,6 +131,7 @@ export function useCalendarsState() {
   }
 
   function removeCalendarShare(calendarId: Id, memberId: Id) {
+    calendarsApi.unshare(calendarId, memberId).catch(console.error);
     setCalendars((current) =>
       current.map((calendar) => {
         if (calendar.id !== calendarId) {
@@ -148,6 +147,7 @@ export function useCalendarsState() {
   }
 
   function restoreCalendar(calendarId: Id) {
+    calendarsApi.restore(calendarId).catch(console.error);
     setCalendars((current) =>
       current.map((calendar) => {
         if (calendar.id !== calendarId) {
@@ -174,6 +174,10 @@ export function useCalendarsState() {
     setCalendars((current) =>
       current.map((calendar) => {
         const ownsCalendar = calendar.ownerId === memberId;
+
+        if (ownsCalendar) {
+          calendarsApi.remove(calendar.id).catch(console.error);
+        }
 
         return {
           ...calendar,
