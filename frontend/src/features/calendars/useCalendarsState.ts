@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { calendarsApi } from "../../api";
+import { calendars as initialCalendars } from "../../data/sampleData";
 import type { AccessLevel, Calendar, Id } from "@shared/types";
 
 type AddEventInput = {
@@ -17,7 +18,7 @@ type ImportEventInput = {
 };
 
 export function useCalendarsState() {
-  const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const [calendars, setCalendars] = useState<Calendar[]>(initialCalendars);
 
   useEffect(() => {
     calendarsApi.getAll().then(setCalendars).catch(console.error);

@@ -97,10 +97,6 @@ export function App() {
     }
   }, [currentMember?.id]);
 
-  if (!currentMember) {
-    return null;
-  }
-
   const selectedDashboardMember =
     activeMembers.find((member) => member.id === selectedDashboardMemberId) ??
     currentMember;
