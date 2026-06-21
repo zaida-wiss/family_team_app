@@ -12,27 +12,29 @@ function makeProgress(todos: Parameters<typeof getRewardPathProgress>[2]) {
   return getRewardPathProgress(child, reward, todos);
 }
 
+function assertStarCounts(
+  todos: Parameters<typeof makeProgress>[0],
+  expectedApproved: number,
+  expectedLeft: number
+) {
+  const progress = makeProgress(todos);
+  expectEqual(progress.approvedStars, expectedApproved);
+  expectEqual(progress.starsLeft, expectedLeft);
+  return progress;
+}
+
 const tests: TestCase[] = [
   {
     name: "approved todos count as stars",
     run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "approved-1",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 4
-        }),
-        createTodo({
-          id: "approved-2",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 3
-        })
-      ]);
-
-      expectEqual(progress.approvedStars, 7);
-      expectEqual(progress.starsLeft, 3);
+      const progress = assertStarCounts(
+        [
+          createTodo({ id: "approved-1", assignedTo: child.id, status: "approved", starValue: 4 }),
+          createTodo({ id: "approved-2", assignedTo: child.id, status: "approved", starValue: 3 })
+        ],
+        7,
+        3
+      );
       expectEqual(progress.isUnlocked, false);
     }
   },
@@ -104,23 +106,14 @@ const tests: TestCase[] = [
   {
     name: "todos assigned to another member do not affect the child reward path",
     run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "other-child-approved",
-          assignedTo: "member-other-child",
-          status: "approved",
-          starValue: 10
-        }),
-        createTodo({
-          id: "own-approved",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 2
-        })
-      ]);
-
-      expectEqual(progress.approvedStars, 2);
-      expectEqual(progress.starsLeft, 8);
+      assertStarCounts(
+        [
+          createTodo({ id: "other-child-approved", assignedTo: "member-other-child", status: "approved", starValue: 10 }),
+          createTodo({ id: "own-approved", assignedTo: child.id, status: "approved", starValue: 2 })
+        ],
+        2,
+        8
+      );
     }
   },
   {

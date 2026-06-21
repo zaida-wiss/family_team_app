@@ -20,19 +20,21 @@ const tests: TestCase[] = [
         expiresAt: "2026-06-01T09:00:00.000Z"
       });
       const occurrences = getDueRecurringTodoOccurrences([template], monday);
+      const occ = occurrences[0];
+      if (!occ) throw new Error("Expected an occurrence");
 
       expectEqual(occurrences.length, 1);
-      expectEqual(occurrences[0]?.id, "todo-weekly-occurrence-2026-06-08");
-      expectEqual(occurrences[0]?.title, "Bädda sängen");
-      expectEqual(occurrences[0]?.createdBy, "member-parent");
-      expectEqual(occurrences[0]?.assignedTo, "member-child");
-      expectEqual(occurrences[0]?.starValue, 3);
-      expectEqual(occurrences[0]?.visual.value, "Bed");
-      expectEqual(occurrences[0]?.recurrence.type, "none");
-      expectEqual(occurrences[0]?.recurringSourceId, "todo-weekly");
-      expectEqual(occurrences[0]?.occurrenceDate, "2026-06-08");
-      expectEqual(occurrences[0]?.visibleFrom, "2026-06-08T07:00:00.000Z");
-      expectEqual(occurrences[0]?.expiresAt, "2026-06-08T09:00:00.000Z");
+      expectEqual(occ.id, "todo-weekly-occurrence-2026-06-08");
+      expectEqual(occ.title, "Bädda sängen");
+      expectEqual(occ.createdBy, "member-parent");
+      expectEqual(occ.assignedTo, "member-child");
+      expectEqual(occ.starValue, 3);
+      expectEqual(occ.visual.value, "Bed");
+      expectEqual(occ.recurrence.type, "none");
+      expectEqual(occ.recurringSourceId, "todo-weekly");
+      expectEqual(occ.occurrenceDate, "2026-06-08");
+      expectEqual(occ.visibleFrom, "2026-06-08T07:00:00.000Z");
+      expectEqual(occ.expiresAt, "2026-06-08T09:00:00.000Z");
     }
   },
   {
