@@ -31,7 +31,7 @@ button {
 .trash-view,
 .calendar-panel,
 .members-panel,
-.adult-dashboard,
+.dashboard,
 .child-dashboard,
 .workplace-dashboard {
   border: 1px solid rgba(47, 125, 109, 0.16);
@@ -158,11 +158,18 @@ button {
   opacity: 0.45;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .settings-nav-button {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -170,6 +177,153 @@ button {
   background: #2f7d6d;
   border-color: #2f7d6d;
   color: #fff;
+}
+
+.member-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  gap: 16px;
+  text-align: center;
+}
+
+.member-picker h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.member-picker-prompt {
+  color: #6b8f85;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.member-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.member-picker-button {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.member-picker-button:hover {
+  border-color: #2f7d6d;
+  background: rgba(47, 125, 109, 0.06);
+}
+
+/* ── Auth ─────────────────────────────────────── */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef4f1;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  background: #fff;
+  border: 1px solid rgba(47, 125, 109, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(30, 56, 50, 0.1);
+  padding: 40px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  color: #2f7d6d;
+  letter-spacing: -1px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-error {
+  color: #c0392b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.auth-switch {
+  background: none;
+  border: none;
+  color: #2f7d6d;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.auth-switch:hover {
+  color: #1f5c4e;
+}
+
+.account-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f4f9f7;
+  border: 1.5px solid rgba(47, 125, 109, 0.16);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 14px 16px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+
+.account-picker-row:hover {
+  background: #e8f3ef;
+  border-color: #2f7d6d;
+}
+
+.account-icon {
+  color: #2f7d6d;
+  flex-shrink: 0;
+}
+
+.account-picker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-picker-info strong {
+  font-size: 1rem;
+  color: #21312e;
+}
+
+.account-picker-info small {
+  font-size: 0.8rem;
+  color: #6b8f85;
 }
 
 .eyebrow {
@@ -272,7 +426,7 @@ h3 {
 
 .calendar-panel,
 .members-panel,
-.adult-dashboard,
+.dashboard,
 .child-dashboard,
 .workplace-dashboard {
   padding: 20px;
@@ -669,42 +823,42 @@ h3 {
   color: #526d66;
 }
 
-.adult-dashboard,
+.dashboard,
 .child-dashboard {
   position: relative;
   touch-action: manipulation;
 }
 
-.adult-dashboard.theme-clear {
+.dashboard.theme-clear {
   background: linear-gradient(180deg, #ffffff 0%, #f6fbf9 100%);
 }
 
-.adult-dashboard.theme-focus {
+.dashboard.theme-focus {
   background: linear-gradient(180deg, #eef4ff 0%, #ffffff 72%);
 }
 
-.adult-dashboard.theme-warm {
+.dashboard.theme-warm {
   background: linear-gradient(180deg, #fff4e6 0%, #ffffff 72%);
 }
 
-.adult-dashboard.theme-dark {
+.dashboard.theme-dark {
   background: linear-gradient(180deg, #24312f 0%, #41514d 100%);
   color: #f4faf7;
 }
 
-.adult-dashboard.theme-dark .eyebrow,
-.adult-dashboard.theme-dark .dashboard-row,
-.adult-dashboard.theme-dark .shopping-card {
+.dashboard.theme-dark .eyebrow,
+.dashboard.theme-dark .dashboard-row,
+.dashboard.theme-dark .shopping-card {
   color: #f4faf7;
 }
 
-.adult-dashboard.theme-dark .dashboard-row,
-.adult-dashboard.theme-dark .shopping-card {
+.dashboard.theme-dark .dashboard-row,
+.dashboard.theme-dark .shopping-card {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.adult-dashboard.theme-nature {
+.dashboard.theme-nature {
   background: linear-gradient(180deg, #e7f5df 0%, #ffffff 74%);
 }
 
@@ -1173,4 +1327,26 @@ h3 {
   .account-type-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+.api-error-banner {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #c0392b;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  pointer-events: none;
+  animation: fade-in-up 0.2s ease;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }

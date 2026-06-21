@@ -4,6 +4,7 @@ import type { Member } from "../../../../shared/types.js";
 const memberSchema = new Schema<Member>({
   id: { type: String, required: true, unique: true },
   accountId: { type: String, required: true },
+  userId: { type: String, default: null },
   name: { type: String, required: true },
   roleId: { type: String, required: true },
   isChild: { type: Boolean, required: true },

@@ -90,54 +90,55 @@ export function AccountSettings({
 
       <div className="settings-grid">
         <section className="settings-form">
-          <h3>Skapa medlem</h3>
+          {canManageMembers && (
+            <>
+              <h3>Skapa medlem</h3>
 
-          <label className="field-label">
-            Namn
-            <input
-              className="text-input"
-              disabled={!canManageMembers}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={account.type === "family" ? "Barn eller vuxen" : "Kollega"}
-              value={name}
-            />
-          </label>
+              <label className="field-label">
+                Namn
+                <input
+                  className="text-input"
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={account.type === "family" ? "Barn eller vuxen" : "Kollega"}
+                  value={name}
+                />
+              </label>
 
-          <label className="field-label">
-            Roll
-            <select
-              className="text-input"
-              disabled={!canManageMembers}
-              onChange={(event) => setRoleId(event.target.value)}
-              value={roleId}
-            >
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label className="field-label">
+                Roll
+                <select
+                  className="text-input"
+                  onChange={(event) => setRoleId(event.target.value)}
+                  value={roleId}
+                >
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          {showChildOption ? (
-            <label className="checkbox-row child-checkbox">
-              <input
-                checked={isChild}
-                onChange={(event) => setIsChild(event.target.checked)}
-                type="checkbox"
-              />
-              <span>Skapa som barnkonto</span>
-            </label>
-          ) : null}
+              {showChildOption ? (
+                <label className="checkbox-row child-checkbox">
+                  <input
+                    checked={isChild}
+                    onChange={(event) => setIsChild(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>Skapa som barnkonto</span>
+                </label>
+              ) : null}
 
-          <button
-            className="primary-button"
-            disabled={!canManageMembers}
-            onClick={createMember}
-            type="button"
-          >
-            Lägg till
-          </button>
+              <button
+                className="primary-button"
+                onClick={createMember}
+                type="button"
+              >
+                Lägg till
+              </button>
+            </>
+          )}
 
           <section className="self-data-card" aria-label="Radera min data">
             <div>
@@ -161,64 +162,64 @@ export function AccountSettings({
           </section>
         </section>
 
-        <section className="settings-members" aria-label="Medlemmar i kontot">
-          <h3>Medlemmar</h3>
-          <div className="settings-member-list">
-            {members
-              .filter((member) => member.accountId === account.id && member.deletedAt === null)
-              .map((member) => (
-                <div className="settings-member-row" key={member.id}>
-                  <MemberAvatar member={member} size="small" />
-                  <div>
-                    <strong>{member.name}</strong>
-                    <small>{member.isChild ? "Barnkonto" : "Vuxen/medlem"}</small>
-                  </div>
-                  <label
-                    aria-label={`Välj bild för ${member.name}`}
-                    className="icon-button"
-                    title={`Välj bild för ${member.name}`}
-                  >
-                    <ImagePlus size={16} />
-                    <input
-                      accept="image/*"
-                      disabled={!canManageMembers}
-                      hidden
-                      onChange={(event) => {
-                        void updateAvatar(member.id, event.target.files?.[0] ?? null);
-                        event.target.value = "";
-                      }}
-                      type="file"
-                    />
-                  </label>
-                  {member.avatarUrl ? (
-                    <button
-                      aria-label={`Ta bort bild för ${member.name}`}
+        {canManageMembers && (
+          <section className="settings-members" aria-label="Medlemmar i kontot">
+            <h3>Medlemmar</h3>
+            <div className="settings-member-list">
+              {members
+                .filter((member) => member.accountId === account.id && member.deletedAt === null)
+                .map((member) => (
+                  <div className="settings-member-row" key={member.id}>
+                    <MemberAvatar member={member} size="small" />
+                    <div>
+                      <strong>{member.name}</strong>
+                      <small>{member.isChild ? "Barnkonto" : "Vuxen/medlem"}</small>
+                    </div>
+                    <label
+                      aria-label={`Välj bild för ${member.name}`}
                       className="icon-button"
-                      disabled={!canManageMembers}
-                      onClick={() => onUpdateMemberAvatar(member.id, null)}
+                      title={`Välj bild för ${member.name}`}
+                    >
+                      <ImagePlus size={16} />
+                      <input
+                        accept="image/*"
+                        hidden
+                        onChange={(event) => {
+                          void updateAvatar(member.id, event.target.files?.[0] ?? null);
+                          event.target.value = "";
+                        }}
+                        type="file"
+                      />
+                    </label>
+                    {member.avatarUrl ? (
+                      <button
+                        aria-label={`Ta bort bild för ${member.name}`}
+                        className="icon-button"
+                        onClick={() => onUpdateMemberAvatar(member.id, null)}
+                        type="button"
+                      >
+                        <X size={16} />
+                      </button>
+                    ) : null}
+                    <button
+                      aria-label={`Radera ${member.name}`}
+                      className="icon-button danger"
+                      disabled={member.id === currentMember.id}
+                      onClick={() => onDeleteMember(member.id)}
+                      title={
+                        member.id === currentMember.id
+                          ? "Du kan inte radera dig själv här"
+                          : "Flytta medlem till papperskorg"
+                      }
                       type="button"
                     >
-                      <X size={16} />
+                      <Trash2 size={16} />
                     </button>
-                  ) : null}
-                  <button
-                    aria-label={`Radera ${member.name}`}
-                    className="icon-button danger"
-                    disabled={!canManageMembers || member.id === currentMember.id}
-                    onClick={() => onDeleteMember(member.id)}
-                    title={
-                      member.id === currentMember.id
-                        ? "Du kan inte radera dig själv här"
-                        : "Flytta medlem till papperskorg"
-                    }
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-          </div>
-        </section>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
       </div>
     </article>
   );

@@ -1,39 +1,75 @@
-import {
-  BriefcaseBusiness,
-  CalendarDays,
-  ChevronRight,
-  Settings,
-  Users
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { BriefcaseBusiness, LogOut, Settings } from "lucide-react";
+import { useState } from "react";
 import { setApiMemberId } from "./api";
-
-import { AccountSettings } from "./features/accounts/AccountSettings";
-import { AccountSetup } from "./features/accounts/AccountSetup";
-import { useAccountState } from "./features/accounts/useAccountState";
-import { useCalendarsState } from "./features/calendars/useCalendarsState";
-import { MemberAvatar } from "./features/members/MemberAvatar";
-import { useMembersState } from "./features/members/useMembersState";
-import { useRolesState } from "./features/roles/useRolesState";
-import {
-  canManageChildAccount,
-  hasPermission
-} from "./features/roles/permissions";
-import { RoleEditor } from "./features/roles/RoleEditor";
-import { useShoppingState } from "./features/shopping/useShoppingState";
-import { TrashView } from "./features/trash/TrashView";
-import { useTodosState } from "./features/todos/useTodosState";
-import { getRewardPathProgress, getVisibleTodos } from "./features/todos/selectors";
-import { useRewardsState } from "./features/rewards/useRewardsState";
-import { AdultDashboard } from "./features/adults/AdultDashboard";
+import { AuthPage } from "./features/auth/AuthPage";
+import { AccountPicker } from "./features/auth/AccountPicker";
+import { useAuth } from "./features/auth/useAuth";
+import { Dashboard } from "./features/adults/Dashboard";
 import { ChildDashboard } from "./features/children/ChildDashboard";
+import { SettingsPanel } from "./features/layout/SettingsPanel";
+import { MemberOverview } from "./features/layout/MemberOverview";
 import { ThemePicker } from "./components/ThemePicker";
-import type { DashboardThemeId, Id } from "@shared/types";
+import { canManageChildAccount, hasPermission } from "./features/roles/permissions";
+import { getRewardPathProgress, getVisibleTodos } from "./features/todos/selectors";
+import { useAppState } from "./hooks/useAppState";
+import type { DashboardThemeId, Id, Membership } from "@shared/types";
 
 export function App() {
-  const { activeAccount, setActiveAccount } = useAccountState();
-  const { roles, createRole, toggleRolePermission } = useRolesState();
+  const { state: authState, login, register, logout, updateMemberships } = useAuth();
+  const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
+
+  if (authState.status === "loading") {
+    return <main className="app-shell"><p style={{ padding: "2rem" }}>Laddar…</p></main>;
+  }
+
+  if (authState.status === "unauthenticated") {
+    return <AuthPage onLogin={login} onRegister={register} />;
+  }
+
+  const { user, memberships } = authState;
+
+  if (!activeMembership) {
+    if (memberships.length === 1) {
+      const m = memberships[0];
+      setActiveMembership(m);
+      setApiMemberId(m.member.id);
+      return null;
+    }
+    return (
+      <AccountPicker
+        user={user}
+        memberships={memberships}
+        onSelect={(m) => { setActiveMembership(m); setApiMemberId(m.member.id); }}
+        onLogout={logout}
+        onMembershipsUpdated={updateMemberships}
+      />
+    );
+  }
+
+  return (
+    <AppShell
+      activeMembership={activeMembership}
+      onLogout={async () => { await logout(); setActiveMembership(null); }}
+      onSwitchAccount={() => setActiveMembership(null)}
+      onMembershipsUpdated={updateMemberships}
+    />
+  );
+}
+
+type ShellProps = {
+  activeMembership: Membership;
+  onLogout: () => Promise<void>;
+  onSwitchAccount: () => void;
+  onMembershipsUpdated: (memberships: Membership[]) => void;
+};
+
+function AppShell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
   const {
+    activeAccount,
+    setActiveAccount,
+    roles,
+    createRole,
+    toggleRolePermission,
     members,
     createMember,
     softDeleteMember,
@@ -41,115 +77,61 @@ export function App() {
     updateMemberTheme,
     updateMemberAvatar,
     assignRole,
-    clearMemberAvatar
-  } = useMembersState();
+    clearMemberAvatar,
+    todosState,
+    calendarsState,
+    shoppingState,
+    rewardsState,
+    currentMember,
+    activeMembers,
+    selectedDashboardMemberId,
+    setSelectedDashboardMemberId,
+    themePickerMemberId,
+    setThemePickerMemberId,
+    showSettings,
+    setShowSettings,
+    apiError
+  } = useAppState(activeMembership);
+
   const {
-    todos,
-    editingTodoId,
-    editingTodoTitle,
-    setEditingTodoTitle,
-    createTodo,
-    completeTodo,
-    startEditingTodo,
-    saveTodoTitle,
-    cancelEditingTodo,
-    softDeleteTodo,
-    restoreTodo,
-    approveTodo,
-    rejectTodo,
-    dismissRejectedTodo,
-    softDeleteTodosForMember
-  } = useTodosState();
+    todos, editingTodoId, editingTodoTitle, setEditingTodoTitle,
+    createTodo, completeTodo, startEditingTodo, saveTodoTitle,
+    cancelEditingTodo, softDeleteTodo, restoreTodo, approveTodo,
+    rejectTodo, dismissRejectedTodo, softDeleteTodosForMember
+  } = todosState;
+
   const {
-    calendars,
-    createCalendar,
-    addCalendarEvent,
-    importCalendarEvents,
-    shareCalendar,
-    removeCalendarShare,
-    restoreCalendar,
-    softDeleteCalendarsForMember
-  } = useCalendarsState();
+    calendars, createCalendar, addCalendarEvent, importCalendarEvents,
+    shareCalendar, removeCalendarShare, restoreCalendar, softDeleteCalendarsForMember
+  } = calendarsState;
+
   const {
-    shoppingLists,
-    createShoppingList,
-    addShoppingItem,
-    shareShoppingList,
-    removeShoppingListShare,
-    softDeleteShoppingList,
-    restoreShoppingList,
-    toggleShoppingItem,
-    softDeleteShoppingForMember
-  } = useShoppingState();
-  const { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish } = useRewardsState();
+    shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
+    removeShoppingListShare, softDeleteShoppingList, restoreShoppingList,
+    toggleShoppingItem, softDeleteShoppingForMember
+  } = shoppingState;
 
-  const [selectedDashboardMemberId, setSelectedDashboardMemberId] =
-    useState<Id | null>(null);
-  const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const {
+    rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish
+  } = rewardsState;
 
-  const activeMembers = members.filter((member) => member.deletedAt === null);
-  const currentMember = activeMembers[0];
-
-  useEffect(() => {
-    if (currentMember) {
-      setApiMemberId(currentMember.id);
-    }
-  }, [currentMember?.id]);
-
-  const selectedDashboardMember =
-    activeMembers.find((member) => member.id === selectedDashboardMemberId) ??
-    currentMember;
-  const selectedAdultDashboardMember = selectedDashboardMember.isChild
-    ? currentMember
-    : selectedDashboardMember;
-  const selectedChild = selectedDashboardMember.isChild
-    ? selectedDashboardMember
-    : activeMembers.find((member) => member.isChild);
-  const activeReward = selectedChild
-    ? (rewards.find((r) => r.wishedBy === selectedChild.id && r.status === "active") ?? null)
-    : null;
-  const rewardProgress = selectedChild && activeReward
-    ? getRewardPathProgress(selectedChild, activeReward, todos)
-    : null;
-  const suggestedRewards = selectedChild
-    ? rewards.filter((r) => r.wishedBy === selectedChild.id && r.status === "suggested")
-    : [];
-  const adultTodos = getVisibleTodos(selectedAdultDashboardMember, roles, todos);
-  const now = Date.now();
-  const activeChildTodos = selectedChild
-    ? todos.filter((todo) => {
-        return (
-          todo.assignedTo === selectedChild.id &&
-          todo.status === "pending" &&
-          todo.recurrence.type === "none" &&
-          todo.deletedAt === null &&
-          isTodoVisibleNow(todo, now)
-        );
-      })
-    : [];
-  const approvalTodos = todos.filter((todo) => todo.status === "done");
-  const allSuggestedRewards = rewards.filter((r) => r.status === "suggested" && r.deletedAt === null);
-  const canCurrentMemberApprove =
-    selectedChild !== undefined &&
-    canManageChildAccount(currentMember, selectedChild, roles) &&
-    hasPermission(currentMember, roles, "canApproveTodos");
-
-  const nextCalendarEvent = calendars
-    .flatMap((calendar) =>
-      calendar.events
-        .filter((event) => event.deletedAt === null)
-        .map((event) => ({ calendar, event }))
-    )
-    .sort(
-      (first, second) =>
-        new Date(first.event.startsAt).getTime() -
-        new Date(second.event.startsAt).getTime()
-    )[0];
+  const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
+  const canManageRoles   = hasPermission(currentMember, roles, "canManageRoles");
+  const canSeeCalendar   = hasPermission(currentMember, roles, "canSeeAllCalendar") || hasPermission(currentMember, roles, "canSeeOwnCalendar");
+  const canSeeTodos      = hasPermission(currentMember, roles, "canSeeAllTodos") || hasPermission(currentMember, roles, "canSeeOwnTodos");
+  const canSeeShopping   = hasPermission(currentMember, roles, "canSeeShoppingLists");
+  const canViewTrash     = hasPermission(currentMember, roles, "canViewTrash");
+  const canApproveTodos  = hasPermission(currentMember, roles, "canApproveTodos");
+  const isParent         = !currentMember.isChild && hasPermission(currentMember, roles, "canManageChildTodos");
 
   const themePickerMember = themePickerMemberId
-    ? activeMembers.find((member) => member.id === themePickerMemberId)
+    ? activeMembers.find((m) => m.id === themePickerMemberId)
     : null;
+
+  function handleThemeSelect(memberId: Id, themeId: DashboardThemeId) {
+    updateMemberTheme(memberId, themeId);
+    setThemePickerMemberId(null);
+  }
 
   function deleteOwnData() {
     const memberId = currentMember.id;
@@ -160,167 +142,93 @@ export function App() {
     softDeleteShoppingForMember(memberId, deletedAt);
   }
 
-  function handleThemeSelect(memberId: Id, themeId: DashboardThemeId) {
-    updateMemberTheme(memberId, themeId);
-    setThemePickerMemberId(null);
-  }
+  const errorBanner = apiError ? (
+    <div className="api-error-banner" role="alert">{apiError}</div>
+  ) : null;
 
-  return (
-    <main className="app-shell">
-      <section className="hero-panel">
-        <div>
-          <p className="eyebrow">
-            {activeAccount.type === "family" ? "Familjekonto" : "Arbetsplats"}
-          </p>
-          <h1>{activeAccount.name}</h1>
-        </div>
-        <div className="account-choice">
-          <span className={`choice-pill ${activeAccount.type === "family" ? "active" : ""}`}>
-            <Users size={16} />
-            Familj
-          </span>
-          <span className={`choice-pill ${activeAccount.type === "workplace" ? "active" : ""}`}>
-            <BriefcaseBusiness size={16} />
-            Arbetsplats
-          </span>
-        </div>
-        {!currentMember.isChild && (
-          <button
-            className={`icon-button settings-nav-button ${showSettings ? "active" : ""}`}
-            onClick={() => setShowSettings((prev) => !prev)}
-            title="Inställningar"
-            type="button"
-          >
-            <Settings size={22} />
-          </button>
-        )}
-      </section>
+  const heroBar = (
+    <section className="hero-panel">
+      <div>
+        <p className="eyebrow">{activeAccount.type === "family" ? "Familjekonto" : "Arbetsplats"}</p>
+        <h1>{activeAccount.name}</h1>
+      </div>
+      <div className="hero-actions">
+        <button
+          className={`icon-button settings-nav-button ${showSettings ? "active" : ""}`}
+          onClick={() => setShowSettings((p) => !p)}
+          title="Inställningar"
+          type="button"
+        >
+          <Settings size={22} />
+        </button>
+        <button className="icon-button" onClick={onSwitchAccount} title="Byt konto" type="button">
+          <LogOut size={22} />
+        </button>
+      </div>
+    </section>
+  );
 
-      <AccountSetup account={activeAccount} onUpdateAccount={setActiveAccount} />
+  const settingsPanel = (
+    <SettingsPanel
+      account={activeAccount}
+      currentMember={currentMember}
+      members={members}
+      roles={roles}
+      todos={todos}
+      calendars={calendars}
+      shoppingLists={shoppingLists}
+      canManageRoles={canManageRoles}
+      canViewTrash={canViewTrash}
+      onUpdateAccount={setActiveAccount}
+      onCreateMember={createMember}
+      onDeleteMember={(id) => softDeleteMember(id, currentMember.id)}
+      onDeleteOwnData={deleteOwnData}
+      onUpdateMemberAvatar={updateMemberAvatar}
+      onAssignRole={assignRole}
+      onCreateRole={createRole}
+      onTogglePermission={toggleRolePermission}
+      onRestoreCalendar={restoreCalendar}
+      onRestoreMember={restoreMember}
+      onRestoreShoppingList={restoreShoppingList}
+      onRestoreTodo={restoreTodo}
+    />
+  );
 
-      <AccountSettings
-        account={activeAccount}
-        currentMember={currentMember}
-        members={members}
-        roles={roles}
-        onCreateMember={createMember}
-        onDeleteMember={(memberId) => softDeleteMember(memberId, currentMember.id)}
-        onDeleteOwnData={deleteOwnData}
-        onUpdateMemberAvatar={updateMemberAvatar}
-      />
+  const themePicker = themePickerMember ? (
+    <ThemePicker
+      member={themePickerMember}
+      onClose={() => setThemePickerMemberId(null)}
+      onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
+    />
+  ) : null;
 
-      {showSettings ? (
-        <RoleEditor
-          members={members}
-          roles={roles}
-          onAssignRole={assignRole}
-          onCreateRole={createRole}
-          onTogglePermission={toggleRolePermission}
-        />
-      ) : null}
+  // Child view
+  if (currentMember.isChild) {
+    const activeReward =
+      rewards.find((r) => r.wishedBy === currentMember.id && r.status === "active") ?? null;
+    const rewardProgress = activeReward
+      ? getRewardPathProgress(currentMember, activeReward, todos)
+      : null;
+    const suggestedRewards = rewards.filter(
+      (r) => r.wishedBy === currentMember.id && r.status === "suggested"
+    );
+    const now = Date.now();
+    const activeChildTodos = todos.filter(
+      (t) =>
+        t.assignedTo === currentMember.id &&
+        t.status === "pending" &&
+        t.recurrence.type === "none" &&
+        t.deletedAt === null &&
+        isTodoVisibleNow(t, now)
+    );
 
-      {!showSettings && (
-      <>
-      <section className="overview-grid">
-        <article className="calendar-panel">
-          <header className="section-header">
-            <div>
-              <p className="eyebrow">Översikt</p>
-              <h2>Kalender</h2>
-            </div>
-            <CalendarDays size={24} />
-          </header>
-
-          {nextCalendarEvent ? (
-            <div className="calendar-card">
-              <span className="date-chip">
-                {formatDateChip(nextCalendarEvent.event.startsAt)}
-              </span>
-              <div>
-                <h3>{nextCalendarEvent.event.title}</h3>
-                <p>
-                  {formatTimeRange(
-                    nextCalendarEvent.event.startsAt,
-                    nextCalendarEvent.event.endsAt
-                  )}{" "}
-                  i {nextCalendarEvent.calendar.name}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="empty-note">Ingen kalenderhändelse inlagd.</p>
-          )}
-        </article>
-
-        <article className="members-panel">
-          <header className="section-header">
-            <div>
-              <p className="eyebrow">Medlemmar</p>
-              <h2>Personliga dashboards</h2>
-            </div>
-            <ChevronRight size={24} />
-          </header>
-
-          <div className="member-row">
-            {activeMembers.map((member) => (
-              <button
-                className={`member-button ${
-                  selectedDashboardMember.id === member.id ? "active" : ""
-                }`}
-                key={member.id}
-                onClick={() => setSelectedDashboardMemberId(member.id)}
-                type="button"
-              >
-                <MemberAvatar member={member} showArchedName />
-                <span className="member-name-fallback">{member.name}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="dashboard-grid">
-        <AdultDashboard
-          member={selectedAdultDashboardMember}
-          members={activeMembers}
-          roles={roles}
-          todos={adultTodos}
-          editingTodoId={editingTodoId}
-          editingTodoTitle={editingTodoTitle}
-          approvalTodos={approvalTodos}
-          allSuggestedRewards={allSuggestedRewards}
-          wishStars={wishStars}
-          canApprove={canCurrentMemberApprove}
-          calendars={calendars}
-          shoppingLists={shoppingLists}
-          onSetEditingTodoTitle={setEditingTodoTitle}
-          onStartEditingTodo={(todo) => startEditingTodo(todo, selectedAdultDashboardMember, roles)}
-          onSaveTodoTitle={(todoId) => saveTodoTitle(todoId, selectedAdultDashboardMember, roles)}
-          onCancelEditingTodo={cancelEditingTodo}
-          onCreateTodo={createTodo}
-          onSoftDeleteTodo={(todoId) => softDeleteTodo(todoId, selectedAdultDashboardMember, roles)}
-          onApproveTodo={(todoId) => approveTodo(todoId, currentMember.id)}
-          onRejectTodo={(todoId) => rejectTodo(todoId, currentMember.id)}
-          onApproveWish={(rewardId) => approveWish(rewardId, currentMember.id)}
-          onRejectWish={(rewardId) => rejectWish(rewardId, currentMember.id)}
-          onSetWishStars={(rewardId, stars) => setWishStars((prev) => ({ ...prev, [rewardId]: stars }))}
-          onAddCalendarEvent={(calendarId, event) => addCalendarEvent(calendarId, event, selectedAdultDashboardMember.id)}
-          onCreateCalendar={(name) => createCalendar(name, selectedAdultDashboardMember.id)}
-          onImportCalendar={(calendarId, sourceName, events) => importCalendarEvents(calendarId, sourceName, events, selectedAdultDashboardMember.id)}
-          onRemoveCalendarShare={removeCalendarShare}
-          onShareCalendar={shareCalendar}
-          onAddShoppingItem={(listId, title) => addShoppingItem(listId, title, selectedAdultDashboardMember.id)}
-          onCreateShoppingList={(name) => createShoppingList(name, selectedAdultDashboardMember.id)}
-          onDeleteShoppingList={(listId) => softDeleteShoppingList(listId, selectedAdultDashboardMember.id)}
-          onRemoveShoppingListShare={removeShoppingListShare}
-          onShareShoppingList={shareShoppingList}
-          onToggleShoppingItem={toggleShoppingItem}
-          onThemePickerOpen={setThemePickerMemberId}
-        />
-
-        {activeAccount.type === "family" && selectedChild ? (
+    return (
+      <main className={`app-shell theme-${currentMember.dashboardTheme ?? "space"}`}>
+        {errorBanner}
+        {heroBar}
+        {showSettings ? settingsPanel : (
           <ChildDashboard
-            child={selectedChild}
+            child={currentMember}
             activeReward={activeReward}
             rewardProgress={rewardProgress}
             suggestedRewards={suggestedRewards}
@@ -328,77 +236,164 @@ export function App() {
             wishTitle={wishTitle}
             onSetWishTitle={setWishTitle}
             onCreateWish={createWish}
-            onCompleteTodo={(todoId) => completeTodo(selectedChild, todoId, roles)}
-            onDismissRejectedTodo={(todoId) => dismissRejectedTodo(todoId, selectedChild.id)}
+            onCompleteTodo={(todoId) => completeTodo(currentMember, todoId, roles)}
+            onDismissRejectedTodo={(todoId) => dismissRejectedTodo(todoId, currentMember.id)}
             onThemePickerOpen={setThemePickerMemberId}
           />
-        ) : (
-          <article className="workplace-dashboard">
-            <header className="section-header">
-              <div>
-                <p className="eyebrow">Arbetsplats</p>
-                <h2>Teamvy</h2>
-              </div>
-              <BriefcaseBusiness size={24} />
-            </header>
-
-            <div className="workplace-note">
-              <strong>Barnfunktioner är avstängda som standard.</strong>
-              <p>Kontot fokuserar på medlemmar, roller, kalender, todo och inköp.</p>
-            </div>
-          </article>
         )}
-      </section>
-      </>
+        {themePicker}
+      </main>
+    );
+  }
+
+  // Member/admin view
+  const selectedDashboardMember =
+    activeMembers.find((m) => m.id === selectedDashboardMemberId) ?? currentMember;
+  const viewedMember = selectedDashboardMember.isChild ? currentMember : selectedDashboardMember;
+  const selectedChild = selectedDashboardMember.isChild
+    ? selectedDashboardMember
+    : activeMembers.find((m) => m.isChild);
+
+  const now = Date.now();
+  const activeReward = selectedChild
+    ? (rewards.find((r) => r.wishedBy === selectedChild.id && r.status === "active") ?? null)
+    : null;
+  const rewardProgress =
+    selectedChild && activeReward
+      ? getRewardPathProgress(selectedChild, activeReward, todos)
+      : null;
+  const suggestedRewards = selectedChild
+    ? rewards.filter((r) => r.wishedBy === selectedChild.id && r.status === "suggested")
+    : [];
+  const activeChildTodos = selectedChild
+    ? todos.filter(
+        (t) =>
+          t.assignedTo === selectedChild.id &&
+          t.status === "pending" &&
+          t.recurrence.type === "none" &&
+          t.deletedAt === null &&
+          isTodoVisibleNow(t, now)
+      )
+    : [];
+  const approvalTodos = canApproveTodos ? todos.filter((t) => t.status === "done") : [];
+  const allSuggestedRewards = canApproveTodos
+    ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null)
+    : [];
+  const canApprove =
+    !!selectedChild &&
+    canManageChildAccount(currentMember, selectedChild, roles) &&
+    canApproveTodos;
+  const children = activeMembers.filter((m) => m.isChild);
+
+  return (
+    <main className="app-shell">
+      {errorBanner}
+      {heroBar}
+
+      {showSettings ? settingsPanel : (
+        <>
+          <MemberOverview
+            activeMembers={activeMembers}
+            selectedMemberId={selectedDashboardMember.id}
+            calendars={canSeeCalendar ? calendars : []}
+            canSeeCalendar={canSeeCalendar}
+            onSelectMember={setSelectedDashboardMemberId}
+          />
+
+          <section className="dashboard-grid">
+            <Dashboard
+              member={viewedMember}
+              members={activeMembers}
+              roles={roles}
+              todos={canSeeTodos ? getVisibleTodos(viewedMember, roles, todos) : []}
+              editingTodoId={editingTodoId}
+              editingTodoTitle={editingTodoTitle}
+              approvalTodos={approvalTodos}
+              allSuggestedRewards={allSuggestedRewards}
+              wishStars={wishStars}
+              canApprove={canApprove}
+              canSeeCalendar={canSeeCalendar}
+              canSeeTodos={canSeeTodos}
+              canSeeShopping={canSeeShopping}
+              calendars={canSeeCalendar ? calendars : []}
+              shoppingLists={canSeeShopping ? shoppingLists : []}
+              onSetEditingTodoTitle={setEditingTodoTitle}
+              onStartEditingTodo={(todo) => startEditingTodo(todo, viewedMember, roles)}
+              onSaveTodoTitle={(todoId) => saveTodoTitle(todoId, viewedMember, roles)}
+              onCancelEditingTodo={cancelEditingTodo}
+              onCreateTodo={createTodo}
+              onSoftDeleteTodo={(todoId) => softDeleteTodo(todoId, viewedMember, roles)}
+              onApproveTodo={(todoId) => approveTodo(todoId, currentMember.id)}
+              onRejectTodo={(todoId) => rejectTodo(todoId, currentMember.id)}
+              onApproveWish={(rewardId) => approveWish(rewardId, currentMember.id)}
+              onRejectWish={(rewardId) => rejectWish(rewardId, currentMember.id)}
+              onSetWishStars={(rewardId, stars) =>
+                setWishStars((prev) => ({ ...prev, [rewardId]: stars }))
+              }
+              onAddCalendarEvent={(calendarId, event) =>
+                addCalendarEvent(calendarId, event, viewedMember.id)
+              }
+              onCreateCalendar={(name) => createCalendar(name, viewedMember.id)}
+              onImportCalendar={(calendarId, sourceName, events) =>
+                importCalendarEvents(calendarId, sourceName, events, viewedMember.id)
+              }
+              onRemoveCalendarShare={removeCalendarShare}
+              onShareCalendar={shareCalendar}
+              onAddShoppingItem={(listId, title) => addShoppingItem(listId, title, viewedMember.id)}
+              onCreateShoppingList={(name) => createShoppingList(name, viewedMember.id)}
+              onDeleteShoppingList={(listId) => softDeleteShoppingList(listId, viewedMember.id)}
+              onRemoveShoppingListShare={removeShoppingListShare}
+              onShareShoppingList={shareShoppingList}
+              onToggleShoppingItem={toggleShoppingItem}
+              onThemePickerOpen={setThemePickerMemberId}
+            />
+
+            {activeAccount.type === "family" && isParent && selectedChild ? (
+              <ChildDashboard
+                child={selectedChild}
+                activeReward={activeReward}
+                rewardProgress={rewardProgress}
+                suggestedRewards={suggestedRewards}
+                activeChildTodos={activeChildTodos}
+                wishTitle={wishTitle}
+                onSetWishTitle={setWishTitle}
+                onCreateWish={createWish}
+                onCompleteTodo={(todoId) => completeTodo(selectedChild, todoId, roles)}
+                onDismissRejectedTodo={(todoId) => dismissRejectedTodo(todoId, selectedChild.id)}
+                onThemePickerOpen={setThemePickerMemberId}
+              />
+            ) : activeAccount.type === "family" && children.length === 0 && canManageMembers ? (
+              <article className="dashboard">
+                <header className="section-header">
+                  <div><p className="eyebrow">Familj</p><h2>Lägg till barn</h2></div>
+                </header>
+                <p className="empty-note">Öppna inställningar för att lägga till barnkonton.</p>
+              </article>
+            ) : activeAccount.type === "workplace" ? (
+              <article className="dashboard">
+                <header className="section-header">
+                  <div><p className="eyebrow">Arbetsplats</p><h2>Teamvy</h2></div>
+                  <BriefcaseBusiness size={24} />
+                </header>
+                <p className="empty-note">
+                  Barnfunktioner är inaktiverade. Kontot fokuserar på kalender, todo och inköp.
+                </p>
+              </article>
+            ) : null}
+          </section>
+        </>
       )}
 
-      <TrashView
-        calendars={calendars}
-        currentMember={currentMember}
-        members={members}
-        roles={roles}
-        shoppingLists={shoppingLists}
-        todos={todos}
-        onRestoreCalendar={restoreCalendar}
-        onRestoreMember={restoreMember}
-        onRestoreShoppingList={restoreShoppingList}
-        onRestoreTodo={restoreTodo}
-      />
-
-      {themePickerMember ? (
-        <ThemePicker
-          member={themePickerMember}
-          onClose={() => setThemePickerMemberId(null)}
-          onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
-        />
-      ) : null}
+      {themePicker}
     </main>
   );
 }
 
-function isTodoVisibleNow(todo: { visibleFrom: string | null; expiresAt: string | null }, now: number) {
-  const visibleFromTime = todo.visibleFrom
-    ? new Date(todo.visibleFrom).getTime()
-    : Number.NEGATIVE_INFINITY;
-  const expiresAtTime = todo.expiresAt
-    ? new Date(todo.expiresAt).getTime()
-    : Number.POSITIVE_INFINITY;
-
-  return visibleFromTime <= now && now < expiresAtTime;
-}
-
-function formatTimeRange(startsAt: string, endsAt: string) {
-  const formatter = new Intl.DateTimeFormat("sv-SE", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  return `${formatter.format(new Date(startsAt))}–${formatter.format(new Date(endsAt))}`;
-}
-
-function formatDateChip(value: string) {
-  return new Intl.DateTimeFormat("sv-SE", {
-    day: "numeric",
-    month: "short"
-  }).format(new Date(value));
+function isTodoVisibleNow(
+  todo: { visibleFrom: string | null; expiresAt: string | null },
+  now: number
+) {
+  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
+  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+  return from <= now && now < until;
 }

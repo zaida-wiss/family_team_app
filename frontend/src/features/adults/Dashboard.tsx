@@ -14,7 +14,7 @@ import { CalendarPanel } from "../calendars/CalendarPanel";
 import { ShoppingListsPanel } from "../shopping/ShoppingListsPanel";
 import { TodoCreator } from "../todos/TodoCreator";
 
-type AdultDashboardTab = "calendar" | "todo" | "shopping";
+type DashboardTab = "calendar" | "todo" | "shopping";
 
 type Props = {
   member: Member;
@@ -27,6 +27,9 @@ type Props = {
   allSuggestedRewards: Reward[];
   wishStars: Record<Id, number>;
   canApprove: boolean;
+  canSeeCalendar: boolean;
+  canSeeTodos: boolean;
+  canSeeShopping: boolean;
   calendars: Calendar[];
   shoppingLists: ShoppingList[];
   onSetEditingTodoTitle: (title: string) => void;
@@ -60,7 +63,7 @@ function getTodoSummary(todo: { status: string; starValue: number }) {
   return `${todo.starValue} stjärnor`;
 }
 
-export function AdultDashboard({
+export function Dashboard({
   member,
   members,
   roles,
@@ -71,6 +74,9 @@ export function AdultDashboard({
   allSuggestedRewards,
   wishStars,
   canApprove,
+  canSeeCalendar,
+  canSeeTodos,
+  canSeeShopping,
   calendars,
   shoppingLists,
   onSetEditingTodoTitle,
@@ -97,11 +103,12 @@ export function AdultDashboard({
   onToggleShoppingItem,
   onThemePickerOpen
 }: Props) {
-  const [tab, setTab] = useState<AdultDashboardTab>("calendar");
+  const firstTab: DashboardTab = canSeeCalendar ? "calendar" : canSeeTodos ? "todo" : "shopping";
+  const [tab, setTab] = useState<DashboardTab>(firstTab);
 
   return (
     <article
-      className={`adult-dashboard theme-${member.dashboardTheme ?? "clear"}`}
+      className={`dashboard theme-${member.dashboardTheme ?? "clear"}`}
       onPointerDown={(event) => {
         if ((event.target as HTMLElement).closest("button, input, select")) {
           return;
@@ -124,30 +131,36 @@ export function AdultDashboard({
       </header>
 
       <nav className="tab-row" aria-label="Vuxen-dashboard vyer">
-        <button
-          className={`tab ${tab === "calendar" ? "active" : ""}`}
-          onClick={() => setTab("calendar")}
-          type="button"
-        >
-          <CalendarDays size={16} />
-          Kalender
-        </button>
-        <button
-          className={`tab ${tab === "todo" ? "active" : ""}`}
-          onClick={() => setTab("todo")}
-          type="button"
-        >
-          <ListTodo size={16} />
-          Todo
-        </button>
-        <button
-          className={`tab ${tab === "shopping" ? "active" : ""}`}
-          onClick={() => setTab("shopping")}
-          type="button"
-        >
-          <ShoppingCart size={16} />
-          Inköp
-        </button>
+        {canSeeCalendar && (
+          <button
+            className={`tab ${tab === "calendar" ? "active" : ""}`}
+            onClick={() => setTab("calendar")}
+            type="button"
+          >
+            <CalendarDays size={16} />
+            Kalender
+          </button>
+        )}
+        {canSeeTodos && (
+          <button
+            className={`tab ${tab === "todo" ? "active" : ""}`}
+            onClick={() => setTab("todo")}
+            type="button"
+          >
+            <ListTodo size={16} />
+            Todo
+          </button>
+        )}
+        {canSeeShopping && (
+          <button
+            className={`tab ${tab === "shopping" ? "active" : ""}`}
+            onClick={() => setTab("shopping")}
+            type="button"
+          >
+            <ShoppingCart size={16} />
+            Inköp
+          </button>
+        )}
       </nav>
 
       {tab === "calendar" ? (

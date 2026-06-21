@@ -22,9 +22,36 @@ export type DashboardThemeId =
   | "dark"
   | "nature";
 
+export type User = {
+  id: Id;
+  email: string;
+  name: string;
+  createdAt: string;
+};
+
+export type Invitation = {
+  id: Id;
+  accountId: Id;
+  invitedEmail: string;
+  invitedByMemberId: Id;
+  memberName: string;
+  roleId: Id;
+  isChild: boolean;
+  token: string;
+  status: "pending" | "accepted" | "expired";
+  createdAt: string;
+  expiresAt: string;
+};
+
+export type Membership = {
+  member: Member;
+  account: Account;
+};
+
 export type Member = {
   id: Id;
   accountId: Id;
+  userId: Id | null;
   name: string;
   roleId: Id;
   isChild: boolean;

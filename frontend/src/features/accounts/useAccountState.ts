@@ -1,16 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { accountsApi } from "../../api";
-import { accounts } from "../../data/sampleData";
 import type { Account } from "@shared/types";
 
-const FALLBACK_ACCOUNT_ID = "account-family-1";
+export function useAccountState(initial: Account) {
+  const [activeAccount, setActiveAccount] = useState<Account>(initial);
 
-export function useAccountState() {
-  const [activeAccount, setActiveAccount] = useState<Account>(accounts[0]);
+  async function updateAccount(patch: Partial<Account>) {
+    const updated = { ...activeAccount, ...patch };
+    setActiveAccount(updated);
+    await accountsApi.update(activeAccount.id, patch);
+  }
 
-  useEffect(() => {
-    accountsApi.get(FALLBACK_ACCOUNT_ID).then(setActiveAccount).catch(console.error);
-  }, []);
-
-  return { activeAccount, setActiveAccount };
+  return { activeAccount, setActiveAccount: updateAccount };
 }

@@ -9,12 +9,12 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "outDir": ".test-dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../shared/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "../shared/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "../shared/types.ts"]
 }
