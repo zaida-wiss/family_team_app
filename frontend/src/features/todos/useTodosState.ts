@@ -163,6 +163,22 @@ export function useTodosState() {
     );
   }
 
+  function dismissRejectedTodo(todoId: Id, memberId: Id) {
+    setTodos((current) =>
+      current.map((todo) => {
+        if (todo.id !== todoId || todo.status !== "rejected" || todo.assignedTo !== memberId) {
+          return todo;
+        }
+
+        return {
+          ...todo,
+          deletedAt: new Date().toISOString(),
+          deletedBy: memberId
+        };
+      })
+    );
+  }
+
   function softDeleteTodosForMember(memberId: Id, deletedAt: string) {
     setTodos((current) =>
       current.map((todo) => {
@@ -189,6 +205,7 @@ export function useTodosState() {
     restoreTodo,
     approveTodo,
     rejectTodo,
+    dismissRejectedTodo,
     softDeleteTodosForMember
   };
 }

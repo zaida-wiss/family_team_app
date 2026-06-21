@@ -68,6 +68,7 @@ export function App() {
     restoreTodo,
     approveTodo,
     rejectTodo,
+    dismissRejectedTodo,
     softDeleteTodosForMember
   } = useTodosState();
   const {
@@ -533,10 +534,11 @@ export function App() {
               {activeChildTodos.length === 0 ? (
                 <p className="empty-note">Inga aktiva uppgifter just nu.</p>
               ) : (
-                activeChildTodos.map((todo) => (
+                activeChildTodos.map((todo, index) => (
                   <button
                     className="falling-todo-card"
                     key={todo.id}
+                    style={{ animationDelay: `${index * 120}ms` }}
                     onClick={() => completeTodo(selectedChild, todo.id, roles)}
                     type="button"
                   >
@@ -557,6 +559,14 @@ export function App() {
                       <strong>{todo.title}</strong>
                       <small>Den här gick inte igenom – prova igen!</small>
                     </div>
+                    <button
+                      className="rejected-dismiss"
+                      type="button"
+                      onClick={() => dismissRejectedTodo(todo.id, selectedChild.id)}
+                      aria-label="Stäng"
+                    >
+                      Okej
+                    </button>
                   </div>
                 ))}
               </section>
