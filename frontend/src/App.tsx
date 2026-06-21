@@ -564,19 +564,19 @@ export function App() {
 
             <div className="reward-path" aria-label="Belöningsbana">
               {Array.from({ length: 10 }).map((_, index) => {
-                const isApproved = index < rewardProgress.approvedStars;
-                const pending =
-                  rewardProgress.pendingTaskImages[index - rewardProgress.approvedStars];
+                const item = rewardProgress.pathItems[index];
+                const isApproved = item?.type === "approved-star";
+                const pendingTodo = item?.type === "pending-task" ? item.todo : null;
 
                 return (
                   <span
-                    className={`path-step ${isApproved ? "approved" : ""} ${pending ? "pending" : ""}`}
+                    className={`path-step ${isApproved ? "approved" : ""} ${pendingTodo ? "pending" : ""}`}
                     key={index}
                   >
                     {isApproved ? (
                       <Star size={18} fill="currentColor" />
-                    ) : pending ? (
-                      pending.visual.value.slice(0, 1)
+                    ) : pendingTodo ? (
+                      pendingTodo.visual.value.slice(0, 1)
                     ) : (
                       ""
                     )}

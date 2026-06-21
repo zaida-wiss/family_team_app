@@ -155,6 +155,58 @@ const tests: TestCase[] = [
       expectEqual(progress.starsLeft, 0);
       expectEqual(progress.isUnlocked, true);
     }
+  },
+  {
+    name: "pathItems preserves order based on completedAt",
+    run: () => {
+      const progress = getRewardPathProgress(child, reward, [
+        createTodo({
+          id: "done-second",
+          assignedTo: child.id,
+          status: "done",
+          completedAt: "2026-06-21T10:00:00"
+        }),
+        createTodo({
+          id: "approved-first",
+          assignedTo: child.id,
+          status: "approved",
+          starValue: 2,
+          completedAt: "2026-06-21T09:00:00"
+        })
+      ]);
+
+      expectEqual(progress.pathItems.length, 3);
+      expectEqual(progress.pathItems[0]?.type, "approved-star");
+      expectEqual(progress.pathItems[1]?.type, "approved-star");
+      expectEqual(progress.pathItems[2]?.type, "pending-task");
+    }
+  },
+  {
+    name: "approved todo with starValue 3 occupies three consecutive path slots",
+    run: () => {
+      const progress = getRewardPathProgress(child, reward, [
+        createTodo({
+          id: "approved-multi",
+          assignedTo: child.id,
+          status: "approved",
+          starValue: 3,
+          completedAt: "2026-06-21T09:00:00"
+        }),
+        createTodo({
+          id: "pending-after",
+          assignedTo: child.id,
+          status: "done",
+          completedAt: "2026-06-21T10:00:00"
+        })
+      ]);
+
+      expectEqual(progress.pathItems.length, 4);
+      expectEqual(progress.pathItems[0]?.type, "approved-star");
+      expectEqual(progress.pathItems[1]?.type, "approved-star");
+      expectEqual(progress.pathItems[2]?.type, "approved-star");
+      expectEqual(progress.pathItems[3]?.type, "pending-task");
+      expectEqual(progress.approvedStars, 3);
+    }
   }
 ];
 
