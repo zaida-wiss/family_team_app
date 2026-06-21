@@ -1,0 +1,1095 @@
+:root {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #21312e;
+  background: #eef4f1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+.hero-panel,
+.account-setup,
+.account-settings,
+.trash-view,
+.calendar-panel,
+.members-panel,
+.adult-dashboard,
+.child-dashboard,
+.workplace-dashboard {
+  border: 1px solid rgba(47, 125, 109, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 32px rgba(30, 56, 50, 0.08);
+}
+
+.hero-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+}
+
+.account-setup {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 20px;
+}
+
+.account-settings {
+  margin-top: 18px;
+  padding: 20px;
+}
+
+.trash-view {
+  margin-top: 18px;
+  padding: 20px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
+  gap: 18px;
+}
+
+.settings-form,
+.settings-members {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfdfc;
+}
+
+.settings-form {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.self-data-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  border: 1px solid #f2c3bd;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff8f6;
+}
+
+.self-data-card p:last-child {
+  margin-bottom: 0;
+  color: #6f5b56;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.child-checkbox {
+  margin-top: 2px;
+  font-weight: 700;
+}
+
+.settings-member-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.settings-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e1ebe7;
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+}
+
+.settings-member-row div {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-member-row small {
+  color: #526d66;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #c9d8d3;
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: #31534b;
+  cursor: pointer;
+}
+
+.icon-button.danger {
+  border-color: #f2c3bd;
+  color: #a13b2f;
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #526d66;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.35rem;
+}
+
+h3 {
+  margin-bottom: 6px;
+}
+
+.account-choice,
+.tab-row,
+.member-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.choice-pill,
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid #c9d8d3;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #f8fbfa;
+  color: #31534b;
+}
+
+.choice-pill.active,
+.tab.active,
+.account-type-button.active {
+  background: #2f7d6d;
+  color: white;
+  border-color: #2f7d6d;
+}
+
+.account-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.account-type-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  border: 1px solid #c9d8d3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f8fbfa;
+  color: #31534b;
+  cursor: pointer;
+  text-align: left;
+}
+
+.account-type-button span {
+  display: grid;
+  gap: 2px;
+}
+
+.account-type-button small {
+  color: inherit;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.overview-grid,
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.calendar-panel,
+.members-panel,
+.adult-dashboard,
+.child-dashboard,
+.workplace-dashboard {
+  padding: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.calendar-card,
+.todo-row,
+.reward-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+}
+
+.date-chip {
+  display: grid;
+  place-items: center;
+  min-width: 78px;
+  min-height: 54px;
+  border-radius: 8px;
+  background: #dff1eb;
+  color: #215c50;
+  font-weight: 800;
+}
+
+.member-button {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #263b36;
+  cursor: pointer;
+}
+
+.member-button.active {
+  color: #1d5f52;
+  font-weight: 800;
+}
+
+.member-button.active .avatar-large img,
+.member-button.active .avatar-large .avatar-icon {
+  border-color: #f2b84b;
+  box-shadow: 0 0 0 4px rgba(242, 184, 75, 0.24);
+}
+
+.avatar-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: #2f7d6d;
+}
+
+.avatar-large {
+  width: 108px;
+  height: 108px;
+}
+
+.avatar-small {
+  width: 84px;
+  height: 84px;
+}
+
+.avatar-large img,
+.avatar-large .avatar-icon,
+.avatar-small img,
+.avatar-small .avatar-icon {
+  display: grid;
+  place-items: center;
+  border: 3px solid #2f7d6d;
+  border-radius: 50%;
+  background: #f6fbf9;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.avatar-large img,
+.avatar-large .avatar-icon {
+  width: 84px;
+  height: 84px;
+}
+
+.avatar-small,
+.avatar-small img,
+.avatar-small .avatar-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.avatar-small img,
+.avatar-small .avatar-icon {
+  border-width: 2px;
+}
+
+.avatar-arc-text {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.avatar-arc-text text {
+  fill: #204f47;
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.member-name-fallback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.todo-list,
+.dashboard-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.todo-row strong,
+.dashboard-row strong {
+  color: #b7791f;
+}
+
+.dashboard-row,
+.shopping-card {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+}
+
+.dashboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-row span {
+  flex: 1;
+}
+
+.todo-dashboard-row {
+  align-items: center;
+}
+
+.todo-title-input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.todo-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.dashboard-row span small {
+  display: block;
+  margin-top: 3px;
+  color: #526d66;
+  font-size: 0.82rem;
+}
+
+.shopping-card-header,
+.shopping-card-header div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shopping-card-header {
+  justify-content: space-between;
+}
+
+.shopping-create-card {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fbfa;
+}
+
+.calendar-tool-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fbfa;
+}
+
+.calendar-tool-card label {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.calendar-actions,
+.calendar-event-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.calendar-event-form .text-input {
+  flex: 1 1 160px;
+}
+
+.share-list {
+  display: grid;
+  gap: 8px;
+}
+
+.share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+}
+
+.share-row span {
+  display: grid;
+  gap: 2px;
+  font-weight: 800;
+}
+
+.share-row small {
+  color: #526d66;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.shopping-items {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shopping-items label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shopping-items input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f7d6d;
+}
+
+.shopping-items label.done {
+  color: #6d7f79;
+  text-decoration: line-through;
+}
+
+.shopping-share-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  border-top: 1px solid #e1ebe7;
+  padding-top: 12px;
+}
+
+.shopping-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.approval-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fffaf0;
+}
+
+.todo-creator {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fbfa;
+}
+
+.todo-creator-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.todo-creator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.approval-header,
+.approval-row,
+.approval-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.approval-header,
+.approval-row {
+  justify-content: space-between;
+}
+
+.approval-header span {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  background: #ffd84d;
+  color: #6f4a00;
+  font-weight: 900;
+}
+
+.approval-row {
+  border-top: 1px solid #eadfc8;
+  padding-top: 10px;
+}
+
+.approval-row div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.approval-row small {
+  color: #6d7f79;
+}
+
+.child-dashboard {
+  background: linear-gradient(180deg, #fff8d7 0%, #ffffff 72%);
+}
+
+.workplace-dashboard {
+  background: linear-gradient(180deg, #eef5ff 0%, #ffffff 72%);
+}
+
+.workplace-note {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfdfc;
+}
+
+.workplace-note p {
+  margin: 8px 0 0;
+  color: #526d66;
+}
+
+.adult-dashboard,
+.child-dashboard {
+  position: relative;
+  touch-action: manipulation;
+}
+
+.adult-dashboard.theme-clear {
+  background: linear-gradient(180deg, #ffffff 0%, #f6fbf9 100%);
+}
+
+.adult-dashboard.theme-focus {
+  background: linear-gradient(180deg, #eef4ff 0%, #ffffff 72%);
+}
+
+.adult-dashboard.theme-warm {
+  background: linear-gradient(180deg, #fff4e6 0%, #ffffff 72%);
+}
+
+.adult-dashboard.theme-dark {
+  background: linear-gradient(180deg, #24312f 0%, #41514d 100%);
+  color: #f4faf7;
+}
+
+.adult-dashboard.theme-dark .eyebrow,
+.adult-dashboard.theme-dark .dashboard-row,
+.adult-dashboard.theme-dark .shopping-card {
+  color: #f4faf7;
+}
+
+.adult-dashboard.theme-dark .dashboard-row,
+.adult-dashboard.theme-dark .shopping-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.adult-dashboard.theme-nature {
+  background: linear-gradient(180deg, #e7f5df 0%, #ffffff 74%);
+}
+
+.child-dashboard.theme-space {
+  background: linear-gradient(180deg, #25215c 0%, #7357b7 55%, #ffffff 100%);
+  color: #ffffff;
+}
+
+.child-dashboard.theme-rainbow {
+  background: linear-gradient(180deg, #ffe1ec 0%, #fff4b8 45%, #e1f5ff 100%);
+}
+
+.child-dashboard.theme-ocean {
+  background: linear-gradient(180deg, #d8f3ff 0%, #ffffff 72%);
+}
+
+.child-dashboard.theme-forest {
+  background: linear-gradient(180deg, #dff5d8 0%, #ffffff 72%);
+}
+
+.child-dashboard.theme-superhero {
+  background: linear-gradient(180deg, #ffe1a6 0%, #ffffff 72%);
+}
+
+.child-dashboard.theme-animal-park {
+  background: linear-gradient(180deg, #f7e4c6 0%, #ffffff 72%);
+}
+
+.theme-picker {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  width: min(420px, calc(100% - 40px));
+  border: 1px solid rgba(47, 125, 109, 0.22);
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(30, 56, 50, 0.2);
+}
+
+.theme-picker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.theme-option {
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #21312e;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.theme-option.active {
+  border-color: #21312e;
+}
+
+.theme-option.theme-clear {
+  background: #f6fbf9;
+}
+
+.theme-option.theme-focus {
+  background: #dce8ff;
+}
+
+.theme-option.theme-warm {
+  background: #ffe0b8;
+}
+
+.theme-option.theme-dark {
+  background: #24312f;
+  color: #ffffff;
+}
+
+.theme-option.theme-nature {
+  background: #d9f0ce;
+}
+
+.theme-option.theme-space {
+  background: #7357b7;
+  color: #ffffff;
+}
+
+.theme-option.theme-rainbow {
+  background: #ffd5e5;
+}
+
+.theme-option.theme-ocean {
+  background: #ccefff;
+}
+
+.theme-option.theme-forest {
+  background: #dff5d8;
+}
+
+.theme-option.theme-superhero {
+  background: #ffd36e;
+}
+
+.theme-option.theme-animal-park {
+  background: #f4d8ad;
+}
+
+.reward-card {
+  background: #fff3b0;
+}
+
+.falling-todos {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.falling-todo-card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 3px 12px;
+  align-items: center;
+  min-height: 68px;
+  border: 2px solid #ffd84d;
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+  color: #21312e;
+  cursor: pointer;
+  text-align: left;
+  animation: todo-drop 420ms ease-out;
+}
+
+.falling-todo-card span {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #f5e8ff;
+  color: #7e3bb0;
+  font-weight: 900;
+}
+
+.falling-todo-card small {
+  color: #6d7f79;
+}
+
+@keyframes todo-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reward-label {
+  font-weight: 800;
+}
+
+.reward-path {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(26px, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.path-step {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 2px dashed #d8c776;
+  border-radius: 8px;
+  background: #fffdf0;
+  color: #8f6f0c;
+  font-weight: 900;
+}
+
+.path-step.approved {
+  border-style: solid;
+  background: #ffd84d;
+  color: #8b5a00;
+}
+
+.path-step.pending {
+  border-style: solid;
+  background: #f5e8ff;
+  color: #7e3bb0;
+}
+
+.role-editor {
+  margin-top: 18px;
+  border: 1px solid rgba(47, 125, 109, 0.16);
+  border-radius: 8px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 32px rgba(30, 56, 50, 0.08);
+}
+
+.role-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.7fr) minmax(0, 1.3fr);
+  gap: 18px;
+}
+
+.role-create-panel,
+.role-card,
+.member-role-panel {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfdfc;
+}
+
+.field-label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+  color: #294942;
+}
+
+.text-input,
+.member-role-row select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #c9d8d3;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: white;
+  color: #21312e;
+}
+
+.permission-groups {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.permission-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px 12px;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #e1ebe7;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.permission-group legend {
+  padding: 0 6px;
+  color: #526d66;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 0.92rem;
+}
+
+.checkbox-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f7d6d;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #2f7d6d;
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid #c9d8d3;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #f8fbfa;
+  color: #31534b;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.secondary-button.danger-action {
+  border-color: #e8a69d;
+  background: #fff1ee;
+  color: #94372d;
+}
+
+.secondary-button.danger-action.confirming {
+  background: #a13b2f;
+  color: white;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.trash-list {
+  display: grid;
+  gap: 10px;
+}
+
+.trash-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #e1ebe7;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfdfc;
+}
+
+.trash-row div {
+  display: grid;
+  gap: 3px;
+}
+
+.trash-row small,
+.empty-note {
+  color: #526d66;
+}
+
+.role-list-panel {
+  display: grid;
+  gap: 14px;
+  max-height: 720px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.role-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.role-card-header span {
+  color: #526d66;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.member-role-panel {
+  margin-top: 18px;
+}
+
+.member-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.member-role-row {
+  display: grid;
+  gap: 8px;
+}
+
+.member-role-row span {
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .hero-panel,
+  .account-setup,
+  .settings-grid,
+  .overview-grid,
+  .dashboard-grid,
+  .role-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-panel {
+    align-items: stretch;
+  }
+
+  .account-type-grid {
+    grid-template-columns: 1fr;
+  }
+}
