@@ -65,6 +65,39 @@ const tests: TestCase[] = [
     }
   },
   {
+    name: "rejected todos are included in rejectedTodos for feedback display",
+    run: () => {
+      const progress = getRewardPathProgress(child, reward, [
+        createTodo({ id: "rejected-1", assignedTo: child.id, status: "rejected" }),
+        createTodo({ id: "rejected-2", assignedTo: child.id, status: "rejected" }),
+        createTodo({ id: "approved-1", assignedTo: child.id, status: "approved", starValue: 3 })
+      ]);
+
+      expectEqual(progress.rejectedTodos.length, 2);
+      expectEqual(progress.rejectedTodos[0]?.id, "rejected-1");
+      expectEqual(progress.rejectedTodos[1]?.id, "rejected-2");
+      expectEqual(progress.approvedStars, 3);
+    }
+  },
+  {
+    name: "deleted rejected todos do not appear in rejectedTodos",
+    run: () => {
+      const progress = getRewardPathProgress(child, reward, [
+        createTodo({
+          id: "rejected-deleted",
+          assignedTo: child.id,
+          status: "rejected",
+          deletedAt: "2026-06-21T10:00:00",
+          deletedBy: "member-parent"
+        }),
+        createTodo({ id: "rejected-active", assignedTo: child.id, status: "rejected" })
+      ]);
+
+      expectEqual(progress.rejectedTodos.length, 1);
+      expectEqual(progress.rejectedTodos[0]?.id, "rejected-active");
+    }
+  },
+  {
     name: "todos assigned to another member do not affect the child reward path",
     run: () => {
       const progress = getRewardPathProgress(child, reward, [

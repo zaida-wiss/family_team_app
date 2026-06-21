@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import { connectDB } from "./db/connection.js";
 import { accountsRouter } from "./routes/accounts.js";

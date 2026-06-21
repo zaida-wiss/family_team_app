@@ -190,6 +190,7 @@ export type RewardPathProgress = {
   rewardId: Id;
   approvedStars: number;
   pendingTaskImages: Todo[];
+  rejectedTodos: Todo[];
   starsLeft: number;
   isUnlocked: boolean;
 };

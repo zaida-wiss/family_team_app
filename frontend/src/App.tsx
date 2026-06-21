@@ -6,6 +6,7 @@ import {
   ListTodo,
   Pencil,
   Save,
+  Settings,
   ShoppingCart,
   Sparkles,
   Star,
@@ -95,6 +96,7 @@ export function App() {
   const [selectedDashboardMemberId, setSelectedDashboardMemberId] =
     useState<Id | null>(null);
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const activeMembers = members.filter((member) => member.deletedAt === null);
   const currentMember = activeMembers[0];
@@ -187,6 +189,16 @@ export function App() {
             Arbetsplats
           </span>
         </div>
+        {!currentMember.isChild && (
+          <button
+            className={`icon-button settings-nav-button ${showSettings ? "active" : ""}`}
+            onClick={() => setShowSettings((prev) => !prev)}
+            title="Inställningar"
+            type="button"
+          >
+            <Settings size={22} />
+          </button>
+        )}
       </section>
 
       <AccountSetup account={activeAccount} onUpdateAccount={setActiveAccount} />
@@ -202,6 +214,18 @@ export function App() {
         onUpdateMemberAvatar={updateMemberAvatar}
       />
 
+      {showSettings ? (
+        <RoleEditor
+          members={members}
+          roles={roles}
+          onAssignRole={assignRole}
+          onCreateRole={createRole}
+          onTogglePermission={toggleRolePermission}
+        />
+      ) : null}
+
+      {!showSettings && (
+      <>
       <section className="overview-grid">
         <article className="calendar-panel">
           <header className="section-header">
@@ -524,6 +548,20 @@ export function App() {
               )}
             </section>
 
+            {rewardProgress.rejectedTodos.length > 0 && (
+              <section className="rejected-notice" aria-label="Nekade uppgifter">
+                {rewardProgress.rejectedTodos.map((todo) => (
+                  <div className="rejected-todo-card" key={todo.id}>
+                    <span>{todo.visual.value.slice(0, 1)}</span>
+                    <div>
+                      <strong>{todo.title}</strong>
+                      <small>Den här gick inte igenom – prova igen!</small>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
             <div className="reward-path" aria-label="Belöningsbana">
               {Array.from({ length: 10 }).map((_, index) => {
                 const isApproved = index < rewardProgress.approvedStars;
@@ -564,14 +602,8 @@ export function App() {
           </article>
         )}
       </section>
-
-      <RoleEditor
-        members={members}
-        roles={roles}
-        onAssignRole={assignRole}
-        onCreateRole={createRole}
-        onTogglePermission={toggleRolePermission}
-      />
+      </>
+      )}
 
       <TrashView
         calendars={calendars}

@@ -35,12 +35,14 @@ export function getRewardPathProgress(
     .reduce((sum, todo) => sum + todo.starValue, 0);
 
   const pendingTaskImages = childTodos.filter((todo) => todo.status === "done");
+  const rejectedTodos = childTodos.filter((todo) => todo.status === "rejected");
 
   return {
     childId: child.id,
     rewardId: reward.id,
     approvedStars,
     pendingTaskImages,
+    rejectedTodos,
     starsLeft: Math.max(reward.starsNeeded - approvedStars, 0),
     isUnlocked: approvedStars >= reward.starsNeeded
   };
