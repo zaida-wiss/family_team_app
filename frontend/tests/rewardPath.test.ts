@@ -8,11 +8,15 @@ const reward = createReward({
   starsNeeded: 10
 });
 
+function makeProgress(todos: Parameters<typeof getRewardPathProgress>[2]) {
+  return getRewardPathProgress(child, reward, todos);
+}
+
 const tests: TestCase[] = [
   {
     name: "approved todos count as stars",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "approved-1",
           assignedTo: child.id,
@@ -35,7 +39,7 @@ const tests: TestCase[] = [
   {
     name: "done todos become pending task images and do not count as stars",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "done-1",
           assignedTo: child.id,
@@ -53,7 +57,7 @@ const tests: TestCase[] = [
   {
     name: "pending rejected and expired todos do not count as stars or pending images",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({ id: "pending", assignedTo: child.id, status: "pending" }),
         createTodo({ id: "rejected", assignedTo: child.id, status: "rejected" }),
         createTodo({ id: "expired", assignedTo: child.id, status: "expired" })
@@ -67,7 +71,7 @@ const tests: TestCase[] = [
   {
     name: "rejected todos are included in rejectedTodos for feedback display",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({ id: "rejected-1", assignedTo: child.id, status: "rejected" }),
         createTodo({ id: "rejected-2", assignedTo: child.id, status: "rejected" }),
         createTodo({ id: "approved-1", assignedTo: child.id, status: "approved", starValue: 3 })
@@ -82,7 +86,7 @@ const tests: TestCase[] = [
   {
     name: "deleted rejected todos do not appear in rejectedTodos",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "rejected-deleted",
           assignedTo: child.id,
@@ -100,7 +104,7 @@ const tests: TestCase[] = [
   {
     name: "todos assigned to another member do not affect the child reward path",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "other-child-approved",
           assignedTo: "member-other-child",
@@ -122,7 +126,7 @@ const tests: TestCase[] = [
   {
     name: "deleted todos do not affect the reward path",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "deleted-approved",
           assignedTo: child.id,
@@ -142,7 +146,7 @@ const tests: TestCase[] = [
   {
     name: "reward unlocks when approved stars reach the required amount",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "approved-unlock",
           assignedTo: child.id,
@@ -159,7 +163,7 @@ const tests: TestCase[] = [
   {
     name: "pathItems preserves order based on completedAt",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "done-second",
           assignedTo: child.id,
@@ -184,7 +188,7 @@ const tests: TestCase[] = [
   {
     name: "approved todo with starValue 3 occupies three consecutive path slots",
     run: () => {
-      const progress = getRewardPathProgress(child, reward, [
+      const progress = makeProgress([
         createTodo({
           id: "approved-multi",
           assignedTo: child.id,
