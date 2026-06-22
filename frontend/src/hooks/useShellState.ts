@@ -129,6 +129,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     todos,
     calendars,
     shoppingLists,
+    canManageMembers: permissions.canManageMembers,
     canManageRoles: permissions.canManageRoles,
     canViewTrash: permissions.canViewTrash,
     onUpdateAccount: setActiveAccount,

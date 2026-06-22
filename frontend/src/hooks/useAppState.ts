@@ -15,7 +15,6 @@ export type ShellPanel =
   | "shopping"
   | "todos"
   | "members"
-  | "roles"
   | "trash"
   | "settings";
 

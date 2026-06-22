@@ -10,6 +10,8 @@ import { DeleteAccountSection } from "./features/accounts/DeleteAccountSection";
 import { InviteForm } from "./features/invitations/InviteForm";
 import { RoleEditor } from "./features/roles/RoleEditor";
 import { TrashView } from "./features/trash/TrashView";
+import { CalendarPanel } from "./features/calendars/CalendarPanel";
+import { ShoppingListsPanel } from "./features/shopping/ShoppingListsPanel";
 import { ThemePicker } from "./components/ThemePicker";
 import { useAppNavigation } from "./hooks/useAppNavigation";
 import { useShellState } from "./hooks/useShellState";
@@ -109,6 +111,29 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
     panelContent = (
       <>
         <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
+        <CalendarPanel
+          calendars={settingsProps.calendars}
+          currentMember={currentMember}
+          members={settingsProps.members}
+          roles={settingsProps.roles}
+          onAddEvent={memberContentProps.onAddCalendarEvent}
+          onCreateCalendar={memberContentProps.onCreateCalendar}
+          onImportCalendar={memberContentProps.onImportCalendar}
+          onShareCalendar={memberContentProps.onShareCalendar}
+          onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+        />
+        <ShoppingListsPanel
+          currentMember={currentMember}
+          members={settingsProps.members}
+          roles={settingsProps.roles}
+          shoppingLists={settingsProps.shoppingLists}
+          onAddItem={memberContentProps.onAddShoppingItem}
+          onCreateList={memberContentProps.onCreateShoppingList}
+          onDeleteList={memberContentProps.onDeleteShoppingList}
+          onShareList={memberContentProps.onShareShoppingList}
+          onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
+          onToggleItem={memberContentProps.onToggleShoppingItem}
+        />
         <DeleteAccountSection
           accountId={activeAccount.id}
           accountName={activeAccount.name}

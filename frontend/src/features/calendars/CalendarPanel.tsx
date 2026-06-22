@@ -20,6 +20,7 @@ type CalendarPanelProps = {
   currentMember: Member;
   members: Member[];
   roles: Role[];
+  managementOnly?: boolean;
   onAddEvent: (
     calendarId: Id,
     event: Omit<ImportedCalendarEvent, "notes"> & { notes?: string | null }
@@ -39,6 +40,7 @@ export function CalendarPanel({
   currentMember,
   members,
   roles,
+  managementOnly = false,
   onAddEvent,
   onCreateCalendar,
   onImportCalendar,
@@ -302,7 +304,7 @@ export function CalendarPanel({
         </section>
       ) : null}
 
-      {selectedCalendar ? (
+      {!managementOnly && selectedCalendar ? (
         <section className="calendar-tool-card" aria-label="Lägg till kalenderhändelse">
           <div className="calendar-event-form">
             <input
@@ -338,7 +340,7 @@ export function CalendarPanel({
         </section>
       ) : null}
 
-      {visibleCalendars.flatMap((calendar) =>
+      {!managementOnly && visibleCalendars.flatMap((calendar) =>
         calendar.events
           .filter((event) => event.deletedAt === null)
           .map((event) => (

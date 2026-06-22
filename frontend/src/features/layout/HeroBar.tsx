@@ -4,7 +4,6 @@ import {
   ListTodo,
   LogOut,
   Settings,
-  Shield,
   ShoppingCart,
   Trash2,
   Users
@@ -14,7 +13,6 @@ import type { ShellPanel } from "../../hooks/useAppState";
 type Props = {
   activePanel: ShellPanel;
   canManageMembers: boolean;
-  canManageRoles: boolean;
   canViewTrash: boolean;
   onNavigate: (panel: ShellPanel) => void;
   onSwitchAccount: () => void;
@@ -23,7 +21,6 @@ type Props = {
 export function HeroBar({
   activePanel,
   canManageMembers,
-  canManageRoles,
   canViewTrash,
   onNavigate,
   onSwitchAccount
@@ -38,9 +35,6 @@ export function HeroBar({
         <NavBtn icon={<ListTodo size={20} />} panel="todos" active={activePanel === "todos"} label="Todos" onNavigate={onNavigate} />
         {canManageMembers && (
           <NavBtn icon={<Users size={20} />} panel="members" active={activePanel === "members"} label="Medlemmar" onNavigate={onNavigate} />
-        )}
-        {canManageRoles && (
-          <NavBtn icon={<Shield size={20} />} panel="roles" active={activePanel === "roles"} label="Roller" onNavigate={onNavigate} />
         )}
         {canViewTrash && (
           <NavBtn icon={<Trash2 size={20} />} panel="trash" active={activePanel === "trash"} label="Papperskorg" onNavigate={onNavigate} />

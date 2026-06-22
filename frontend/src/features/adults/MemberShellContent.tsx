@@ -2,10 +2,11 @@ import type { ComponentProps } from "react";
 import { ChildDashboard } from "../children/ChildDashboard";
 import { Dashboard } from "./Dashboard";
 import { MemberOverview } from "../layout/MemberOverview";
-import { CalendarPanel } from "../calendars/CalendarPanel";
-import { ShoppingListsPanel } from "../shopping/ShoppingListsPanel";
+import { CalendarView } from "../calendars/CalendarView";
+import { ShoppingView } from "../shopping/ShoppingView";
+import { TodosView } from "../todos/TodosView";
 import { canManageChildAccount } from "../../utils/permissions";
-import { getRewardPathProgress, getVisibleTodos } from "../todos/selectors";
+import { getRewardPathProgress } from "../todos/selectors";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
 
@@ -27,7 +28,6 @@ type Props = {
   canSeeShopping: boolean;
   canApproveTodos: boolean;
   canManageMembers: boolean;
-  isParent: boolean;
   editingTodoId: string | null;
   editingTodoTitle: string;
   wishStars: Record<string, number>;
@@ -76,7 +76,7 @@ export function MemberShellContent({
   activePanel, accountName,
   currentMember, activeMembers, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists,
-  canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers, isParent,
+  canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   editingTodoId, editingTodoTitle, wishStars, wishTitle,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
   onCancelEditingTodo, onCreateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
@@ -87,93 +87,65 @@ export function MemberShellContent({
   onSetWishTitle, onCreateWish
 }: Props) {
 
-  // ── Full-page calendar panel ──────────────────────────────────────────────
+  // ── Kalender-vy (nav) — snygg presentation, ingen hantering ──────────────
   if (activePanel === "calendar") {
     return (
-      <CalendarPanel
+      <CalendarView
         calendars={canSeeCalendar ? calendars : []}
         currentMember={currentMember}
-        members={activeMembers}
         roles={roles}
         onAddEvent={onAddCalendarEvent}
-        onCreateCalendar={onCreateCalendar}
-        onImportCalendar={onImportCalendar}
-        onShareCalendar={onShareCalendar}
-        onRemoveCalendarShare={onRemoveCalendarShare}
       />
     );
   }
 
-  // ── Full-page shopping panel ──────────────────────────────────────────────
+  // ── Inköps-vy (nav) — bocka av, lägg till varor, ingen hantering ─────────
   if (activePanel === "shopping") {
     return (
-      <ShoppingListsPanel
+      <ShoppingView
         currentMember={currentMember}
-        members={activeMembers}
         roles={roles}
         shoppingLists={canSeeShopping ? shoppingLists : []}
         onAddItem={onAddShoppingItem}
-        onCreateList={onCreateShoppingList}
-        onDeleteList={onDeleteShoppingList}
-        onShareList={onShareShoppingList}
-        onRemoveListShare={onRemoveShoppingListShare}
         onToggleItem={onToggleShoppingItem}
       />
     );
   }
 
-  // ── Full-page todos panel: reuse Dashboard forced to todo tab ─────────────
+  // ── Todos-vy (nav) — skapa/klara/godkänn, ingen delnings-UI ─────────────
   if (activePanel === "todos") {
     return (
-      <Dashboard
-        member={currentMember}
+      <TodosView
+        currentMember={currentMember}
         members={activeMembers}
         roles={roles}
-        todos={canSeeTodos ? getVisibleTodos(currentMember, roles, todos) : []}
+        todos={todos}
+        rewards={rewards}
         editingTodoId={editingTodoId}
         editingTodoTitle={editingTodoTitle}
-        approvalTodos={canApproveTodos ? todos.filter((t) => t.status === "done") : []}
-        allSuggestedRewards={canApproveTodos ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null) : []}
-        wishStars={wishStars}
-        canApprove={canApproveTodos}
-        canSeeCalendar={false}
+        canApproveTodos={canApproveTodos}
         canSeeTodos={canSeeTodos}
-        canSeeShopping={false}
-        calendars={[]}
-        shoppingLists={[]}
-        initialTab="todo"
+        wishStars={wishStars}
         onSetEditingTodoTitle={onSetEditingTodoTitle}
-        onStartEditingTodo={(todo) => onStartEditingTodo(todo)}
-        onSaveTodoTitle={(todoId) => onSaveTodoTitle(todoId)}
+        onStartEditingTodo={onStartEditingTodo}
+        onSaveTodoTitle={onSaveTodoTitle}
         onCancelEditingTodo={onCancelEditingTodo}
         onCreateTodo={onCreateTodo}
-        onSoftDeleteTodo={(todoId) => onSoftDeleteTodo(todoId)}
-        onApproveTodo={(todoId) => onApproveTodo(todoId)}
-        onRejectTodo={(todoId) => onRejectTodo(todoId)}
-        onApproveWish={(rewardId) => onApproveWish(rewardId)}
-        onRejectWish={(rewardId) => onRejectWish(rewardId)}
-        onSetWishStars={(rewardId, stars) => onSetWishStars(rewardId, stars)}
-        onAddCalendarEvent={onAddCalendarEvent}
-        onCreateCalendar={onCreateCalendar}
-        onImportCalendar={onImportCalendar}
-        onShareCalendar={onShareCalendar}
-        onRemoveCalendarShare={onRemoveCalendarShare}
-        onAddShoppingItem={onAddShoppingItem}
-        onCreateShoppingList={onCreateShoppingList}
-        onDeleteShoppingList={(listId) => onDeleteShoppingList(listId)}
-        onShareShoppingList={onShareShoppingList}
-        onRemoveShoppingListShare={onRemoveShoppingListShare}
-        onToggleShoppingItem={onToggleShoppingItem}
-        onThemePickerOpen={onThemePickerOpen}
+        onSoftDeleteTodo={onSoftDeleteTodo}
+        onApproveTodo={onApproveTodo}
+        onRejectTodo={onRejectTodo}
+        onApproveWish={onApproveWish}
+        onRejectWish={onRejectWish}
+        onSetWishStars={onSetWishStars}
       />
     );
   }
 
-  // ── Home panel ────────────────────────────────────────────────────────────
+  // ── Hem-panel ─────────────────────────────────────────────────────────────
   const selectedDashboardMember =
     activeMembers.find((m) => m.id === selectedDashboardMemberId) ?? null;
 
-  // If a member is selected, show their personal dashboard
+  // Vald medlem → personlig dashboard
   if (selectedDashboardMember) {
     const now = Date.now();
     const isSelectedChild = selectedDashboardMember.isChild;
@@ -209,7 +181,7 @@ export function MemberShellContent({
           member={viewedAdult}
           members={activeMembers}
           roles={roles}
-          todos={canSeeTodos ? getVisibleTodos(viewedAdult, roles, todos) : []}
+          todos={canSeeTodos ? todos.filter((t) => t.assignedTo === viewedAdult.id || t.isShared).filter((t) => t.deletedAt === null) : []}
           editingTodoId={editingTodoId}
           editingTodoTitle={editingTodoTitle}
           approvalTodos={canApproveTodos ? todos.filter((t) => t.status === "done") : []}
@@ -246,7 +218,7 @@ export function MemberShellContent({
           onThemePickerOpen={onThemePickerOpen}
         />
 
-        {isSelectedChild ? (
+        {isSelectedChild && (
           <ChildDashboard
             child={selectedDashboardMember}
             activeReward={activeReward}
@@ -260,12 +232,12 @@ export function MemberShellContent({
             onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, selectedDashboardMember.id)}
             onThemePickerOpen={onThemePickerOpen}
           />
-        ) : null}
+        )}
       </section>
     );
   }
 
-  // No member selected → show redesigned overview
+  // Ingen vald → översikten
   const children = activeMembers.filter((m) => m.isChild);
   return (
     <>
