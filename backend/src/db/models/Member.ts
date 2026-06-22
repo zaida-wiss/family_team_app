@@ -9,6 +9,7 @@ const memberSchema = new Schema<Member>({
   roleId: { type: String, required: true },
   isChild: { type: Boolean, required: true },
   avatarUrl: { type: String, default: null },
+  color: { type: String, default: null },
   dashboardTheme: { type: String, default: null },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }

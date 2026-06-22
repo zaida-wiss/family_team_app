@@ -88,6 +88,16 @@ export function useMembersState() {
     updateMemberAvatar(memberId, null);
   }
 
+  function updateMemberColor(memberId: Id, color: string | null) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) return member;
+        membersApi.update(memberId, { color }).catch(console.error);
+        return { ...member, color };
+      })
+    );
+  }
+
   return {
     members,
     createMember,
@@ -95,6 +105,7 @@ export function useMembersState() {
     restoreMember,
     updateMemberTheme,
     updateMemberAvatar,
+    updateMemberColor,
     assignRole,
     clearMemberAvatar
   };

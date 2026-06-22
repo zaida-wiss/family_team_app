@@ -29,6 +29,7 @@ export function useAppState(initialMembership: ActiveMembership) {
     restoreMember,
     updateMemberTheme,
     updateMemberAvatar,
+    updateMemberColor,
     assignRole,
     clearMemberAvatar
   } = useMembersState();
@@ -76,6 +77,7 @@ export function useAppState(initialMembership: ActiveMembership) {
     restoreMember,
     updateMemberTheme,
     updateMemberAvatar,
+    updateMemberColor,
     assignRole,
     clearMemberAvatar,
     todosState,

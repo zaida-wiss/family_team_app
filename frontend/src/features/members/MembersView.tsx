@@ -1,4 +1,5 @@
 import { MemberAvatar } from "../../components/MemberAvatar";
+import type { ShellPanel } from "../../hooks/useAppState";
 import type { Account, Member, Role } from "@shared/types";
 
 type Props = {
@@ -6,12 +7,19 @@ type Props = {
   currentMember: Member;
   members: Member[];
   roles: Role[];
+  onSelectMember: (id: string) => void;
+  onNavigate: (panel: ShellPanel) => void;
 };
 
-export function MembersView({ account, currentMember, members, roles }: Props) {
+export function MembersView({ account, currentMember, members, roles, onSelectMember, onNavigate }: Props) {
   const active = members.filter(
     (m) => m.accountId === account.id && m.deletedAt === null
   );
+
+  function openMember(member: Member) {
+    onSelectMember(member.id);
+    onNavigate("home");
+  }
 
   return (
     <div className="members-page">
@@ -29,11 +37,13 @@ export function MembersView({ account, currentMember, members, roles }: Props) {
             : (role?.name ?? "Förälder");
 
           return (
-            <div
+            <button
               className={`members-card${isMe ? " members-card--me" : ""}`}
               key={member.id}
+              onClick={() => openMember(member)}
+              type="button"
             >
-              <MemberAvatar member={member} />
+              <MemberAvatar member={member} size="small" />
               <div className="members-card-info">
                 <span className="members-card-name">
                   {member.name}
@@ -41,7 +51,7 @@ export function MembersView({ account, currentMember, members, roles }: Props) {
                 </span>
                 <span className="members-card-role">{roleLabel}</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

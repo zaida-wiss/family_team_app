@@ -1,7 +1,7 @@
 import { Eraser, ImagePlus, Trash2, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
-import { canCreateChildAccount, hasPermission } from "../../utils/permissions";
+import { hasPermission } from "../../utils/permissions";
 import type { Account, Member, Role } from "@shared/types";
 
 type AccountSettingsProps = {
@@ -13,6 +13,7 @@ type AccountSettingsProps = {
   onDeleteMember: (memberId: string) => void;
   onDeleteOwnData: () => void;
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
+  onUpdateMemberColor: (memberId: string, color: string | null) => void;
 };
 
 export function AccountSettings({
@@ -23,16 +24,14 @@ export function AccountSettings({
   onCreateMember,
   onDeleteMember,
   onDeleteOwnData,
-  onUpdateMemberAvatar
+  onUpdateMemberAvatar,
+  onUpdateMemberColor
 }: AccountSettingsProps) {
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
-  const [isChild, setIsChild] = useState(false);
   const [confirmOwnDataDelete, setConfirmOwnDataDelete] = useState(false);
 
   const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
-  const canCreateChild = canCreateChildAccount(currentMember, roles);
-  const showChildOption = account.type === "family" && canCreateChild;
 
   function createMember() {
     const trimmedName = name.trim();
@@ -41,7 +40,8 @@ export function AccountSettings({
       return;
     }
 
-    const childAccount = account.type === "family" && isChild && canCreateChild;
+    const selectedRole = roles.find((r) => r.id === roleId);
+    const isChild = selectedRole?.isChildRole ?? false;
 
     onCreateMember({
       id: `member-${crypto.randomUUID()}`,
@@ -49,15 +49,15 @@ export function AccountSettings({
       userId: null,
       name: trimmedName,
       roleId,
-      isChild: childAccount,
+      isChild,
       avatarUrl: null,
-      dashboardTheme: childAccount ? "space" : "focus",
+      color: null,
+      dashboardTheme: isChild ? "space" : "focus",
       deletedAt: null,
       deletedBy: null
     });
 
     setName("");
-    setIsChild(false);
   }
 
   async function updateAvatar(memberId: string, file: File | null) {
@@ -120,17 +120,6 @@ export function AccountSettings({
                 </select>
               </label>
 
-              {showChildOption ? (
-                <label className="checkbox-row child-checkbox">
-                  <input
-                    checked={isChild}
-                    onChange={(event) => setIsChild(event.target.checked)}
-                    type="checkbox"
-                  />
-                  <span>Skapa som barnkonto</span>
-                </label>
-              ) : null}
-
               <button
                 className="primary-button"
                 onClick={createMember}
@@ -172,10 +161,23 @@ export function AccountSettings({
                 .map((member) => (
                   <div className="settings-member-row" key={member.id}>
                     <MemberAvatar member={member} size="small" />
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <strong>{member.name}</strong>
                       <small>{member.isChild ? "Barnkonto" : "Vuxen/medlem"}</small>
                     </div>
+                    <label
+                      aria-label={`Välj färg för ${member.name}`}
+                      className="member-color-picker"
+                      style={{ background: member.color ?? "var(--border)" }}
+                      title="Välj färg"
+                    >
+                      <input
+                        hidden
+                        onChange={(e) => onUpdateMemberColor(member.id, e.target.value)}
+                        type="color"
+                        value={member.color ?? "#888888"}
+                      />
+                    </label>
                     <label
                       aria-label={`Välj bild för ${member.name}`}
                       className="icon-button"

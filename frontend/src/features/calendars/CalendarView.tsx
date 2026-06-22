@@ -12,10 +12,11 @@ type Props = {
   currentMember: Member;
   activeMembers: Member[];
   roles: Role[];
-  onAddEvent: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
-  onUpdateEvent: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
-  onDeleteEvent: (calendarId: string, eventId: string) => void;
-  onRsvpEvent: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
+  displayOnly?: boolean;
+  onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
+  onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
+  onDeleteEvent?: (calendarId: string, eventId: string) => void;
+  onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
 };
 
 type FormState = {
@@ -161,7 +162,7 @@ function blankForm(defaults: Partial<FormState> = {}): FormState {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function CalendarView({ calendars, currentMember, activeMembers, roles, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
   const now = new Date();
   const todayStr = toLocalDateStr(now);
 
@@ -203,8 +204,9 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, o
   function eventsForDay(dateStr: string) {
     return expandedEvents
       .filter((ev) => {
-        const start = toLocalDateStr(new Date(ev.startsAt));
-        const end = toLocalDateStr(new Date(ev.endsAt));
+        // For all-day events use the raw ISO date prefix to avoid timezone shifts
+        const start = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
+        const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
         return start <= dateStr && dateStr <= end;
       })
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
@@ -267,13 +269,14 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, o
       until: form.recurrenceUntil ? new Date(form.recurrenceUntil).toISOString() : null,
     };
 
-    const isoStart = form.isAllDay ? `${form.startsAt}T00:00:00.000Z` : new Date(form.startsAt).toISOString();
-    const isoEnd = form.isAllDay ? `${form.endsAt}T23:59:59.999Z` : new Date(form.endsAt).toISOString();
+    // All-day events stored at noon UTC so slice(0,10) always gives the correct local date
+    const isoStart = form.isAllDay ? `${form.startsAt}T12:00:00.000Z` : new Date(form.startsAt).toISOString();
+    const isoEnd = form.isAllDay ? `${form.endsAt}T12:00:00.000Z` : new Date(form.endsAt).toISOString();
 
     const attendees = form.attendeeIds.map((memberId) => ({ memberId, status: "pending" as const }));
 
     if (modal?.kind === "new") {
-      onAddEvent(form.calendarId, {
+      onAddEvent?.(form.calendarId, {
         title: trimmed,
         isAllDay: form.isAllDay,
         startsAt: isoStart,
@@ -285,7 +288,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, o
       });
     } else if (modal?.kind === "edit") {
       const baseId = modal.event.id.split("~")[0];
-      onUpdateEvent(modal.event.calendarId, baseId, {
+      onUpdateEvent?.(modal.event.calendarId, baseId, {
         title: trimmed,
         isAllDay: form.isAllDay,
         startsAt: isoStart,
@@ -303,7 +306,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, o
   function deleteEvent() {
     if (modal?.kind !== "edit") return;
     const baseId = modal.event.id.split("~")[0];
-    onDeleteEvent(modal.event.calendarId, baseId);
+    onDeleteEvent?.(modal.event.calendarId, baseId);
     closeModal();
   }
 
@@ -333,6 +336,63 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, o
         </header>
         <p className="empty-note">Du har inga tillgängliga kalendrar. Skapa en i Inställningar.</p>
       </article>
+    );
+  }
+
+  if (displayOnly) {
+    // Build a map: calendarId → display color derived from the owner member's color
+    const calendarDisplayColor = new Map<string, string>();
+    for (const member of activeMembers) {
+      const memberCals = visible.filter((c) => c.ownerId === member.id);
+      const baseColor = member.color ?? null;
+      memberCals.forEach((cal, idx) => {
+        if (!baseColor) {
+          calendarDisplayColor.set(cal.id, cal.color);
+        } else if (idx === 0) {
+          calendarDisplayColor.set(cal.id, baseColor);
+        } else {
+          // Lighter shade for additional calendars using CSS color-mix at render time
+          calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
+        }
+      });
+    }
+
+    return (
+      <div className="cal-grid-card">
+        <div className="cal-grid-nav">
+          <button className="icon-button" onClick={prevMonth} type="button"><ChevronLeft size={18} /></button>
+          <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
+          <button className="icon-button" onClick={nextMonth} type="button"><ChevronRight size={18} /></button>
+        </div>
+        <div className="cal-day-names">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
+        <div className="cal-grid">
+          {cells.map(({ date, isCurrentMonth }) => {
+            const dateStr = toLocalDateStr(date);
+            const isToday = dateStr === todayStr;
+            const dayEvents = isCurrentMonth ? eventsForDay(dateStr) : [];
+            return (
+              <div
+                key={dateStr}
+                className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today"].filter(Boolean).join(" ")}
+                style={{ cursor: "default" }}
+              >
+                <span className="cal-cell-num">{date.getDate()}</span>
+                <div className="cal-cell-dots">
+                  {dayEvents.slice(0, 5).map((ev) => (
+                    <span
+                      key={ev.id}
+                      className="cal-cell-dot"
+                      style={{ background: calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }}
+                      title={ev.title}
+                    />
+                  ))}
+                  {dayEvents.length > 5 && <span className="cal-cell-dot-more">+{dayEvents.length - 5}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -367,8 +427,8 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, o
                 </span>
               </div>
               <div className="cal-rsvp-btns">
-                <button className="secondary-button" onClick={() => onRsvpEvent(ev.calendarId, ev.id, "declined")} type="button">Tacka nej</button>
-                <button className="primary-button" onClick={() => onRsvpEvent(ev.calendarId, ev.id, "accepted")} type="button">Acceptera</button>
+                <button className="secondary-button" onClick={() => onRsvpEvent?.(ev.calendarId, ev.id, "declined")} type="button">Tacka nej</button>
+                <button className="primary-button" onClick={() => onRsvpEvent?.(ev.calendarId, ev.id, "accepted")} type="button">Acceptera</button>
               </div>
             </div>
           ))}

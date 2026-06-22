@@ -152,6 +152,28 @@
   line-height: 1.4;
 }
 
+/* ── Display-only dot mode ── */
+.cal-cell-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 1px 2px 0;
+}
+
+.cal-cell-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-cell-dot-more {
+  font-size: 0.5rem;
+  color: var(--muted-fg);
+  line-height: 1;
+  align-self: center;
+}
+
 /* ── Event list below grid ── */
 .cal-event-list {
   display: flex;
@@ -252,6 +274,9 @@
   box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
   width: 100%;
   max-width: 400px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -263,13 +288,182 @@
   border-bottom: 1px solid var(--border);
   font-weight: 700;
   font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .cal-form-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 18px;
+  padding: 16px 18px 18px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Form field rows ── */
+.cal-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-allday-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.cal-allday-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.cal-form-datetimes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-form-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-fg);
+}
+
+.cal-form-location .text-input {
+  flex: 1;
+}
+
+.cal-notes {
+  resize: vertical;
+  min-height: 54px;
+}
+
+/* ── Recurrence ── */
+.cal-recurrence {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-recurrence-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-fg);
+}
+
+.cal-recurrence-top .text-input {
+  flex: 1;
+}
+
+.cal-recurrence-details {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-left: 23px;
+}
+
+.cal-interval-input {
+  width: 64px !important;
+  text-align: center;
+}
+
+.cal-interval-unit {
+  font-size: 0.88rem;
+  color: var(--muted-fg);
+}
+
+/* ── Attendees ── */
+.cal-attendees {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-attendee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-attendee-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--background);
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.cal-attendee-item--checked {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 7%, var(--background));
+}
+
+/* ── Form actions ── */
+.cal-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+.cal-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Invitations ── */
+.cal-invitations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.cal-invitations-title {
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin: 0 0 4px;
+}
+
+.cal-invitation-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-rsvp-btns {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cal-rsvp-btns .primary-button,
+.cal-rsvp-btns .secondary-button {
+  padding: 5px 10px;
+  font-size: 0.78rem;
 }
 
 /* ── Mobile ── */
@@ -297,5 +491,15 @@
 
   .cal-view-title {
     font-size: 1.5rem;
+  }
+
+  /* Overlay clears fixed bottom navbar (~80px) + breathing room */
+  .cal-form-overlay {
+    padding: 16px 12px 100px;
+    align-items: flex-start;
+  }
+
+  .cal-form-modal {
+    max-height: 100%;
   }
 }

@@ -145,11 +145,20 @@ button {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px 18px;
+  padding: 18px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: 0 2px 10px color-mix(in oklch, var(--foreground) 5%, transparent);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.13s, background 0.13s;
+}
+
+.members-card:hover {
+  border-color: color-mix(in oklch, var(--primary) 40%, transparent);
+  background: color-mix(in oklch, var(--primary) 4%, var(--card));
 }
 
 .members-card--me {
@@ -336,23 +345,30 @@ button {
 
 .overview-members {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  flex-wrap: nowrap;
+  gap: 8px;
   padding: 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.overview-members::-webkit-scrollbar {
+  display: none;
 }
 
 .overview-member-btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
-  background: none;
-  border: 2px solid transparent;
-  border-radius: 14px;
-  padding: 12px 10px 10px;
+  gap: 8px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 99px;
+  padding: 6px 14px 6px 6px;
   cursor: pointer;
   transition: border-color 0.13s, background 0.13s;
-  min-width: 90px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .overview-member-btn:hover {
@@ -366,13 +382,30 @@ button {
 }
 
 .overview-member-name {
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.88rem;
   color: var(--foreground);
 }
 
-.overview-member-role {
+/* ── Overview calendar wrapper ───────────────────── */
+.overview-cal-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.overview-cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 10px;
+}
+
+.overview-cal-label {
   font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--muted-fg);
 }
 
@@ -686,6 +719,22 @@ button {
 
 .settings-member-row small {
   color: var(--muted-fg);
+}
+
+.member-color-picker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.13s;
+}
+
+.member-color-picker:hover {
+  border-color: var(--foreground);
 }
 
 .icon-button {

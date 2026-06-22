@@ -74,6 +74,8 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
         currentMember={currentMember}
         members={settingsProps.members}
         roles={settingsProps.roles}
+        onSelectMember={memberContentProps.onSelectMember}
+        onNavigate={setActivePanel}
       />
     );
   } else if (activePanel === "settings") {
@@ -92,6 +94,7 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
             onDeleteMember={settingsProps.onDeleteMember}
             onDeleteOwnData={settingsProps.onDeleteOwnData}
             onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
+            onUpdateMemberColor={settingsProps.onUpdateMemberColor}
           />
           {canManageMembers && (
             <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />

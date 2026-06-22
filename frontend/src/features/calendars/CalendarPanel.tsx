@@ -410,25 +410,27 @@ function getMemberName(memberId: Id, members: Member[]) {
 }
 
 function parseIcsEvents(text: string): ImportedCalendarEvent[] {
-  return text
+  // Unfold iCal lines: CRLF or LF + whitespace = continuation
+  const unfolded = text.replace(/\r?\n[ \t]/g, "");
+
+  return unfolded
     .split("BEGIN:VEVENT")
     .slice(1)
     .map((block) => block.split("END:VEVENT")[0] ?? "")
     .map((block) => {
       const title = getIcsValue(block, "SUMMARY") ?? "Importerad händelse";
-      const startsAt = parseIcsDate(getIcsValue(block, "DTSTART"));
-      const endsAt = parseIcsDate(getIcsValue(block, "DTEND"));
+      const dtstart = getIcsValue(block, "DTSTART");
+      const dtend = getIcsValue(block, "DTEND") ?? getIcsValue(block, "DURATION");
+      const startsAt = parseIcsDate(dtstart);
+      const endsAt = parseIcsDate(dtend) ?? startsAt; // fall back to same day
 
-      if (!startsAt || !endsAt) {
-        return null;
-      }
+      if (!startsAt || !endsAt) return null;
 
-      return {
-        title,
-        startsAt,
-        endsAt,
-        notes: getIcsValue(block, "DESCRIPTION")
-      };
+      const description = getIcsValue(block, "DESCRIPTION");
+      const location = getIcsValue(block, "LOCATION");
+      const notes = [description, location].filter(Boolean).join(" · ") || null;
+
+      return { title, startsAt, endsAt, notes };
     })
     .filter((event): event is ImportedCalendarEvent => event !== null);
 }
@@ -436,22 +438,26 @@ function parseIcsEvents(text: string): ImportedCalendarEvent[] {
 function getIcsValue(block: string, key: string) {
   const line = block
     .split(/\r?\n/)
-    .find((candidate) => candidate.startsWith(`${key}:`) || candidate.startsWith(`${key};`));
-
-  return line?.slice(line.indexOf(":") + 1).trim() ?? null;
+    .find((l) => l.startsWith(`${key}:`) || l.startsWith(`${key};`));
+  if (!line) return null;
+  // Strip any parameter part (e.g. DTSTART;TZID=Europe/Stockholm:...)
+  return line.slice(line.indexOf(":") + 1).trim() || null;
 }
 
-function parseIcsDate(value: string | null) {
-  if (!value) {
-    return null;
-  }
+function parseIcsDate(value: string | null): string | null {
+  if (!value) return null;
 
+  // 20240615T120000Z  — UTC datetime
   if (/^\d{8}T\d{6}Z$/.test(value)) {
     return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}T${value.slice(9, 11)}:${value.slice(11, 13)}:${value.slice(13, 15)}Z`;
   }
-
+  // 20240615T120000   — local datetime (no Z)
   if (/^\d{8}T\d{6}$/.test(value)) {
     return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}T${value.slice(9, 11)}:${value.slice(11, 13)}:${value.slice(13, 15)}`;
+  }
+  // 20240615          — all-day date (Tempus format)
+  if (/^\d{8}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}T12:00:00.000Z`;
   }
 
   return null;

@@ -14,7 +14,8 @@ export const accounts: Account[] = [
     id: "account-family-1",
     name: "Familjen Solbacken",
     type: "family",
-    createdBy: "member-parent-1"
+    createdBy: "member-parent-1",
+    deletedAt: null
   }
 ];
 
@@ -22,6 +23,7 @@ export const roles: Role[] = [
   {
     id: "role-parent",
     name: "Foralder",
+    isChildRole: false,
     permissions: createPermissionMap([
       "canManageMembers",
       "canManageRoles",
@@ -48,6 +50,7 @@ export const roles: Role[] = [
   {
     id: "role-child",
     name: "Barn",
+    isChildRole: true,
     permissions: createPermissionMap([
       "canSeeOwnTodos",
       "canCompleteAssignedTodos",
@@ -60,10 +63,12 @@ export const members: Member[] = [
   {
     id: "member-parent-1",
     accountId: "account-family-1",
+    userId: null,
     name: "Zaida",
     roleId: "role-parent",
     isChild: false,
     avatarUrl: null,
+    color: null,
     dashboardTheme: "warm",
     deletedAt: null,
     deletedBy: null
@@ -71,10 +76,12 @@ export const members: Member[] = [
   {
     id: "member-child-1",
     accountId: "account-family-1",
+    userId: null,
     name: "Sam",
     roleId: "role-child",
     isChild: true,
     avatarUrl: null,
+    color: null,
     dashboardTheme: "space",
     deletedAt: null,
     deletedBy: null

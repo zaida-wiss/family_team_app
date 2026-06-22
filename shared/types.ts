@@ -57,6 +57,7 @@ export type Member = {
   roleId: Id;
   isChild: boolean;
   avatarUrl: string | null;
+  color: string | null;
   dashboardTheme: DashboardThemeId | null;
   deletedAt: string | null;
   deletedBy: Id | null;
