@@ -1,4 +1,4 @@
-import { CalendarDays, Download, Globe, Plus, Share2, Upload, X } from "lucide-react";
+import { CalendarDays, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { calendarsApi } from "../../api";
 import {
@@ -7,14 +7,32 @@ import {
   canViewResource,
   hasPermission
 } from "../../utils/permissions";
-import type { AccessLevel, Calendar, Id, Member, Role } from "@shared/types";
+import type { AccessLevel, Calendar, Id, IcsSubscription, Member, Role } from "@shared/types";
 
 type ImportedCalendarEvent = {
   title: string;
   startsAt: string;
   endsAt: string;
+  isAllDay: boolean;
+  color: string | null;
   notes: string | null;
+  categories: string[];
 };
+
+const SCHOOL_CLOSED_RE = /stängningsdag|kompetensdag/i;
+const LOV_RE = /\blov\b|^ledig|ledighet|sportlov|höstlov|jullov|påsklov|sommarlov|höstledigt|sommarledigt/i;
+const HELGDAG_RE = /helgdag|röd dag|nationaldag|jul|påsk|midsommar|nyår|kristi|allhelgon|pingst/i;
+const SCHOOL_CLOSED_COLOR = "#e07000";
+
+function detectCategories(title: string, isAllDay: boolean, icsRaw: string[]): string[] {
+  const cats = new Set<string>(icsRaw);
+  if (SCHOOL_CLOSED_RE.test(title)) cats.add("Stängningsdag");
+  else if (LOV_RE.test(title)) cats.add("Lov / Ledigt");
+  else if (HELGDAG_RE.test(title)) cats.add("Helgdag");
+  else if (isAllDay) cats.add("Heldag");
+  else cats.add("Övrigt");
+  return [...cats];
+}
 
 type CalendarPanelProps = {
   calendars: Calendar[];
@@ -27,6 +45,7 @@ type CalendarPanelProps = {
     event: Omit<ImportedCalendarEvent, "notes"> & { notes?: string | null }
   ) => void;
   onCreateCalendar: (name: string) => void;
+  onDeleteCalendar: (calendarId: Id) => void;
   onImportCalendar: (
     calendarId: Id,
     sourceName: string,
@@ -34,6 +53,10 @@ type CalendarPanelProps = {
   ) => void;
   onShareCalendar: (calendarId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
+  onAddSubscription: (calendarId: Id, sub: Omit<IcsSubscription, "id" | "calendarId" | "lastSyncedAt">) => void;
+  onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords">>) => Promise<void>;
+  onRemoveSubscription: (calendarId: Id, subId: Id) => void;
+  onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
 };
 
 export function CalendarPanel({
@@ -44,9 +67,14 @@ export function CalendarPanel({
   managementOnly = false,
   onAddEvent,
   onCreateCalendar,
+  onDeleteCalendar,
   onImportCalendar,
   onRemoveCalendarShare,
-  onShareCalendar
+  onShareCalendar,
+  onAddSubscription,
+  onUpdateSubscription,
+  onRemoveSubscription,
+  onSyncSubscription
 }: CalendarPanelProps) {
   const visibleCalendars = calendars.filter((calendar) => {
     if (calendar.deletedAt !== null) {
@@ -80,8 +108,30 @@ export function CalendarPanel({
     members.find((member) => member.id !== currentMember.id)?.id ?? ""
   );
   const [shareAccess, setShareAccess] = useState<AccessLevel>("view");
-  const [icsUrl, setIcsUrl] = useState("");
-  const [importing, setImporting] = useState(false);
+  const [newSubUrl, setNewSubUrl] = useState("");
+  const [newSubIncludeWords, setNewSubIncludeWords] = useState<string[]>([]);
+  const [newSubExcludeWords, setNewSubExcludeWords] = useState<string[]>([]);
+  const [newSubFrom, setNewSubFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newSubTo, setNewSubTo] = useState(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [addingSub, setAddingSub] = useState(false);
+  const [syncingSubId, setSyncingSubId] = useState<string | null>(null);
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [editIncludeWords, setEditIncludeWords] = useState<string[]>([]);
+  const [editExcludeWords, setEditExcludeWords] = useState<string[]>([]);
+  const [confirmDeleteSubId, setConfirmDeleteSubId] = useState<string | null>(null);
+  const [fileFilterFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fileFilterTo] = useState(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [previewEvents, setPreviewEvents] = useState<ImportedCalendarEvent[] | null>(null);
+  const [previewSource, setPreviewSource] = useState("");
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
 
   const canCreateCalendar = hasPermission(currentMember, roles, "canCreateCalendar");
   const canImport = hasPermission(currentMember, roles, "canImportCalendar");
@@ -100,18 +150,21 @@ export function CalendarPanel({
     setCalendarName("");
   }
 
+  const canImportToSelected = !!selectedCalendar && canImport && canEditSelectedCalendar;
+
   function addEvent() {
     const title = eventTitle.trim();
-
-    if (!title || !startsAt || !endsAt || !selectedCalendar || !canEditSelectedCalendar) {
-      return;
-    }
+    const ready = title && startsAt && endsAt && selectedCalendar && canEditSelectedCalendar;
+    if (!ready) return;
 
     onAddEvent(selectedCalendar.id, {
       title,
       startsAt,
       endsAt,
-      notes: null
+      isAllDay: false,
+      color: null,
+      notes: null,
+      categories: []
     });
     setEventTitle("");
     setStartsAt("");
@@ -119,41 +172,76 @@ export function CalendarPanel({
   }
 
   function shareCalendar() {
-    if (!selectedCalendar || !shareMemberId || !canEditSelectedCalendar) {
-      return;
-    }
-
+    if (!selectedCalendar || !shareMemberId || !canEditSelectedCalendar) return;
     onShareCalendar(selectedCalendar.id, shareMemberId, shareAccess);
   }
 
   async function importCalendar(file: File | null) {
-    if (!file || !selectedCalendar || !canImport || !canEditSelectedCalendar) {
-      return;
-    }
-
-    const text = await file.text();
-    const events = parseIcsEvents(text);
-
-    if (events.length === 0) {
-      return;
-    }
-
-    onImportCalendar(selectedCalendar.id, file.name, events);
+    if (!file || !canImportToSelected || !selectedCalendar) return;
+    const events = filterByDateRange(parseIcsEvents(await file.text()), fileFilterFrom, fileFilterTo);
+    setPreviewSource(file.name);
+    setPreviewEvents(events);
+    setSelectedEventIds(new Set(events.map((_, i) => String(i))));
   }
 
-  async function importFromUrl() {
-    const url = icsUrl.trim();
-    if (!url || !selectedCalendar || !canImport || !canEditSelectedCalendar) return;
-    setImporting(true);
+  function copySchoolClosedToParents(events: ImportedCalendarEvent[], sourceName: string) {
+    if (!selectedCalendar) return;
+    const schoolClosed = events.filter((ev) => SCHOOL_CLOSED_RE.test(ev.title));
+    if (schoolClosed.length === 0) return;
+    for (const m of members.filter((m) => !m.isChild && m.deletedAt === null && m.id !== selectedCalendar.ownerId)) {
+      const cal = calendars.find((c) => c.ownerId === m.id && c.deletedAt === null);
+      if (cal) onImportCalendar(cal.id, sourceName, schoolClosed);
+    }
+  }
+
+  function confirmImport() {
+    if (!previewEvents || !selectedCalendar) return;
+    const chosen = previewEvents.filter((_, i) => selectedEventIds.has(String(i)));
+    if (chosen.length === 0) return;
+    onImportCalendar(selectedCalendar.id, previewSource, chosen);
+    copySchoolClosedToParents(chosen, previewSource);
+    setPreviewEvents(null);
+    setSelectedEventIds(new Set());
+    setPreviewSource("");
+  }
+
+  async function addSubscription() {
+    const url = newSubUrl.trim();
+    if (!url || !selectedCalendar || !canImportToSelected) return;
+    setAddingSub(true);
     try {
-      const { icsText } = await calendarsApi.fetchIcs(selectedCalendar.id, url);
-      const events = parseIcsEvents(icsText);
-      if (events.length > 0) {
-        onImportCalendar(selectedCalendar.id, url, events);
-        setIcsUrl("");
-      }
+      await onAddSubscription(selectedCalendar.id, {
+        url,
+        includeWords: newSubIncludeWords,
+        excludeWords: newSubExcludeWords,
+        dateFrom: newSubFrom || null,
+        dateTo: newSubTo || null
+      });
+      setNewSubUrl("");
+      setNewSubIncludeWords([]);
+      setNewSubExcludeWords([]);
     } finally {
-      setImporting(false);
+      setAddingSub(false);
+    }
+  }
+
+  async function saveSubEdit(sub: IcsSubscription) {
+    if (!selectedCalendar) return;
+    await onUpdateSubscription(selectedCalendar.id, sub.id, {
+      includeWords: editIncludeWords,
+      excludeWords: editExcludeWords
+    });
+    setEditingSubId(null);
+    await syncSub(sub.id);
+  }
+
+  async function syncSub(subId: string) {
+    if (!selectedCalendar) return;
+    setSyncingSubId(subId);
+    try {
+      await onSyncSubscription(selectedCalendar.id, subId);
+    } finally {
+      setSyncingSubId(null);
     }
   }
 
@@ -226,6 +314,19 @@ export function CalendarPanel({
           </label>
 
           <div className="calendar-actions">
+            <button
+              className="icon-button danger"
+              disabled={!canEditSelectedCalendar}
+              onClick={() => {
+                if (confirm(`Radera "${selectedCalendar.name}"? Detta går inte att ångra.`)) {
+                  onDeleteCalendar(selectedCalendar.id);
+                }
+              }}
+              title="Radera kalender"
+              type="button"
+            >
+              <X size={16} />
+            </button>
             <label className="secondary-button">
               <Upload size={16} />
               Importera fil
@@ -251,24 +352,186 @@ export function CalendarPanel({
             </button>
           </div>
 
-          {canImport && canEditSelectedCalendar && (
-            <div className="shopping-add-row" style={{ marginTop: "8px" }}>
-              <input
-                className="text-input"
-                onChange={(e) => setIcsUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void importFromUrl(); }}
-                placeholder="iCal-länk (https://…)"
-                value={icsUrl}
+          {previewEvents !== null && (
+            <div className="ics-import-block">
+              <p className="eyebrow">Välj händelser att importera</p>
+              <PreviewSelector
+                events={previewEvents}
+                selectedIds={selectedEventIds}
+                onChangeSelected={setSelectedEventIds}
+                onConfirm={confirmImport}
               />
-              <button
-                className="secondary-button"
-                disabled={!icsUrl.trim() || importing}
-                onClick={() => void importFromUrl()}
-                type="button"
-              >
-                <Globe size={16} />
-                {importing ? "Hämtar…" : "Importera länk"}
-              </button>
+            </div>
+          )}
+
+          {canImport && canEditSelectedCalendar && (
+            <div className="ics-import-block">
+              <p className="eyebrow">Prenumerationer</p>
+
+              {/* New subscription form */}
+              <div className="ics-sub-form">
+                <input
+                  className="text-input"
+                  onChange={(e) => setNewSubUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") void addSubscription(); }}
+                  placeholder="iCal-länk (https://…)"
+                  value={newSubUrl}
+                />
+                <WordTagInput
+                  label="Inkludera händelser med ord"
+                  placeholder="Skriv ord + Enter"
+                  words={newSubIncludeWords}
+                  onChangeWords={setNewSubIncludeWords}
+                />
+                <WordTagInput
+                  label="Exkludera händelser med ord"
+                  placeholder="Skriv ord + Enter"
+                  words={newSubExcludeWords}
+                  onChangeWords={setNewSubExcludeWords}
+                />
+                <div className="ics-filter-row">
+                  <label className="ics-filter-label">
+                    Från
+                    <input
+                      className="text-input"
+                      onChange={(e) => setNewSubFrom(e.target.value)}
+                      type="date"
+                      value={newSubFrom}
+                    />
+                  </label>
+                  <label className="ics-filter-label">
+                    Till
+                    <input
+                      className="text-input"
+                      onChange={(e) => setNewSubTo(e.target.value)}
+                      type="date"
+                      value={newSubTo}
+                    />
+                  </label>
+                </div>
+                <button
+                  className="secondary-button"
+                  disabled={!newSubUrl.trim() || addingSub}
+                  onClick={() => void addSubscription()}
+                  type="button"
+                >
+                  <Globe size={16} />
+                  {addingSub ? "Lägger till…" : "Lägg till prenumeration"}
+                </button>
+              </div>
+
+              {/* Existing subscriptions */}
+              {(selectedCalendar.subscriptions ?? []).length > 0 && (
+                <div className="ics-sub-list">
+                  {(selectedCalendar.subscriptions ?? []).map((sub) => (
+                    <div className="ics-sub-row" key={sub.id}>
+                      {editingSubId === sub.id ? (
+                        <div className="ics-sub-edit">
+                          <WordTagInput
+                            label="Inkludera händelser med ord"
+                            placeholder="Skriv ord + Enter"
+                            words={editIncludeWords}
+                            onChangeWords={setEditIncludeWords}
+                          />
+                          <WordTagInput
+                            label="Exkludera händelser med ord"
+                            placeholder="Skriv ord + Enter"
+                            words={editExcludeWords}
+                            onChangeWords={setEditExcludeWords}
+                          />
+                          <div className="ics-sub-edit-actions">
+                            <button
+                              className="secondary-button"
+                              onClick={() => void saveSubEdit(sub as IcsSubscription)}
+                              type="button"
+                            >
+                              <RefreshCw size={13} />
+                              Spara &amp; synka
+                            </button>
+                            <button
+                              className="icon-button"
+                              onClick={() => setEditingSubId(null)}
+                              type="button"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="ics-sub-info">
+                            <span className="ics-sub-url" title={sub.url}>
+                              {sub.url.replace(/^https?:\/\//, "").slice(0, 48)}…
+                            </span>
+                            {sub.includeWords.length > 0 && (
+                              <small>Inkludera: {sub.includeWords.join(", ")}</small>
+                            )}
+                            {sub.excludeWords.length > 0 && (
+                              <small>Exkludera: {sub.excludeWords.join(", ")}</small>
+                            )}
+                            {sub.lastSyncedAt && (
+                              <small>Senast synkad: {new Date(sub.lastSyncedAt).toLocaleString("sv-SE")}</small>
+                            )}
+                          </div>
+                          <div className="ics-sub-actions">
+                            <button
+                              className="icon-button"
+                              onClick={() => {
+                                setEditingSubId(sub.id);
+                                setEditIncludeWords([...sub.includeWords]);
+                                setEditExcludeWords([...sub.excludeWords]);
+                              }}
+                              title="Redigera ord"
+                              type="button"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              disabled={syncingSubId === sub.id}
+                              onClick={() => void syncSub(sub.id)}
+                              title="Synka nu"
+                              type="button"
+                            >
+                              <RefreshCw size={14} className={syncingSubId === sub.id ? "spin" : undefined} />
+                            </button>
+                            {confirmDeleteSubId === sub.id ? (
+                              <>
+                                <button
+                                  className="secondary-button ics-confirm-del"
+                                  onClick={() => {
+                                    onRemoveSubscription(selectedCalendar.id, sub.id);
+                                    setConfirmDeleteSubId(null);
+                                  }}
+                                  type="button"
+                                >
+                                  Radera
+                                </button>
+                                <button
+                                  className="icon-button"
+                                  onClick={() => setConfirmDeleteSubId(null)}
+                                  type="button"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="icon-button danger"
+                                onClick={() => setConfirmDeleteSubId(sub.id)}
+                                title="Ta bort prenumeration"
+                                type="button"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -398,6 +661,125 @@ export function CalendarPanel({
   );
 }
 
+type PreviewSelectorProps = {
+  events: ImportedCalendarEvent[];
+  selectedIds: Set<string>;
+  onChangeSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onConfirm: () => void;
+};
+
+const SW = new Set([
+  "och","för","av","i","på","med","är","att","en","ett","de","det","den",
+  "till","från","men","om","så","vid","som","har","vi","du","ni","han",
+  "hon","kan","ska","var","dag","dagar","kl","år","vecka"
+]);
+
+function buildKeywordGroups(events: ImportedCalendarEvent[]): Map<string, number[]> {
+  const freq = new Map<string, number[]>();
+  for (const [i, ev] of events.entries()) {
+    const words = ev.title.toLowerCase().match(/[a-zåäö]{3,}/g) ?? [];
+    for (const word of new Set(words)) {
+      if (SW.has(word)) continue;
+      const bucket = freq.get(word) ?? [];
+      if (bucket.length === 0) freq.set(word, bucket);
+      bucket.push(i);
+    }
+  }
+  return new Map(
+    [...freq.entries()]
+      .filter(([, idx]) => idx.length >= 2)
+      .sort((a, b) => b[1].length - a[1].length)
+      .slice(0, 20)
+      .map(([word, idx]) => [word.charAt(0).toUpperCase() + word.slice(1), idx])
+  );
+}
+
+function buildCategoryGroups(events: ImportedCalendarEvent[]): Map<string, number[]> {
+  const groups = new Map<string, number[]>();
+  for (const [i, ev] of events.entries()) {
+    for (const cat of ev.categories) {
+      const bucket = groups.get(cat) ?? [];
+      if (bucket.length === 0) groups.set(cat, bucket);
+      bucket.push(i);
+    }
+  }
+  return groups;
+}
+
+function PreviewSelector({ events, selectedIds, onChangeSelected, onConfirm }: PreviewSelectorProps) {
+  if (events.length === 0) {
+    return <p className="empty-note">Inga händelser i valt datumintervall.</p>;
+  }
+
+  const groups = buildCategoryGroups(events);
+  const keywords = buildKeywordGroups(events);
+
+  function toggleGroup(indices: number[]) {
+    const allSelected = indices.every((i) => selectedIds.has(String(i)));
+    onChangeSelected((prev) => {
+      const next = new Set(prev);
+      for (const i of indices) {
+        if (allSelected) next.delete(String(i)); else next.add(String(i));
+      }
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    const allSelected = selectedIds.size === events.length;
+    onChangeSelected(allSelected ? new Set() : new Set(events.map((_, i) => String(i))));
+  }
+
+  function renderChip(label: string, indices: number[], modifier?: string) {
+    const selectedCount = indices.filter((i) => selectedIds.has(String(i))).length;
+    const allOn = selectedCount === indices.length;
+    const someOn = selectedCount > 0 && !allOn;
+    const cls = ["ics-cat-btn", allOn && "ics-cat-btn--on", someOn && "ics-cat-btn--partial", modifier]
+      .filter(Boolean).join(" ");
+    return (
+      <button key={label} className={cls} onClick={() => toggleGroup(indices)} type="button">
+        <span className="ics-cat-name">{label}</span>
+        <span className="ics-cat-count">{selectedCount}/{indices.length}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="ics-preview">
+      <div className="ics-preview-header">
+        <span className="ics-preview-count">{selectedIds.size} av {events.length} händelser valda</span>
+        <button className="ics-bulk-btn" onClick={toggleAll} type="button">
+          {selectedIds.size === events.length ? "Ingen" : "Alla"}
+        </button>
+      </div>
+
+      <div className="ics-cat-grid">
+        {[...groups.entries()].map(([cat, idx]) =>
+          renderChip(cat, idx, cat === "Stängningsdag" ? "ics-cat-btn--special" : undefined)
+        )}
+      </div>
+
+      {keywords.size > 0 && (
+        <>
+          <p className="ics-keyword-label">Nyckelord</p>
+          <div className="ics-keyword-row">
+            {[...keywords.entries()].map(([word, idx]) => renderChip(word, idx))}
+          </div>
+        </>
+      )}
+
+      <button
+        className="primary-button"
+        disabled={selectedIds.size === 0}
+        onClick={onConfirm}
+        type="button"
+      >
+        Importera {selectedIds.size} händelser
+      </button>
+    </div>
+  );
+}
+
 function canEditCalendar(member: Member, roles: Role[], calendar: Calendar) {
   return (
     hasPermission(member, roles, "canEditCalendar") &&
@@ -422,15 +804,22 @@ function parseIcsEvents(text: string): ImportedCalendarEvent[] {
       const dtstart = getIcsValue(block, "DTSTART");
       const dtend = getIcsValue(block, "DTEND") ?? getIcsValue(block, "DURATION");
       const startsAt = parseIcsDate(dtstart);
-      const endsAt = parseIcsDate(dtend) ?? startsAt; // fall back to same day
+      const endsAt = parseIcsDate(dtend) ?? startsAt;
 
       if (!startsAt || !endsAt) return null;
+
+      const isAllDay = /^\d{8}$/.test(dtstart ?? "");
+      const color = SCHOOL_CLOSED_RE.test(title) ? SCHOOL_CLOSED_COLOR : null;
 
       const description = getIcsValue(block, "DESCRIPTION");
       const location = getIcsValue(block, "LOCATION");
       const notes = [description, location].filter(Boolean).join(" · ") || null;
 
-      return { title, startsAt, endsAt, notes };
+      const rawCats = (getIcsValue(block, "CATEGORIES") ?? "")
+        .split(",").map((s) => s.trim()).filter(Boolean);
+      const categories = detectCategories(title, isAllDay, rawCats);
+
+      return { title, startsAt, endsAt, isAllDay, color, notes, categories };
     })
     .filter((event): event is ImportedCalendarEvent => event !== null);
 }
@@ -499,6 +888,18 @@ function escapeIcs(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
 
+function filterByDateRange(
+  events: ImportedCalendarEvent[],
+  from: string,
+  to: string
+): ImportedCalendarEvent[] {
+  if (!from && !to) return events;
+  return events.filter((ev) => {
+    const date = ev.startsAt.slice(0, 10);
+    return (!from || date >= from) && (!to || date <= to);
+  });
+}
+
 function formatTimeRange(startsAt: string, endsAt: string) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
     day: "numeric",
@@ -508,4 +909,61 @@ function formatTimeRange(startsAt: string, endsAt: string) {
   });
 
   return `${formatter.format(new Date(startsAt))}–${formatter.format(new Date(endsAt))}`;
+}
+
+function WordTagInput({
+  words,
+  onChangeWords,
+  placeholder,
+  label
+}: {
+  words: string[];
+  onChangeWords: (words: string[]) => void;
+  placeholder?: string;
+  label?: string;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function commit() {
+    const w = draft.trim().replace(/,+$/, "");
+    if (w && !words.includes(w)) onChangeWords([...words, w]);
+    setDraft("");
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Backspace" && !draft && words.length > 0) {
+      onChangeWords(words.slice(0, -1));
+    }
+  }
+
+  return (
+    <div className="word-tag-field-wrap">
+      {label && <span className="word-tag-label">{label}</span>}
+      <div className="word-tag-input">
+        {words.map((w) => (
+          <span key={w} className="word-tag">
+            {w}
+            <button
+              className="word-tag-remove"
+              onClick={() => onChangeWords(words.filter((x) => x !== w))}
+              type="button"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          className="word-tag-draft"
+          onBlur={commit}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={words.length === 0 ? placeholder : ""}
+          value={draft}
+        />
+      </div>
+    </div>
+  );
 }

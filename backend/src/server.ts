@@ -7,7 +7,8 @@ import type { ErrorRequestHandler } from "express";
 import { connectDB } from "./db/connection.js";
 import { authRouter } from "./routes/auth.js";
 import { accountsRouter } from "./routes/accounts.js";
-import { calendarsRouter } from "./routes/calendars.js";
+import { calendarsRouter, syncSubscription } from "./routes/calendars.js";
+import { CalendarModel } from "./db/models/Calendar.js";
 import { invitationsRouter } from "./routes/invitations.js";
 import { membersRouter } from "./routes/members.js";
 import { rewardsRouter } from "./routes/rewards.js";
@@ -22,7 +23,7 @@ const app = express();
 
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
 app.use("/api/auth", authRouter);
 app.use("/api", invitationsRouter);
@@ -43,11 +44,22 @@ const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
 
 app.use(errorHandler);
 
+async function syncAllSubscriptions() {
+  const calendars = await CalendarModel.find({ deletedAt: null });
+  for (const cal of calendars) {
+    for (const sub of cal.subscriptions ?? []) {
+      await syncSubscription(cal.id, sub as any).catch(console.error);
+    }
+  }
+}
+
 async function start() {
   await connectDB();
   app.listen(PORT, () => {
     console.log(`Servern lyssnar på port ${PORT}`);
   });
+  // Sync all subscriptions every hour
+  setInterval(() => { syncAllSubscriptions().catch(console.error); }, 60 * 60 * 1000);
 }
 
 start().catch(console.error);

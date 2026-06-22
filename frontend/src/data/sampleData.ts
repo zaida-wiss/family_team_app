@@ -96,6 +96,7 @@ export const calendars: Calendar[] = [
     color: "#2f7d6d",
     sharedWith: [{ memberId: "member-child-1", access: "view" }],
     importedSources: [],
+    subscriptions: [],
     deletedAt: null,
     deletedBy: null,
     events: [
@@ -106,6 +107,9 @@ export const calendars: Calendar[] = [
         startsAt: "2026-06-10T17:00:00",
         endsAt: "2026-06-10T18:00:00",
         isAllDay: false,
+        color: null,
+        uid: null,
+        subscriptionId: null,
         location: null,
         notes: null,
         recurrence: { type: "none" as const, interval: 1, until: null },

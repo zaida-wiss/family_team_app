@@ -46,9 +46,14 @@ type Props = {
   onSetWishStars: (rewardId: Id, stars: number) => void;
   onAddCalendarEvent: ComponentProps<typeof CalendarPanel>["onAddEvent"];
   onCreateCalendar: (name: string) => void;
+  onDeleteCalendar: ComponentProps<typeof CalendarPanel>["onDeleteCalendar"];
   onImportCalendar: ComponentProps<typeof CalendarPanel>["onImportCalendar"];
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
   onShareCalendar: (calendarId: Id, memberId: Id, access: "view" | "edit") => void;
+  onAddSubscription: ComponentProps<typeof CalendarPanel>["onAddSubscription"];
+  onUpdateSubscription: ComponentProps<typeof CalendarPanel>["onUpdateSubscription"];
+  onRemoveSubscription: ComponentProps<typeof CalendarPanel>["onRemoveSubscription"];
+  onSyncSubscription: ComponentProps<typeof CalendarPanel>["onSyncSubscription"];
   onAddShoppingItem: (listId: Id, title: string) => void;
   onCreateShoppingList: (name: string) => void;
   onDeleteShoppingList: (listId: Id) => void;
@@ -94,9 +99,14 @@ export function Dashboard({
   onSetWishStars,
   onAddCalendarEvent,
   onCreateCalendar,
+  onDeleteCalendar,
   onImportCalendar,
   onRemoveCalendarShare,
   onShareCalendar,
+  onAddSubscription,
+  onUpdateSubscription,
+  onRemoveSubscription,
+  onSyncSubscription,
   onAddShoppingItem,
   onCreateShoppingList,
   onDeleteShoppingList,
@@ -174,9 +184,14 @@ export function Dashboard({
           roles={roles}
           onAddEvent={onAddCalendarEvent}
           onCreateCalendar={onCreateCalendar}
+          onDeleteCalendar={onDeleteCalendar}
           onImportCalendar={onImportCalendar}
           onRemoveCalendarShare={onRemoveCalendarShare}
           onShareCalendar={onShareCalendar}
+          onAddSubscription={onAddSubscription}
+          onUpdateSubscription={onUpdateSubscription}
+          onRemoveSubscription={onRemoveSubscription}
+          onSyncSubscription={onSyncSubscription}
         />
       ) : null}
 

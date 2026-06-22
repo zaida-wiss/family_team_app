@@ -237,6 +237,23 @@ export const calendarsApi = {
     request<{ ok: boolean }>(api(`calendars/${id}/restore`), {
       method: "PATCH",
       body: JSON.stringify({})
+    }),
+  createSubscription: (calendarId: string, sub: { url: string; includeWords: string[]; excludeWords: string[]; dateFrom: string | null; dateTo: string | null }) =>
+    request<import("@shared/types").IcsSubscription>(api(`calendars/${calendarId}/subscriptions`), {
+      method: "POST",
+      body: JSON.stringify(sub)
+    }),
+  updateSubscription: (calendarId: string, subId: string, patch: { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null }) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}`), {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }),
+  deleteSubscription: (calendarId: string, subId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}`), { method: "DELETE" }),
+  syncSubscription: (calendarId: string, subId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}/sync`), {
+      method: "POST",
+      body: JSON.stringify({})
     })
 };
 

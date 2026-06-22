@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { calendarsApi } from "../../api";
 import { calendars as initialCalendars } from "../../data/sampleData";
-import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
+import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
 
 type AddEventInput = {
   title: string;
@@ -18,6 +18,8 @@ type ImportEventInput = {
   title: string;
   startsAt: string;
   endsAt: string;
+  isAllDay?: boolean;
+  color?: string | null;
   notes: string | null;
 };
 
@@ -36,6 +38,7 @@ export function useCalendarsState() {
       color: "#2f7d6d",
       sharedWith: [],
       importedSources: [],
+      subscriptions: [],
       deletedAt: null,
       deletedBy: null,
       events: []
@@ -53,6 +56,9 @@ export function useCalendarsState() {
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       isAllDay: event.isAllDay ?? false,
+      color: null,
+      uid: null,
+      subscriptionId: null,
       location: event.location ?? null,
       notes: event.notes ?? null,
       recurrence: event.recurrence ?? { type: "none", interval: 1, until: null },
@@ -155,7 +161,10 @@ export function useCalendarsState() {
       title: event.title,
       startsAt: event.startsAt,
       endsAt: event.endsAt,
-      isAllDay: false,
+      isAllDay: event.isAllDay ?? false,
+      color: event.color ?? null,
+      uid: null,
+      subscriptionId: null,
       location: null,
       notes: event.notes,
       recurrence: { type: "none" as const, interval: 1, until: null },
@@ -177,6 +186,24 @@ export function useCalendarsState() {
           ...calendar,
           importedSources: [...calendar.importedSources, source],
           events: [...calendar.events, ...newEvents]
+        };
+      })
+    );
+  }
+
+  function deleteCalendar(calendarId: Id, memberId: Id) {
+    const deletedAt = new Date().toISOString();
+    calendarsApi.remove(calendarId).catch(console.error);
+    setCalendars((current) =>
+      current.map((calendar) => {
+        if (calendar.id !== calendarId) return calendar;
+        return {
+          ...calendar,
+          deletedAt,
+          deletedBy: memberId,
+          events: calendar.events.map((ev) =>
+            ev.deletedAt ? ev : { ...ev, deletedAt, deletedBy: memberId }
+          )
         };
       })
     );
@@ -272,17 +299,67 @@ export function useCalendarsState() {
     );
   }
 
+  function addSubscription(calendarId: Id, sub: Omit<IcsSubscription, "id" | "calendarId" | "lastSyncedAt">) {
+    calendarsApi.createSubscription(calendarId, sub).then((created) => {
+      setCalendars((current) =>
+        current.map((cal) =>
+          cal.id !== calendarId ? cal : { ...cal, subscriptions: [...cal.subscriptions, created] }
+        )
+      );
+    }).catch(console.error);
+  }
+
+  async function updateSubscription(calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "dateFrom" | "dateTo">>) {
+    setCalendars((current) =>
+      current.map((cal) =>
+        cal.id !== calendarId ? cal : {
+          ...cal,
+          subscriptions: cal.subscriptions.map((s) => s.id !== subId ? s : { ...s, ...patch })
+        }
+      )
+    );
+    await calendarsApi.updateSubscription(calendarId, subId, patch);
+  }
+
+  function removeSubscription(calendarId: Id, subId: Id) {
+    const deletedAt = new Date().toISOString();
+    calendarsApi.deleteSubscription(calendarId, subId).catch(console.error);
+    setCalendars((current) =>
+      current.map((cal) => {
+        if (cal.id !== calendarId) return cal;
+        return {
+          ...cal,
+          subscriptions: cal.subscriptions.filter((s) => s.id !== subId),
+          events: cal.events.map((ev) =>
+            ev.subscriptionId === subId && !ev.deletedAt ? { ...ev, deletedAt } : ev
+          )
+        };
+      })
+    );
+  }
+
+  async function syncSubscription(calendarId: Id, subId: Id) {
+    await calendarsApi.syncSubscription(calendarId, subId);
+    const updated = await calendarsApi.getAll();
+    setCalendars(updated);
+  }
+
   return {
     calendars,
     createCalendar,
     addCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,
+    deleteCalendar,
     rsvpCalendarEvent,
     importCalendarEvents,
     shareCalendar,
     removeCalendarShare,
     restoreCalendar,
-    softDeleteCalendarsForMember
+    softDeleteCalendarsForMember,
+    addSubscription,
+    updateSubscription,
+    removeSubscription,
+    syncSubscription
   };
 }

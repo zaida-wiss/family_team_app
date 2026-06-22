@@ -109,12 +109,24 @@ export type OwnedSharedResource = {
   deletedBy: Id | null;
 };
 
+export type IcsSubscription = {
+  id: Id;
+  calendarId: Id;
+  url: string;
+  includeWords: string[];
+  excludeWords: string[];
+  dateFrom: string | null;
+  dateTo: string | null;
+  lastSyncedAt: string | null;
+};
+
 export type Calendar = OwnedSharedResource & {
   id: Id;
   name: string;
   color: string;
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
+  subscriptions: IcsSubscription[];
 };
 
 export type EventRecurrence = {
@@ -135,6 +147,9 @@ export type CalendarEvent = {
   startsAt: string;
   endsAt: string;
   isAllDay: boolean;
+  color: string | null;
+  uid: string | null;
+  subscriptionId: string | null;
   location: string | null;
   notes: string | null;
   recurrence: EventRecurrence;

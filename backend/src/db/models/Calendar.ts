@@ -17,6 +17,9 @@ const calendarSchema = new Schema<Calendar>({
       startsAt: { type: String, required: true },
       endsAt: { type: String, required: true },
       isAllDay: { type: Boolean, default: false },
+      color: { type: String, default: null },
+      uid: { type: String, default: null },
+      subscriptionId: { type: String, default: null },
       location: { type: String, default: null },
       notes: { type: String, default: null },
       recurrence: {
@@ -36,6 +39,18 @@ const calendarSchema = new Schema<Calendar>({
       type: { type: String, required: true },
       name: { type: String, required: true },
       importedAt: { type: String, required: true }
+    }
+  ],
+  subscriptions: [
+    {
+      id: { type: String, required: true },
+      calendarId: { type: String, required: true },
+      url: { type: String, required: true },
+      includeWords: [{ type: String }],
+      excludeWords: [{ type: String }],
+      dateFrom: { type: String, default: null },
+      dateTo: { type: String, default: null },
+      lastSyncedAt: { type: String, default: null }
     }
   ]
 });

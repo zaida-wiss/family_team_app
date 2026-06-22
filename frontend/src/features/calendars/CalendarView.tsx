@@ -279,6 +279,9 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
       onAddEvent?.(form.calendarId, {
         title: trimmed,
         isAllDay: form.isAllDay,
+        color: null,
+        uid: null,
+        subscriptionId: null,
         startsAt: isoStart,
         endsAt: isoEnd,
         location: form.location.trim() || null,
@@ -357,40 +360,83 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
       });
     }
 
+    const displayListEvents = selectedDay
+      ? eventsForDay(selectedDay)
+      : enrichedEvents
+          .filter((ev) => {
+            const start = toLocalDateStr(new Date(ev.startsAt));
+            return start.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`);
+          })
+          .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+
     return (
-      <div className="cal-grid-card">
-        <div className="cal-grid-nav">
-          <button className="icon-button" onClick={prevMonth} type="button"><ChevronLeft size={18} /></button>
-          <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
-          <button className="icon-button" onClick={nextMonth} type="button"><ChevronRight size={18} /></button>
+      <div className="cal-overview-wrap">
+        <div className="cal-grid-card">
+          <div className="cal-grid-nav">
+            <button className="icon-button" onClick={prevMonth} type="button"><ChevronLeft size={18} /></button>
+            <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
+            <button className="icon-button" onClick={nextMonth} type="button"><ChevronRight size={18} /></button>
+          </div>
+          <div className="cal-day-names">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
+          <div className="cal-grid">
+            {cells.map(({ date, isCurrentMonth }) => {
+              const dateStr = toLocalDateStr(date);
+              const isToday = dateStr === todayStr;
+              const isSelected = dateStr === selectedDay;
+              const dayEvents = isCurrentMonth ? eventsForDay(dateStr) : [];
+              return (
+                <div
+                  key={dateStr}
+                  className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today", isSelected && "cal-cell--selected"].filter(Boolean).join(" ")}
+                  onClick={() => { if (isCurrentMonth) setSelectedDay((s) => s === dateStr ? null : dateStr); }}
+                >
+                  <span className="cal-cell-num">{date.getDate()}</span>
+                  <div className="cal-cell-dots">
+                    {dayEvents.slice(0, 5).map((ev) => (
+                      <span
+                        key={ev.id}
+                        className="cal-cell-dot"
+                        style={{ background: calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }}
+                        title={ev.title}
+                      />
+                    ))}
+                    {dayEvents.length > 5 && <span className="cal-cell-dot-more">+{dayEvents.length - 5}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="cal-day-names">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
-        <div className="cal-grid">
-          {cells.map(({ date, isCurrentMonth }) => {
-            const dateStr = toLocalDateStr(date);
-            const isToday = dateStr === todayStr;
-            const dayEvents = isCurrentMonth ? eventsForDay(dateStr) : [];
-            return (
-              <div
-                key={dateStr}
-                className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today"].filter(Boolean).join(" ")}
-                style={{ cursor: "default" }}
-              >
-                <span className="cal-cell-num">{date.getDate()}</span>
-                <div className="cal-cell-dots">
-                  {dayEvents.slice(0, 5).map((ev) => (
-                    <span
-                      key={ev.id}
-                      className="cal-cell-dot"
-                      style={{ background: calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }}
-                      title={ev.title}
-                    />
-                  ))}
-                  {dayEvents.length > 5 && <span className="cal-cell-dot-more">+{dayEvents.length - 5}</span>}
+
+        <div className="cal-event-list">
+          <div className="cal-event-list-header">
+            <span className="cal-event-list-title">
+              {selectedDay ? fmtFullDate(selectedDay) : `${MONTHS[viewMonth]} ${viewYear}`}
+            </span>
+            {selectedDay && (
+              <button className="cal-clear-day" onClick={() => setSelectedDay(null)} type="button">
+                Visa alla
+              </button>
+            )}
+          </div>
+          {displayListEvents.length === 0 ? (
+            <p className="cal-empty-note">{selectedDay ? "Inga händelser denna dag." : "Inga händelser denna månad."}</p>
+          ) : (
+            displayListEvents.map((ev) => (
+              <div className="cal-event-row" key={ev.id}>
+                <div className="cal-event-color-dot" style={{ background: ev.color ?? calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }} />
+                <div className="cal-event-row-info">
+                  <span className="cal-event-row-title">{ev.title}</span>
+                  <span className="cal-event-row-meta">
+                    {ev.isAllDay
+                      ? `${fmtFullDate(ev.startsAt.slice(0, 10))} · Heldag`
+                      : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`}
+                    {" · "}{ev.calendarName}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+            ))
+          )}
         </div>
       </div>
     );
@@ -418,7 +464,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           <p className="cal-invitations-title">Inbjudningar ({pendingInvitations.length})</p>
           {pendingInvitations.map((ev) => (
             <div className="cal-invitation-row" key={ev.id}>
-              <div className="cal-event-color-dot" style={{ background: ev.calendarColor }} />
+              <div className="cal-event-color-dot" style={{ background: ev.color ?? ev.calendarColor }} />
               <div className="cal-event-row-info">
                 <span className="cal-event-row-title">{ev.title}</span>
                 <span className="cal-event-row-meta">
@@ -496,7 +542,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             onClick={() => openEdit(ev)}
             style={{ cursor: "pointer" }}
           >
-            <div className="cal-event-color-dot" style={{ background: ev.calendarColor }} />
+            <div className="cal-event-color-dot" style={{ background: ev.color ?? ev.calendarColor }} />
             <div className="cal-event-row-info">
               <span className="cal-event-row-title">
                 {ev.title}

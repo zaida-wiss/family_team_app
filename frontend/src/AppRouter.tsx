@@ -109,9 +109,14 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
             roles={settingsProps.roles}
             onAddEvent={memberContentProps.onAddCalendarEvent}
             onCreateCalendar={memberContentProps.onCreateCalendar}
+            onDeleteCalendar={memberContentProps.onDeleteCalendar}
             onImportCalendar={memberContentProps.onImportCalendar}
             onShareCalendar={memberContentProps.onShareCalendar}
             onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+            onAddSubscription={memberContentProps.onAddSubscription}
+            onUpdateSubscription={memberContentProps.onUpdateSubscription}
+            onRemoveSubscription={memberContentProps.onRemoveSubscription}
+            onSyncSubscription={memberContentProps.onSyncSubscription}
           />
         </SettingsSection>
         <SettingsSection title="Inköpslistor">
