@@ -56,6 +56,30 @@ calendarsRouter.delete("/:id/share/:memberId", requireAuth, async (request, resp
   response.json({ ok: true });
 });
 
+calendarsRouter.post("/:id/fetch-ics", requireAuth, async (request, response) => {
+  const { url } = request.body as { url?: string };
+  if (!url || !/^https?:\/\/.+/.test(url)) {
+    response.status(400).json({ error: "Ogiltig URL – måste börja med http:// eller https://" });
+    return;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const icsResponse = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!icsResponse.ok) {
+      response.status(502).json({ error: "Kunde inte hämta kalender från URL" });
+      return;
+    }
+    const icsText = await icsResponse.text();
+    response.json({ icsText });
+  } catch {
+    clearTimeout(timeout);
+    response.status(502).json({ error: "Tidsgräns nådd – kontrollera URL:en" });
+  }
+});
+
 calendarsRouter.post("/:id/import", requireAuth, async (request, response) => {
   const calendar = await CalendarModel.findOne({ id: request.params.id });
   if (!calendar) {
@@ -67,6 +91,43 @@ calendarsRouter.post("/:id/import", requireAuth, async (request, response) => {
   for (const event of events) {
     calendar.events.push(event);
   }
+  await calendar.save();
+  response.json({ ok: true });
+});
+
+calendarsRouter.patch("/:id/events/:eventId", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) { response.status(404).json({ error: "Kalender hittades inte" }); return; }
+  const event = calendar.events.find((e) => e.id === request.params.eventId);
+  if (!event) { response.status(404).json({ error: "Händelse hittades inte" }); return; }
+  const updates = request.body as Partial<typeof event>;
+  Object.assign(event, updates);
+  calendar.markModified("events");
+  await calendar.save();
+  response.json({ ok: true });
+});
+
+calendarsRouter.delete("/:id/events/:eventId", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) { response.status(404).json({ error: "Kalender hittades inte" }); return; }
+  const event = calendar.events.find((e) => e.id === request.params.eventId);
+  if (!event) { response.status(404).json({ error: "Händelse hittades inte" }); return; }
+  event.deletedAt = new Date().toISOString();
+  event.deletedBy = request.memberId ?? null;
+  calendar.markModified("events");
+  await calendar.save();
+  response.json({ ok: true });
+});
+
+calendarsRouter.patch("/:id/events/:eventId/rsvp", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) { response.status(404).json({ error: "Kalender hittades inte" }); return; }
+  const event = calendar.events.find((e) => e.id === request.params.eventId);
+  if (!event) { response.status(404).json({ error: "Händelse hittades inte" }); return; }
+  const { memberId, status } = request.body as { memberId: string; status: string };
+  const attendee = event.attendees?.find((a) => a.memberId === memberId);
+  if (attendee) { attendee.status = status; }
+  calendar.markModified("events");
   await calendar.save();
   response.json({ ok: true });
 });

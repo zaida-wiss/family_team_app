@@ -5,10 +5,9 @@ import { MemberOverview } from "../layout/MemberOverview";
 import { CalendarView } from "../calendars/CalendarView";
 import { ShoppingView } from "../shopping/ShoppingView";
 import { TodosView } from "../todos/TodosView";
-import { canManageChildAccount } from "../../utils/permissions";
 import { getRewardPathProgress } from "../todos/selectors";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
+import type { Calendar, CalendarEvent, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
 
 type DashboardProps = ComponentProps<typeof Dashboard>;
 
@@ -46,6 +45,9 @@ type Props = {
   onRejectWish: (rewardId: string) => void;
   onSetWishStars: (rewardId: string, stars: number) => void;
   onAddCalendarEvent: DashboardProps["onAddCalendarEvent"];
+  onUpdateCalendarEvent: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
+  onDeleteCalendarEvent: (calendarId: string, eventId: string) => void;
+  onRsvpCalendarEvent: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
   onCreateCalendar: (name: string) => void;
   onImportCalendar: DashboardProps["onImportCalendar"];
   onShareCalendar: DashboardProps["onShareCalendar"];
@@ -80,11 +82,10 @@ export function MemberShellContent({
   editingTodoId, editingTodoTitle, wishStars, wishTitle,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
   onCancelEditingTodo, onCreateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
-  onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent, onCreateCalendar,
-  onImportCalendar, onShareCalendar, onRemoveCalendarShare, onAddShoppingItem,
-  onCreateShoppingList, onDeleteShoppingList, onShareShoppingList, onRemoveShoppingListShare,
-  onToggleShoppingItem, onThemePickerOpen, onCompleteTodo, onDismissRejectedTodo,
-  onSetWishTitle, onCreateWish
+  onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
+  onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
+  onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
+  onDismissRejectedTodo, onSetWishTitle, onCreateWish
 }: Props) {
 
   // ── Kalender-vy (nav) — snygg presentation, ingen hantering ──────────────
@@ -93,8 +94,12 @@ export function MemberShellContent({
       <CalendarView
         calendars={canSeeCalendar ? calendars : []}
         currentMember={currentMember}
+        activeMembers={activeMembers}
         roles={roles}
         onAddEvent={onAddCalendarEvent}
+        onUpdateEvent={onUpdateCalendarEvent}
+        onDeleteEvent={onDeleteCalendarEvent}
+        onRsvpEvent={onRsvpCalendarEvent}
       />
     );
   }
@@ -145,95 +150,59 @@ export function MemberShellContent({
   const selectedDashboardMember =
     activeMembers.find((m) => m.id === selectedDashboardMemberId) ?? null;
 
-  // Vald medlem → personlig dashboard
-  if (selectedDashboardMember) {
+  // Valt barn → barnens dashboard (enda vyn som är annorlunda)
+  if (selectedDashboardMember?.isChild) {
     const now = Date.now();
-    const isSelectedChild = selectedDashboardMember.isChild;
-    const viewedAdult = isSelectedChild ? currentMember : selectedDashboardMember;
-    const activeReward = isSelectedChild
-      ? (rewards.find((r) => r.wishedBy === selectedDashboardMember.id && r.status === "active") ?? null)
+    const activeReward =
+      rewards.find((r) => r.wishedBy === selectedDashboardMember.id && r.status === "active") ?? null;
+    const rewardProgress = activeReward
+      ? getRewardPathProgress(selectedDashboardMember, activeReward, todos)
       : null;
-    const rewardProgress =
-      isSelectedChild && activeReward
-        ? getRewardPathProgress(selectedDashboardMember, activeReward, todos)
-        : null;
-    const suggestedRewards = isSelectedChild
-      ? rewards.filter((r) => r.wishedBy === selectedDashboardMember.id && r.status === "suggested")
-      : [];
-    const activeChildTodos = isSelectedChild
-      ? todos.filter(
-          (t) =>
-            t.assignedTo === selectedDashboardMember.id &&
-            t.status === "pending" &&
-            t.recurrence.type === "none" &&
-            t.deletedAt === null &&
-            isTodoVisibleNow(t, now)
-        )
-      : [];
-    const canApprove =
-      isSelectedChild &&
-      canManageChildAccount(currentMember, selectedDashboardMember, roles) &&
-      canApproveTodos;
+    const suggestedRewards = rewards.filter(
+      (r) => r.wishedBy === selectedDashboardMember.id && r.status === "suggested"
+    );
+    const activeChildTodos = todos.filter(
+      (t) =>
+        t.assignedTo === selectedDashboardMember.id &&
+        t.status === "pending" &&
+        t.recurrence.type === "none" &&
+        t.deletedAt === null &&
+        isTodoVisibleNow(t, now)
+    );
 
     return (
-      <section className="dashboard-grid">
-        <Dashboard
-          member={viewedAdult}
-          members={activeMembers}
-          roles={roles}
-          todos={canSeeTodos ? todos.filter((t) => t.assignedTo === viewedAdult.id || t.isShared).filter((t) => t.deletedAt === null) : []}
-          editingTodoId={editingTodoId}
-          editingTodoTitle={editingTodoTitle}
-          approvalTodos={canApproveTodos ? todos.filter((t) => t.status === "done") : []}
-          allSuggestedRewards={canApproveTodos ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null) : []}
-          wishStars={wishStars}
-          canApprove={canApprove}
-          canSeeCalendar={canSeeCalendar}
-          canSeeTodos={canSeeTodos}
-          canSeeShopping={canSeeShopping}
-          calendars={canSeeCalendar ? calendars : []}
-          shoppingLists={canSeeShopping ? shoppingLists : []}
-          onSetEditingTodoTitle={onSetEditingTodoTitle}
-          onStartEditingTodo={(todo) => onStartEditingTodo(todo)}
-          onSaveTodoTitle={(todoId) => onSaveTodoTitle(todoId)}
-          onCancelEditingTodo={onCancelEditingTodo}
-          onCreateTodo={onCreateTodo}
-          onSoftDeleteTodo={(todoId) => onSoftDeleteTodo(todoId)}
-          onApproveTodo={(todoId) => onApproveTodo(todoId)}
-          onRejectTodo={(todoId) => onRejectTodo(todoId)}
-          onApproveWish={(rewardId) => onApproveWish(rewardId)}
-          onRejectWish={(rewardId) => onRejectWish(rewardId)}
-          onSetWishStars={(rewardId, stars) => onSetWishStars(rewardId, stars)}
-          onAddCalendarEvent={onAddCalendarEvent}
-          onCreateCalendar={onCreateCalendar}
-          onImportCalendar={onImportCalendar}
-          onShareCalendar={onShareCalendar}
-          onRemoveCalendarShare={onRemoveCalendarShare}
-          onAddShoppingItem={onAddShoppingItem}
-          onCreateShoppingList={onCreateShoppingList}
-          onDeleteShoppingList={(listId) => onDeleteShoppingList(listId)}
-          onShareShoppingList={onShareShoppingList}
-          onRemoveShoppingListShare={onRemoveShoppingListShare}
-          onToggleShoppingItem={onToggleShoppingItem}
-          onThemePickerOpen={onThemePickerOpen}
-        />
+      <ChildDashboard
+        child={selectedDashboardMember}
+        activeReward={activeReward}
+        rewardProgress={rewardProgress}
+        suggestedRewards={suggestedRewards}
+        activeChildTodos={activeChildTodos}
+        wishTitle={wishTitle}
+        onSetWishTitle={onSetWishTitle}
+        onCreateWish={onCreateWish}
+        onCompleteTodo={(todoId) => onCompleteTodo(selectedDashboardMember, todoId, roles)}
+        onDismissRejectedTodo={(todoId) =>
+          onDismissRejectedTodo(todoId, selectedDashboardMember.id)
+        }
+        onThemePickerOpen={onThemePickerOpen}
+      />
+    );
+  }
 
-        {isSelectedChild && (
-          <ChildDashboard
-            child={selectedDashboardMember}
-            activeReward={activeReward}
-            rewardProgress={rewardProgress}
-            suggestedRewards={suggestedRewards}
-            activeChildTodos={activeChildTodos}
-            wishTitle={wishTitle}
-            onSetWishTitle={onSetWishTitle}
-            onCreateWish={onCreateWish}
-            onCompleteTodo={(todoId) => onCompleteTodo(selectedDashboardMember, todoId, roles)}
-            onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, selectedDashboardMember.id)}
-            onThemePickerOpen={onThemePickerOpen}
-          />
-        )}
-      </section>
+  // Vald vuxen → hemvy för den personen (samma layout som hem)
+  if (selectedDashboardMember) {
+    return (
+      <MemberOverview
+        currentMember={selectedDashboardMember}
+        accountName={accountName}
+        roles={roles}
+        activeMembers={activeMembers}
+        selectedMemberId={selectedDashboardMember.id}
+        calendars={canSeeCalendar ? calendars : []}
+        canSeeCalendar={canSeeCalendar}
+        onSelectMember={onSelectMember}
+        onOpenCalendar={() => onNavigate("calendar")}
+      />
     );
   }
 

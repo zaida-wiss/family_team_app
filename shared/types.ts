@@ -116,13 +116,28 @@ export type Calendar = OwnedSharedResource & {
   importedSources: ImportedCalendarSource[];
 };
 
+export type EventRecurrence = {
+  type: "none" | "daily" | "weekly" | "monthly" | "yearly";
+  interval: number;
+  until: string | null;
+};
+
+export type EventAttendee = {
+  memberId: Id;
+  status: "pending" | "accepted" | "declined";
+};
+
 export type CalendarEvent = {
   id: Id;
   calendarId: Id;
   title: string;
   startsAt: string;
   endsAt: string;
+  isAllDay: boolean;
+  location: string | null;
   notes: string | null;
+  recurrence: EventRecurrence;
+  attendees: EventAttendee[];
   createdBy: Id;
   deletedAt: string | null;
   deletedBy: Id | null;

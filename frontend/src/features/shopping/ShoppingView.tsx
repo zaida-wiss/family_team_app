@@ -72,7 +72,7 @@ export function ShoppingView({
                 <strong>{list.name}</strong>
               </div>
               {activeItems.length > 0 && (
-                <small style={{ color: "#6b8f85" }}>
+                <small style={{ color: "var(--muted-fg)" }}>
                   {doneCount}/{activeItems.length} klart
                 </small>
               )}

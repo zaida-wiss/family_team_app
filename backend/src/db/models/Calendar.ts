@@ -16,7 +16,15 @@ const calendarSchema = new Schema<Calendar>({
       title: { type: String, required: true },
       startsAt: { type: String, required: true },
       endsAt: { type: String, required: true },
+      isAllDay: { type: Boolean, default: false },
+      location: { type: String, default: null },
       notes: { type: String, default: null },
+      recurrence: {
+        type: { type: String, default: "none" },
+        interval: { type: Number, default: 1 },
+        until: { type: String, default: null }
+      },
+      attendees: [{ memberId: String, status: String }],
       createdBy: { type: String, required: true },
       deletedAt: { type: String, default: null },
       deletedBy: { type: String, default: null }

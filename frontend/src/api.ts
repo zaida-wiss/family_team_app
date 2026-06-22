@@ -212,6 +212,25 @@ export const calendarsApi = {
       method: "POST",
       body: JSON.stringify({ source, events })
     }),
+  fetchIcs: (calendarId: string, url: string) =>
+    request<{ icsText: string }>(api(`calendars/${calendarId}/fetch-ics`), {
+      method: "POST",
+      body: JSON.stringify({ url })
+    }),
+  updateEvent: (calendarId: string, eventId: string, updates: Partial<Calendar["events"][number]>) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/events/${eventId}`), {
+      method: "PATCH",
+      body: JSON.stringify(updates)
+    }),
+  deleteEvent: (calendarId: string, eventId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/events/${eventId}`), {
+      method: "DELETE"
+    }),
+  rsvpEvent: (calendarId: string, eventId: string, memberId: string, status: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/events/${eventId}/rsvp`), {
+      method: "PATCH",
+      body: JSON.stringify({ memberId, status })
+    }),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), { method: "DELETE" }),
   restore: (id: string) =>

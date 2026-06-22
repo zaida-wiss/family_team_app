@@ -98,7 +98,11 @@ export const calendars: Calendar[] = [
         title: "Simskola",
         startsAt: "2026-06-10T17:00:00",
         endsAt: "2026-06-10T18:00:00",
+        isAllDay: false,
+        location: null,
         notes: null,
+        recurrence: { type: "none" as const, interval: 1, until: null },
+        attendees: [],
         createdBy: "member-parent-1",
         deletedAt: null,
         deletedBy: null

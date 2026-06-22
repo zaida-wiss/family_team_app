@@ -1,13 +1,6 @@
 import { CalendarDays } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
-import type { Calendar, CalendarEvent, Member, Role } from "@shared/types";
-
-type WeekItem = {
-  event: CalendarEvent;
-  creatorName: string;
-  participants: Member[];
-  isPrivate: boolean;
-};
+import type { Calendar, Member, Role } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -30,9 +23,10 @@ export function MemberOverview({
   calendars,
   canSeeCalendar,
   onSelectMember,
-  onOpenCalendar
+  onOpenCalendar,
 }: Props) {
-  const weekEvents = canSeeCalendar ? getWeekEvents(calendars, activeMembers) : [];
+  const weekDays = canSeeCalendar ? getWeekDays(calendars) : [];
+  const todayStr = toLocalDateStr(new Date());
 
   return (
     <div className="overview-home">
@@ -73,84 +67,111 @@ export function MemberOverview({
             )}
           </header>
 
-          {weekEvents.length === 0 ? (
-            <p className="empty-note">Inga händelser den närmaste veckan.</p>
-          ) : (
-            <div className="week-calendar-events">
-              {weekEvents.map((item) => (
-                <div className="week-event-row" key={item.event.id}>
-                  <div className="week-event-date">
-                    <span className="week-event-day">{fmtDayAbbr(item.event.startsAt)}</span>
-                    <span className="week-event-num">{fmtDayNum(item.event.startsAt)}</span>
-                    <span className="week-event-month">{fmtMonth(item.event.startsAt)}</span>
-                  </div>
-                  <div className="week-event-info">
-                    <span className="week-event-title">{item.event.title}</span>
-                    <span className="week-event-meta">
-                      {fmtTime(item.event.startsAt)} · {item.creatorName}
-                      {item.isPrivate ? " · privat" : ""}
+          <div className="week-timeline">
+            {weekDays.map(({ date, dateStr, memberEvents }) => {
+              const isToday = dateStr === todayStr;
+
+              return (
+                <div className="week-tl-day" key={dateStr}>
+                  <div className="week-tl-day-hdr">
+                    <span className="week-tl-abbr">{fmtAbbr(date)}</span>
+                    <span className={`week-tl-num${isToday ? " week-tl-num--today" : ""}`}>
+                      {date.getDate()}
                     </span>
                   </div>
-                  <div className="week-event-participants">
-                    {item.participants.map((m) => (
-                      <MemberAvatar key={m.id} member={m} size="xs" />
-                    ))}
+
+                  <div className="week-tl-rows">
+                    {activeMembers.map((member) => {
+                      const color = getMemberColor(member.id, calendars);
+                      const events = (memberEvents.get(member.id) ?? []).sort(
+                        (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+                      );
+
+                      return (
+                        <div className="week-tl-row" key={member.id}>
+                          <MemberAvatar member={member} size="xs" />
+                          <div className="week-tl-bar">
+                            {events.map((ev) => (
+                              <div
+                                className="week-tl-dot"
+                                key={ev.id}
+                                style={{
+                                  left: `${timeToPercent(ev.startsAt)}%`,
+                                  background: color,
+                                }}
+                                title={`${fmtTime(ev.startsAt)} ${ev.title}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+
+            {weekDays.length === 0 && (
+              <p className="empty-note" style={{ padding: "14px 20px" }}>
+                Inga händelser den närmaste veckan.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function getWeekEvents(calendars: Calendar[], members: Member[]): WeekItem[] {
-  const now = new Date();
-  const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-  return calendars
-    .flatMap((cal) =>
-      cal.events
-        .filter((ev) => ev.deletedAt === null)
-        .filter((ev) => {
-          const start = new Date(ev.startsAt);
-          return start >= now && start <= weekEnd;
-        })
-        .map((ev) => {
-          const creator = members.find((m) => m.id === ev.createdBy);
-          const participants = [
-            members.find((m) => m.id === cal.ownerId),
-            ...cal.sharedWith.map((s) => members.find((m) => m.id === s.memberId))
-          ].filter((m): m is Member => m !== undefined);
-          return {
-            event: ev,
-            creatorName: creator?.name ?? "Okänd",
-            participants,
-            isPrivate: cal.sharedWith.length === 0
-          };
-        })
-    )
-    .sort(
-      (a, b) =>
-        new Date(a.event.startsAt).getTime() - new Date(b.event.startsAt).getTime()
-    );
+function toLocalDateStr(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-const sv = new Intl.DateTimeFormat("sv-SE", { weekday: "short" });
-const svDay = new Intl.DateTimeFormat("sv-SE", { day: "numeric" });
-const svMonth = new Intl.DateTimeFormat("sv-SE", { month: "long" });
+function timeToPercent(isoStr: string): number {
+  const d = new Date(isoStr);
+  return ((d.getHours() + d.getMinutes() / 60) / 24) * 100;
+}
+
+function getMemberColor(memberId: string, calendars: Calendar[]): string {
+  const cal = calendars.find((c) => c.ownerId === memberId && c.deletedAt === null);
+  return cal?.color ?? "var(--muted-fg)";
+}
+
+function getWeekDays(calendars: Calendar[]) {
+  const now = new Date();
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const dateStr = toLocalDateStr(date);
+
+    const memberEvents = new Map<string, { id: string; title: string; startsAt: string }[]>();
+
+    for (const cal of calendars) {
+      if (cal.deletedAt !== null) continue;
+      const dayEvents = cal.events
+        .filter(
+          (ev) => ev.deletedAt === null && toLocalDateStr(new Date(ev.startsAt)) === dateStr
+        )
+        .map((ev) => ({ id: ev.id, title: ev.title, startsAt: ev.startsAt }));
+
+      if (dayEvents.length > 0) {
+        const existing = memberEvents.get(cal.ownerId) ?? [];
+        memberEvents.set(cal.ownerId, [...existing, ...dayEvents]);
+      }
+    }
+
+    return { date, dateStr, memberEvents };
+  });
+}
+
+const svAbbr = new Intl.DateTimeFormat("sv-SE", { weekday: "short" });
 const svTime = new Intl.DateTimeFormat("sv-SE", { hour: "2-digit", minute: "2-digit" });
 
-function fmtDayAbbr(iso: string) {
-  return sv.format(new Date(iso)).toUpperCase().replace(".", "");
-}
-function fmtDayNum(iso: string) {
-  return svDay.format(new Date(iso));
-}
-function fmtMonth(iso: string) {
-  return svMonth.format(new Date(iso));
+function fmtAbbr(date: Date) {
+  return svAbbr.format(date).replace(".", "").toUpperCase();
 }
 function fmtTime(iso: string) {
   return svTime.format(new Date(iso));

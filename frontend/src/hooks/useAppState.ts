@@ -15,7 +15,6 @@ export type ShellPanel =
   | "shopping"
   | "todos"
   | "members"
-  | "trash"
   | "settings";
 
 type ActiveMembership = { member: Member; account: Account };

@@ -12,7 +12,10 @@ import { RoleEditor } from "./features/roles/RoleEditor";
 import { TrashView } from "./features/trash/TrashView";
 import { CalendarPanel } from "./features/calendars/CalendarPanel";
 import { ShoppingListsPanel } from "./features/shopping/ShoppingListsPanel";
+import { MembersView } from "./features/members/MembersView";
+import { SettingsSection } from "./features/layout/SettingsSection";
 import { ThemePicker } from "./components/ThemePicker";
+import { LogOut } from "lucide-react";
 import { useAppNavigation } from "./hooks/useAppNavigation";
 import { useShellState } from "./hooks/useShellState";
 import type { Membership } from "@shared/types";
@@ -66,80 +69,108 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
     panelContent = <ChildShellContent {...childContentProps} />;
   } else if (activePanel === "members") {
     panelContent = (
-      <>
-        <AccountSettings
-          account={activeAccount}
-          currentMember={currentMember}
-          members={settingsProps.members}
-          roles={settingsProps.roles}
-          onCreateMember={settingsProps.onCreateMember}
-          onDeleteMember={settingsProps.onDeleteMember}
-          onDeleteOwnData={settingsProps.onDeleteOwnData}
-          onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
-        />
-        {canManageMembers && (
-          <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
-        )}
-      </>
-    );
-  } else if (activePanel === "roles") {
-    panelContent = (
-      <RoleEditor
-        members={settingsProps.members}
-        roles={settingsProps.roles}
-        onAssignRole={settingsProps.onAssignRole}
-        onCreateRole={settingsProps.onCreateRole}
-        onTogglePermission={settingsProps.onTogglePermission}
-      />
-    );
-  } else if (activePanel === "trash") {
-    panelContent = (
-      <TrashView
-        calendars={settingsProps.calendars}
+      <MembersView
+        account={activeAccount}
         currentMember={currentMember}
         members={settingsProps.members}
         roles={settingsProps.roles}
-        shoppingLists={settingsProps.shoppingLists}
-        todos={settingsProps.todos}
-        onRestoreCalendar={settingsProps.onRestoreCalendar}
-        onRestoreMember={settingsProps.onRestoreMember}
-        onRestoreShoppingList={settingsProps.onRestoreShoppingList}
-        onRestoreTodo={settingsProps.onRestoreTodo}
       />
     );
   } else if (activePanel === "settings") {
     panelContent = (
-      <>
-        <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
-        <CalendarPanel
-          calendars={settingsProps.calendars}
-          currentMember={currentMember}
-          members={settingsProps.members}
-          roles={settingsProps.roles}
-          onAddEvent={memberContentProps.onAddCalendarEvent}
-          onCreateCalendar={memberContentProps.onCreateCalendar}
-          onImportCalendar={memberContentProps.onImportCalendar}
-          onShareCalendar={memberContentProps.onShareCalendar}
-          onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
-        />
-        <ShoppingListsPanel
-          currentMember={currentMember}
-          members={settingsProps.members}
-          roles={settingsProps.roles}
-          shoppingLists={settingsProps.shoppingLists}
-          onAddItem={memberContentProps.onAddShoppingItem}
-          onCreateList={memberContentProps.onCreateShoppingList}
-          onDeleteList={memberContentProps.onDeleteShoppingList}
-          onShareList={memberContentProps.onShareShoppingList}
-          onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
-          onToggleItem={memberContentProps.onToggleShoppingItem}
-        />
-        <DeleteAccountSection
-          accountId={activeAccount.id}
-          accountName={activeAccount.name}
-          onConfirm={settingsProps.onDeleteAccount}
-        />
-      </>
+      <div className="settings-accordion">
+        <SettingsSection title="Konto" defaultOpen>
+          <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
+        </SettingsSection>
+        <SettingsSection title="Familjemedlemmar">
+          <AccountSettings
+            account={activeAccount}
+            currentMember={currentMember}
+            members={settingsProps.members}
+            roles={settingsProps.roles}
+            onCreateMember={settingsProps.onCreateMember}
+            onDeleteMember={settingsProps.onDeleteMember}
+            onDeleteOwnData={settingsProps.onDeleteOwnData}
+            onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
+          />
+          {canManageMembers && (
+            <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
+          )}
+        </SettingsSection>
+        <SettingsSection title="Kalendrar">
+          <CalendarPanel
+            managementOnly
+            calendars={settingsProps.calendars}
+            currentMember={currentMember}
+            members={settingsProps.members}
+            roles={settingsProps.roles}
+            onAddEvent={memberContentProps.onAddCalendarEvent}
+            onCreateCalendar={memberContentProps.onCreateCalendar}
+            onImportCalendar={memberContentProps.onImportCalendar}
+            onShareCalendar={memberContentProps.onShareCalendar}
+            onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+          />
+        </SettingsSection>
+        <SettingsSection title="Inköpslistor">
+          <ShoppingListsPanel
+            managementOnly
+            currentMember={currentMember}
+            members={settingsProps.members}
+            roles={settingsProps.roles}
+            shoppingLists={settingsProps.shoppingLists}
+            onAddItem={memberContentProps.onAddShoppingItem}
+            onCreateList={memberContentProps.onCreateShoppingList}
+            onDeleteList={memberContentProps.onDeleteShoppingList}
+            onShareList={memberContentProps.onShareShoppingList}
+            onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
+            onToggleItem={memberContentProps.onToggleShoppingItem}
+          />
+        </SettingsSection>
+        {canManageRoles && (
+          <SettingsSection title="Roller & behörigheter">
+            <RoleEditor
+              members={settingsProps.members}
+              roles={settingsProps.roles}
+              onAssignRole={settingsProps.onAssignRole}
+              onCreateRole={settingsProps.onCreateRole}
+              onTogglePermission={settingsProps.onTogglePermission}
+            />
+          </SettingsSection>
+        )}
+        {canViewTrash && (
+          <SettingsSection title="Papperskorg">
+            <TrashView
+              calendars={settingsProps.calendars}
+              currentMember={currentMember}
+              members={settingsProps.members}
+              roles={settingsProps.roles}
+              shoppingLists={settingsProps.shoppingLists}
+              todos={settingsProps.todos}
+              onRestoreCalendar={settingsProps.onRestoreCalendar}
+              onRestoreMember={settingsProps.onRestoreMember}
+              onRestoreShoppingList={settingsProps.onRestoreShoppingList}
+              onRestoreTodo={settingsProps.onRestoreTodo}
+            />
+          </SettingsSection>
+        )}
+        <SettingsSection title="Radera konto">
+          <DeleteAccountSection
+            accountId={activeAccount.id}
+            accountName={activeAccount.name}
+            onConfirm={settingsProps.onDeleteAccount}
+          />
+        </SettingsSection>
+        <SettingsSection title="Logga ut">
+          <button
+            className="settings-logout-btn"
+            onClick={() => void onLogout()}
+            type="button"
+          >
+            <LogOut size={18} />
+            Logga ut från Familjeappen
+          </button>
+        </SettingsSection>
+      </div>
     );
   } else {
     panelContent = (
@@ -152,27 +183,31 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
     );
   }
 
+  const isChild = currentMember.isChild;
+
   return (
-    <main className={`app-shell${currentMember.isChild ? ` theme-${currentMember.dashboardTheme ?? "space"}` : ""}`}>
+    <main className={`app-shell${isChild ? ` theme-${currentMember.dashboardTheme ?? "space"}` : ""}`}>
       {apiError && <div className="api-error-banner" role="alert">{apiError}</div>}
-      {!currentMember.isChild && (
+      {!isChild && (
         <HeroBar
           activePanel={activePanel}
+          accountName={activeAccount.name}
+          currentMember={currentMember}
           canManageMembers={canManageMembers}
-          canManageRoles={canManageRoles}
-          canViewTrash={canViewTrash}
           onNavigate={setActivePanel}
           onSwitchAccount={onSwitchAccount}
         />
       )}
-      {panelContent}
-      {themePickerMember && (
-        <ThemePicker
-          member={themePickerMember}
-          onClose={closeThemePicker}
-          onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
-        />
-      )}
+      <div className={`app-shell-content${isChild ? " app-shell-full" : ""}`}>
+        {panelContent}
+        {themePickerMember && (
+          <ThemePicker
+            member={themePickerMember}
+            onClose={closeThemePicker}
+            onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
+          />
+        )}
+      </div>
     </main>
   );
 }

@@ -12,6 +12,7 @@ type ShoppingListsPanelProps = {
   members: Member[];
   roles: Role[];
   shoppingLists: ShoppingList[];
+  managementOnly?: boolean;
   onCreateList: (name: string) => void;
   onAddItem: (listId: Id, title: string) => void;
   onDeleteList: (listId: Id) => void;
@@ -30,6 +31,7 @@ export function ShoppingListsPanel({
   members,
   roles,
   shoppingLists,
+  managementOnly = false,
   onCreateList,
   onAddItem,
   onDeleteList,
@@ -167,51 +169,55 @@ export function ShoppingListsPanel({
               </button>
             </div>
 
-            <ul className="shopping-items">
-              {list.items
-                .filter((item) => item.deletedAt === null)
-                .map((item) => (
-                  <li key={item.id}>
-                    <label className={item.done ? "done" : ""}>
-                      <input
-                        checked={item.done}
-                        disabled={!canEditThisList}
-                        onChange={() => onToggleItem(list.id, item.id)}
-                        type="checkbox"
-                      />
-                      <span>{item.title}</span>
-                    </label>
-                  </li>
-                ))}
-            </ul>
+            {!managementOnly && (
+              <>
+                <ul className="shopping-items">
+                  {list.items
+                    .filter((item) => item.deletedAt === null)
+                    .map((item) => (
+                      <li key={item.id}>
+                        <label className={item.done ? "done" : ""}>
+                          <input
+                            checked={item.done}
+                            disabled={!canEditThisList}
+                            onChange={() => onToggleItem(list.id, item.id)}
+                            type="checkbox"
+                          />
+                          <span>{item.title}</span>
+                        </label>
+                      </li>
+                    ))}
+                </ul>
 
-            <div className="shopping-add-row">
-              <input
-                className="text-input"
-                disabled={!canEditThisList}
-                onChange={(event) =>
-                  setDraftItems((currentDrafts) => ({
-                    ...currentDrafts,
-                    [list.id]: event.target.value
-                  }))
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    addItem(list.id);
-                  }
-                }}
-                placeholder="Lägg till vara"
-                value={draftItems[list.id] ?? ""}
-              />
-              <button
-                className="icon-button"
-                disabled={!canEditThisList}
-                onClick={() => addItem(list.id)}
-                type="button"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
+                <div className="shopping-add-row">
+                  <input
+                    className="text-input"
+                    disabled={!canEditThisList}
+                    onChange={(event) =>
+                      setDraftItems((currentDrafts) => ({
+                        ...currentDrafts,
+                        [list.id]: event.target.value
+                      }))
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        addItem(list.id);
+                      }
+                    }}
+                    placeholder="Lägg till vara"
+                    value={draftItems[list.id] ?? ""}
+                  />
+                  <button
+                    className="icon-button"
+                    disabled={!canEditThisList}
+                    onClick={() => addItem(list.id)}
+                    type="button"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </>
+            )}
 
             <div className="shopping-share-panel">
               <div className="calendar-event-form">

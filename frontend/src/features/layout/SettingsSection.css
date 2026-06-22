@@ -1,0 +1,102 @@
+.settings-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.settings-section-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  transition: background 0.15s;
+}
+
+.settings-section-btn:hover {
+  background: color-mix(in oklch, var(--primary) 5%, transparent);
+}
+
+.settings-section--open .settings-section-btn {
+  border-bottom-color: var(--border);
+}
+
+.settings-chevron {
+  color: var(--muted-fg);
+  transition: transform 0.28s ease;
+  flex-shrink: 0;
+}
+
+.settings-section--open .settings-chevron {
+  transform: rotate(180deg);
+}
+
+/* Smooth height animation via grid-rows trick */
+.settings-section-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+
+.settings-section--open .settings-section-body {
+  grid-template-rows: 1fr;
+}
+
+.settings-section-inner {
+  overflow: hidden;
+  padding: 0;
+}
+
+.settings-section--open .settings-section-inner {
+  padding-bottom: 4px;
+}
+
+/* Hide redundant inner section headers (accordion btn is the heading) */
+.settings-section-inner .account-settings > header,
+.settings-section-inner .account-setup > header {
+  display: none;
+}
+
+/* Strip redundant card chrome from inner components */
+.settings-section-inner .account-setup {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 16px 18px;
+  margin-top: 0;
+}
+
+.settings-section-inner .dashboard-list {
+  margin-top: 0;
+  padding: 12px 0;
+}
+
+.settings-section-inner .danger-zone {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 16px 18px;
+  margin-top: 0;
+}
+
+.settings-section-inner .role-layout,
+.settings-section-inner .trash-view {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 16px 18px;
+  margin-top: 0;
+}

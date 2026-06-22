@@ -1,5 +1,6 @@
-import { CalendarDays, Download, Plus, Share2, Upload, X } from "lucide-react";
+import { CalendarDays, Download, Globe, Plus, Share2, Upload, X } from "lucide-react";
 import { useState } from "react";
+import { calendarsApi } from "../../api";
 import {
   canEditSharedResource,
   canExportCalendar,
@@ -79,6 +80,8 @@ export function CalendarPanel({
     members.find((member) => member.id !== currentMember.id)?.id ?? ""
   );
   const [shareAccess, setShareAccess] = useState<AccessLevel>("view");
+  const [icsUrl, setIcsUrl] = useState("");
+  const [importing, setImporting] = useState(false);
 
   const canCreateCalendar = hasPermission(currentMember, roles, "canCreateCalendar");
   const canImport = hasPermission(currentMember, roles, "canImportCalendar");
@@ -136,6 +139,22 @@ export function CalendarPanel({
     }
 
     onImportCalendar(selectedCalendar.id, file.name, events);
+  }
+
+  async function importFromUrl() {
+    const url = icsUrl.trim();
+    if (!url || !selectedCalendar || !canImport || !canEditSelectedCalendar) return;
+    setImporting(true);
+    try {
+      const { icsText } = await calendarsApi.fetchIcs(selectedCalendar.id, url);
+      const events = parseIcsEvents(icsText);
+      if (events.length > 0) {
+        onImportCalendar(selectedCalendar.id, url, events);
+        setIcsUrl("");
+      }
+    } finally {
+      setImporting(false);
+    }
   }
 
   function exportCalendar(calendar: Calendar) {
@@ -209,7 +228,7 @@ export function CalendarPanel({
           <div className="calendar-actions">
             <label className="secondary-button">
               <Upload size={16} />
-              Importera
+              Importera fil
               <input
                 accept=".ics,text/calendar"
                 disabled={!canImport || !canEditSelectedCalendar}
@@ -231,6 +250,27 @@ export function CalendarPanel({
               Exportera
             </button>
           </div>
+
+          {canImport && canEditSelectedCalendar && (
+            <div className="shopping-add-row" style={{ marginTop: "8px" }}>
+              <input
+                className="text-input"
+                onChange={(e) => setIcsUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void importFromUrl(); }}
+                placeholder="iCal-länk (https://…)"
+                value={icsUrl}
+              />
+              <button
+                className="secondary-button"
+                disabled={!icsUrl.trim() || importing}
+                onClick={() => void importFromUrl()}
+                type="button"
+              >
+                <Globe size={16} />
+                {importing ? "Hämtar…" : "Importera länk"}
+              </button>
+            </div>
+          )}
         </section>
       ) : null}
 

@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { calendarsApi } from "../../api";
 import { calendars as initialCalendars } from "../../data/sampleData";
-import type { AccessLevel, Calendar, Id } from "@shared/types";
+import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
 
 type AddEventInput = {
   title: string;
   startsAt: string;
   endsAt: string;
+  isAllDay?: boolean;
+  location?: string | null;
   notes?: string | null;
+  recurrence?: EventRecurrence;
+  attendees?: EventAttendee[];
 };
 
 type ImportEventInput = {
@@ -48,7 +52,11 @@ export function useCalendarsState() {
       title: event.title,
       startsAt: event.startsAt,
       endsAt: event.endsAt,
+      isAllDay: event.isAllDay ?? false,
+      location: event.location ?? null,
       notes: event.notes ?? null,
+      recurrence: event.recurrence ?? { type: "none", interval: 1, until: null },
+      attendees: event.attendees ?? [],
       createdBy: memberId,
       deletedAt: null,
       deletedBy: null
@@ -56,13 +64,76 @@ export function useCalendarsState() {
 
     calendarsApi.addEvent(calendarId, newEvent).catch(console.error);
     setCalendars((current) =>
-      current.map((calendar) => {
-        if (calendar.id !== calendarId) {
-          return calendar;
-        }
+      current.map((calendar) =>
+        calendar.id !== calendarId
+          ? calendar
+          : { ...calendar, events: [...calendar.events, newEvent] }
+      )
+    );
+  }
 
-        return { ...calendar, events: [...calendar.events, newEvent] };
-      })
+  function updateCalendarEvent(
+    calendarId: Id,
+    eventId: Id,
+    updates: Partial<Calendar["events"][number]>
+  ) {
+    calendarsApi.updateEvent(calendarId, eventId, updates).catch(console.error);
+    setCalendars((current) =>
+      current.map((calendar) =>
+        calendar.id !== calendarId
+          ? calendar
+          : {
+              ...calendar,
+              events: calendar.events.map((ev) =>
+                ev.id !== eventId ? ev : { ...ev, ...updates }
+              )
+            }
+      )
+    );
+  }
+
+  function deleteCalendarEvent(calendarId: Id, eventId: Id, memberId: Id) {
+    const deletedAt = new Date().toISOString();
+    calendarsApi.deleteEvent(calendarId, eventId).catch(console.error);
+    setCalendars((current) =>
+      current.map((calendar) =>
+        calendar.id !== calendarId
+          ? calendar
+          : {
+              ...calendar,
+              events: calendar.events.map((ev) =>
+                ev.id !== eventId ? ev : { ...ev, deletedAt, deletedBy: memberId }
+              )
+            }
+      )
+    );
+  }
+
+  function rsvpCalendarEvent(
+    calendarId: Id,
+    eventId: Id,
+    memberId: Id,
+    status: "accepted" | "declined"
+  ) {
+    calendarsApi.rsvpEvent(calendarId, eventId, memberId, status).catch(console.error);
+    setCalendars((current) =>
+      current.map((calendar) =>
+        calendar.id !== calendarId
+          ? calendar
+          : {
+              ...calendar,
+              events: calendar.events.map((ev) =>
+                ev.id !== eventId
+                  ? ev
+                  : {
+                      ...ev,
+                      attendees: ev.attendees.map((a) =>
+                        a.memberId !== memberId ? a : { ...a, status }
+                      )
+                    }
+              )
+            }
+      )
     );
   }
 
@@ -78,13 +149,17 @@ export function useCalendarsState() {
       name: sourceName,
       importedAt: new Date().toISOString()
     };
-    const newEvents = events.map((event) => ({
+    const newEvents: Calendar["events"] = events.map((event) => ({
       id: `event-${crypto.randomUUID()}`,
       calendarId,
       title: event.title,
       startsAt: event.startsAt,
       endsAt: event.endsAt,
+      isAllDay: false,
+      location: null,
       notes: event.notes,
+      recurrence: { type: "none" as const, interval: 1, until: null },
+      attendees: [],
       createdBy: memberId,
       deletedAt: null,
       deletedBy: null
@@ -201,6 +276,9 @@ export function useCalendarsState() {
     calendars,
     createCalendar,
     addCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+    rsvpCalendarEvent,
     importCalendarEvents,
     shareCalendar,
     removeCalendarShare,
