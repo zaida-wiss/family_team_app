@@ -16,6 +16,7 @@ import { TodoCreator } from "../todos/TodoCreator";
 
 type DashboardTab = "calendar" | "todo" | "shopping";
 
+
 type Props = {
   member: Member;
   members: Member[];
@@ -55,6 +56,7 @@ type Props = {
   onShareShoppingList: (listId: Id, memberId: Id, access: "view" | "edit") => void;
   onToggleShoppingItem: (listId: Id, itemId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
+  initialTab?: DashboardTab;
 };
 
 function getTodoSummary(todo: { status: string; starValue: number }) {
@@ -101,9 +103,10 @@ export function Dashboard({
   onRemoveShoppingListShare,
   onShareShoppingList,
   onToggleShoppingItem,
-  onThemePickerOpen
+  onThemePickerOpen,
+  initialTab
 }: Props) {
-  const firstTab: DashboardTab = canSeeCalendar ? "calendar" : canSeeTodos ? "todo" : "shopping";
+  const firstTab: DashboardTab = initialTab ?? (canSeeCalendar ? "calendar" : canSeeTodos ? "todo" : "shopping");
   const [tab, setTab] = useState<DashboardTab>(firstTab);
 
   return (

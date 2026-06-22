@@ -4,7 +4,7 @@ import type { Member } from "@shared/types";
 type MemberAvatarProps = {
   member: Member;
   showArchedName?: boolean;
-  size?: "large" | "small";
+  size?: "large" | "small" | "xs";
 };
 
 export function MemberAvatar({
@@ -13,6 +13,7 @@ export function MemberAvatar({
   size = "large"
 }: MemberAvatarProps) {
   const pathId = `avatar-arc-${member.id.replace(/[^a-zA-Z0-9]/g, "")}-${size}`;
+  const iconSize = size === "large" ? 34 : size === "small" ? 18 : 12;
 
   return (
     <span className={`avatar-frame avatar-${size}`}>
@@ -21,9 +22,9 @@ export function MemberAvatar({
       ) : (
         <span className="avatar-icon">
           {member.isChild ? (
-            <Baby size={size === "large" ? 34 : 18} />
+            <Baby size={iconSize} />
           ) : (
-            <Users size={size === "large" ? 34 : 18} />
+            <Users size={iconSize} />
           )}
         </span>
       )}

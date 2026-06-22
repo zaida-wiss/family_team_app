@@ -5,7 +5,7 @@ import {
   canExportCalendar,
   canViewResource,
   hasPermission
-} from "../roles/permissions";
+} from "../../utils/permissions";
 import type { AccessLevel, Calendar, Id, Member, Role } from "@shared/types";
 
 type ImportedCalendarEvent = {

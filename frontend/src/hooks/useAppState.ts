@@ -4,11 +4,20 @@ import { useAccountState } from "../features/accounts/useAccountState";
 import { useCalendarsState } from "../features/calendars/useCalendarsState";
 import { useMembersState } from "../features/members/useMembersState";
 import { useRewardsState } from "../features/rewards/useRewardsState";
-import { hasPermission } from "../features/roles/permissions";
 import { useRolesState } from "../features/roles/useRolesState";
 import { useShoppingState } from "../features/shopping/useShoppingState";
 import { useTodosState } from "../features/todos/useTodosState";
 import type { Account, Id, Member } from "@shared/types";
+
+export type ShellPanel =
+  | "home"
+  | "calendar"
+  | "shopping"
+  | "todos"
+  | "members"
+  | "roles"
+  | "trash"
+  | "settings";
 
 type ActiveMembership = { member: Member; account: Account };
 
@@ -32,8 +41,13 @@ export function useAppState(initialMembership: ActiveMembership) {
 
   const [selectedDashboardMemberId, setSelectedDashboardMemberId] = useState<Id | null>(null);
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [activePanel, setActivePanelRaw] = useState<ShellPanel>("home");
   const [apiError, setApiError] = useState<string | null>(null);
+
+  function setActivePanel(panel: ShellPanel) {
+    setActivePanelRaw(panel);
+    if (panel !== "home") setSelectedDashboardMemberId(null);
+  }
 
   const currentMember = initialMembership.member;
 
@@ -51,22 +65,6 @@ export function useAppState(initialMembership: ActiveMembership) {
   const activeMembers = members
     .filter((m) => m.deletedAt === null)
     .sort((a, b) => Number(a.isChild) - Number(b.isChild));
-
-  const permissions = {
-    canManageMembers: hasPermission(currentMember, roles, "canManageMembers"),
-    canManageRoles: hasPermission(currentMember, roles, "canManageRoles"),
-    canSeeCalendar:
-      hasPermission(currentMember, roles, "canSeeAllCalendar") ||
-      hasPermission(currentMember, roles, "canSeeOwnCalendar"),
-    canSeeTodos:
-      hasPermission(currentMember, roles, "canSeeAllTodos") ||
-      hasPermission(currentMember, roles, "canSeeOwnTodos"),
-    canSeeShopping: hasPermission(currentMember, roles, "canSeeShoppingLists"),
-    canViewTrash: hasPermission(currentMember, roles, "canViewTrash"),
-    canApproveTodos: hasPermission(currentMember, roles, "canApproveTodos"),
-    isParent:
-      !currentMember.isChild && hasPermission(currentMember, roles, "canManageChildTodos")
-  };
 
   return {
     activeAccount,
@@ -92,8 +90,8 @@ export function useAppState(initialMembership: ActiveMembership) {
     setSelectedDashboardMemberId,
     themePickerMemberId,
     setThemePickerMemberId,
-    showSettings,
-    setShowSettings,
+    activePanel,
+    setActivePanel,
     apiError
   };
 }

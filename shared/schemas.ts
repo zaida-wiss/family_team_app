@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const IdSchema = z.string();
 
-export const AccountTypeSchema = z.enum(["family", "workplace"]);
+export const AccountTypeSchema = z.enum(["family"]);
 
 export const AccountSchema = z.object({
   id: IdSchema,

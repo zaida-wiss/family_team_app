@@ -1,6 +1,6 @@
 import { PlusCircle } from "lucide-react";
 import { useState } from "react";
-import { hasPermission } from "../roles/permissions";
+import { hasPermission } from "../../utils/permissions";
 import type { Id, Member, RecurrenceRule, Role, Todo } from "@shared/types";
 
 type TodoCreatorProps = {

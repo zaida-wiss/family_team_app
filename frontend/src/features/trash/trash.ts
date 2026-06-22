@@ -1,4 +1,4 @@
-import { hasPermission } from "../roles/permissions";
+import { hasPermission } from "../../utils/permissions";
 import type { Id, Member, Role } from "@shared/types";
 
 export type SoftDeletedEntity = {

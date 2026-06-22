@@ -1,7 +1,10 @@
 import { AccountSettings } from "../accounts/AccountSettings";
 import { AccountSetup } from "../accounts/AccountSetup";
+import { DeleteAccountSection } from "../accounts/DeleteAccountSection";
+import { InviteForm } from "../invitations/InviteForm";
 import { RoleEditor } from "../roles/RoleEditor";
 import { TrashView } from "../trash/TrashView";
+import { hasPermission } from "../../utils/permissions";
 import type { Account, Calendar, Member, PermissionKey, Role, ShoppingList, Todo } from "@shared/types";
 
 type Props = {
@@ -26,6 +29,7 @@ type Props = {
   onRestoreMember: (memberId: string) => void;
   onRestoreShoppingList: (listId: string) => void;
   onRestoreTodo: (todoId: string) => void;
+  onDeleteAccount: () => Promise<void>;
 };
 
 export function SettingsPanel({
@@ -49,8 +53,11 @@ export function SettingsPanel({
   onRestoreCalendar,
   onRestoreMember,
   onRestoreShoppingList,
-  onRestoreTodo
+  onRestoreTodo,
+  onDeleteAccount
 }: Props) {
+  const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
+
   return (
     <>
       <AccountSetup account={account} onUpdateAccount={onUpdateAccount} />
@@ -64,6 +71,12 @@ export function SettingsPanel({
         onDeleteOwnData={onDeleteOwnData}
         onUpdateMemberAvatar={onUpdateMemberAvatar}
       />
+      {canManageMembers && (
+        <InviteForm
+          accountId={account.id}
+          roles={roles}
+        />
+      )}
       {canManageRoles && (
         <RoleEditor
           members={members}
@@ -85,6 +98,13 @@ export function SettingsPanel({
           onRestoreMember={onRestoreMember}
           onRestoreShoppingList={onRestoreShoppingList}
           onRestoreTodo={onRestoreTodo}
+        />
+      )}
+      {canManageMembers && (
+        <DeleteAccountSection
+          accountId={account.id}
+          accountName={account.name}
+          onConfirm={onDeleteAccount}
         />
       )}
     </>

@@ -1,52 +1,51 @@
-# Epics and Stories: Familje- och teamapp
+# Epics and Stories: Familjeapp
 
 ## 1. Syfte
 
 Detta dokument bryter ner PRD, UX och arkitektur till byggbara delar. Varje story ska vara tillrackligt liten for att kunna implementeras, testas och visas.
 
-Byggordningen ar vald for att undvika att vi bygger roligt UI ovanpa osakra regler. Forst datamodell och behorighet, sedan skarmar, sedan barnens lekfulla animationer.
+## Testdata-krav (galler alla stories)
+
+Varje story bor ha minst:
+
+- En ny testfil eller ett nytt testfall.
+- Minst en aktiv beloning finns.
+- Minst en privat kalender finns.
+- Minst en delad inkopslista finns.
+- Minst tre todos finns med olika statusar.
 
 ## Epic 1: Projektgrund och datamodell
 
-Mal: Skapa en teknisk grund som resten av appen kan byggas pa.
+Mal: Fa appen att starta och definiera de centrala typerna.
 
-### Story 1.1: Initiera React och TypeScript-app
+### Story 1.1: Initiera React-app med TypeScript
 
-Som utvecklare vill jag ha en React + TypeScript-app sa att jag kan bygga UI med tydliga datatyper.
-
-Acceptanskriterier:
-
-- Appen kan startas lokalt.
-- TypeScript ar aktiverat.
-- Lucide-ikoner kan importeras.
-- En forsta startsida renderas.
-
-Anteckning:
-
-Detta ar forsta kodsteget. Utan detta har vi ingen plats att skriva komponenter, typer och tester.
-
-### Story 1.2: Skapa centrala TypeScript-typer
-
-Som utvecklare vill jag definiera typer for medlem, roll, kalender, inkopslista, todo och beloning sa att appens data ar konsekvent.
+Som utvecklare vill jag ha en React-app med TypeScript sa att koden kan typkontrolleras fran borjan.
 
 Acceptanskriterier:
 
-- `Member` finns.
-- `Role` och `PermissionKey` finns.
-- `Calendar` och `CalendarEvent` finns.
-- `ShoppingList` och `ShoppingItem` finns.
-- `Todo`, `TodoStatus`, `RecurrenceRule` och `TodoVisual` finns.
-- `Reward` och `RewardPathProgress` finns.
+- React + TypeScript-app kan startas lokalt.
+- Inga kompileringsfel.
+- Inga oanvanda beroenden.
 
-### Story 1.3: Skapa testdata for lokal utveckling
+### Story 1.2: Definiera centrala typer
 
-Som utvecklare vill jag ha realistisk testdata sa att jag kan bygga UI utan backend.
+Som utvecklare vill jag ha en central typfil sa att alla moduler delar samma datastrukturer.
 
 Acceptanskriterier:
 
-- Minst en admin/foralder finns.
-- Minst ett barn finns.
-- Minst en vuxen/medlem finns.
+- `Account`, `Member`, `Role`, `Todo`, `Calendar`, `ShoppingList`, `Reward` ar definierade.
+- `AccountType = "family"`.
+- Alla typer exporteras fran en central plats.
+- Inga duplikat av samma typ i olika filer.
+
+### Story 1.3: Skapa testdata
+
+Som utvecklare vill jag ha realistisk testdata sa att appen kan koras utan att allt maste konfigureras manuellt.
+
+Acceptanskriterier:
+
+- Minst en familj med tre medlemmar.
 - Minst en privat kalender finns.
 - Minst en delad inkopslista finns.
 - Minst tre todos finns med olika statusar.
@@ -86,11 +85,12 @@ Acceptanskriterier:
 
 ### Story 2.3: Bygg roll-editor med checkboxar
 
-Som admin vill jag skapa roller och kryssa i behorigheter sa att varje roll kan anpassas efter familj eller kontor.
+Som admin vill jag skapa roller och kryssa i behorigheter sa att varje roll kan anpassas efter familjen.
 
 Acceptanskriterier:
 
 - Admin kan skriva rollnamn.
+- Admin kan markera om rollen ar en barnroll (`isChildRole`).
 - Behorigheter visas som checkboxar.
 - Checkboxar skapas fran en central lista, inte hardkodas en och en.
 - Rollen kan sparas i lokal state.
@@ -104,20 +104,6 @@ Varfor loopar vi over en behorighetslista i stallet for att skriva varje checkbo
 
 Mal: Bygga den gemensamma forstasidan med kalender och klickbara medlemmar.
 
-### Story 3.0: Skapa konto och valj kontotyp
-
-Som vuxen vill jag valja om kontot ska anvandas for familj eller arbetsplats.
-
-Acceptanskriterier:
-
-- Appen har en `Account`-modell.
-- Konto kan vara `family` eller `workplace`.
-- Vid konto-skapande valjer anvandaren familj eller arbetsplats.
-- Medlemmar kopplas till konto via `accountId`.
-- Vyer visar bara medlemmar fran aktivt konto.
-- Familjekonto visar barnfunktioner.
-- Arbetsplatskonto visar inte barnfunktioner som standard.
-
 ### Story 3.1: Skapa medlemshantering
 
 Som admin vill jag kunna skapa medlemmar inne i appen sa att namn inte ar hardkodade.
@@ -125,8 +111,7 @@ Som admin vill jag kunna skapa medlemmar inne i appen sa att namn inte ar hardko
 Acceptanskriterier:
 
 - Admin kan skriva namn.
-- Admin kan valja om medlemmen ar barn.
-- Admin kan valja roll.
+- Admin kan valja roll (inkl. barnroll via `isChildRole` pa rollen).
 - Admin kan valja eller lagga till avatar/bild.
 - Medlemmen visas i medlemslistan.
 
@@ -567,21 +552,20 @@ Acceptanskriterier:
 10. Epic 10: Papperskorg och soft delete
 11. Epic 11: Test och kvalitet
 
-## Implementationstatus 2026-06-09
+## Implementationstatus 2026-06-22
 
-Den aktuella prototypen har redan byggt flera stories innan detta dokument borjade anvandas strikt som arbetsko. Detta avsnitt markerar vad som ar gjort, delvis gjort och vad som bor vara nasta kontrollerade BMAD-steg.
+Den aktuella implementationen ar fullstack: React + TypeScript (Vite) i frontend, Express 4 + MongoDB Atlas (Mongoose) i backend.
 
 ### Done i prototyp
 
 - Story 1.1: React + TypeScript-app finns och kan byggas.
-- Story 1.2: Centrala typer finns i `src/types.ts`.
-- Story 1.3: Testdata finns i `src/sampleData.ts`.
-- Story 2.1: Grundfunktioner for roller och behorigheter finns.
+- Story 1.2: Centrala typer finns i `shared/types.ts` (delade mellan frontend och backend).
+- Story 1.3: Testdata finns i `backend/src/db/seed.ts`.
+- Story 2.1: Grundfunktioner for roller och behorigheter finns i `frontend/src/utils/permissions.ts`.
 - Story 2.2: Resursatkomst for agda/delade resurser finns.
-- Story 2.3: Roll-editor med checkboxar finns.
-- Story 3.0: Konto kan vara familj eller arbetsplats.
+- Story 2.3: Roll-editor med checkboxar finns, inklusive `isChildRole`.
 - Story 3.1: Medlemmar kan skapas inne i appen.
-- Story 3.1b: Barnkonto kan skapas fran installningar i familjelage.
+- Story 3.1b: Barnkonto kan skapas fran installningar i familjekonto.
 - Story 3.2: Startsida visar kalenderoversikt.
 - Story 3.3: Runda klickbara medlemsbilder finns med bagtext.
 - Story 4.1: Vuxen-dashboard har flikar for kalender, todo och inkop.
@@ -616,14 +600,11 @@ Den aktuella prototypen har redan byggt flera stories innan detta dokument borja
 - Story 6.6: Aktiva todo-kort finns, men fallande/mjukt inkommande animation ar inte byggd.
 - Story 7.2: Datamodell for rewards finns, men barn kan inte skapa egna onskningar i UI.
 - Story 7.3: Godkann/nekande av onskningar saknas i UI.
-- Automatiska tester finns nu for de prioriterade regelomradena i Epic 11.
 
-### Viktig teknisk skuld innan fler features
+### Viktig teknisk skuld
 
-- Nuvarande state ligger i `App.tsx`, vilket fungerar for prototyp men bor delas upp nar funktionerna vaxer.
-- Permissions bor testas automatiskt innan mer privat/delad data byggs.
 - Kalenderimporten parse:ar bara enkla `.ics`-fall i MVP.
-- `localStorage` passar prototyp, men bilddata som data-URL kan bli tungt om manga stora bilder laddas upp.
+- Bilddata som data-URL kan bli tungt om manga stora bilder laddas upp.
 
 ## Nasta BMAD-story att bygga
 

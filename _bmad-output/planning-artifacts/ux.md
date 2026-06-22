@@ -1,322 +1,200 @@
-# UX: Familje- och teamapp
+# UX: Familjeapp
 
-## 1. UX-mal
+## 1. Designprinciper
 
-Appen ska kannas tydlig for vuxna och rolig for barn. Den ska oppna pa en gemensam oversikt, men snabbt lata anvandaren ga in pa en persons egen dashboard.
+- **Enkelt och tydligt**: Appen ska fungera for bade vuxna och barn.
+- **Barnperspektiv forst for barn**: Barn ska forstå vad de ska gora utan att lasa mycket text.
+- **Visuell progression**: Beloningsbanan ska kanna rolig och motiverande, inte som ett krav.
+- **Minsta motstand for vuxna**: Kalender, todos och inkopslistor ska vara snabbt tillgangliga.
+- **Trygg radering**: Mjuk radering och tydliga varningar gor att misstag kan attas.
 
-Designen ska stodja tva olika arbetssatt:
+## 2. Inloggning och registrering
 
-- Vuxna vill planera, skapa schema och hantera ansvar.
-- Barn ska snabbt forsta vad de kan gora nu och hur det for dem narmare en beloning.
+### 2.1 Foersta start
 
-## 2. Forsta skarmen: kalender och medlemmar
+Nar appen oppnas forsta gangen visas ett enkelt val:
 
-Innan forsta skarmen visas for ett nytt konto ska anvandaren valja kontotyp:
+- Logga in pa befintligt konto
+- Skapa nytt konto
 
-- Familj
-- Arbetsplats
+Nar ett nytt konto skapas skapas det alltid som ett familjekonto. Ingen kontotyp behovs valjas.
 
-Valet styr vilka standardfunktioner som visas. Familj visar stod for barnkonton och beloningsbana. Arbetsplats visar medlemmar, roller, kalender, todo och inkopslistor utan barnfunktioner som standard.
+### 2.2 Inbjudningsflode
 
-Startsidan ska visa kalendern som huvudvy. Kalendern ska ge en snabb bild av dagens och veckans handelser.
+Foralder kan skicka en inbjudningslank fran installningar. Mottagaren klickar pa lanken och:
 
-Pa samma skarm ska medlemmarna visas som runda bilder eller avatarer. Varje bild ska vara klickbar och leda till medlemmens personliga dashboard.
+1. Registrerar ett nytt anvandarkonto, eller
+2. Loggar in pa ett befintligt anvandarkonto.
 
-Medlemsnamn ska visas vid bilden. Onskad losning ar bojd text i en bage runt den runda bilden. Om det blir for avancerat i forsta implementationen ska namnet visas tydligt under bilden.
+Mottagaren lar till i familjekontot med den roll som foraldren valt.
 
-Varfor: startsidan blir bade gemensam och personlig. Kalendern svarar pa "vad hander?", medan medlemsbilderna svarar pa "vem galler det?".
+## 3. Startsida
 
-## 3. Medlemskort pa startsidan
+### 3.1 Kalender som primar vy
 
-Varje medlemskort ska innehalla:
+Startsidan visar kalenderoversikten.
 
-- Rund bild eller avatar
-- Namn
-- Tydlig rollkansla, till exempel barn eller vuxen
-- Visuell indikator om medlemmen har viktiga saker idag
+Dagens datum ar tydligt markerat. Kommande handelser visas pa ett enkelt och oversiktligt satt.
 
-Interaktion:
+### 3.2 Runda klickbara medlemsbilder
 
-- Klick pa bilden oppnar personens dashboard.
-- Hover/fokus pa desktop ska visa att bilden ar klickbar.
-- Touch pa mobil ska vara stor nog for barn att traffa enkelt.
+Under eller ovanfor kalendern visas runda bilder eller avatarer for varje familjemedlem.
 
-## 4. Personlig dashboard for vuxna
+- Bilderna ar klickbara.
+- Klick pa en bild oppnar den personens personliga dashboard.
+- Namn ska visas vid bilden.
+- Om bagtext ar tillganglig visas namnet som bojd text runt bilden.
+- Om bagtext inte ar byggd visas namnet tydligt under bilden.
 
-Vuxnas dashboard ska fokusera pa kontroll och planering.
+## 4. Installningar
 
-Den ska visa:
+### 4.1 Installningar for familjekonto
 
-- Egen kalender
-- Delade kalendrar som personen far se
-- Egna todos
-- Todos personen skapat at andra
-- Inkoplistor personen ager eller har fatt delade
-- Verktyg for att skapa aterkommande todos
-- Uppgifter som vantar pa godkannande om personen far godkanna barns todos
+Installningssidan har foljande sektioner:
 
-Vuxnas dashboard ska ha tydlig vaxling mellan:
+**Kontonamn**
+- Redigera familjekontots namn.
 
-- Kalender
-- Todo
-- Inkopslistor
+**Familjemedlemmar**
+- Lista pa alla aktiva familjemedlemmar.
+- Admin kan skapa ett nytt barnkonto.
+- Admin kan bjuda in en vuxen via inbjudningslank.
+- Admin kan radera en medlem (mjuk radering).
+- Varje rad visar namn, roll och avatar.
+- Admin kan andra en medlems avatar.
 
-Vaxlingen kan byggas som flikar, segmenterad kontroll eller tydliga navigationsknappar. Rekommenderad MVP-losning ar flikar eftersom det ar enkelt att forsta och snabbt att bygga.
+**Roller och behorigheter**
+- Admin kan skapa egna roller.
+- Admin kan namnge roller.
+- Admin kan kryssa i vilka behorigheter rollen har.
+- Admin kan tilldela roll till en medlem.
+- Rollnamn ar fria textfaltet.
+- Barnroller (`isChildRole: true`) ger automatiskt tillgang till barnfunktioner.
 
-Vuxna ska kunna byta mellan fem dashboardteman genom langtryck pa bakgrunden.
+**Papperskorg**
+- Admin kan se allas raderade saker.
+- Vanlig anvandare ser bara sina egna.
+- Varje rad visar typ, namn, raderat av och tid.
+- Aterstallningsknapp finns per rad.
 
-Vuxenteman ska vara lugna och praktiska. Forslag:
+**GDPR och kontoborttagning** (synlig for admin)
 
-- Klar
-- Fokus
-- Varm
-- Mork
-- Natur
+Langst ned pa installningssidan visas en tydlig GDPR-sektion:
 
-## 4.1 Installningar for konto
+- `GDPR · Artikel 17 & 20`
+- Rubrik: "Ta bort familjekonto"
+- Knapp for att ladda ner all kontodata som JSON (GDPR Art. 20 – ratten till dataportabilitet).
+- Knapp "Ta bort konto..." oppnar ett utokningsflode.
+- Utokningsflode visar:
+  - En lista pa vad som hander (alla familjemedlemmar forlorar atkomst, all data raderas, 30 dagars karenstid, atgarden kan inte angras).
+  - En kryssruta dar anvandaren bekraftar att de forstar.
+  - Knapp "Bekrafta radering" (inaktiv tills kryssrutan ar checkad).
+  - Knapp "Avbryt".
 
-Kontoinstallningar ska visa om kontot ar familj eller arbetsplats.
+## 5. Vuxnas dashboard
 
-I familjelage ska installningar innehalla barnkonton och vuxna.
+Vuxnas dashboard fokuserar pa overblick och snabb tillgang till resurser.
 
-I arbetsplatslage ska installningar innehalla medlemmar, roller och arbetsplatsinstallningar.
+### 5.1 Flikar
 
-## 4.2 Installningar for familjekonto
+Tre flikar:
 
-Vuxna med ratt behorighet ska kunna ga till installningar for familjekontot.
+1. **Kalender** – visa och skapa handelser i egna och delade kalendrar.
+2. **Todos** – personliga och gemensamma todos, med mojlighet att godkanna barns klara uppgifter.
+3. **Inkopslistor** – privata och delade listor.
 
-Installningar ska innehalla:
+### 5.2 Teman for vuxna
 
-- Skapa barnkonto
-- Valja barnets namn
-- Valja barnets avatar/bild
-- Valja roll for barnet
-- Valja starttema for barnets dashboard
-- Hantera vilka vuxna som finns i familjekontot
+Fem lugna och praktiska teman:
 
-Samtliga vuxna i samma familjekonto ska kunna:
+- Clear
+- Focus
+- Warm
+- Dark
+- Nature
 
-- Skapa uppgifter at barn om rollen tillater det
-- Fylla i/lagga upp uppgifter pa barnkontot
-- Godkanna eller neka klara uppgifter om rollen har godkannandebehorighet
+Vuxna oppnar temaval genom att halla fingret lange pa dashboardens bakgrund. Valet sparas pa sin profil.
 
-Varfor: barnkontot ska inte vara beroende av en enda vuxen. I en familj behover flera vuxna kunna hjalpas at.
+### 5.3 Godkannandeko
 
-Vuxna ska kunna skapa todos med schema:
+Om vuxen har behorighet `canApproveTodos` visas en sektion med barns todos som vantar pa godkannande.
 
-- Engangsuppgift
-- Veckovis uppgift
-- Eget valt intervall
-- Starttid
-- Sluttid eller tidsfonster
-- Stjarnvarde om uppgiften riktas till barn
-- Om uppgiften ska forsvinna om den inte ar klar i tid
+- Barnets namn och uppgiftens titel visas.
+- Uppgiftens stjarnvarde visas.
+- Vuxen kan godkanna eller neka.
 
-## 5. Personlig dashboard for barn
+## 6. Barns dashboard
 
-Barnens dashboard ska vara glad, positiv och enkel att forsta. Den ska inte kannas som en vuxenlista med mycket text.
+### 6.1 Enkelt och gladjefyllt
 
-Den ska visa:
+Barns dashboard ska vara enkel, positiv och inbjudande.
 
-- Barnets namn och bild
-- Barnets valda tema
-- Beloningsbana
-- Godkanda stjarnor
-- Vantande uppgiftsbilder
-- Hur manga godkanda stjarnor som saknas till beloningen
-- Aktiva todos som visuella kort eller bilder
-- Onskningar och beloningar som ar godkanda
+- Barnets avatar och namn visas tydligt.
+- Barnteman styr helhetskansklan.
+- Aktiva todos visas som tydliga visuella kort.
 
-Barnets dashboard ska prioritera handling:
+### 6.2 Teman for barn
 
-- Vad kan jag gora nu?
-- Vad far jag for det?
-- Hur nara ar jag min beloning?
+Sex glada barnteman:
 
-## 6. Beloningsbana
+- Space (standard)
+- Rainbow
+- Ocean
+- Forest
+- Superhero
+- Animal Park
 
-Beloningsbanan ska visuellt visa hur barnet ror sig mot malet.
+Barn oppnar temaval genom att halla fingret lange pa dashboardens bakgrund.
+
+### 6.3 Aktiva todos
+
+Aktiva todos visas som bilder eller kort.
+
+- Barnet trycker pa kortet nar uppgiften ar klar.
+- Kortet forflyttas till beloningsbanan och visas som vantande.
+- Vantande uppgifter blir stjarnor forst nar foralder godkanner.
+
+### 6.4 Beloningsbana
+
+Beloningsbanan visar barnets progress mot en aktiv beloning.
+
+Banan visar:
+
+- Stjarnor for godkanda uppgifter.
+- Uppgiftsbilder for uppgifter som vantar pa godkannande.
+- Hur manga stjarnor som kvarstår.
+- Beloning vid slutet av banan.
 
 Regler:
 
-- Godkanda stjarnor raknas mot beloningen.
-- Uppgifter som ar klara men inte godkanda visas som uppgiftsbilder pa banan.
-- Vantande uppgiftsbilder ska inte minska antalet stjarnor kvar till malet.
-- Nar uppgiften godkanns forvandlas uppgiftsbilden till en eller flera stjarnor pa samma plats.
-- Nar barnet nar kravet med godkanda stjarnor ska beloningen visas som upplast.
+- Bara godkanda uppgifter ger stjarnor.
+- Vantande uppgifter visas som bilder, inte som stjarnor.
+- Nar foralder godkanner en uppgift forvandlas bilden till stjarnor pa samma plats pa banan.
+- Nar tillrackligt manga stjarnor samlas upp visas beloningen som upplast.
 
-Visuell ide:
+## 7. UX for barn – onskningar
 
-- En bana med steg, rutor eller stationer.
-- Godkanda steg lyser tydligt.
-- Vantande steg visar uppgiftsbilden.
-- Tomma steg visar vad som ar kvar.
-- Beloningen visas vid slutet av banan.
+Barn ska kunna onska en beloning.
 
-## 7. Todo-bilder for barn
+- Onskning far status `suggested`.
+- Foralder/admin ser onskningen och kan godkanna eller neka.
+- En godkand onskning blir en aktiv beloning med ett antal stjarnor som krav.
 
-Barns aktiva todos ska kunna visas som tydliga bilder eller kort som ramlar ner i dashboarden vid installda tider pa vag mot beloningsbanan.
+## 8. Soft delete och papperskorg
 
-Interaktion:
+Nar nagot raderas visas inte data i aktiva vyer.
 
-- En todo visas nar dess starttid eller tidsfonster borjar.
-- Todo-bilden ramlar eller glider ner i barnets dashboard.
-- Barnet trycker pa todo-bilden nar uppgiften ar klar.
-- Todo-bilden placeras pa beloningsbanan som vantande uppgift.
-- Antal stjarnor beror pa uppgiftens stjarnvarde.
-- Foralder/admin godkanner senare.
-- Efter godkannande forvandlas uppgiftsbilden till en eller flera tydliga godkanda stjarnor.
-- Stjarnorna behaller uppgiftsbildens plats pa beloningsbanan.
+Papperskorgen visar:
 
-Om uppgiften inte blir klar i tid:
+- Raderat objekt.
+- Raderat av.
+- Tidpunkt.
 
-- Den forsvinner fran barnets aktiva dashboard.
-- Den markeras som missad eller utgangen.
-- Den ska inte ge vantande uppgiftsbild eller godkanda stjarnor.
+Aterstallning tar bort `deletedAt` och `deletedBy` och objektet syns igen i vanliga vyer.
 
-Varfor: barnet far en konkret och rolig koppling mellan handling och beloning. Uppgiften blir inte bara text, utan nagot man kan trycka pa, placera pa banan och senare se forvandlas till stjarnor.
+## 9. Felhantering och feedback
 
-## 8. Tema for dashboards
-
-Barn och vuxna ska kunna byta tema pa sin egen dashboard.
-
-Primar interaktion:
-
-- Anvandaren haller fingret lange pa dashboardens bakgrund.
-- Ett temaval oppnas.
-- Anvandaren valjer tema visuellt.
-- Temat sparas pa medlemmens profil/dashboard.
-
-Tema ska bara paverka medlemmens egen dashboard.
-
-Exempel pa barnteman:
-
-- Rymd
-- Regnbage
-- Djurpark
-- Hav
-- Superhjalte
-- Skog
-
-Exempel pa vuxenteman:
-
-- Klar
-- Fokus
-- Varm
-- Mork
-- Natur
-
-Tillganglighet och fallback:
-
-- Pa desktop ska langt musklick kunna oppna samma temaval.
-- Om langtryck ar svart att upptacka kan en liten tema-knapp anvandas som kompletterande vag.
-
-## 9. Foralderns godkannandeflode
-
-Foralder/admin ska ha en tydlig vy for uppgifter som barn markerat som klara.
-
-Vyn ska visa:
-
-- Barnets namn
-- Uppgiftens titel
-- Stjarnvarde
-- Nar barnet markerade uppgiften som klar
-- Val: godkann eller neka
-
-Vid godkannande:
-
-- Uppgiften far status `approved`.
-- Stjarnorna blir godkanda.
-- Barnets beloningsbana uppdateras.
-
-Vid nekande:
-
-- Uppgiften far status `rejected`.
-- Inga stjarnor delas ut.
-- Uppgiftsbilden ska inte forvandlas till stjarnor.
-- Uppgiftsbilden ska tas bort fran progressbanan eller visas kort som nekad innan den forsvinner.
-- Barnet kan se att uppgiften inte gav stjarnor pa ett lugnt och tydligt satt.
-
-## 10. Onskningar och beloningar
-
-Barn ska kunna skapa onskningar.
-
-Foralder/admin maste godkanna onskningen innan den blir en aktiv beloning.
-
-Beloningskort ska visa:
-
-- Beloningens namn
-- Stjarnor som kravs
-- Barnets godkanda stjarnor
-- Stjarnor kvar
-- Status: forslag, aktiv, upplast eller inlost
-
-## 11. Kalenderflode
-
-Kalendern ska kunna vara:
-
-- Privat
-- Delad med `Kan se`
-- Delad med `Kan redigera`
-
-Kalenderimport:
-
-- Anvandaren valjer en `.ics`-fil.
-- Appen visar vilka handelser som hittades.
-- Anvandaren bekraftar import till vald kalender.
-
-Kalenderexport:
-
-- Agare kan exportera sin kalender.
-- Person med `edit`-atkomst och exportbehorighet kan exportera delad kalender.
-- Person med endast `view`-atkomst kan inte exportera delad kalender.
-
-## 12. Inkopslisteflode
-
-Inkopslistor ska folja samma delningsmodell som kalender.
-
-En inkopslista kan:
-
-- Vara privat
-- Delas med `Kan se`
-- Delas med `Kan redigera`
-
-Vyn ska tydligt visa om anvandaren bara kan titta eller ocksa redigera.
-
-## 13. Papperskorg
-
-Papperskorgen ska visa mjukraderad data.
-
-Vanlig medlem:
-
-- Ser bara sina egna raderade saker.
-
-Admin:
-
-- Kan se allas raderade saker i MVP.
-
-Varje rad i papperskorgen ska visa:
-
-- Typ av data
-- Namn/titel
-- Agare/skapare
-- Raderad av
-- Raderad tid
-- Aterstall om behorighet finns
-
-## 14. Viktiga UX-regler
-
-- Barnvyer ska vara mer visuella an texttunga.
-- Vuxenvyer ska vara tydliga, effektiva och strukturerade.
-- Behoringheter ska aldrig gommas bakom bara design; UI:t ska visa ratt handlingar for ratt person.
-- Radering ska alltid kannas trygg eftersom data hamnar i papperskorg.
-- Delning ska alltid visa skillnaden mellan `Kan se` och `Kan redigera`.
-- Vantande uppgiftsbilder ska inte kunna forvaxlas med godkanda stjarnor.
-
-## 15. Oppna UX-val
-
-1. Ska barnens todo-bilder bokstavligen falla/ramla ner pa skarmen, eller racker det att de glider in mjukt?
-2. Ska medlemsnamn i bage runt bilden vara krav i MVP, eller far text under bilden vara forsta version?
-3. Vilka 4-6 teman ska finnas i forsta versionen?
-4. Ska foralder kunna stanga av barnets mojlighet att byta tema?
-5. Vad ska handa visuellt om foralder nekar en uppgift som redan ligger som bild pa banan?
+- Laddar: visa ett enkelt laddningsindikator.
+- API-fel: visa en tydlig banner overst pa sidan med kortfattat meddelande.
+- Formvalidering: visa fel direkt under det relevanta faltet.
+- Tomma tillstand: visa ett vanlighetsfullt meddelande i stallet for tom lista.

@@ -1,12 +1,13 @@
 export type Id = string;
 
-export type AccountType = "family" | "workplace";
+export type AccountType = "family";
 
 export type Account = {
   id: Id;
   name: string;
   type: AccountType;
   createdBy: Id;
+  deletedAt: string | null;
 };
 
 export type DashboardThemeId =
@@ -89,6 +90,7 @@ export type PermissionKey =
 export type Role = {
   id: Id;
   name: string;
+  isChildRole: boolean;
   permissions: Record<PermissionKey, boolean>;
 };
 

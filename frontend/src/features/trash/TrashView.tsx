@@ -1,5 +1,5 @@
 import { RotateCcw, Trash2 } from "lucide-react";
-import { hasPermission } from "../roles/permissions";
+import { hasPermission } from "../../utils/permissions";
 import { getDeletedItemsForTrash } from "./trash";
 import type { Calendar, Id, Member, Role, ShoppingList, Todo } from "@shared/types";
 

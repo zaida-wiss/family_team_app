@@ -1,15 +1,12 @@
-import { BriefcaseBusiness, Users } from "lucide-react";
 import { useState } from "react";
-import type { AccountType } from "@shared/types";
 
 type Props = {
-  onSubmit: (name: string, type: AccountType) => Promise<void>;
+  onSubmit: (name: string) => Promise<void>;
   onCancel: () => void;
 };
 
 export function CreateAccountForm({ onSubmit, onCancel }: Props) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<AccountType>("family");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +15,7 @@ export function CreateAccountForm({ onSubmit, onCancel }: Props) {
     setError(null);
     setLoading(true);
     try {
-      await onSubmit(name.trim(), type);
+      await onSubmit(name.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Något gick fel");
     } finally {
@@ -28,34 +25,15 @@ export function CreateAccountForm({ onSubmit, onCancel }: Props) {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      <p className="eyebrow">Nytt konto</p>
-
-      <div className="account-type-picker">
-        <button
-          className={`account-type-option ${type === "family" ? "active" : ""}`}
-          onClick={() => setType("family")}
-          type="button"
-        >
-          <Users size={22} />
-          Familj
-        </button>
-        <button
-          className={`account-type-option ${type === "workplace" ? "active" : ""}`}
-          onClick={() => setType("workplace")}
-          type="button"
-        >
-          <BriefcaseBusiness size={22} />
-          Arbetsplats
-        </button>
-      </div>
+      <p className="eyebrow">Nytt familjekonto</p>
 
       <label className="field-label">
-        {type === "family" ? "Familjens namn" : "Arbetsplatsens namn"}
+        Familjens namn
         <input
           autoFocus
           className="text-input"
           onChange={(e) => setName(e.target.value)}
-          placeholder={type === "family" ? "t.ex. Familjen Svensson" : "t.ex. Axel AB"}
+          placeholder="t.ex. Familjen Svensson"
           required
           type="text"
           value={name}

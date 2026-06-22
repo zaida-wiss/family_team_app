@@ -1,0 +1,178 @@
+import type { Request, Response } from "express";
+import { z } from "zod";
+import { AccountModel } from "../db/models/Account.js";
+import { CalendarModel } from "../db/models/Calendar.js";
+import { MemberModel } from "../db/models/Member.js";
+import { RewardModel } from "../db/models/Reward.js";
+import { RoleModel } from "../db/models/Role.js";
+import { ShoppingListModel } from "../db/models/ShoppingList.js";
+import { TodoModel } from "../db/models/Todo.js";
+import { UserModel } from "../db/models/User.js";
+import { validate } from "../utils/validate.js";
+import type { PermissionKey } from "../../../shared/types.js";
+
+const setupSchema = z.object({
+  name: z.string().min(1, "Kontonamn krävs").max(80)
+});
+
+const PARENT_PERMISSIONS: PermissionKey[] = [
+  "canManageMembers", "canManageRoles", "canCreateChildAccounts", "canManageChildTodos",
+  "canSeeAllTodos", "canCreateTodos", "canScheduleRecurringTodos",
+  "canEditAnyTodos", "canDeleteAnyTodos", "canApproveTodos",
+  "canSeeAllCalendar", "canCreateCalendar", "canEditCalendar",
+  "canImportCalendar", "canExportCalendar",
+  "canSeeShoppingLists", "canCreateShoppingLists", "canEditShoppingLists",
+  "canViewTrash", "canRestoreFromTrash"
+];
+
+const CHILD_PERMISSIONS: PermissionKey[] = [
+  "canSeeOwnTodos", "canCompleteAssignedTodos", "canSeeOwnCalendar"
+];
+
+const ALL_PERMISSION_KEYS: PermissionKey[] = [
+  "canManageMembers", "canManageRoles",
+  "canSeeAllTodos", "canSeeOwnTodos", "canCreateTodos", "canScheduleRecurringTodos",
+  "canCompleteAssignedTodos", "canEditAnyTodos", "canDeleteAnyTodos", "canApproveTodos",
+  "canSeeAllCalendar", "canSeeOwnCalendar", "canCreateCalendar", "canEditCalendar",
+  "canImportCalendar", "canExportCalendar",
+  "canSeeShoppingLists", "canCreateShoppingLists", "canEditShoppingLists",
+  "canViewTrash", "canRestoreFromTrash",
+  "canCreateChildAccounts", "canManageChildTodos"
+];
+
+function makePermissions(enabled: PermissionKey[]) {
+  return Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, enabled.includes(k)])) as Record<PermissionKey, boolean>;
+}
+
+export async function setupAccount(req: Request, res: Response) {
+  const { name } = validate(setupSchema, req.body);
+
+  const user = await UserModel.findOne({ id: req.userId });
+  if (!user) {
+    res.status(401).json({ error: "Användare hittades inte" });
+    return;
+  }
+
+  const accountId = `account-${crypto.randomUUID()}`;
+  const memberId = `member-${crypto.randomUUID()}`;
+  const förälderRoleId = `role-${crypto.randomUUID()}`;
+  const barnRoleId = `role-${crypto.randomUUID()}`;
+
+  await Promise.all([
+    new RoleModel({
+      id: förälderRoleId,
+      name: "Förälder",
+      isChildRole: false,
+      permissions: makePermissions(PARENT_PERMISSIONS)
+    }).save(),
+    new RoleModel({
+      id: barnRoleId,
+      name: "Barn",
+      isChildRole: true,
+      permissions: makePermissions(CHILD_PERMISSIONS)
+    }).save(),
+    new AccountModel({ id: accountId, name, type: "family", createdBy: memberId }).save(),
+    new MemberModel({
+      id: memberId,
+      accountId,
+      userId: user.id,
+      name: user.name,
+      roleId: förälderRoleId,
+      isChild: false,
+      avatarUrl: null,
+      dashboardTheme: "focus",
+      deletedAt: null,
+      deletedBy: null
+    }).save()
+  ]);
+
+  const savedMember = await MemberModel.findOne({ id: memberId }, { _id: 0, __v: 0 });
+  const savedAccount = await AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 });
+
+  res.status(201).json({ membership: { member: savedMember, account: savedAccount } });
+}
+
+export async function getAccount(req: Request, res: Response) {
+  const account = await AccountModel.findOne({ id: req.params.id }, { _id: 0, __v: 0 });
+  if (!account) {
+    res.status(404).json({ error: "Konto hittades inte" });
+    return;
+  }
+  res.json(account);
+}
+
+export async function updateAccount(req: Request, res: Response) {
+  const account = await AccountModel.findOne({ id: req.params.id });
+  if (!account) {
+    res.status(404).json({ error: "Konto hittades inte" });
+    return;
+  }
+  Object.assign(account, req.body);
+  await account.save();
+  res.json({ ok: true });
+}
+
+export async function exportAccount(req: Request, res: Response) {
+  const member = await MemberModel.findOne({ id: req.memberId });
+  if (!member) {
+    res.status(403).json({ error: "Åtkomst nekad" });
+    return;
+  }
+
+  const accountId = req.params.id;
+  if (member.accountId !== accountId) {
+    res.status(403).json({ error: "Åtkomst nekad" });
+    return;
+  }
+
+  const [account, members, roles, todos, calendars, shoppingLists, rewards] = await Promise.all([
+    AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 }),
+    MemberModel.find({ accountId }, { _id: 0, __v: 0 }),
+    RoleModel.find({ id: { $in: [] } }, { _id: 0, __v: 0 }), // populated below
+    TodoModel.find({ accountId }, { _id: 0, __v: 0 }),
+    CalendarModel.find({ accountId }, { _id: 0, __v: 0 }),
+    ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 }),
+    RewardModel.find({ accountId }, { _id: 0, __v: 0 })
+  ]);
+
+  const roleIds = (members as Array<{ roleId: string }>).map((m) => m.roleId);
+  const populatedRoles = await RoleModel.find({ id: { $in: roleIds } }, { _id: 0, __v: 0 });
+
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    gdprNote: "Exporterad enligt GDPR Art. 20 – rätten till dataportabilitet.",
+    account,
+    members,
+    roles: populatedRoles,
+    todos,
+    calendars,
+    shoppingLists,
+    rewards
+  };
+
+  res.setHeader("Content-Disposition", `attachment; filename="bmad-export-${accountId}.json"`);
+  res.json(exportData);
+}
+
+export async function deleteAccount(req: Request, res: Response) {
+  const member = await MemberModel.findOne({ id: req.memberId });
+  if (!member) {
+    res.status(403).json({ error: "Åtkomst nekad" });
+    return;
+  }
+
+  const account = await AccountModel.findOne({ id: req.params.id });
+  if (!account) {
+    res.status(404).json({ error: "Konto hittades inte" });
+    return;
+  }
+
+  if (account.id !== member.accountId) {
+    res.status(403).json({ error: "Åtkomst nekad" });
+    return;
+  }
+
+  account.deletedAt = new Date().toISOString();
+  await account.save();
+  res.json({ ok: true });
+}

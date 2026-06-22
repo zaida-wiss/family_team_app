@@ -48,6 +48,272 @@ button {
   padding: 24px;
 }
 
+/* ── Nav bar ──────────────────────────────────────── */
+
+.hero-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border: 1px solid rgba(47, 125, 109, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 16px rgba(30, 56, 50, 0.07);
+  margin-bottom: 24px;
+}
+
+.hero-brand {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #21312e;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+
+.hero-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.hero-nav-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: #4a706a;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s;
+}
+
+.hero-nav-btn:hover {
+  background: rgba(47, 125, 109, 0.08);
+  color: #21312e;
+}
+
+.hero-nav-btn.active {
+  background: #2f7d6d;
+  color: #fff;
+  border-color: #2f7d6d;
+}
+
+/* ── Home overview ────────────────────────────────── */
+
+.overview-home {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.overview-greeting {
+  padding: 0 4px;
+}
+
+.overview-greeting-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0 0 6px;
+  color: #21312e;
+}
+
+.overview-greeting-sub {
+  margin: 0;
+  color: #5a7b74;
+  font-size: 0.975rem;
+}
+
+.overview-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 0 4px;
+}
+
+.overview-member-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 12px 10px 10px;
+  cursor: pointer;
+  transition: border-color 0.13s, background 0.13s;
+  min-width: 90px;
+}
+
+.overview-member-btn:hover {
+  border-color: #2f7d6d;
+  background: rgba(47, 125, 109, 0.04);
+}
+
+.overview-member-btn.active {
+  border-color: #2f7d6d;
+  background: rgba(47, 125, 109, 0.07);
+}
+
+.overview-member-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #21312e;
+}
+
+.overview-member-role {
+  font-size: 0.78rem;
+  color: #6b8f85;
+}
+
+/* ── Week calendar ────────────────────────────────── */
+
+.week-calendar {
+  border: 1px solid rgba(47, 125, 109, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 24px rgba(30, 56, 50, 0.07);
+  overflow: hidden;
+}
+
+.week-calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(47, 125, 109, 0.1);
+}
+
+.week-calendar-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #21312e;
+  flex: 1;
+}
+
+.week-calendar-header svg {
+  color: #2f7d6d;
+  flex-shrink: 0;
+}
+
+.week-calendar-link {
+  background: none;
+  border: none;
+  color: #2f7d6d;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.week-calendar-link:hover {
+  color: #1f5c4e;
+  text-decoration: underline;
+}
+
+.week-calendar-events {
+  display: flex;
+  flex-direction: column;
+}
+
+.week-event-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(47, 125, 109, 0.07);
+}
+
+.week-event-row:last-child {
+  border-bottom: none;
+}
+
+.week-event-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.week-event-day {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b8f85;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.week-event-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #21312e;
+  line-height: 1.1;
+}
+
+.week-event-month {
+  font-size: 0.75rem;
+  color: #6b8f85;
+  line-height: 1.2;
+}
+
+.week-event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.week-event-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #21312e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.week-event-meta {
+  font-size: 0.8rem;
+  color: #6b8f85;
+}
+
+.week-event-participants {
+  display: flex;
+  align-items: center;
+  gap: -4px;
+}
+
+.week-event-participants .avatar-frame {
+  margin-left: -4px;
+}
+
+/* ── Avatar xs size ───────────────────────────────── */
+
+.avatar-xs {
+  width: 28px;
+  height: 28px;
+}
+
+.avatar-xs img,
+.avatar-xs .avatar-icon {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #2f7d6d;
+  border-radius: 50%;
+  background: #f6fbf9;
+  object-fit: cover;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
 .account-setup {
   display: grid;
   grid-template-columns: minmax(220px, 0.7fr) minmax(220px, 1fr) auto;
@@ -383,6 +649,39 @@ h3 {
   background: #2f7d6d;
   color: white;
   border-color: #2f7d6d;
+}
+
+.account-type-picker {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.account-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border: 1.5px solid #c9d8d3;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #2a4a42;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.account-type-option:hover {
+  border-color: #2f7d6d;
+}
+
+.account-type-option.active {
+  border-color: #2f7d6d;
+  background: #f0faf7;
+  color: #1a5248;
 }
 
 .account-type-grid {
@@ -1269,6 +1568,59 @@ h3 {
   color: #526d66;
 }
 
+/* Invite flow */
+.invite-form {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px solid #e4ede9;
+  margin-top: 8px;
+}
+
+.invite-form h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.invite-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.invite-result {
+  display: grid;
+  gap: 10px;
+}
+
+.invite-success {
+  color: #2f7d6d;
+  font-weight: 500;
+  margin: 0;
+}
+
+.invite-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0faf7;
+  border: 1px solid #c9d8d3;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.invite-url {
+  flex: 1;
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: #1a5248;
+}
+
+.invite-mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
 .role-list-panel {
   display: grid;
   gap: 14px;
@@ -1349,4 +1701,69 @@ h3 {
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* --- Danger zone / account deletion --- */
+.danger-zone {
+  border: 1px solid #e74c3c33;
+}
+
+.danger-button {
+  background: transparent;
+  border: 1.5px solid #e74c3c;
+  color: #e74c3c;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.danger-button:hover:not(:disabled) {
+  background: #e74c3c;
+  color: #fff;
+}
+.danger-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ghost-button {
+  background: transparent;
+  border: 1.5px solid var(--color-border, #ddd);
+  color: inherit;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ghost-button:hover {
+  background: var(--color-surface-alt, #f5f5f5);
+}
+
+.delete-account-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.delete-account-consequences {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #666);
+}
+.delete-account-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.delete-account-actions {
+  display: flex;
+  gap: 0.75rem;
 }

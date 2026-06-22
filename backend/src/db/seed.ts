@@ -35,36 +35,41 @@ await Promise.all([
 
 await AccountModel.create({
   id: "account-family-1",
-  name: "Familjen Solbacken",
+  name: "Testfamiljen",
   type: "family",
-  createdBy: "member-parent-1"
+  createdBy: "member-foralder-1"
 });
 
 await RoleModel.create([
   {
-    id: "role-parent",
-    name: "Foralder",
+    id: "role-foralder",
+    name: "Förälder",
+    isChildRole: false,
     permissions: makePermissions([
-      "canManageMembers", "canManageRoles", "canSeeAllTodos", "canCreateTodos",
-      "canScheduleRecurringTodos", "canEditAnyTodos", "canDeleteAnyTodos", "canApproveTodos",
-      "canSeeAllCalendar", "canCreateCalendar", "canEditCalendar", "canImportCalendar",
-      "canExportCalendar", "canSeeShoppingLists", "canCreateShoppingLists", "canEditShoppingLists",
-      "canViewTrash", "canRestoreFromTrash", "canCreateChildAccounts", "canManageChildTodos"
+      "canManageMembers", "canManageRoles", "canCreateChildAccounts", "canManageChildTodos",
+      "canSeeAllTodos", "canCreateTodos", "canScheduleRecurringTodos",
+      "canEditAnyTodos", "canDeleteAnyTodos", "canApproveTodos",
+      "canSeeAllCalendar", "canCreateCalendar", "canEditCalendar",
+      "canImportCalendar", "canExportCalendar",
+      "canSeeShoppingLists", "canCreateShoppingLists", "canEditShoppingLists",
+      "canViewTrash", "canRestoreFromTrash"
     ])
   },
   {
-    id: "role-child",
+    id: "role-barn",
     name: "Barn",
+    isChildRole: true,
     permissions: makePermissions(["canSeeOwnTodos", "canCompleteAssignedTodos", "canSeeOwnCalendar"])
   }
 ]);
 
 await MemberModel.create([
   {
-    id: "member-parent-1",
+    id: "member-foralder-1",
     accountId: "account-family-1",
-    name: "Zaida",
-    roleId: "role-parent",
+    userId: null,
+    name: "Förälder",
+    roleId: "role-foralder",
     isChild: false,
     avatarUrl: null,
     dashboardTheme: "warm",
@@ -72,10 +77,11 @@ await MemberModel.create([
     deletedBy: null
   },
   {
-    id: "member-child-1",
+    id: "member-barn-1",
     accountId: "account-family-1",
-    name: "Sam",
-    roleId: "role-child",
+    userId: null,
+    name: "Barn",
+    roleId: "role-barn",
     isChild: true,
     avatarUrl: null,
     dashboardTheme: "space",
@@ -87,9 +93,9 @@ await MemberModel.create([
 await CalendarModel.create({
   id: "calendar-family",
   name: "Familjekalender",
-  ownerId: "member-parent-1",
+  ownerId: "member-foralder-1",
   color: "#2f7d6d",
-  sharedWith: [{ memberId: "member-child-1", access: "view" }],
+  sharedWith: [{ memberId: "member-barn-1", access: "view" }],
   importedSources: [],
   deletedAt: null,
   deletedBy: null,
@@ -101,7 +107,7 @@ await CalendarModel.create({
       startsAt: "2026-06-10T17:00:00",
       endsAt: "2026-06-10T18:00:00",
       notes: null,
-      createdBy: "member-parent-1",
+      createdBy: "member-foralder-1",
       deletedAt: null,
       deletedBy: null
     }
@@ -111,24 +117,24 @@ await CalendarModel.create({
 await ShoppingListModel.create({
   id: "shopping-1",
   name: "Veckohandling",
-  ownerId: "member-parent-1",
+  ownerId: "member-foralder-1",
   color: "#f4a261",
   icon: "ShoppingCart",
-  sharedWith: [{ memberId: "member-child-1", access: "view" }],
+  sharedWith: [{ memberId: "member-barn-1", access: "view" }],
   deletedAt: null,
   deletedBy: null,
   items: [
-    { id: "shopping-item-1", title: "Mjolk", createdBy: "member-parent-1", done: false, deletedAt: null, deletedBy: null },
-    { id: "shopping-item-2", title: "Pasta", createdBy: "member-parent-1", done: true, deletedAt: null, deletedBy: null }
+    { id: "shopping-item-1", title: "Mjölk", createdBy: "member-foralder-1", done: false, deletedAt: null, deletedBy: null },
+    { id: "shopping-item-2", title: "Pasta", createdBy: "member-foralder-1", done: true, deletedAt: null, deletedBy: null }
   ]
 });
 
 await TodoModel.create([
   {
     id: "todo-1",
-    title: "Badda sangen",
-    createdBy: "member-parent-1",
-    assignedTo: "member-child-1",
+    title: "Bädda sängen",
+    createdBy: "member-foralder-1",
+    assignedTo: "member-barn-1",
     isShared: false,
     status: "pending",
     starValue: 2,
@@ -148,9 +154,9 @@ await TodoModel.create([
   },
   {
     id: "todo-2",
-    title: "Lasa 20 minuter",
-    createdBy: "member-parent-1",
-    assignedTo: "member-child-1",
+    title: "Läsa 20 minuter",
+    createdBy: "member-foralder-1",
+    assignedTo: "member-barn-1",
     isShared: false,
     status: "done",
     starValue: 3,
@@ -171,8 +177,8 @@ await TodoModel.create([
   {
     id: "todo-3",
     title: "Duka bordet",
-    createdBy: "member-parent-1",
-    assignedTo: "member-child-1",
+    createdBy: "member-foralder-1",
+    assignedTo: "member-barn-1",
     isShared: false,
     status: "approved",
     starValue: 4,
@@ -183,7 +189,7 @@ await TodoModel.create([
     visibleFrom: null,
     expiresAt: null,
     completedAt: "2026-06-07T17:30:00",
-    approvedBy: "member-parent-1",
+    approvedBy: "member-foralder-1",
     approvedAt: "2026-06-07T18:00:00",
     rejectedBy: null,
     rejectedAt: null,
@@ -195,10 +201,10 @@ await TodoModel.create([
 await RewardModel.create({
   id: "reward-1",
   title: "Bio med popcorn",
-  wishedBy: "member-child-1",
+  wishedBy: "member-barn-1",
   starsNeeded: 20,
   status: "active",
-  approvedBy: "member-parent-1",
+  approvedBy: "member-foralder-1",
   approvedAt: "2026-06-08T18:00:00",
   redeemedAt: null,
   deletedAt: null,

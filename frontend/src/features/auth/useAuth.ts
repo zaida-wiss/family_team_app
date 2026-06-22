@@ -60,5 +60,5 @@ export function useAuth() {
     );
   }
 
-  return { state, login, register, logout, updateMemberships };
+  return { state, login, register, logout, updateMemberships, applySession };
 }

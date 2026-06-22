@@ -1,5 +1,5 @@
 import type { Member, Reward, RewardPathItem, RewardPathProgress, Role, Todo } from "@shared/types";
-import { hasPermission } from "../roles/permissions";
+import { hasPermission } from "../../utils/permissions";
 
 export function getVisibleTodos(
   member: Member,

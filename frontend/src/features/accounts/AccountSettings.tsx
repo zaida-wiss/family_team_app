@@ -1,7 +1,7 @@
 import { Eraser, ImagePlus, Trash2, UserPlus, X } from "lucide-react";
 import { useState } from "react";
-import { MemberAvatar } from "../members/MemberAvatar";
-import { canCreateChildAccount, hasPermission } from "../roles/permissions";
+import { MemberAvatar } from "../../components/MemberAvatar";
+import { canCreateChildAccount, hasPermission } from "../../utils/permissions";
 import type { Account, Member, Role } from "@shared/types";
 
 type AccountSettingsProps = {
@@ -46,6 +46,7 @@ export function AccountSettings({
     onCreateMember({
       id: `member-${crypto.randomUUID()}`,
       accountId: account.id,
+      userId: null,
       name: trimmedName,
       roleId,
       isChild: childAccount,
@@ -83,7 +84,7 @@ export function AccountSettings({
       <header className="section-header">
         <div>
           <p className="eyebrow">Inställningar</p>
-          <h2>{account.type === "family" ? "Familjekonto" : "Arbetsplatskonto"}</h2>
+          <h2>Familjekonto</h2>
         </div>
         <UserPlus size={24} />
       </header>

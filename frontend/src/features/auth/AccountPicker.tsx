@@ -1,8 +1,8 @@
-import { BriefcaseBusiness, Plus, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { accountsApi } from "../../api";
 import { CreateAccountForm } from "./CreateAccountForm";
-import type { AccountType, Membership, User } from "@shared/types";
+import type { Membership, User } from "@shared/types";
 
 type Props = {
   user: User;
@@ -15,8 +15,8 @@ type Props = {
 export function AccountPicker({ user, memberships, onSelect, onLogout, onMembershipsUpdated }: Props) {
   const [creating, setCreating] = useState(false);
 
-  async function handleCreate(name: string, type: AccountType) {
-    const { membership } = await accountsApi.setup(name, type);
+  async function handleCreate(name: string) {
+    const { membership } = await accountsApi.setup(name);
     const updated = [...memberships, membership];
     onMembershipsUpdated(updated);
     onSelect(membership);
@@ -46,13 +46,7 @@ export function AccountPicker({ user, memberships, onSelect, onLogout, onMembers
                     onClick={() => onSelect({ member, account })}
                     type="button"
                   >
-                    <span className="account-icon">
-                      {account?.type === "family" ? (
-                        <Users size={20} />
-                      ) : (
-                        <BriefcaseBusiness size={20} />
-                      )}
-                    </span>
+                    <span className="account-icon"><Users size={20} /></span>
                     <span className="account-picker-info">
                       <strong>{account?.name ?? "Okänt konto"}</strong>
                       <small>{member.isChild ? "Barnkonto" : member.name}</small>
@@ -76,8 +70,8 @@ export function AccountPicker({ user, memberships, onSelect, onLogout, onMembers
             >
               <span className="account-icon"><Plus size={20} /></span>
               <span className="account-picker-info">
-                <strong>Skapa nytt konto</strong>
-                <small>Familj eller arbetsplats</small>
+                <strong>Skapa nytt familjekonto</strong>
+                <small>Bjud sedan in familjemedlemmar</small>
               </span>
             </button>
 

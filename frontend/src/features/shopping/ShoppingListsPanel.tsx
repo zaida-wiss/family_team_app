@@ -4,7 +4,7 @@ import {
   canEditSharedResource,
   canViewResource,
   hasPermission
-} from "../roles/permissions";
+} from "../../utils/permissions";
 import type { AccessLevel, Id, Member, Role, ShoppingList } from "@shared/types";
 
 type ShoppingListsPanelProps = {

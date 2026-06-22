@@ -23,7 +23,8 @@ export function hasPermission(
   roles: Role[],
   permission: PermissionKey
 ): boolean {
-  return getRoleForMember(member, roles).permissions[permission] === true;
+  const role = roles.find((r) => r.id === member.roleId);
+  return role?.permissions[permission] === true;
 }
 
 export function getShareAccess(

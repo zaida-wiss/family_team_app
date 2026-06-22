@@ -95,7 +95,7 @@ export const authApi = {
 export const invitationsApi = {
   invite: (
     accountId: string,
-    payload: { invitedEmail: string; memberName: string; roleId: string; isChild: boolean }
+    payload: { invitedEmail: string; memberName: string; roleId: string }
   ) =>
     request<{ invitation: Invitation; inviteUrl: string; accountName: string }>(
       api(`accounts/${accountId}/invite`),
@@ -111,7 +111,7 @@ export const invitationsApi = {
       | { action: "register"; email: string; password: string; name: string }
       | { action: "login"; email: string; password: string }
   ) =>
-    request<{ ok: boolean; memberId: string; accountId: string }>(
+    request<LoginResponse>(
       api(`invitations/${token}/accept`),
       { method: "POST", body: JSON.stringify(payload) }
     )
@@ -147,14 +147,18 @@ export const rolesApi = {
 };
 
 export const accountsApi = {
-  setup: (name: string, type: "family" | "workplace") =>
+  setup: (name: string) =>
     request<{ membership: Membership }>(api("accounts/setup"), {
       method: "POST",
-      body: JSON.stringify({ name, type })
+      body: JSON.stringify({ name })
     }),
   get: (id: string) => request<Account>(api(`accounts/${id}`)),
   update: (id: string, patch: Partial<Account>) =>
-    request<{ ok: boolean }>(api(`accounts/${id}`), { method: "PUT", body: JSON.stringify(patch) })
+    request<{ ok: boolean }>(api(`accounts/${id}`), { method: "PUT", body: JSON.stringify(patch) }),
+  export: (id: string) =>
+    request<unknown>(api(`accounts/${id}/export`)),
+  delete: (id: string) =>
+    request<{ ok: boolean }>(api(`accounts/${id}`), { method: "DELETE" })
 };
 
 export const todosApi = {

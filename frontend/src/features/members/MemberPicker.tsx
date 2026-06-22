@@ -1,5 +1,5 @@
 import type { Account, Member } from "@shared/types";
-import { MemberAvatar } from "./MemberAvatar";
+import { MemberAvatar } from "../../components/MemberAvatar";
 
 type Props = {
   account: Account;
@@ -10,7 +10,7 @@ type Props = {
 export function MemberPicker({ account, members, onSelect }: Props) {
   return (
     <main className="member-picker">
-      <p className="eyebrow">{account.type === "family" ? "Familj" : "Arbetsplats"}</p>
+      <p className="eyebrow">Familj</p>
       <h1>{account.name}</h1>
       <p className="member-picker-prompt">Vem är du?</p>
       <div className="member-picker-grid">

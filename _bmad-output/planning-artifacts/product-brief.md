@@ -1,20 +1,17 @@
-# Product Brief: Familje- och teamapp
+# Product Brief: Familjeapp
 
 ## Ide
 
-En app for familjer, kontor och andra grupper dar medlemmar kan dela kalender, inkopslistor och todo-listor. Appen ska fungera bade for vardag i familjen och for enklare samarbete i team eller pa kontor.
+En app for familjer dar medlemmar kan dela kalender, inkopslistor och todo-listor. Appen ska fungera for vardagen i familjen med stod for bade vuxna och barn.
 
 ## Malgrupper
 
 - Familjer
 - Barnfamiljer
-- Kontor
-- Mindre team
-- Grupper som behover dela planering och ansvar
 
 ## Problem
 
-Familjer och team har ofta information utspridd i flera appar: kalender i en app, inkop i en annan och uppgifter i en tredje. Det blir svart att se vem som ansvarar for vad, vad som ar privat, vad som ar delat och vilka personer som far se eller andra information.
+Familjer har ofta information utspridd i flera appar: kalender i en app, inkop i en annan och uppgifter i en tredje. Det blir svart att se vem som ansvarar for vad, vad som ar privat, vad som ar delat och vilka personer som far se eller andra information.
 
 For barn behovs dessutom ett tydligt och roligt satt att forsta sina uppgifter, samla beloningar och se sin progress utan att allt bygger pa mycket text.
 
@@ -38,17 +35,15 @@ Appen ska ge en tydlig gemensam plats for:
 
 Medlemmar ska skapas inne i appen. Appen ska inte ha namn hardkodade i forvag.
 
-En anvandare ska kunna lagga till sa manga medlemmar som behovs, sa att appen fungerar for bade familjer och kontor.
+En anvandare ska kunna lagga till sa manga medlemmar som behovs.
 
 Varje medlem ska kunna kopplas till en roll.
 
-Nar ett konto skapas ska anvandaren valja om kontot ska anvandas for familj eller arbetsplats.
+Nar ett konto skapas skapas automatiskt rollerna Foralder och Barn. Den som skapar kontot far rollen Foralder.
 
-For familjer ska appen stodja ett familjekonto. Vuxna ska kunna ga in i installningar och skapa barnkonton i familjekontot.
+For familjer ska appen stodja ett familjekonto. Foraldrar ska kunna bjuda in familjemedlemmar via en inbjudningslank.
 
 Samtliga vuxna i samma familjekonto ska kunna godkanna barns uppgifter och fylla i/lagga upp uppgifter pa barnkontot, om deras roll tillater det.
-
-For arbetsplats ska appen stodja ett arbetsplatskonto med medlemmar, roller, kalender, todos och inkopslistor. Barnkonton, stjarnor och beloningsbana ska inte vara standard i arbetsplatslage.
 
 Startsidan ska visa runda bilder eller avatarer for medlemmarna. Bilderna ska kunna klickas for att oppna medlemmens personliga dashboard.
 
@@ -60,12 +55,9 @@ Admin ska kunna skapa roller inne i appen och kryssa i vad varje roll far se och
 
 Exempel pa roller:
 
-- Admin
 - Foralder
 - Barn
-- Medlem
 - Gast
-- Kollega
 
 Roller ska kunna styra exempelvis:
 
@@ -181,6 +173,12 @@ Aktiva todos for barn ska kunna visas som tydliga bilder eller kort som ramlar n
 
 Foralder ska kunna stalla in hur lange en barns todo ar aktiv. Om uppgiften inte blir avklarad inom tiden ska den forsvinna fran barnets aktiva dashboard och markeras som missad eller utgangen.
 
+## GDPR och kontoborttagning
+
+Anvandaren ska kunna exportera all sin data i maskinlasbart format (JSON) enligt GDPR Art. 20.
+
+Anvandaren ska kunna ta bort sitt familjekonto enligt GDPR Art. 17. Kontoborttagning ska vara mjuk och data raderas definititivt inom 30 dagar. Appen ska tydligt informera om vad som hander innan borttagningen bekraftas.
+
 ## Mjuk radering och papperskorg
 
 Appen ska anvanda mjuk radering.
@@ -200,7 +198,7 @@ Raderad data ska kunna aterstallas enligt behorighet.
 
 Forsta versionen bor fokusera pa:
 
-1. Skapa medlemmar inne i appen
+1. Skapa konto med inbjudningsflode
 2. Skapa roller och kryssa i behorigheter
 3. Tilldela roll till medlem
 4. Skapa privata och delade kalendrar
