@@ -5,8 +5,6 @@ import {
   Palette,
   Settings,
   ShoppingCart,
-  Shield,
-  Trash2,
   Users
 } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
@@ -19,8 +17,6 @@ type Props = {
   accountName: string;
   currentMember: Member;
   canManageMembers: boolean;
-  canManageRoles: boolean;
-  canViewTrash: boolean;
   onNavigate: (panel: ShellPanel) => void;
   onSwitchAccount: () => void;
   onOpenThemePicker: () => void;
@@ -31,8 +27,6 @@ export function HeroBar({
   accountName,
   currentMember,
   canManageMembers,
-  canManageRoles,
-  canViewTrash,
   onNavigate,
   onSwitchAccount,
   onOpenThemePicker,
@@ -51,12 +45,6 @@ export function HeroBar({
         <NavBtn icon={<ListTodo size={20} />} label="Todos" panel="todos" active={activePanel === "todos"} onNavigate={onNavigate} />
         {canManageMembers && (
           <NavBtn icon={<Users size={20} />} label="Medlemmar" panel="members" active={activePanel === "members"} onNavigate={onNavigate} />
-        )}
-        {canManageRoles && (
-          <NavBtn icon={<Shield size={20} />} label="Roller" panel="roles" active={activePanel === "roles"} onNavigate={onNavigate} />
-        )}
-        {canViewTrash && (
-          <NavBtn icon={<Trash2 size={20} />} label="Papperskorg" panel="trash" active={activePanel === "trash"} onNavigate={onNavigate} />
         )}
         <NavBtn icon={<Settings size={20} />} label="Inställningar" panel="settings" active={activePanel === "settings"} onNavigate={onNavigate} />
       </div>
