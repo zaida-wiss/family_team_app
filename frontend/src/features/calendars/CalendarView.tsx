@@ -190,12 +190,13 @@ type EventListProps = {
   holidayTextColor: string;
   onEventClick: (ev: EnrichedEvent) => void;
   onClearDay?: () => void;
+  onNewEvent?: () => void;
 };
 
 function CalendarEventList({
   allEvents, selectedDay, viewYear, viewMonth, todayStr,
   visible, calendarDisplayColor, showHolidays, holidayBgColor, holidayTextColor,
-  onEventClick, onClearDay,
+  onEventClick, onClearDay, onNewEvent,
 }: EventListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
@@ -243,55 +244,55 @@ function CalendarEventList({
   return (
     <div className="cal-event-list">
       <div className="cal-event-list-header">
-        <span className="cal-event-list-title">
-          {selectedDay ? fmtFullDate(selectedDay) : `${MONTHS[viewMonth]} ${viewYear}`}
-        </span>
-        <div className="cal-list-controls">
-          <div className="cal-overview-search">
-            <Search size={14} className="cal-search-icon" />
-            <input
-              className="cal-search-input"
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Sök…"
-              type="search"
-              value={searchQuery}
-            />
-          </div>
-          <div className="cal-filter-wrap" ref={filterRef}>
-            <button
-              className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
-              onClick={() => setShowFilter((s) => !s)}
-              title="Filtrera kalendrar"
-              type="button"
-            >
-              <Filter size={16} />
-            </button>
-            {showFilter && (
-              <div className="cal-filter-dropdown">
-                {visible.map((cal) => (
-                  <label className="cal-filter-item" key={cal.id}>
-                    <input
-                      checked={!hiddenCalendarIds.has(cal.id)}
-                      onChange={(e) => {
-                        setHiddenCalendarIds((prev) => {
-                          const next = new Set(prev);
-                          if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
-                          return next;
-                        });
-                      }}
-                      type="checkbox"
-                    />
-                    <span className="cal-filter-dot" style={{ background: cal.color }} />
-                    <span>{cal.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-          {selectedDay && onClearDay && (
-            <button className="cal-clear-day" onClick={onClearDay} type="button">Visa alla</button>
+        <div className="cal-filter-wrap" ref={filterRef}>
+          <button
+            className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
+            onClick={() => setShowFilter((s) => !s)}
+            title="Filtrera kalendrar"
+            type="button"
+          >
+            <Filter size={16} />
+          </button>
+          {showFilter && (
+            <div className="cal-filter-dropdown">
+              {visible.map((cal) => (
+                <label className="cal-filter-item" key={cal.id}>
+                  <input
+                    checked={!hiddenCalendarIds.has(cal.id)}
+                    onChange={(e) => {
+                      setHiddenCalendarIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
+                        return next;
+                      });
+                    }}
+                    type="checkbox"
+                  />
+                  <span className="cal-filter-dot" style={{ background: cal.color }} />
+                  <span>{cal.name}</span>
+                </label>
+              ))}
+            </div>
           )}
         </div>
+        <div className="cal-overview-search">
+          <Search size={14} className="cal-search-icon" />
+          <input
+            className="cal-search-input"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Sök händelser…"
+            type="search"
+            value={searchQuery}
+          />
+        </div>
+        {selectedDay && onClearDay && (
+          <button className="cal-clear-day" onClick={onClearDay} type="button">Visa alla</button>
+        )}
+        {onNewEvent && (
+          <button className="icon-button" onClick={onNewEvent} title="Ny händelse" type="button">
+            <Plus size={16} />
+          </button>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -674,13 +675,6 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
     return (
       <div className="cal-overview-wrap">
-        {(editableCalendars.length > 0 && onAddEvent) && (
-          <div className="cal-overview-header">
-            <button className="primary-button cal-new-btn" onClick={() => openNew()} type="button">
-              <Plus size={16} /> Ny händelse
-            </button>
-          </div>
-        )}
 
         <div className="cal-grid-card">
           <div className="cal-grid-nav">
@@ -753,6 +747,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           holidayTextColor={holidayTextColor}
           onEventClick={setDetailEvent}
           onClearDay={() => setSelectedDay(null)}
+          onNewEvent={editableCalendars.length > 0 && onAddEvent ? () => openNew() : undefined}
         />
 
         {/* Event detail panel */}
@@ -925,6 +920,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         holidayTextColor={holidayTextColor}
         onEventClick={openEdit}
         onClearDay={() => setSelectedDay(null)}
+        onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}
       />
 
       {eventModalOverlay}

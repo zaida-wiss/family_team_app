@@ -211,8 +211,13 @@
 .cal-event-list-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   margin-bottom: 4px;
+}
+
+.cal-event-list-header .cal-overview-search {
+  flex: 1;
+  min-width: 0;
 }
 
 .cal-event-list-title {
