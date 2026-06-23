@@ -3,6 +3,7 @@ import "express-async-errors";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import type { ErrorRequestHandler } from "express";
 import { authRouter } from "./routes/auth.js";
 import { accountsRouter } from "./routes/accounts.js";
@@ -18,6 +19,7 @@ const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").repla
 
 export const app = express();
 
+app.use(helmet());
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
