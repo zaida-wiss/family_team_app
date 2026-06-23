@@ -222,7 +222,7 @@ button {
 @media (min-width: 760px) {
   .app-shell {
     display: grid;
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 248px 1fr;
     max-width: 100%;
     margin: 0;
     padding: 0;
