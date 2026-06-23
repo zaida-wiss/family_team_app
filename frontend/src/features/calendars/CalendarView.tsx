@@ -1,8 +1,8 @@
 import { ChevronLeft, ChevronRight, Filter, MapPin, Plus, RefreshCw, Repeat, Search, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
-import type { Calendar, CalendarEvent, EventRecurrence, Id, Member, Role } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
 import "./CalendarView.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ type Props = {
   activeMembers: Member[];
   roles: Role[];
   displayOnly?: boolean;
+  calendarSettings?: CalendarSettings;
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
@@ -161,9 +162,181 @@ function blankForm(defaults: Partial<FormState> = {}): FormState {
   };
 }
 
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+const HELGDAG_RE = /helgdag|röd dag|nationaldag|jul(?:dag|afton)|påsk|midsommar|nyår|kristi\s+himmel|allhelgon|pingst|trettondagen?|valborg/i;
+
+function isHolidayEvent(ev: { title: string; calendarName: string }): boolean {
+  return HELGDAG_RE.test(ev.title) || HELGDAG_RE.test(ev.calendarName);
+}
+
+// ── Shared event list component ──────────────────────────────────────────────
+
+type EventListProps = {
+  allEvents: EnrichedEvent[];
+  selectedDay: string | null;
+  viewYear: number;
+  viewMonth: number;
+  todayStr: string;
+  visible: Calendar[];
+  calendarDisplayColor: Map<string, string>;
+  showHolidays: boolean;
+  holidayBgColor: string;
+  holidayTextColor: string;
+  onEventClick: (ev: EnrichedEvent) => void;
+  onClearDay?: () => void;
+};
+
+function CalendarEventList({
+  allEvents, selectedDay, viewYear, viewMonth, todayStr,
+  visible, calendarDisplayColor, showHolidays, holidayBgColor, holidayTextColor,
+  onEventClick, onClearDay,
+}: EventListProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
+  const [showFilter, setShowFilter] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setSearchQuery(""); setHiddenCalendarIds(new Set()); }, [viewYear, viewMonth]);
+
+  useEffect(() => {
+    if (!showFilter) return;
+    function handler(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowFilter(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showFilter]);
+
+  const q = searchQuery.trim().toLowerCase();
+  const hasFilter = !!q || hiddenCalendarIds.size > 0;
+
+  // When viewing the current month without filters: hide past events.
+  // When browsing a past or future month: show everything (user navigated there intentionally).
+  const todayYM = todayStr.slice(0, 7); // "YYYY-MM"
+  const viewYM = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+  const isCurrentMonth = viewYM === todayYM;
+  const hidePast = isCurrentMonth && !selectedDay && !hasFilter;
+
+  const filtered = allEvents
+    .filter((ev) => hiddenCalendarIds.size === 0 || !hiddenCalendarIds.has(ev.calendarId))
+    .filter((ev) => showHolidays || !isHolidayEvent(ev))
+    .filter((ev) => {
+      if (hidePast) {
+        const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
+        return end >= todayStr;
+      }
+      return true;
+    })
+    .filter((ev) => !q || (
+      ev.title.toLowerCase().includes(q) ||
+      ev.calendarName.toLowerCase().includes(q) ||
+      (ev.location?.toLowerCase().includes(q) ?? false) ||
+      (ev.notes?.replace(/\\n/g, " ").toLowerCase().includes(q) ?? false)
+    ));
+
+  return (
+    <div className="cal-event-list">
+      <div className="cal-event-list-header">
+        <span className="cal-event-list-title">
+          {selectedDay ? fmtFullDate(selectedDay) : `${MONTHS[viewMonth]} ${viewYear}`}
+        </span>
+        <div className="cal-list-controls">
+          <div className="cal-overview-search">
+            <Search size={14} className="cal-search-icon" />
+            <input
+              className="cal-search-input"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Sök…"
+              type="search"
+              value={searchQuery}
+            />
+          </div>
+          <div className="cal-filter-wrap" ref={filterRef}>
+            <button
+              className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
+              onClick={() => setShowFilter((s) => !s)}
+              title="Filtrera kalendrar"
+              type="button"
+            >
+              <Filter size={16} />
+            </button>
+            {showFilter && (
+              <div className="cal-filter-dropdown">
+                {visible.map((cal) => (
+                  <label className="cal-filter-item" key={cal.id}>
+                    <input
+                      checked={!hiddenCalendarIds.has(cal.id)}
+                      onChange={(e) => {
+                        setHiddenCalendarIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
+                          return next;
+                        });
+                      }}
+                      type="checkbox"
+                    />
+                    <span className="cal-filter-dot" style={{ background: cal.color }} />
+                    <span>{cal.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          {selectedDay && onClearDay && (
+            <button className="cal-clear-day" onClick={onClearDay} type="button">Visa alla</button>
+          )}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="cal-empty-note">
+          {hasFilter
+            ? "Inga händelser matchar filtret."
+            : selectedDay
+              ? "Inga händelser denna dag."
+              : "Inga händelser denna månad."}
+        </p>
+      ) : (
+        filtered.map((ev) => {
+          const holiday = isHolidayEvent(ev);
+          return (
+            <div
+              className="cal-event-row"
+              key={ev.id}
+              onClick={() => onEventClick(ev)}
+              style={{ cursor: "pointer", ...(holiday ? { background: holidayBgColor, color: holidayTextColor } : {}) }}
+            >
+              <div className="cal-event-color-dot" style={{ background: holiday ? holidayBgColor : (ev.color ?? calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor) }} />
+              <div className="cal-event-row-info">
+                <span className="cal-event-row-title">
+                  {ev.title}
+                  {ev.recurrence?.type !== "none" && <Repeat size={12} style={{ marginLeft: 5, opacity: 0.55, verticalAlign: "middle" }} />}
+                </span>
+                <span className="cal-event-row-meta" style={holiday ? { color: holidayTextColor } : undefined}>
+                  {ev.isAllDay
+                    ? `${fmtFullDate(ev.startsAt.slice(0, 10))} · Heldag`
+                    : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`}
+                  {ev.location && <> · <MapPin size={11} style={{ verticalAlign: "middle" }} /> {ev.location}</>}
+                  {" · "}{ev.calendarName}
+                </span>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
   const now = new Date();
   const todayStr = toLocalDateStr(now);
 
@@ -174,21 +347,6 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
   const [form, setForm] = useState<FormState>(blankForm());
   const [detailEvent, setDetailEvent] = useState<EnrichedEvent | null>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
-  const [showCalFilter, setShowCalFilter] = useState(false);
-  const calFilterRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showCalFilter) return;
-    function handleOutside(e: MouseEvent) {
-      if (calFilterRef.current && !calFilterRef.current.contains(e.target as Node)) {
-        setShowCalFilter(false);
-      }
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [showCalFilter]);
 
   // ── Permission filtering ──
   const visible = calendars.filter((cal) => {
@@ -350,11 +508,30 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
   }
 
   const cells = getMonthCells(viewYear, viewMonth);
+  const weeks: typeof cells[] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+  const showWeekNumbers = calendarSettings?.showWeekNumbers ?? false;
+  const showHolidays = calendarSettings?.showHolidays ?? true;
+  const holidayBgColor = calendarSettings?.holidayBgColor ?? "#ffe4e6";
+  const holidayTextColor = calendarSettings?.holidayTextColor ?? "#9f1239";
+
+  const calendarDisplayColor = new Map<string, string>();
+  for (const member of activeMembers) {
+    const memberCals = visible.filter((c) => c.ownerId === member.id);
+    const baseColor = member.color ?? null;
+    memberCals.forEach((cal, idx) => {
+      if (!baseColor) calendarDisplayColor.set(cal.id, cal.color);
+      else if (idx === 0) calendarDisplayColor.set(cal.id, baseColor);
+      else calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
+    });
+  }
+
   const isEditing = modal?.kind === "edit";
   const eventIsEditable = isEditing && canEditEvent(modal.event);
   const otherMembers = activeMembers.filter((m) => m.id !== currentMember.id);
 
-  if (visible.length === 0) {
+  if (visible.length === 0 && !displayOnly) {
     return (
       <article className="dashboard">
         <header className="section-header">
@@ -487,32 +664,6 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
   ) : null;
 
   if (displayOnly) {
-    // Build a map: calendarId → display color derived from the owner member's color
-    const calendarDisplayColor = new Map<string, string>();
-    for (const member of activeMembers) {
-      const memberCals = visible.filter((c) => c.ownerId === member.id);
-      const baseColor = member.color ?? null;
-      memberCals.forEach((cal, idx) => {
-        if (!baseColor) {
-          calendarDisplayColor.set(cal.id, cal.color);
-        } else if (idx === 0) {
-          calendarDisplayColor.set(cal.id, baseColor);
-        } else {
-          calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
-        }
-      });
-    }
-
-    const displayListEvents = selectedDay
-      ? eventsForDay(selectedDay)
-      : expandedEvents
-          .filter((ev) => {
-            const evStart = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
-            const evEnd = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-            return evStart <= monthLastDay && evEnd >= monthFirstDay;
-          })
-          .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-
     const handleDayTouchStart = (dateStr: string) => {
       if (editableCalendars.length === 0 || !onAddEvent) return;
       longPressRef.current = setTimeout(() => { openNew(dateStr); }, 600);
@@ -521,66 +672,15 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
       if (longPressRef.current !== null) { clearTimeout(longPressRef.current); longPressRef.current = null; }
     };
 
-    const q = searchQuery.trim().toLowerCase();
-    const filteredDisplayEvents = displayListEvents
-      .filter((ev) => hiddenCalendarIds.size === 0 || !hiddenCalendarIds.has(ev.calendarId))
-      .filter((ev) => !q || (
-        ev.title.toLowerCase().includes(q) ||
-        ev.calendarName.toLowerCase().includes(q) ||
-        (ev.location?.toLowerCase().includes(q) ?? false) ||
-        (ev.notes?.replace(/\\n/g, " ").toLowerCase().includes(q) ?? false)
-      ));
-
     return (
       <div className="cal-overview-wrap">
-        <div className="cal-overview-header">
-          {editableCalendars.length > 0 && onAddEvent && (
+        {(editableCalendars.length > 0 && onAddEvent) && (
+          <div className="cal-overview-header">
             <button className="primary-button cal-new-btn" onClick={() => openNew()} type="button">
               <Plus size={16} /> Ny händelse
             </button>
-          )}
-          <div className="cal-overview-search">
-            <Search size={14} className="cal-search-icon" />
-            <input
-              className="cal-search-input"
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Sök händelser…"
-              type="search"
-              value={searchQuery}
-            />
           </div>
-          <div className="cal-filter-wrap" ref={calFilterRef}>
-            <button
-              className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
-              onClick={() => setShowCalFilter((s) => !s)}
-              title="Filtrera kalendrar"
-              type="button"
-            >
-              <Filter size={16} />
-            </button>
-            {showCalFilter && (
-              <div className="cal-filter-dropdown">
-                {visible.map((cal) => (
-                  <label className="cal-filter-item" key={cal.id}>
-                    <input
-                      checked={!hiddenCalendarIds.has(cal.id)}
-                      onChange={(e) => {
-                        setHiddenCalendarIds((prev) => {
-                          const next = new Set(prev);
-                          if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
-                          return next;
-                        });
-                      }}
-                      type="checkbox"
-                    />
-                    <span className="cal-filter-dot" style={{ background: cal.color }} />
-                    <span>{cal.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         <div className="cal-grid-card">
           <div className="cal-grid-nav">
@@ -588,79 +688,72 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
             <button className="icon-button" onClick={nextMonth} type="button"><ChevronRight size={18} /></button>
           </div>
-          <div className="cal-day-names">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
-          <div className="cal-grid">
-            {cells.map(({ date, isCurrentMonth }) => {
-              const dateStr = toLocalDateStr(date);
-              const isToday = dateStr === todayStr;
-              const isSelected = dateStr === selectedDay;
-              const dayEvents = isCurrentMonth
-                ? eventsForDay(dateStr).filter((ev) => !hiddenCalendarIds.has(ev.calendarId))
-                : [];
-              return (
-                <div
-                  key={dateStr}
-                  className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today", isSelected && "cal-cell--selected"].filter(Boolean).join(" ")}
-                  onClick={() => { if (isCurrentMonth) setSelectedDay((s) => s === dateStr ? null : dateStr); }}
-                  onTouchCancel={handleDayTouchEnd}
-                  onTouchEnd={handleDayTouchEnd}
-                  onTouchStart={() => { if (isCurrentMonth) handleDayTouchStart(dateStr); }}
-                >
-                  <span className="cal-cell-num">{date.getDate()}</span>
-                  <div className="cal-cell-dots">
-                    {dayEvents.slice(0, 5).map((ev) => (
-                      <span
-                        key={ev.id}
-                        className="cal-cell-dot"
-                        style={{ background: calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }}
-                        title={ev.title}
-                      />
-                    ))}
-                    {dayEvents.length > 5 && <span className="cal-cell-dot-more">+{dayEvents.length - 5}</span>}
-                  </div>
-                </div>
-              );
-            })}
+          <div className={`cal-day-names${showWeekNumbers ? " cal-day-names--wk" : ""}`}>
+            {showWeekNumbers && <span className="cal-wk-label" />}
+            {DAYS.map((d) => <span key={d}>{d}</span>)}
+          </div>
+          <div className={`cal-grid${showWeekNumbers ? " cal-grid--wk" : ""}`}>
+            {weeks.map((week) => (
+              <Fragment key={week[0].date.getTime()}>
+                {showWeekNumbers && (
+                  <span className="cal-wk-num">
+                    v.{getISOWeek(week[0].date)}
+                  </span>
+                )}
+                {week.map(({ date, isCurrentMonth }) => {
+                  const dateStr = toLocalDateStr(date);
+                  const isToday = dateStr === todayStr;
+                  const isSelected = dateStr === selectedDay;
+                  const dayEvents = isCurrentMonth
+                    ? eventsForDay(dateStr).filter((ev) => showHolidays || !isHolidayEvent(ev))
+                    : [];
+                  return (
+                    <div
+                      key={dateStr}
+                      className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today", isSelected && "cal-cell--selected"].filter(Boolean).join(" ")}
+                      onClick={() => { if (isCurrentMonth) setSelectedDay((s) => s === dateStr ? null : dateStr); }}
+                      onTouchCancel={handleDayTouchEnd}
+                      onTouchEnd={handleDayTouchEnd}
+                      onTouchStart={() => { if (isCurrentMonth) handleDayTouchStart(dateStr); }}
+                    >
+                      <span className="cal-cell-num">{date.getDate()}</span>
+                      <div className="cal-cell-dots">
+                        {dayEvents.slice(0, 5).map((ev) => {
+                          const holiday = isHolidayEvent(ev);
+                          return (
+                            <span
+                              key={ev.id}
+                              className="cal-cell-dot"
+                              style={{ background: holiday ? holidayBgColor : (calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor) }}
+                              title={ev.title}
+                            />
+                          );
+                        })}
+                        {dayEvents.length > 5 && <span className="cal-cell-dot-more">+{dayEvents.length - 5}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </Fragment>
+            ))}
           </div>
         </div>
 
-        <div className="cal-event-list">
-          <div className="cal-event-list-header">
-            <span className="cal-event-list-title">
-              {selectedDay ? fmtFullDate(selectedDay) : `${MONTHS[viewMonth]} ${viewYear}`}
-            </span>
-            {selectedDay && (
-              <button className="cal-clear-day" onClick={() => setSelectedDay(null)} type="button">Visa alla</button>
-            )}
-          </div>
-          {filteredDisplayEvents.length === 0 ? (
-            <p className="cal-empty-note">
-              {q || hiddenCalendarIds.size > 0
-                ? "Inga händelser matchar filtret."
-                : selectedDay ? "Inga händelser denna dag." : "Inga händelser denna månad."}
-            </p>
-          ) : (
-            filteredDisplayEvents.map((ev) => (
-              <div
-                className="cal-event-row"
-                key={ev.id}
-                onClick={() => setDetailEvent(ev)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="cal-event-color-dot" style={{ background: ev.color ?? calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }} />
-                <div className="cal-event-row-info">
-                  <span className="cal-event-row-title">{ev.title}</span>
-                  <span className="cal-event-row-meta">
-                    {ev.isAllDay
-                      ? `${fmtFullDate(ev.startsAt.slice(0, 10))} · Heldag`
-                      : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`}
-                    {" · "}{ev.calendarName}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <CalendarEventList
+          key={`${viewYear}-${viewMonth}`}
+          allEvents={listEvents}
+          selectedDay={selectedDay}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          todayStr={todayStr}
+          visible={visible}
+          calendarDisplayColor={calendarDisplayColor}
+          showHolidays={showHolidays}
+          holidayBgColor={holidayBgColor}
+          holidayTextColor={holidayTextColor}
+          onEventClick={setDetailEvent}
+          onClearDay={() => setSelectedDay(null)}
+        />
 
         {/* Event detail panel */}
         {detailEvent && (
@@ -762,78 +855,77 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
           <button className="icon-button" onClick={nextMonth} type="button"><ChevronRight size={18} /></button>
         </div>
-        <div className="cal-day-names">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
-        <div className="cal-grid">
-          {cells.map(({ date, isCurrentMonth }) => {
-            const dateStr = toLocalDateStr(date);
-            const isToday = dateStr === todayStr;
-            const isSelected = dateStr === selectedDay;
-            const dayEvents = isCurrentMonth ? eventsForDay(dateStr) : [];
+        <div className={`cal-day-names${showWeekNumbers ? " cal-day-names--wk" : ""}`}>
+          {showWeekNumbers && <span className="cal-wk-label" />}
+          {DAYS.map((d) => <span key={d}>{d}</span>)}
+        </div>
+        <div className={`cal-grid${showWeekNumbers ? " cal-grid--wk" : ""}`}>
+          {weeks.map((week) => (
+            <Fragment key={week[0].date.getTime()}>
+              {showWeekNumbers && (
+                <span className="cal-wk-num">
+                  v.{getISOWeek(week[0].date)}
+                </span>
+              )}
+              {week.map(({ date, isCurrentMonth }) => {
+                const dateStr = toLocalDateStr(date);
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selectedDay;
+                const dayEvents = isCurrentMonth
+                  ? eventsForDay(dateStr).filter((ev) => showHolidays || !isHolidayEvent(ev))
+                  : [];
 
-            return (
-              <div
-                key={dateStr}
-                className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today", isSelected && "cal-cell--selected"].filter(Boolean).join(" ")}
-                onClick={() => { if (isCurrentMonth) setSelectedDay((s) => s === dateStr ? null : dateStr); }}
-              >
-                <span className="cal-cell-num">{date.getDate()}</span>
-                <div className="cal-cell-events">
-                  {dayEvents.slice(0, 3).map((ev) => (
-                    <div
-                      key={ev.id}
-                      className="cal-event-pill"
-                      style={{ "--event-color": ev.calendarColor } as React.CSSProperties}
-                      title={ev.title}
-                      onClick={(e) => { e.stopPropagation(); openEdit(ev); }}
-                    >
-                      {!ev.isAllDay && `${fmtTime(ev.startsAt)} `}{ev.title}
-                      {ev.recurrence?.type !== "none" && <Repeat size={8} style={{ marginLeft: 2, opacity: 0.7 }} />}
+                return (
+                  <div
+                    key={dateStr}
+                    className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today", isSelected && "cal-cell--selected"].filter(Boolean).join(" ")}
+                    onClick={() => { if (isCurrentMonth) setSelectedDay((s) => s === dateStr ? null : dateStr); }}
+                  >
+                    <span className="cal-cell-num">{date.getDate()}</span>
+                    <div className="cal-cell-events">
+                      {dayEvents.slice(0, 3).map((ev) => {
+                        const holiday = isHolidayEvent(ev);
+                        return (
+                          <div
+                            key={ev.id}
+                            className="cal-event-pill"
+                            style={holiday
+                              ? { "--event-color": holidayBgColor, color: holidayTextColor } as React.CSSProperties
+                              : { "--event-color": ev.calendarColor } as React.CSSProperties}
+                            title={ev.title}
+                            onClick={(e) => { e.stopPropagation(); openEdit(ev); }}
+                          >
+                            {!ev.isAllDay && `${fmtTime(ev.startsAt)} `}{ev.title}
+                            {ev.recurrence?.type !== "none" && <Repeat size={8} style={{ marginLeft: 2, opacity: 0.7 }} />}
+                          </div>
+                        );
+                      })}
+                      {dayEvents.length > 3 && <span className="cal-event-more">+{dayEvents.length - 3}</span>}
                     </div>
-                  ))}
-                  {dayEvents.length > 3 && <span className="cal-event-more">+{dayEvents.length - 3}</span>}
-                </div>
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </Fragment>
+          ))}
         </div>
       </div>
 
       {/* ── Event list ── */}
-      <div className="cal-event-list">
-        <div className="cal-event-list-header">
-          <span className="cal-event-list-title">
-            {selectedDay ? fmtFullDate(selectedDay) : `${MONTHS[viewMonth]} ${viewYear}`}
-          </span>
-          {selectedDay && <button className="cal-clear-day" onClick={() => setSelectedDay(null)} type="button">Visa alla</button>}
-        </div>
-        {listEvents.length === 0 && (
-          <p className="cal-empty-note">{selectedDay ? "Inga händelser denna dag." : "Inga händelser denna månad."}</p>
-        )}
-        {listEvents.map((ev) => (
-          <div
-            key={ev.id}
-            className="cal-event-row"
-            onClick={() => openEdit(ev)}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="cal-event-color-dot" style={{ background: ev.color ?? ev.calendarColor }} />
-            <div className="cal-event-row-info">
-              <span className="cal-event-row-title">
-                {ev.title}
-                {ev.recurrence?.type !== "none" && <Repeat size={12} style={{ marginLeft: 5, opacity: 0.55, verticalAlign: "middle" }} />}
-              </span>
-              <span className="cal-event-row-meta">
-                {ev.isAllDay
-                  ? `${fmtFullDate(ev.startsAt.slice(0, 10))} · Heldag`
-                  : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`
-                }
-                {ev.location && <> · <MapPin size={11} style={{ verticalAlign: "middle" }} /> {ev.location}</>}
-                {" · "}{ev.calendarName}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      <CalendarEventList
+        key={`${viewYear}-${viewMonth}`}
+        allEvents={listEvents}
+        selectedDay={selectedDay}
+        viewYear={viewYear}
+        viewMonth={viewMonth}
+        todayStr={todayStr}
+        visible={visible}
+        calendarDisplayColor={calendarDisplayColor}
+        showHolidays={showHolidays}
+        holidayBgColor={holidayBgColor}
+        holidayTextColor={holidayTextColor}
+        onEventClick={openEdit}
+        onClearDay={() => setSelectedDay(null)}
+      />
 
       {eventModalOverlay}
     </div>

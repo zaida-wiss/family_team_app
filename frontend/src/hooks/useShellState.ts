@@ -1,7 +1,7 @@
 import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
 import { useShellPermissions } from "./useShellPermissions";
-import type { DashboardThemeId, Id, Membership } from "@shared/types";
+import type { CalendarSettings, DashboardThemeId, Id, Membership } from "@shared/types";
 
 export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
   const {
@@ -149,6 +149,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     canManageRoles: permissions.canManageRoles,
     canViewTrash: permissions.canViewTrash,
     onUpdateAccount: setActiveAccount,
+    onUpdateCalendarSettings: (settings: CalendarSettings) =>
+      setActiveAccount({ ...activeAccount, calendarSettings: settings }),
     onCreateMember: createMember,
     onDeleteMember: (id: string) => softDeleteMember(id, currentMember.id),
     onDeleteOwnData: deleteOwnData,

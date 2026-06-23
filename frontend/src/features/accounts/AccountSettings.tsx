@@ -2,7 +2,15 @@ import { Eraser, ImagePlus, Trash2, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { hasPermission } from "../../utils/permissions";
-import type { Account, Member, Role } from "@shared/types";
+import type { Account, CalendarSettings, Member, Role } from "@shared/types";
+
+const DEFAULT_CALENDAR_SETTINGS: CalendarSettings = {
+  showWeekNumbers: false,
+  showHolidays: true,
+  holidayBgColor: "#ffe4e6",
+  holidayTextColor: "#9f1239",
+  subscriptionUrl: null,
+};
 
 type AccountSettingsProps = {
   account: Account;
@@ -14,6 +22,7 @@ type AccountSettingsProps = {
   onDeleteOwnData: () => void;
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
   onUpdateMemberColor: (memberId: string, color: string | null) => void;
+  onUpdateCalendarSettings: (settings: CalendarSettings) => void;
 };
 
 export function AccountSettings({
@@ -25,13 +34,15 @@ export function AccountSettings({
   onDeleteMember,
   onDeleteOwnData,
   onUpdateMemberAvatar,
-  onUpdateMemberColor
+  onUpdateMemberColor,
+  onUpdateCalendarSettings
 }: AccountSettingsProps) {
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [confirmOwnDataDelete, setConfirmOwnDataDelete] = useState(false);
 
   const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
+  const calSettings: CalendarSettings = account.calendarSettings ?? DEFAULT_CALENDAR_SETTINGS;
 
   function createMember() {
     const trimmedName = name.trim();
@@ -128,6 +139,68 @@ export function AccountSettings({
                 Lägg till
               </button>
             </>
+          )}
+
+          {canManageMembers && (
+            <section className="calendar-settings-card" aria-label="Kalenderinställningar">
+              <h3>Kalendervisning</h3>
+
+              <label className="field-label toggle-label">
+                <span>Visa veckornummer</span>
+                <input
+                  type="checkbox"
+                  checked={calSettings.showWeekNumbers}
+                  onChange={(e) => onUpdateCalendarSettings({ ...calSettings, showWeekNumbers: e.target.checked })}
+                />
+              </label>
+
+              <label className="field-label toggle-label">
+                <span>Markera helgdagar</span>
+                <input
+                  type="checkbox"
+                  checked={calSettings.showHolidays}
+                  onChange={(e) => onUpdateCalendarSettings({ ...calSettings, showHolidays: e.target.checked })}
+                />
+              </label>
+
+              {calSettings.showHolidays && (
+                <div className="holiday-color-row">
+                  <label className="field-label" style={{ flex: 1 }}>
+                    Bakgrundsfärg
+                    <label className="member-color-picker" style={{ background: calSettings.holidayBgColor }}>
+                      <input
+                        hidden
+                        type="color"
+                        value={calSettings.holidayBgColor}
+                        onChange={(e) => onUpdateCalendarSettings({ ...calSettings, holidayBgColor: e.target.value })}
+                      />
+                    </label>
+                  </label>
+                  <label className="field-label" style={{ flex: 1 }}>
+                    Textfärg
+                    <label className="member-color-picker" style={{ background: calSettings.holidayTextColor }}>
+                      <input
+                        hidden
+                        type="color"
+                        value={calSettings.holidayTextColor}
+                        onChange={(e) => onUpdateCalendarSettings({ ...calSettings, holidayTextColor: e.target.value })}
+                      />
+                    </label>
+                  </label>
+                </div>
+              )}
+
+              <label className="field-label">
+                Prenumerationslänk (webcal)
+                <input
+                  className="text-input"
+                  type="url"
+                  placeholder="webcal://…"
+                  value={calSettings.subscriptionUrl ?? ""}
+                  onChange={(e) => onUpdateCalendarSettings({ ...calSettings, subscriptionUrl: e.target.value || null })}
+                />
+              </label>
+            </section>
           )}
 
           <section className="self-data-card" aria-label="Radera min data">

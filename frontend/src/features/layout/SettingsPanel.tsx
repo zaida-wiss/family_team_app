@@ -5,7 +5,7 @@ import { InviteForm } from "../invitations/InviteForm";
 import { RoleEditor } from "../roles/RoleEditor";
 import { TrashView } from "../trash/TrashView";
 import { hasPermission } from "../../utils/permissions";
-import type { Account, Calendar, Member, PermissionKey, Role, ShoppingList, Todo } from "@shared/types";
+import type { Account, CalendarSettings, Calendar, Member, PermissionKey, Role, ShoppingList, Todo } from "@shared/types";
 
 type Props = {
   account: Account;
@@ -18,6 +18,7 @@ type Props = {
   canManageRoles: boolean;
   canViewTrash: boolean;
   onUpdateAccount: (account: Account) => void;
+  onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onCreateMember: (member: Member) => void;
   onDeleteMember: (memberId: string) => void;
   onDeleteOwnData: () => void;
@@ -44,6 +45,7 @@ export function SettingsPanel({
   canManageRoles,
   canViewTrash,
   onUpdateAccount,
+  onUpdateCalendarSettings,
   onCreateMember,
   onDeleteMember,
   onDeleteOwnData,
@@ -73,6 +75,7 @@ export function SettingsPanel({
         onDeleteOwnData={onDeleteOwnData}
         onUpdateMemberAvatar={onUpdateMemberAvatar}
         onUpdateMemberColor={onUpdateMemberColor}
+        onUpdateCalendarSettings={onUpdateCalendarSettings}
       />
       {canManageMembers && (
         <InviteForm

@@ -7,7 +7,7 @@ import { ShoppingView } from "../shopping/ShoppingView";
 import { TodosView } from "../todos/TodosView";
 import { getRewardPathProgress } from "../todos/selectors";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarSettings, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
 
 type DashboardProps = ComponentProps<typeof Dashboard>;
 
@@ -58,6 +58,7 @@ type Props = {
   onShareShoppingList: DashboardProps["onShareShoppingList"];
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
   onToggleShoppingItem: (listId: string, itemId: string) => void;
+  calendarSettings?: CalendarSettings;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
@@ -85,7 +86,7 @@ export function MemberShellContent({
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
-  onDismissRejectedTodo, onSetWishTitle, onCreateWish
+  onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings
 }: Props) {
 
   // ── Kalender-vy (nav) — snygg presentation, ingen hantering ──────────────
@@ -96,6 +97,7 @@ export function MemberShellContent({
         currentMember={currentMember}
         activeMembers={activeMembers}
         roles={roles}
+        calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
@@ -202,6 +204,7 @@ export function MemberShellContent({
         canSeeCalendar={canSeeCalendar}
         onSelectMember={onSelectMember}
         onOpenCalendar={() => onNavigate("calendar")}
+        calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
@@ -223,6 +226,7 @@ export function MemberShellContent({
         canSeeCalendar={canSeeCalendar}
         onSelectMember={onSelectMember}
         onOpenCalendar={() => onNavigate("calendar")}
+        calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}

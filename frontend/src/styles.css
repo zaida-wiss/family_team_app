@@ -754,6 +754,36 @@ button {
   gap: 14px;
 }
 
+.calendar-settings-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.calendar-settings-card h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.toggle-label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.holiday-color-row {
+  display: flex;
+  gap: 16px;
+}
+
 .self-data-card {
   display: grid;
   gap: 12px;

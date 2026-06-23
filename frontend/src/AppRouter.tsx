@@ -95,6 +95,7 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
             onDeleteOwnData={settingsProps.onDeleteOwnData}
             onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
             onUpdateMemberColor={settingsProps.onUpdateMemberColor}
+            onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
           />
           {canManageMembers && (
             <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
@@ -189,6 +190,7 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
         {...memberContentProps}
         activePanel={activePanel}
         accountName={activeAccount.name}
+        calendarSettings={activeAccount.calendarSettings}
         onNavigate={setActivePanel}
       />
     );
