@@ -72,7 +72,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           <span>{isEditing ? (eventIsEditable ? "Redigera händelse" : "Händelse") : "Ny händelse"}</span>
           <button className="icon-button" onClick={closeModal} type="button"><X size={18} /></button>
         </div>
-        {isEditing && !eventIsEditable ? (
+        {modal.kind === "edit" && !eventIsEditable ? (
           <div className="cal-form-body">
             <p style={{ fontWeight: 700, fontSize: "1.05rem" }}>{modal.event.title}</p>
             <p className="cal-event-row-meta">
