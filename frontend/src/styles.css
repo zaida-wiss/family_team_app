@@ -23,8 +23,8 @@
   --destructive:       oklch(0.6 0.2 25);
 
   /* ── Fonts ─────────────────────────────────────── */
-  --font-sans:    "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans:    "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
 
   font-family: var(--font-sans);
   color: var(--foreground);
