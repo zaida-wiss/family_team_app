@@ -7,6 +7,7 @@ import {
   canViewResource,
   hasPermission
 } from "../../utils/permissions";
+import type { AddEventInput } from "./useCalendarsState";
 import type { AccessLevel, Calendar, Id, IcsSubscription, Member, Role } from "@shared/types";
 
 type ImportedCalendarEvent = {
@@ -40,10 +41,7 @@ type CalendarPanelProps = {
   members: Member[];
   roles: Role[];
   managementOnly?: boolean;
-  onAddEvent: (
-    calendarId: Id,
-    event: Omit<ImportedCalendarEvent, "notes"> & { notes?: string | null }
-  ) => void;
+  onAddEvent: (calendarId: Id, event: AddEventInput) => void;
   onCreateCalendar: (name: string, color: string) => void;
   onUpdateCalendarColor: (calendarId: Id, color: string) => void;
   onRenameCalendar: (calendarId: Id, name: string) => void;
@@ -192,9 +190,7 @@ export function CalendarPanel({
       startsAt,
       endsAt,
       isAllDay: false,
-      color: null,
-      notes: null,
-      categories: []
+      notes: null
     });
     setEventTitle("");
     setStartsAt("");

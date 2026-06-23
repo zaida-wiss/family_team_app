@@ -48,7 +48,7 @@ type Props = {
   onUpdateCalendarEvent: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteCalendarEvent: (calendarId: string, eventId: string) => void;
   onRsvpCalendarEvent: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
-  onCreateCalendar: (name: string) => void;
+  onCreateCalendar: DashboardProps["onCreateCalendar"];
   onImportCalendar: DashboardProps["onImportCalendar"];
   onShareCalendar: DashboardProps["onShareCalendar"];
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;

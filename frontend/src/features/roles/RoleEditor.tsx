@@ -45,6 +45,7 @@ export function RoleEditor({
     onCreateRole({
       id: `role-${crypto.randomUUID()}`,
       name: trimmedName,
+      isChildRole: false,
       permissions: createPermissionMap(draftPermissions)
     });
 

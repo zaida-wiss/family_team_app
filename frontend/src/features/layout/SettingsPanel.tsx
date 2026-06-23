@@ -22,6 +22,7 @@ type Props = {
   onDeleteMember: (memberId: string) => void;
   onDeleteOwnData: () => void;
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
+  onUpdateMemberColor: (memberId: string, color: string | null) => void;
   onAssignRole: (memberId: string, roleId: string) => void;
   onCreateRole: (role: Role) => void;
   onTogglePermission: (roleId: string, key: PermissionKey) => void;
@@ -47,6 +48,7 @@ export function SettingsPanel({
   onDeleteMember,
   onDeleteOwnData,
   onUpdateMemberAvatar,
+  onUpdateMemberColor,
   onAssignRole,
   onCreateRole,
   onTogglePermission,
@@ -70,6 +72,7 @@ export function SettingsPanel({
         onDeleteMember={onDeleteMember}
         onDeleteOwnData={onDeleteOwnData}
         onUpdateMemberAvatar={onUpdateMemberAvatar}
+        onUpdateMemberColor={onUpdateMemberColor}
       />
       {canManageMembers && (
         <InviteForm
