@@ -76,10 +76,16 @@
   .hero-bottom {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 8px;
     border-top: 1px solid var(--sidebar-border);
     padding-top: 12px;
     margin-top: 12px;
+  }
+
+  .hero-bottom-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .hero-member-btn {
@@ -88,12 +94,13 @@
     gap: 10px;
     background: none;
     border: none;
-    padding: 8px;
+    padding: 6px 8px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     text-align: left;
     transition: background 0.12s;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 
   .hero-member-btn:hover {
@@ -122,12 +129,37 @@
     color: var(--muted-fg);
   }
 
+  .hero-theme-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: none;
+    border: none;
+    color: var(--muted-fg);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .hero-theme-btn:hover {
+    background: color-mix(in oklch, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+  }
+
   .hero-dots {
     display: none;
   }
 
   .hero-tip {
-    display: none;
+    font-size: 0.69rem;
+    color: var(--muted-fg);
+    line-height: 1.45;
+    padding: 0 8px;
+    margin: 0;
+    opacity: 0.7;
   }
 }
 

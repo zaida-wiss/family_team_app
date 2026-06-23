@@ -31,6 +31,31 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
 
   if (currentMember.isChild) {
     panelContent = <ChildShellContent {...childContentProps} />;
+  } else if (activePanel === "roles" && canManageRoles) {
+    panelContent = (
+      <RoleEditor
+        members={settingsProps.members}
+        roles={settingsProps.roles}
+        onAssignRole={settingsProps.onAssignRole}
+        onCreateRole={settingsProps.onCreateRole}
+        onTogglePermission={settingsProps.onTogglePermission}
+      />
+    );
+  } else if (activePanel === "trash" && canViewTrash) {
+    panelContent = (
+      <TrashView
+        calendars={settingsProps.calendars}
+        currentMember={currentMember}
+        members={settingsProps.members}
+        roles={settingsProps.roles}
+        shoppingLists={settingsProps.shoppingLists}
+        todos={settingsProps.todos}
+        onRestoreCalendar={settingsProps.onRestoreCalendar}
+        onRestoreMember={settingsProps.onRestoreMember}
+        onRestoreShoppingList={settingsProps.onRestoreShoppingList}
+        onRestoreTodo={settingsProps.onRestoreTodo}
+      />
+    );
   } else if (activePanel === "members") {
     panelContent = (
       <MembersView
@@ -171,8 +196,11 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
           accountName={activeAccount.name}
           currentMember={currentMember}
           canManageMembers={canManageMembers}
+          canManageRoles={canManageRoles}
+          canViewTrash={canViewTrash}
           onNavigate={setActivePanel}
           onSwitchAccount={onSwitchAccount}
+          onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
         />
       )}
       <div className={`app-shell-content${isChild ? " app-shell-full" : ""}`}>

@@ -2,8 +2,11 @@ import {
   CalendarDays,
   Home,
   ListTodo,
+  Palette,
   Settings,
   ShoppingCart,
+  Shield,
+  Trash2,
   Users
 } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
@@ -16,8 +19,11 @@ type Props = {
   accountName: string;
   currentMember: Member;
   canManageMembers: boolean;
+  canManageRoles: boolean;
+  canViewTrash: boolean;
   onNavigate: (panel: ShellPanel) => void;
   onSwitchAccount: () => void;
+  onOpenThemePicker: () => void;
 };
 
 export function HeroBar({
@@ -25,8 +31,11 @@ export function HeroBar({
   accountName,
   currentMember,
   canManageMembers,
+  canManageRoles,
+  canViewTrash,
   onNavigate,
-  onSwitchAccount
+  onSwitchAccount,
+  onOpenThemePicker,
 }: Props) {
   return (
     <nav className="hero-bar">
@@ -43,21 +52,27 @@ export function HeroBar({
         {canManageMembers && (
           <NavBtn icon={<Users size={20} />} label="Medlemmar" panel="members" active={activePanel === "members"} onNavigate={onNavigate} />
         )}
+        {canManageRoles && (
+          <NavBtn icon={<Shield size={20} />} label="Roller" panel="roles" active={activePanel === "roles"} onNavigate={onNavigate} />
+        )}
+        {canViewTrash && (
+          <NavBtn icon={<Trash2 size={20} />} label="Papperskorg" panel="trash" active={activePanel === "trash"} onNavigate={onNavigate} />
+        )}
         <NavBtn icon={<Settings size={20} />} label="Inställningar" panel="settings" active={activePanel === "settings"} onNavigate={onNavigate} />
       </div>
 
       <div className="hero-bottom">
-        <button className="hero-member-btn" onClick={onSwitchAccount} type="button">
-          <MemberAvatar member={currentMember} size="xs" />
-          <div className="hero-member-info">
-            <span className="hero-member-name">{currentMember.name}</span>
-            <span className="hero-switch">Byt vy</span>
-          </div>
-        </button>
-        <div className="hero-dots">
-          <span className="hero-dot" style={{ background: "#e8956d" }} />
-          <span className="hero-dot" style={{ background: "#2f9b8f" }} />
-          <span className="hero-dot" style={{ background: "#2f7d6d" }} />
+        <div className="hero-bottom-row">
+          <button className="hero-member-btn" onClick={onSwitchAccount} type="button">
+            <MemberAvatar member={currentMember} size="xs" />
+            <div className="hero-member-info">
+              <span className="hero-member-name">{currentMember.name}</span>
+              <span className="hero-switch">Byt vy</span>
+            </div>
+          </button>
+          <button className="hero-theme-btn" onClick={onOpenThemePicker} title="Byt tema" type="button">
+            <Palette size={18} />
+          </button>
         </div>
         <p className="hero-tip">Tips: håll fingret länge på bakgrunden för att byta tema.</p>
       </div>
