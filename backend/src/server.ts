@@ -17,7 +17,7 @@ import { shoppingRouter } from "./routes/shopping.js";
 import { todosRouter } from "./routes/todos.js";
 
 const PORT = process.env.PORT ?? 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
+const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
 const app = express();
 
