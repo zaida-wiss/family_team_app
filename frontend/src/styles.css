@@ -321,7 +321,7 @@ button {
 .overview-home {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 12px;
 }
 
 .overview-greeting {

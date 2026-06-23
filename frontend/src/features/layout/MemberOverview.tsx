@@ -32,13 +32,6 @@ export function MemberOverview({
 }: Props) {
   return (
     <div className="overview-home">
-      <div className="overview-greeting">
-        <h1 className="overview-greeting-title">God dag, {currentMember.name}.</h1>
-        <p className="overview-greeting-sub">
-          Familjen {accountName} — alla händelser på ett ställe.
-        </p>
-      </div>
-
       {canSeeCalendar && (
         <div className="overview-cal-wrap">
           <div className="overview-cal-toolbar">
