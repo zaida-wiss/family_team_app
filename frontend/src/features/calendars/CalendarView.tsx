@@ -1,9 +1,12 @@
-import { ChevronLeft, ChevronRight, Filter, MapPin, Plus, RefreshCw, Repeat, Search, Trash2, X } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, MapPin, Plus, RefreshCw, Repeat, Trash2, X } from "lucide-react";
+import { Fragment } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
-import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
-import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
 import "./CalendarView.css";
+import { CalendarEventList } from "./CalendarEventList";
+import type { EnrichedEvent } from "./CalendarEventList";
+import { DAYS, MONTHS, RECURRENCE_LABELS, RECURRENCE_UNIT, fmtFullDate, fmtTime, getISOWeek, isHolidayEvent, toLocalDateStr } from "./calendarHelpers";
+import { useCalendarView } from "./useCalendarView";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +23,7 @@ type Props = {
   onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
 };
 
-type FormState = {
+export type FormState = {
   calendarId: string;
   title: string;
   isAllDay: boolean;
@@ -28,509 +31,27 @@ type FormState = {
   endsAt: string;
   location: string;
   notes: string;
-  recurrenceType: EventRecurrence["type"];
+  recurrenceType: import("@shared/types").EventRecurrence["type"];
   recurrenceInterval: number;
   recurrenceUntil: string;
   attendeeIds: string[];
 };
 
-type EnrichedEvent = CalendarEvent & { calendarColor: string; calendarName: string; calendarOwnerId?: string | null };
-type ModalMode = { kind: "new"; prefilledDate?: string } | { kind: "edit"; event: EnrichedEvent };
-
-// ── Constants ────────────────────────────────────────────────────────────────
-
-const DAYS = ["MÅN", "TIS", "ONS", "TOR", "FRE", "LÖR", "SÖN"];
-const MONTHS = [
-  "Januari", "Februari", "Mars", "April", "Maj", "Juni",
-  "Juli", "Augusti", "September", "Oktober", "November", "December",
-];
-const RECURRENCE_LABELS: Record<EventRecurrence["type"], string> = {
-  none: "Ingen upprepning",
-  daily: "Dagligen",
-  weekly: "Veckovis",
-  monthly: "Månadsvis",
-  yearly: "Årsvis",
-};
-const RECURRENCE_UNIT: Record<EventRecurrence["type"], string> = {
-  none: "",
-  daily: "dag",
-  weekly: "vecka",
-  monthly: "månad",
-  yearly: "år",
-};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function toLocalDateStr(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function toLocalDateTimeStr(date: Date) {
-  return `${toLocalDateStr(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
-function fmtTime(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function fmtFullDate(iso: string) {
-  return new Intl.DateTimeFormat("sv-SE", { weekday: "long", day: "numeric", month: "long" }).format(new Date(iso + (iso.length === 10 ? "T12:00" : "")));
-}
-
-function addInterval(date: Date, type: EventRecurrence["type"], interval: number): Date {
-  const d = new Date(date);
-  if (type === "daily") d.setDate(d.getDate() + interval);
-  else if (type === "weekly") d.setDate(d.getDate() + 7 * interval);
-  else if (type === "monthly") d.setMonth(d.getMonth() + interval);
-  else if (type === "yearly") d.setFullYear(d.getFullYear() + interval);
-  return d;
-}
-
-function expandForMonth<T extends CalendarEvent & { calendarColor: string; calendarName: string }>(events: T[], year: number, month: number): T[] {
-  const monthStart = new Date(year, month, 1);
-  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
-  const result: T[] = [];
-
-  for (const ev of events) {
-    const rec = ev.recurrence ?? { type: "none" as const, interval: 1, until: null };
-    if (rec.type === "none") {
-      result.push(ev);
-      continue;
-    }
-
-    const origStart = new Date(ev.startsAt);
-    if (origStart > monthEnd) continue;
-
-    const duration = new Date(ev.endsAt).getTime() - origStart.getTime();
-    const until = rec.until ? new Date(rec.until) : null;
-
-    // Fast-forward close to monthStart
-    let cur = new Date(origStart);
-    if (cur < monthStart) {
-      const msPerStep = rec.type === "yearly" ? rec.interval * 365.25 * 86400000
-        : rec.type === "monthly" ? rec.interval * 30.44 * 86400000
-        : rec.type === "weekly" ? rec.interval * 7 * 86400000
-        : rec.interval * 86400000;
-      const skip = Math.max(0, Math.floor((monthStart.getTime() - cur.getTime()) / msPerStep) - 2);
-      for (let i = 0; i < skip; i++) cur = addInterval(cur, rec.type, rec.interval);
-      while (cur < monthStart) cur = addInterval(cur, rec.type, rec.interval);
-    }
-
-    let guard = 0;
-    while (cur <= monthEnd && guard++ < 200) {
-      if (until && cur > until) break;
-      result.push({
-        ...ev,
-        id: `${ev.id}~${cur.getTime()}`,
-        startsAt: cur.toISOString(),
-        endsAt: new Date(cur.getTime() + duration).toISOString(),
-      });
-      cur = addInterval(new Date(cur), rec.type, rec.interval);
-    }
-  }
-
-  return result;
-}
-
-function getMonthCells(year: number, month: number) {
-  const firstDay = new Date(year, month, 1);
-  const startDow = (firstDay.getDay() + 6) % 7;
-  const lastDate = new Date(year, month + 1, 0).getDate();
-  const cells: { date: Date; isCurrentMonth: boolean }[] = [];
-  for (let i = startDow; i > 0; i--) cells.push({ date: new Date(year, month, 1 - i), isCurrentMonth: false });
-  for (let d = 1; d <= lastDate; d++) cells.push({ date: new Date(year, month, d), isCurrentMonth: true });
-  const trailing = cells.length % 7 === 0 ? 0 : 7 - (cells.length % 7);
-  for (let d = 1; d <= trailing; d++) cells.push({ date: new Date(year, month + 1, d), isCurrentMonth: false });
-  return cells;
-}
-
-function blankForm(defaults: Partial<FormState> = {}): FormState {
-  return {
-    calendarId: "",
-    title: "",
-    isAllDay: false,
-    startsAt: "",
-    endsAt: "",
-    location: "",
-    notes: "",
-    recurrenceType: "none",
-    recurrenceInterval: 1,
-    recurrenceUntil: "",
-    attendeeIds: [],
-    ...defaults,
-  };
-}
-
-function getISOWeek(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
-const HELGDAG_RE = /helgdag|röd dag|nationaldag|jul(?:dag|afton)|påsk|midsommar|nyår|kristi\s+himmel|allhelgon|pingst|trettondagen?|valborg/i;
-
-function isHolidayEvent(ev: { title: string; calendarName: string }): boolean {
-  return HELGDAG_RE.test(ev.title) || HELGDAG_RE.test(ev.calendarName);
-}
-
-// ── Shared event list component ──────────────────────────────────────────────
-
-type EventListProps = {
-  allEvents: EnrichedEvent[];
-  selectedDay: string | null;
-  viewYear: number;
-  viewMonth: number;
-  todayStr: string;
-  visible: Calendar[];
-  calendarDisplayColor: Map<string, string>;
-  showHolidays: boolean;
-  holidayBgColor: string;
-  holidayTextColor: string;
-  onEventClick: (ev: EnrichedEvent) => void;
-  onClearDay?: () => void;
-  onNewEvent?: () => void;
-};
-
-function CalendarEventList({
-  allEvents, selectedDay, viewYear, viewMonth, todayStr,
-  visible, calendarDisplayColor, showHolidays, holidayBgColor, holidayTextColor,
-  onEventClick, onClearDay, onNewEvent,
-}: EventListProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
-  const [showFilter, setShowFilter] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setSearchQuery(""); setHiddenCalendarIds(new Set()); }, [viewYear, viewMonth]);
-
-  useEffect(() => {
-    if (!showFilter) return;
-    function handler(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowFilter(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showFilter]);
-
-  const q = searchQuery.trim().toLowerCase();
-  const hasFilter = !!q || hiddenCalendarIds.size > 0;
-
-  // When viewing the current month without filters: hide past events.
-  // When browsing a past or future month: show everything (user navigated there intentionally).
-  const todayYM = todayStr.slice(0, 7); // "YYYY-MM"
-  const viewYM = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-  const isCurrentMonth = viewYM === todayYM;
-  const hidePast = isCurrentMonth && !selectedDay && !hasFilter;
-
-  const filtered = allEvents
-    .filter((ev) => hiddenCalendarIds.size === 0 || !hiddenCalendarIds.has(ev.calendarId))
-    .filter((ev) => showHolidays || !isHolidayEvent(ev))
-    .filter((ev) => {
-      if (hidePast) {
-        const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-        return end >= todayStr;
-      }
-      return true;
-    })
-    .filter((ev) => !q || (
-      ev.title.toLowerCase().includes(q) ||
-      ev.calendarName.toLowerCase().includes(q) ||
-      (ev.location?.toLowerCase().includes(q) ?? false) ||
-      (ev.notes?.replace(/\\n/g, " ").toLowerCase().includes(q) ?? false)
-    ));
-
-  return (
-    <div className="cal-event-list">
-      <div className="cal-event-list-header">
-        <div className="cal-filter-wrap" ref={filterRef}>
-          <button
-            className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
-            onClick={() => setShowFilter((s) => !s)}
-            title="Filtrera kalendrar"
-            type="button"
-          >
-            <Filter size={16} />
-          </button>
-          {showFilter && (
-            <div className="cal-filter-dropdown">
-              {visible.map((cal) => (
-                <label className="cal-filter-item" key={cal.id}>
-                  <input
-                    checked={!hiddenCalendarIds.has(cal.id)}
-                    onChange={(e) => {
-                      setHiddenCalendarIds((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
-                        return next;
-                      });
-                    }}
-                    type="checkbox"
-                  />
-                  <span className="cal-filter-dot" style={{ background: cal.color }} />
-                  <span>{cal.name}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="cal-overview-search">
-          <Search size={14} className="cal-search-icon" />
-          <input
-            className="cal-search-input"
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Sök händelser…"
-            type="search"
-            value={searchQuery}
-          />
-        </div>
-        {selectedDay && onClearDay && (
-          <button className="cal-clear-day" onClick={onClearDay} type="button">Visa alla</button>
-        )}
-        {onNewEvent && (
-          <button className="icon-button" onClick={onNewEvent} title="Ny händelse" type="button">
-            <Plus size={16} />
-          </button>
-        )}
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className="cal-empty-note">
-          {hasFilter
-            ? "Inga händelser matchar filtret."
-            : selectedDay
-              ? "Inga händelser denna dag."
-              : "Inga händelser denna månad."}
-        </p>
-      ) : (
-        filtered.map((ev) => {
-          const holiday = isHolidayEvent(ev);
-          return (
-            <div
-              className="cal-event-row"
-              key={ev.id}
-              onClick={() => onEventClick(ev)}
-              style={{ cursor: "pointer", ...(holiday ? { background: holidayBgColor, color: holidayTextColor } : {}) }}
-            >
-              <div className="cal-event-color-dot" style={{ background: holiday ? holidayBgColor : (ev.color ?? calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor) }} />
-              <div className="cal-event-row-info">
-                <span className="cal-event-row-title">
-                  {ev.title}
-                  {ev.recurrence?.type !== "none" && <Repeat size={12} style={{ marginLeft: 5, opacity: 0.55, verticalAlign: "middle" }} />}
-                </span>
-                <span className="cal-event-row-meta" style={holiday ? { color: holidayTextColor } : undefined}>
-                  {ev.isAllDay
-                    ? `${fmtFullDate(ev.startsAt.slice(0, 10))} · Heldag`
-                    : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`}
-                  {ev.location && <> · <MapPin size={11} style={{ verticalAlign: "middle" }} /> {ev.location}</>}
-                  {" · "}{ev.calendarName}
-                </span>
-              </div>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-}
+export type ModalMode = { kind: "new"; prefilledDate?: string } | { kind: "edit"; event: EnrichedEvent };
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
-  const now = new Date();
-  const todayStr = toLocalDateStr(now);
-
-  const [viewYear, setViewYear] = useState(now.getFullYear());
-  const [viewMonth, setViewMonth] = useState(now.getMonth());
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [modal, setModal] = useState<ModalMode | null>(null);
-  const [form, setForm] = useState<FormState>(blankForm());
-  const [detailEvent, setDetailEvent] = useState<EnrichedEvent | null>(null);
-  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Permission filtering ──
-  const visible = calendars.filter((cal) => {
-    if (cal.deletedAt !== null) return false;
-    if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
-    return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, cal);
-  });
-
-  const editableCalendars = visible.filter(
-    (cal) => hasPermission(currentMember, roles, "canEditCalendar") && canEditSharedResource(currentMember, cal)
-  );
-
-  const canEditEvent = (ev: CalendarEvent) =>
-    editableCalendars.some((cal) => cal.id === ev.calendarId);
-
-  // ── All events with color ──
-  const enrichedEvents: EnrichedEvent[] = visible.flatMap((cal) =>
-    cal.events
-      .filter((ev) => ev.deletedAt === null)
-      .map((ev) => ({ ...ev, calendarColor: cal.color, calendarName: cal.name, calendarOwnerId: cal.ownerId }))
-  );
-
-  const expandedEvents = expandForMonth(enrichedEvents, viewYear, viewMonth);
-
-  // ── Pending invitations for current user ──
-  const pendingInvitations = enrichedEvents.filter(
-    (ev) => ev.attendees?.some((a) => a.memberId === currentMember.id && a.status === "pending")
-  );
-
-  // ── Events per day ──
-  function eventsForDay(dateStr: string) {
-    return expandedEvents
-      .filter((ev) => {
-        // For all-day events use the raw ISO date prefix to avoid timezone shifts
-        const start = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
-        const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-        return start <= dateStr && dateStr <= end;
-      })
-      .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-  }
-
-  // ── List events below grid (same overlap logic as eventsForDay) ──
-  const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-  const monthFirstDay = `${monthPrefix}-01`;
-  const monthLastDay = `${monthPrefix}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, "0")}`;
-
-  const listEvents = selectedDay
-    ? eventsForDay(selectedDay)
-    : expandedEvents
-        .filter((ev) => {
-          const evStart = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
-          const evEnd = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-          return evStart <= monthLastDay && evEnd >= monthFirstDay;
-        })
-        .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-
-  // ── Navigation ──
-  function prevMonth() { setSelectedDay(null); setViewMonth((m) => { if (m === 0) { setViewYear((y) => y - 1); return 11; } return m - 1; }); }
-  function nextMonth() { setSelectedDay(null); setViewMonth((m) => { if (m === 11) { setViewYear((y) => y + 1); return 0; } return m + 1; }); }
-
-  // ── Open modal ──
-  function openNew(dateStr?: string) {
-    if (editableCalendars.length === 0) return;
-    const base = dateStr ?? todayStr;
-    setForm(blankForm({
-      calendarId: editableCalendars[0].id,
-      startsAt: `${base}T09:00`,
-      endsAt: `${base}T10:00`,
-    }));
-    setModal({ kind: "new", prefilledDate: dateStr });
-  }
-
-  function openEdit(ev: typeof enrichedEvents[number]) {
-    const rec = ev.recurrence ?? { type: "none" as const, interval: 1, until: null };
-    setForm({
-      calendarId: ev.calendarId,
-      title: ev.title,
-      isAllDay: ev.isAllDay ?? false,
-      startsAt: ev.isAllDay ? toLocalDateStr(new Date(ev.startsAt)) : toLocalDateTimeStr(new Date(ev.startsAt)),
-      endsAt: ev.isAllDay ? toLocalDateStr(new Date(ev.endsAt)) : toLocalDateTimeStr(new Date(ev.endsAt)),
-      location: ev.location ?? "",
-      notes: ev.notes ?? "",
-      recurrenceType: rec.type,
-      recurrenceInterval: rec.interval ?? 1,
-      recurrenceUntil: rec.until ? toLocalDateStr(new Date(rec.until)) : "",
-      attendeeIds: (ev.attendees ?? []).map((a) => a.memberId),
-    });
-    setModal({ kind: "edit", event: ev });
-  }
-
-  function closeModal() { setModal(null); }
-
-  // ── Submit ──
-  function submitForm() {
-    const trimmed = form.title.trim();
-    if (!trimmed || !form.startsAt || !form.endsAt || !form.calendarId) return;
-
-    const recurrence: EventRecurrence = {
-      type: form.recurrenceType,
-      interval: form.recurrenceInterval,
-      until: form.recurrenceUntil ? new Date(form.recurrenceUntil).toISOString() : null,
-    };
-
-    // All-day events stored at noon UTC so slice(0,10) always gives the correct local date
-    const isoStart = form.isAllDay ? `${form.startsAt}T12:00:00.000Z` : new Date(form.startsAt).toISOString();
-    const isoEnd = form.isAllDay ? `${form.endsAt}T12:00:00.000Z` : new Date(form.endsAt).toISOString();
-
-    const attendees = form.attendeeIds.map((memberId) => ({ memberId, status: "pending" as const }));
-
-    if (modal?.kind === "new") {
-      onAddEvent?.(form.calendarId, {
-        title: trimmed,
-        isAllDay: form.isAllDay,
-        color: null,
-        uid: null,
-        subscriptionId: null,
-        startsAt: isoStart,
-        endsAt: isoEnd,
-        location: form.location.trim() || null,
-        notes: form.notes.trim() || null,
-        recurrence,
-        attendees,
-      });
-    } else if (modal?.kind === "edit") {
-      const baseId = modal.event.id.split("~")[0];
-      onUpdateEvent?.(modal.event.calendarId, baseId, {
-        title: trimmed,
-        isAllDay: form.isAllDay,
-        startsAt: isoStart,
-        endsAt: isoEnd,
-        location: form.location.trim() || null,
-        notes: form.notes.trim() || null,
-        recurrence,
-        attendees,
-      });
-    }
-
-    closeModal();
-  }
-
-  function deleteEvent() {
-    if (modal?.kind !== "edit") return;
-    const baseId = modal.event.id.split("~")[0];
-    onDeleteEvent?.(modal.event.calendarId, baseId);
-    closeModal();
-  }
-
-  function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  function toggleAttendee(memberId: string) {
-    setForm((f) => ({
-      ...f,
-      attendeeIds: f.attendeeIds.includes(memberId)
-        ? f.attendeeIds.filter((id) => id !== memberId)
-        : [...f.attendeeIds, memberId],
-    }));
-  }
-
-  const cells = getMonthCells(viewYear, viewMonth);
-  const weeks: typeof cells[] = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-
-  const showWeekNumbers = calendarSettings?.showWeekNumbers ?? false;
-  const showHolidays = calendarSettings?.showHolidays ?? true;
-  const holidayBgColor = calendarSettings?.holidayBgColor ?? "#ffe4e6";
-  const holidayTextColor = calendarSettings?.holidayTextColor ?? "#9f1239";
-
-  const calendarDisplayColor = new Map<string, string>();
-  for (const member of activeMembers) {
-    const memberCals = visible.filter((c) => c.ownerId === member.id);
-    const baseColor = member.color ?? null;
-    memberCals.forEach((cal, idx) => {
-      if (!baseColor) calendarDisplayColor.set(cal.id, cal.color);
-      else if (idx === 0) calendarDisplayColor.set(cal.id, baseColor);
-      else calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
-    });
-  }
-
-  const isEditing = modal?.kind === "edit";
-  const eventIsEditable = isEditing && canEditEvent(modal.event);
-  const otherMembers = activeMembers.filter((m) => m.id !== currentMember.id);
+  const {
+    todayStr, viewYear, viewMonth, selectedDay, setSelectedDay,
+    modal, form, setForm, detailEvent, setDetailEvent, longPressRef,
+    visible, editableCalendars, canEditEvent, pendingInvitations,
+    eventsForDay, listEvents, prevMonth, nextMonth,
+    openNew, openEdit, closeModal, submitForm, deleteEvent,
+    setField, toggleAttendee, weeks,
+    showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
+    calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
+  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, onAddEvent, onUpdateEvent, onDeleteEvent);
 
   if (visible.length === 0 && !displayOnly) {
     return (
@@ -615,8 +136,8 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             <div className="cal-recurrence">
               <div className="cal-recurrence-top">
                 <RefreshCw size={15} />
-                <select className="text-input" onChange={(e) => setField("recurrenceType", e.target.value as EventRecurrence["type"])} value={form.recurrenceType}>
-                  {(Object.keys(RECURRENCE_LABELS) as EventRecurrence["type"][]).map((k) => (
+                <select className="text-input" onChange={(e) => setField("recurrenceType", e.target.value as import("@shared/types").EventRecurrence["type"])} value={form.recurrenceType}>
+                  {(Object.keys(RECURRENCE_LABELS) as import("@shared/types").EventRecurrence["type"][]).map((k) => (
                     <option key={k} value={k}>{RECURRENCE_LABELS[k]}</option>
                   ))}
                 </select>
