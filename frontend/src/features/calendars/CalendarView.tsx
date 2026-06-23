@@ -329,10 +329,6 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     <div className="cal-view">
       {/* ── Header ── */}
       <div className="cal-view-top">
-        <div>
-          <h2 className="cal-view-title">Kalender</h2>
-          <p className="cal-view-sub">Privata och delade händelser, allt på en plats.</p>
-        </div>
         {editableCalendars.length > 0 && (
           <button className="primary-button cal-new-btn" onClick={() => openNew()} type="button">
             <Plus size={16} />
