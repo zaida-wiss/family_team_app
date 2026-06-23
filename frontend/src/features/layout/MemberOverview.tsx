@@ -36,11 +36,6 @@ export function MemberOverview({
         <div className="overview-cal-wrap">
           <div className="overview-cal-toolbar">
             <span className="overview-cal-label">Familjens kalender</span>
-            {onOpenCalendar && (
-              <button className="week-calendar-link" onClick={onOpenCalendar} type="button">
-                Öppna →
-              </button>
-            )}
           </div>
           <CalendarView
             displayOnly
