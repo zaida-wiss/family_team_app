@@ -5,6 +5,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import type { ErrorRequestHandler } from "express";
+import { logger } from "./utils/logger.js";
 import { authRouter } from "./routes/auth.js";
 import { accountsRouter } from "./routes/accounts.js";
 import { calendarsRouter } from "./routes/calendars.js";
@@ -35,7 +36,7 @@ app.use("/api/shopping", shoppingRouter);
 app.use("/api/rewards", rewardsRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
-  console.error(err);
+  logger.error(err);
   const status = (err as { status?: number }).status ?? 500;
   const message = err instanceof Error ? err.message : "Okänt fel";
   response.status(status).json({ error: message });

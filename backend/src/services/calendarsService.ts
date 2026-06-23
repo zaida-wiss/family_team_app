@@ -1,6 +1,7 @@
 import { CalendarModel } from "../db/models/Calendar.js";
 import type { IcsSubscription } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ export async function createSubscription(calendarId: string, body: unknown) {
   calendar.markModified("subscriptions");
   await calendar.save();
   // Sync immediately in background
-  syncSubscription(calendarId, sub).catch(console.error);
+  syncSubscription(calendarId, sub).catch((e) => logger.error(e));
   return sub;
 }
 

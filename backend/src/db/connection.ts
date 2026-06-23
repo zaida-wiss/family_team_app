@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { logger } from "../utils/logger.js";
 
 const MONGODB_URI = process.env.MONGODB_URI ?? "mongodb://localhost:27017/family-team-app";
 
@@ -7,5 +8,5 @@ export async function connectDB() {
     tls: true,
     serverSelectionTimeoutMS: 5000
   });
-  console.log("Ansluten till MongoDB");
+  logger.info("Ansluten till MongoDB");
 }
