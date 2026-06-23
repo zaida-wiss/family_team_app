@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight, MapPin, Plus, RefreshCw, Repeat, Trash2, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Filter, MapPin, Plus, RefreshCw, Repeat, Search, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
 import type { Calendar, CalendarEvent, EventRecurrence, Id, Member, Role } from "@shared/types";
@@ -174,6 +174,21 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
   const [form, setForm] = useState<FormState>(blankForm());
   const [detailEvent, setDetailEvent] = useState<EnrichedEvent | null>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
+  const [showCalFilter, setShowCalFilter] = useState(false);
+  const calFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCalFilter) return;
+    function handleOutside(e: MouseEvent) {
+      if (calFilterRef.current && !calFilterRef.current.contains(e.target as Node)) {
+        setShowCalFilter(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [showCalFilter]);
 
   // ── Permission filtering ──
   const visible = calendars.filter((cal) => {
@@ -215,13 +230,18 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   }
 
-  // ── List events below grid ──
+  // ── List events below grid (same overlap logic as eventsForDay) ──
+  const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+  const monthFirstDay = `${monthPrefix}-01`;
+  const monthLastDay = `${monthPrefix}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, "0")}`;
+
   const listEvents = selectedDay
     ? eventsForDay(selectedDay)
-    : enrichedEvents
+    : expandedEvents
         .filter((ev) => {
-          const start = toLocalDateStr(new Date(ev.startsAt));
-          return start.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`);
+          const evStart = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
+          const evEnd = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
+          return evStart <= monthLastDay && evEnd >= monthFirstDay;
         })
         .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
@@ -384,7 +404,19 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               value={form.title}
             />
             <label className="cal-allday-row">
-              <input checked={form.isAllDay} onChange={(e) => setField("isAllDay", e.target.checked)} type="checkbox" />
+              <input
+                checked={form.isAllDay}
+                onChange={(e) => {
+                  const allDay = e.target.checked;
+                  setForm((f) => ({
+                    ...f,
+                    isAllDay: allDay,
+                    startsAt: allDay ? f.startsAt.slice(0, 10) : `${f.startsAt.slice(0, 10)}T09:00`,
+                    endsAt: allDay ? f.endsAt.slice(0, 10) : `${f.endsAt.slice(0, 10)}T10:00`,
+                  }));
+                }}
+                type="checkbox"
+              />
               <span>Heldag</span>
             </label>
             <div className="cal-form-datetimes">
@@ -473,10 +505,11 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
     const displayListEvents = selectedDay
       ? eventsForDay(selectedDay)
-      : enrichedEvents
+      : expandedEvents
           .filter((ev) => {
-            const start = toLocalDateStr(new Date(ev.startsAt));
-            return start.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`);
+            const evStart = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
+            const evEnd = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
+            return evStart <= monthLastDay && evEnd >= monthFirstDay;
           })
           .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
@@ -488,15 +521,66 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
       if (longPressRef.current !== null) { clearTimeout(longPressRef.current); longPressRef.current = null; }
     };
 
+    const q = searchQuery.trim().toLowerCase();
+    const filteredDisplayEvents = displayListEvents
+      .filter((ev) => hiddenCalendarIds.size === 0 || !hiddenCalendarIds.has(ev.calendarId))
+      .filter((ev) => !q || (
+        ev.title.toLowerCase().includes(q) ||
+        ev.calendarName.toLowerCase().includes(q) ||
+        (ev.location?.toLowerCase().includes(q) ?? false) ||
+        (ev.notes?.replace(/\\n/g, " ").toLowerCase().includes(q) ?? false)
+      ));
+
     return (
       <div className="cal-overview-wrap">
-        {editableCalendars.length > 0 && onAddEvent && (
-          <div className="cal-overview-header">
+        <div className="cal-overview-header">
+          {editableCalendars.length > 0 && onAddEvent && (
             <button className="primary-button cal-new-btn" onClick={() => openNew()} type="button">
               <Plus size={16} /> Ny händelse
             </button>
+          )}
+          <div className="cal-overview-search">
+            <Search size={14} className="cal-search-icon" />
+            <input
+              className="cal-search-input"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Sök händelser…"
+              type="search"
+              value={searchQuery}
+            />
           </div>
-        )}
+          <div className="cal-filter-wrap" ref={calFilterRef}>
+            <button
+              className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
+              onClick={() => setShowCalFilter((s) => !s)}
+              title="Filtrera kalendrar"
+              type="button"
+            >
+              <Filter size={16} />
+            </button>
+            {showCalFilter && (
+              <div className="cal-filter-dropdown">
+                {visible.map((cal) => (
+                  <label className="cal-filter-item" key={cal.id}>
+                    <input
+                      checked={!hiddenCalendarIds.has(cal.id)}
+                      onChange={(e) => {
+                        setHiddenCalendarIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
+                          return next;
+                        });
+                      }}
+                      type="checkbox"
+                    />
+                    <span className="cal-filter-dot" style={{ background: cal.color }} />
+                    <span>{cal.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="cal-grid-card">
           <div className="cal-grid-nav">
@@ -510,7 +594,9 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               const dateStr = toLocalDateStr(date);
               const isToday = dateStr === todayStr;
               const isSelected = dateStr === selectedDay;
-              const dayEvents = isCurrentMonth ? eventsForDay(dateStr) : [];
+              const dayEvents = isCurrentMonth
+                ? eventsForDay(dateStr).filter((ev) => !hiddenCalendarIds.has(ev.calendarId))
+                : [];
               return (
                 <div
                   key={dateStr}
@@ -547,10 +633,14 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               <button className="cal-clear-day" onClick={() => setSelectedDay(null)} type="button">Visa alla</button>
             )}
           </div>
-          {displayListEvents.length === 0 ? (
-            <p className="cal-empty-note">{selectedDay ? "Inga händelser denna dag." : "Inga händelser denna månad."}</p>
+          {filteredDisplayEvents.length === 0 ? (
+            <p className="cal-empty-note">
+              {q || hiddenCalendarIds.size > 0
+                ? "Inga händelser matchar filtret."
+                : selectedDay ? "Inga händelser denna dag." : "Inga händelser denna månad."}
+            </p>
           ) : (
-            displayListEvents.map((ev) => (
+            filteredDisplayEvents.map((ev) => (
               <div
                 className="cal-event-row"
                 key={ev.id}

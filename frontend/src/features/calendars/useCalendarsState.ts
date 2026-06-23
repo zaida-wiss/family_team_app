@@ -3,7 +3,7 @@ import { calendarsApi } from "../../api";
 
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
 
-type AddEventInput = {
+export type AddEventInput = {
   title: string;
   startsAt: string;
   endsAt: string;

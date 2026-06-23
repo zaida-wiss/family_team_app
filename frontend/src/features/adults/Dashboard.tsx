@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import type { Id, Member, Reward, Role, ShoppingList, Calendar, Todo } from "@shared/types";
+import type { AddEventInput } from "../calendars/useCalendarsState";
 import { CalendarPanel } from "../calendars/CalendarPanel";
 import { ShoppingListsPanel } from "../shopping/ShoppingListsPanel";
 import { TodoCreator } from "../todos/TodoCreator";
@@ -44,7 +45,7 @@ type Props = {
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
   onSetWishStars: (rewardId: Id, stars: number) => void;
-  onAddCalendarEvent: ComponentProps<typeof CalendarPanel>["onAddEvent"];
+  onAddCalendarEvent: (calendarId: Id, event: AddEventInput) => void;
   onCreateCalendar: (name: string, color: string) => void;
   onUpdateCalendarColor: (calendarId: Id, color: string) => void;
   onRenameCalendar: (calendarId: Id, name: string) => void;
