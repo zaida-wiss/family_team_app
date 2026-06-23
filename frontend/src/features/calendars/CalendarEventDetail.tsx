@@ -1,5 +1,5 @@
 import { MapPin, X } from "lucide-react";
-import type { Member } from "@shared/types";
+import type { CalendarEvent, Member } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
 import { fmtFullDate, fmtTime } from "./calendarHelpers";
 
@@ -8,7 +8,7 @@ type Props = {
   calendarDisplayColor: Map<string, string>;
   activeMembers: Member[];
   canEditEvent: (ev: EnrichedEvent) => boolean;
-  onUpdateEvent?: unknown;
+  onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onClose: () => void;
   onEdit: (ev: EnrichedEvent) => void;
 };
