@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, MapPin, Plus, RefreshCw, Repeat, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, RefreshCw, Repeat, Trash2, X } from "lucide-react";
 import { Fragment } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
@@ -327,16 +327,6 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
   return (
     <div className="cal-view">
-      {/* ── Header ── */}
-      <div className="cal-view-top">
-        {editableCalendars.length > 0 && (
-          <button className="primary-button cal-new-btn" onClick={() => openNew()} type="button">
-            <Plus size={16} />
-            Ny händelse
-          </button>
-        )}
-      </div>
-
       {/* ── Pending invitations ── */}
       {pendingInvitations.length > 0 && (
         <div className="cal-invitations">
