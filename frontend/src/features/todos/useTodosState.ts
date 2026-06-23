@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { todosApi } from "../../api";
-import { todos as initialTodos } from "../../data/sampleData";
 import { canCompleteTodo, canDeleteTodo, canEditTodo } from "../../utils/permissions";
 import { getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
 
 export function useTodosState() {
-  const [todos, setTodos] = useState<Todo[]>(initialTodos);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [editingTodoId, setEditingTodoId] = useState<Id | null>(null);
   const [editingTodoTitle, setEditingTodoTitle] = useState("");
 

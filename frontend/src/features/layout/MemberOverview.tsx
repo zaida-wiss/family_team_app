@@ -1,5 +1,5 @@
 import { CalendarView } from "../calendars/CalendarView";
-import type { Calendar, Member, Role } from "@shared/types";
+import type { Calendar, CalendarEvent, Id, Member, Role } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -11,6 +11,9 @@ type Props = {
   canSeeCalendar: boolean;
   onSelectMember: (memberId: string) => void;
   onOpenCalendar?: () => void;
+  onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
+  onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
+  onDeleteEvent?: (calendarId: string, eventId: string) => void;
 };
 
 export function MemberOverview({
@@ -21,6 +24,9 @@ export function MemberOverview({
   calendars,
   canSeeCalendar,
   onOpenCalendar,
+  onAddEvent,
+  onUpdateEvent,
+  onDeleteEvent,
 }: Props) {
   return (
     <div className="overview-home">
@@ -47,6 +53,9 @@ export function MemberOverview({
             currentMember={currentMember}
             activeMembers={activeMembers}
             roles={roles}
+            onAddEvent={onAddEvent}
+            onUpdateEvent={onUpdateEvent}
+            onDeleteEvent={onDeleteEvent}
           />
         </div>
       )}

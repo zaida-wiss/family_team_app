@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { membersApi } from "../../api";
-import { members as initialMembers } from "../../data/sampleData";
 import type { DashboardThemeId, Id, Member } from "@shared/types";
 
 export function useMembersState() {
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [members, setMembers] = useState<Member[]>([]);
 
   useEffect(() => {
     membersApi.getAll().then(setMembers).catch(console.error);

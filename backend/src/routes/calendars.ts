@@ -67,11 +67,13 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
   const calendar = await CalendarModel.findOne({ id: calendarId });
   if (!calendar) return;
 
+  const fetchUrl = sub.url.replace(/^webcal:\/\//i, "https://");
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   let icsText: string;
   try {
-    const res = await fetch(sub.url, { signal: controller.signal });
+    const res = await fetch(fetchUrl, { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) return;
     icsText = await res.text();
@@ -244,9 +246,10 @@ calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, async (reque
 // ── ics fetch (for preview) ───────────────────────────────────────────────────
 
 calendarsRouter.post("/:id/fetch-ics", requireAuth, async (request, response) => {
-  const { url } = request.body as { url?: string };
+  const rawUrl = (request.body as { url?: string }).url;
+  const url = rawUrl?.replace(/^webcal:\/\//i, "https://");
   if (!url || !/^https?:\/\/.+/.test(url)) {
-    response.status(400).json({ error: "Ogiltig URL – måste börja med http:// eller https://" });
+    response.status(400).json({ error: "Ogiltig URL – måste börja med http://, https:// eller webcal://" });
     return;
   }
   const controller = new AbortController();
@@ -305,6 +308,17 @@ calendarsRouter.patch("/:id/events/:eventId/rsvp", requireAuth, async (request, 
   const attendee = event.attendees?.find((a) => a.memberId === memberId);
   if (attendee) { attendee.status = status; }
   calendar.markModified("events");
+  await calendar.save();
+  response.json({ ok: true });
+});
+
+calendarsRouter.patch("/:id", requireAuth, async (request, response) => {
+  const calendar = await CalendarModel.findOne({ id: request.params.id });
+  if (!calendar) { response.status(404).json({ error: "Kalender hittades inte" }); return; }
+  const { color, name, ownerId } = request.body as { color?: string; name?: string; ownerId?: string };
+  if (color) calendar.color = color;
+  if (name) calendar.name = name;
+  if (ownerId) calendar.ownerId = ownerId;
   await calendar.save();
   response.json({ ok: true });
 });

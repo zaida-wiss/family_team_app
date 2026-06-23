@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { calendarsApi } from "../../api";
-import { calendars as initialCalendars } from "../../data/sampleData";
+
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
 
 type AddEventInput = {
@@ -24,18 +24,18 @@ type ImportEventInput = {
 };
 
 export function useCalendarsState() {
-  const [calendars, setCalendars] = useState<Calendar[]>(initialCalendars);
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
 
   useEffect(() => {
     calendarsApi.getAll().then(setCalendars).catch(console.error);
   }, []);
 
-  function createCalendar(name: string, memberId: Id) {
+  function createCalendar(name: string, memberId: Id, color: string) {
     const newCalendar: Calendar = {
       id: `calendar-${crypto.randomUUID()}`,
       name,
       ownerId: memberId,
-      color: "#2f7d6d",
+      color,
       sharedWith: [],
       importedSources: [],
       subscriptions: [],
@@ -46,6 +46,27 @@ export function useCalendarsState() {
 
     calendarsApi.create(newCalendar).catch(console.error);
     setCalendars((current) => [...current, newCalendar]);
+  }
+
+  function updateCalendarColor(calendarId: Id, color: string) {
+    calendarsApi.update(calendarId, { color }).catch(console.error);
+    setCalendars((current) =>
+      current.map((cal) => (cal.id !== calendarId ? cal : { ...cal, color }))
+    );
+  }
+
+  function renameCalendar(calendarId: Id, name: string) {
+    calendarsApi.update(calendarId, { name }).catch(console.error);
+    setCalendars((current) =>
+      current.map((cal) => (cal.id !== calendarId ? cal : { ...cal, name }))
+    );
+  }
+
+  function transferCalendar(calendarId: Id, ownerId: Id) {
+    calendarsApi.update(calendarId, { ownerId }).catch(console.error);
+    setCalendars((current) =>
+      current.map((cal) => (cal.id !== calendarId ? cal : { ...cal, ownerId }))
+    );
   }
 
   function addCalendarEvent(calendarId: Id, event: AddEventInput, memberId: Id) {
@@ -347,6 +368,9 @@ export function useCalendarsState() {
   return {
     calendars,
     createCalendar,
+    updateCalendarColor,
+    renameCalendar,
+    transferCalendar,
     addCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,

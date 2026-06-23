@@ -760,6 +760,12 @@ button {
   color: #a13b2f;
 }
 
+.icon-button--active {
+  background: color-mix(in oklch, var(--primary) 15%, var(--card));
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .icon-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -1337,6 +1343,72 @@ h3 {
   font-weight: 800;
 }
 
+/* Calendar color picker */
+.cal-color-input {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Rename row */
+.cal-rename-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+/* Owner transfer */
+.cal-owner-label {
+  display: grid !important;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600 !important;
+}
+
+.cal-owner-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+/* Row with color picker + family-share toggle */
+.cal-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cal-color-label {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600 !important;
+}
+
+.cal-color-label span {
+  white-space: nowrap;
+}
+
+.cal-share-toggle {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+.cal-share-toggle--shared {
+  background: color-mix(in oklch, var(--primary) 15%, var(--card));
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .ics-import-block {
   display: flex;
   flex-direction: column;
@@ -1723,6 +1795,10 @@ h3 {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   margin-top: 12px;
+}
+
+.cal-create-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .approval-panel {

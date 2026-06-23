@@ -45,7 +45,10 @@ type Props = {
   onRejectWish: (rewardId: Id) => void;
   onSetWishStars: (rewardId: Id, stars: number) => void;
   onAddCalendarEvent: ComponentProps<typeof CalendarPanel>["onAddEvent"];
-  onCreateCalendar: (name: string) => void;
+  onCreateCalendar: (name: string, color: string) => void;
+  onUpdateCalendarColor: (calendarId: Id, color: string) => void;
+  onRenameCalendar: (calendarId: Id, name: string) => void;
+  onTransferCalendar: (calendarId: Id, newOwnerId: Id) => void;
   onDeleteCalendar: ComponentProps<typeof CalendarPanel>["onDeleteCalendar"];
   onImportCalendar: ComponentProps<typeof CalendarPanel>["onImportCalendar"];
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
@@ -99,6 +102,9 @@ export function Dashboard({
   onSetWishStars,
   onAddCalendarEvent,
   onCreateCalendar,
+  onUpdateCalendarColor,
+  onRenameCalendar,
+  onTransferCalendar,
   onDeleteCalendar,
   onImportCalendar,
   onRemoveCalendarShare,
@@ -184,6 +190,9 @@ export function Dashboard({
           roles={roles}
           onAddEvent={onAddCalendarEvent}
           onCreateCalendar={onCreateCalendar}
+          onUpdateCalendarColor={onUpdateCalendarColor}
+          onRenameCalendar={onRenameCalendar}
+          onTransferCalendar={onTransferCalendar}
           onDeleteCalendar={onDeleteCalendar}
           onImportCalendar={onImportCalendar}
           onRemoveCalendarShare={onRemoveCalendarShare}

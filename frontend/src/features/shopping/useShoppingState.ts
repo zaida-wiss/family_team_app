@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { shoppingApi } from "../../api";
-import { shoppingLists as initialShoppingLists } from "../../data/sampleData";
 import type { AccessLevel, Id, ShoppingList } from "@shared/types";
 
 export function useShoppingState() {
-  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(initialShoppingLists);
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
 
   useEffect(() => {
     shoppingApi.getAll().then(setShoppingLists).catch(console.error);

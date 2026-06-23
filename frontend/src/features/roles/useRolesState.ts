@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { rolesApi } from "../../api";
-import { roles as initialRoles } from "../../data/sampleData";
 import type { Id, PermissionKey, Role } from "@shared/types";
 
 export function useRolesState() {
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   useEffect(() => {
     rolesApi.getAll().then(setRoles).catch(console.error);

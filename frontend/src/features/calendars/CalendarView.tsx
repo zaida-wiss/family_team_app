@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, MapPin, Plus, RefreshCw, Repeat, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
 import type { Calendar, CalendarEvent, EventRecurrence, Id, Member, Role } from "@shared/types";
@@ -33,7 +33,8 @@ type FormState = {
   attendeeIds: string[];
 };
 
-type ModalMode = { kind: "new"; prefilledDate?: string } | { kind: "edit"; event: CalendarEvent & { calendarColor: string; calendarName: string } };
+type EnrichedEvent = CalendarEvent & { calendarColor: string; calendarName: string; calendarOwnerId?: string | null };
+type ModalMode = { kind: "new"; prefilledDate?: string } | { kind: "edit"; event: EnrichedEvent };
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -85,10 +86,10 @@ function addInterval(date: Date, type: EventRecurrence["type"], interval: number
   return d;
 }
 
-function expandForMonth(events: (CalendarEvent & { calendarColor: string; calendarName: string })[], year: number, month: number) {
+function expandForMonth<T extends CalendarEvent & { calendarColor: string; calendarName: string }>(events: T[], year: number, month: number): T[] {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
-  const result: typeof events = [];
+  const result: T[] = [];
 
   for (const ev of events) {
     const rec = ev.recurrence ?? { type: "none" as const, interval: 1, until: null };
@@ -171,6 +172,8 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalMode | null>(null);
   const [form, setForm] = useState<FormState>(blankForm());
+  const [detailEvent, setDetailEvent] = useState<EnrichedEvent | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Permission filtering ──
   const visible = calendars.filter((cal) => {
@@ -187,10 +190,10 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     editableCalendars.some((cal) => cal.id === ev.calendarId);
 
   // ── All events with color ──
-  const enrichedEvents = visible.flatMap((cal) =>
+  const enrichedEvents: EnrichedEvent[] = visible.flatMap((cal) =>
     cal.events
       .filter((ev) => ev.deletedAt === null)
-      .map((ev) => ({ ...ev, calendarColor: cal.color, calendarName: cal.name }))
+      .map((ev) => ({ ...ev, calendarColor: cal.color, calendarName: cal.name, calendarOwnerId: cal.ownerId }))
   );
 
   const expandedEvents = expandForMonth(enrichedEvents, viewYear, viewMonth);
@@ -342,6 +345,115 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     );
   }
 
+  // ── Shared modal (used in both displayOnly and full view) ──
+  const eventModalOverlay = modal ? (
+    <div className="cal-form-overlay" onClick={closeModal}>
+      <div className="cal-form-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="cal-form-hdr">
+          <span>{isEditing ? (eventIsEditable ? "Redigera händelse" : "Händelse") : "Ny händelse"}</span>
+          <button className="icon-button" onClick={closeModal} type="button"><X size={18} /></button>
+        </div>
+        {isEditing && !eventIsEditable ? (
+          <div className="cal-form-body">
+            <p style={{ fontWeight: 700, fontSize: "1.05rem" }}>{modal.event.title}</p>
+            <p className="cal-event-row-meta">
+              {modal.event.isAllDay
+                ? `${fmtFullDate(modal.event.startsAt.slice(0, 10))} · Heldag`
+                : `${fmtFullDate(modal.event.startsAt)} · ${fmtTime(modal.event.startsAt)}–${fmtTime(modal.event.endsAt)}`}
+            </p>
+            {modal.event.location && <p className="cal-event-row-meta"><MapPin size={13} /> {modal.event.location}</p>}
+            {modal.event.notes && (
+              <p style={{ fontSize: "0.875rem", whiteSpace: "pre-wrap" }}>
+                {modal.event.notes.replace(/\\n/g, "\n")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="cal-form-body">
+            {editableCalendars.length > 1 && (
+              <select className="text-input" onChange={(e) => setField("calendarId", e.target.value)} value={form.calendarId}>
+                {editableCalendars.map((cal) => <option key={cal.id} value={cal.id}>{cal.name}</option>)}
+              </select>
+            )}
+            <input
+              autoFocus
+              className="text-input"
+              onChange={(e) => setField("title", e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitForm(); }}
+              placeholder="Titel"
+              value={form.title}
+            />
+            <label className="cal-allday-row">
+              <input checked={form.isAllDay} onChange={(e) => setField("isAllDay", e.target.checked)} type="checkbox" />
+              <span>Heldag</span>
+            </label>
+            <div className="cal-form-datetimes">
+              <div className="cal-form-row">
+                <label className="field-label">Startar</label>
+                <input className="text-input" onChange={(e) => setField("startsAt", e.target.value)} type={form.isAllDay ? "date" : "datetime-local"} value={form.startsAt} />
+              </div>
+              <div className="cal-form-row">
+                <label className="field-label">Slutar</label>
+                <input className="text-input" onChange={(e) => setField("endsAt", e.target.value)} type={form.isAllDay ? "date" : "datetime-local"} value={form.endsAt} />
+              </div>
+            </div>
+            <div className="cal-form-location">
+              <MapPin size={15} />
+              <input className="text-input" onChange={(e) => setField("location", e.target.value)} placeholder="Plats (valfritt)" value={form.location} />
+            </div>
+            <textarea className="text-input cal-notes" onChange={(e) => setField("notes", e.target.value)} placeholder="Anteckningar (valfritt)" rows={2} value={form.notes} />
+            <div className="cal-recurrence">
+              <div className="cal-recurrence-top">
+                <RefreshCw size={15} />
+                <select className="text-input" onChange={(e) => setField("recurrenceType", e.target.value as EventRecurrence["type"])} value={form.recurrenceType}>
+                  {(Object.keys(RECURRENCE_LABELS) as EventRecurrence["type"][]).map((k) => (
+                    <option key={k} value={k}>{RECURRENCE_LABELS[k]}</option>
+                  ))}
+                </select>
+              </div>
+              {form.recurrenceType !== "none" && (
+                <div className="cal-recurrence-details">
+                  <label className="field-label">Var</label>
+                  <input className="text-input cal-interval-input" min={1} onChange={(e) => setField("recurrenceInterval", Math.max(1, Number(e.target.value)))} type="number" value={form.recurrenceInterval} />
+                  <span className="cal-interval-unit">{RECURRENCE_UNIT[form.recurrenceType]}</span>
+                  <label className="field-label" style={{ marginLeft: 12 }}>Slutar</label>
+                  <input className="text-input" onChange={(e) => setField("recurrenceUntil", e.target.value)} placeholder="Aldrig" type="date" value={form.recurrenceUntil} />
+                </div>
+              )}
+            </div>
+            {otherMembers.length > 0 && (
+              <div className="cal-attendees">
+                <p className="field-label">Bjud in familjemedlemmar</p>
+                <div className="cal-attendee-list">
+                  {otherMembers.map((member) => {
+                    const checked = form.attendeeIds.includes(member.id);
+                    return (
+                      <label className={`cal-attendee-item${checked ? " cal-attendee-item--checked" : ""}`} key={member.id}>
+                        <input checked={checked} onChange={() => toggleAttendee(member.id)} style={{ display: "none" }} type="checkbox" />
+                        <MemberAvatar member={member} size="small" />
+                        <span>{member.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="cal-form-actions">
+              {isEditing && (
+                <button className="danger-button cal-delete-btn" onClick={deleteEvent} type="button">
+                  <Trash2 size={15} /> Radera
+                </button>
+              )}
+              <button className="primary-button" disabled={!form.title.trim() || !form.startsAt || !form.endsAt} onClick={submitForm} style={{ flex: 1 }} type="button">
+                {isEditing ? "Spara ändringar" : "Spara händelse"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   if (displayOnly) {
     // Build a map: calendarId → display color derived from the owner member's color
     const calendarDisplayColor = new Map<string, string>();
@@ -354,7 +466,6 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         } else if (idx === 0) {
           calendarDisplayColor.set(cal.id, baseColor);
         } else {
-          // Lighter shade for additional calendars using CSS color-mix at render time
           calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
         }
       });
@@ -369,8 +480,24 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           })
           .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
+    const handleDayTouchStart = (dateStr: string) => {
+      if (editableCalendars.length === 0 || !onAddEvent) return;
+      longPressRef.current = setTimeout(() => { openNew(dateStr); }, 600);
+    };
+    const handleDayTouchEnd = () => {
+      if (longPressRef.current !== null) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+    };
+
     return (
       <div className="cal-overview-wrap">
+        {editableCalendars.length > 0 && onAddEvent && (
+          <div className="cal-overview-header">
+            <button className="primary-button cal-new-btn" onClick={() => openNew()} type="button">
+              <Plus size={16} /> Ny händelse
+            </button>
+          </div>
+        )}
+
         <div className="cal-grid-card">
           <div className="cal-grid-nav">
             <button className="icon-button" onClick={prevMonth} type="button"><ChevronLeft size={18} /></button>
@@ -389,6 +516,9 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
                   key={dateStr}
                   className={["cal-cell", !isCurrentMonth && "cal-cell--other", isToday && "cal-cell--today", isSelected && "cal-cell--selected"].filter(Boolean).join(" ")}
                   onClick={() => { if (isCurrentMonth) setSelectedDay((s) => s === dateStr ? null : dateStr); }}
+                  onTouchCancel={handleDayTouchEnd}
+                  onTouchEnd={handleDayTouchEnd}
+                  onTouchStart={() => { if (isCurrentMonth) handleDayTouchStart(dateStr); }}
                 >
                   <span className="cal-cell-num">{date.getDate()}</span>
                   <div className="cal-cell-dots">
@@ -414,16 +544,19 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               {selectedDay ? fmtFullDate(selectedDay) : `${MONTHS[viewMonth]} ${viewYear}`}
             </span>
             {selectedDay && (
-              <button className="cal-clear-day" onClick={() => setSelectedDay(null)} type="button">
-                Visa alla
-              </button>
+              <button className="cal-clear-day" onClick={() => setSelectedDay(null)} type="button">Visa alla</button>
             )}
           </div>
           {displayListEvents.length === 0 ? (
             <p className="cal-empty-note">{selectedDay ? "Inga händelser denna dag." : "Inga händelser denna månad."}</p>
           ) : (
             displayListEvents.map((ev) => (
-              <div className="cal-event-row" key={ev.id}>
+              <div
+                className="cal-event-row"
+                key={ev.id}
+                onClick={() => setDetailEvent(ev)}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="cal-event-color-dot" style={{ background: ev.color ?? calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor }} />
                 <div className="cal-event-row-info">
                   <span className="cal-event-row-title">{ev.title}</span>
@@ -438,6 +571,57 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             ))
           )}
         </div>
+
+        {/* Event detail panel */}
+        {detailEvent && (
+          <div className="cal-form-overlay" onClick={() => setDetailEvent(null)}>
+            <div className="cal-form-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="cal-form-hdr">
+                <span>Händelse</span>
+                <button className="icon-button" onClick={() => setDetailEvent(null)} type="button"><X size={18} /></button>
+              </div>
+              <div className="cal-form-body">
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <div className="cal-event-color-dot" style={{ background: detailEvent.color ?? calendarDisplayColor.get(detailEvent.calendarId) ?? detailEvent.calendarColor }} />
+                  <p style={{ fontWeight: 700, fontSize: "1.1rem", margin: 0 }}>{detailEvent.title}</p>
+                </div>
+                <p className="cal-event-row-meta">
+                  {detailEvent.isAllDay
+                    ? `${fmtFullDate(detailEvent.startsAt.slice(0, 10))} · Heldag`
+                    : `${fmtFullDate(detailEvent.startsAt)} · ${fmtTime(detailEvent.startsAt)}–${fmtTime(detailEvent.endsAt)}`}
+                </p>
+                {detailEvent.location && (
+                  <p className="cal-event-row-meta" style={{ marginTop: 4 }}>
+                    <MapPin size={13} style={{ verticalAlign: "middle" }} /> {detailEvent.location}
+                  </p>
+                )}
+                {detailEvent.notes && (
+                  <p style={{ fontSize: "0.875rem", marginTop: 8, whiteSpace: "pre-wrap" }}>
+                    {detailEvent.notes.replace(/\\n/g, "\n")}
+                  </p>
+                )}
+                <p className="cal-event-row-meta" style={{ marginTop: 8 }}>
+                  {detailEvent.calendarName}
+                  {activeMembers.find((m) => m.id === detailEvent.calendarOwnerId) && (
+                    <> · {activeMembers.find((m) => m.id === detailEvent.calendarOwnerId)!.name}</>
+                  )}
+                </p>
+                {canEditEvent(detailEvent) && onUpdateEvent && (
+                  <button
+                    className="primary-button"
+                    onClick={() => { setDetailEvent(null); openEdit(detailEvent); }}
+                    style={{ marginTop: 12, width: "100%" }}
+                    type="button"
+                  >
+                    Redigera händelse
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {eventModalOverlay}
       </div>
     );
   }
@@ -561,182 +745,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         ))}
       </div>
 
-      {/* ── Event modal ── */}
-      {modal && (
-        <div className="cal-form-overlay" onClick={closeModal}>
-          <div className="cal-form-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cal-form-hdr">
-              <span>{isEditing ? (eventIsEditable ? "Redigera händelse" : "Händelse") : "Ny händelse"}</span>
-              <button className="icon-button" onClick={closeModal} type="button"><X size={18} /></button>
-            </div>
-
-            {/* Read-only view mode (can't edit) */}
-            {isEditing && !eventIsEditable ? (
-              <div className="cal-form-body">
-                <p style={{ fontWeight: 700, fontSize: "1.05rem" }}>{modal.event.title}</p>
-                <p className="cal-event-row-meta">
-                  {modal.event.isAllDay
-                    ? `${fmtFullDate(modal.event.startsAt.slice(0, 10))} · Heldag`
-                    : `${fmtFullDate(modal.event.startsAt)} · ${fmtTime(modal.event.startsAt)}–${fmtTime(modal.event.endsAt)}`}
-                </p>
-                {modal.event.location && <p className="cal-event-row-meta"><MapPin size={13} /> {modal.event.location}</p>}
-                {modal.event.notes && <p style={{ fontSize: "0.875rem" }}>{modal.event.notes}</p>}
-              </div>
-            ) : (
-              <div className="cal-form-body">
-                {/* Calendar selector */}
-                {editableCalendars.length > 1 && (
-                  <select className="text-input" onChange={(e) => setField("calendarId", e.target.value)} value={form.calendarId}>
-                    {editableCalendars.map((cal) => <option key={cal.id} value={cal.id}>{cal.name}</option>)}
-                  </select>
-                )}
-
-                {/* Title */}
-                <input
-                  autoFocus
-                  className="text-input"
-                  onChange={(e) => setField("title", e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") submitForm(); }}
-                  placeholder="Titel"
-                  value={form.title}
-                />
-
-                {/* All-day toggle */}
-                <label className="cal-allday-row">
-                  <input
-                    checked={form.isAllDay}
-                    onChange={(e) => setField("isAllDay", e.target.checked)}
-                    type="checkbox"
-                  />
-                  <span>Heldag</span>
-                </label>
-
-                {/* Start / End */}
-                <div className="cal-form-datetimes">
-                  <div className="cal-form-row">
-                    <label className="field-label">Startar</label>
-                    <input
-                      className="text-input"
-                      onChange={(e) => setField("startsAt", e.target.value)}
-                      type={form.isAllDay ? "date" : "datetime-local"}
-                      value={form.startsAt}
-                    />
-                  </div>
-                  <div className="cal-form-row">
-                    <label className="field-label">Slutar</label>
-                    <input
-                      className="text-input"
-                      onChange={(e) => setField("endsAt", e.target.value)}
-                      type={form.isAllDay ? "date" : "datetime-local"}
-                      value={form.endsAt}
-                    />
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="cal-form-location">
-                  <MapPin size={15} />
-                  <input
-                    className="text-input"
-                    onChange={(e) => setField("location", e.target.value)}
-                    placeholder="Plats (valfritt)"
-                    value={form.location}
-                  />
-                </div>
-
-                {/* Notes */}
-                <textarea
-                  className="text-input cal-notes"
-                  onChange={(e) => setField("notes", e.target.value)}
-                  placeholder="Anteckningar (valfritt)"
-                  rows={2}
-                  value={form.notes}
-                />
-
-                {/* Recurrence */}
-                <div className="cal-recurrence">
-                  <div className="cal-recurrence-top">
-                    <RefreshCw size={15} />
-                    <select
-                      className="text-input"
-                      onChange={(e) => setField("recurrenceType", e.target.value as EventRecurrence["type"])}
-                      value={form.recurrenceType}
-                    >
-                      {(Object.keys(RECURRENCE_LABELS) as EventRecurrence["type"][]).map((k) => (
-                        <option key={k} value={k}>{RECURRENCE_LABELS[k]}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {form.recurrenceType !== "none" && (
-                    <div className="cal-recurrence-details">
-                      <label className="field-label">Var</label>
-                      <input
-                        className="text-input cal-interval-input"
-                        min={1}
-                        onChange={(e) => setField("recurrenceInterval", Math.max(1, Number(e.target.value)))}
-                        type="number"
-                        value={form.recurrenceInterval}
-                      />
-                      <span className="cal-interval-unit">{RECURRENCE_UNIT[form.recurrenceType]}</span>
-                      <label className="field-label" style={{ marginLeft: 12 }}>Slutar</label>
-                      <input
-                        className="text-input"
-                        onChange={(e) => setField("recurrenceUntil", e.target.value)}
-                        placeholder="Aldrig"
-                        type="date"
-                        value={form.recurrenceUntil}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Attendees */}
-                {otherMembers.length > 0 && (
-                  <div className="cal-attendees">
-                    <p className="field-label">Bjud in familjemedlemmar</p>
-                    <div className="cal-attendee-list">
-                      {otherMembers.map((member) => {
-                        const checked = form.attendeeIds.includes(member.id);
-                        return (
-                          <label className={`cal-attendee-item${checked ? " cal-attendee-item--checked" : ""}`} key={member.id}>
-                            <input
-                              checked={checked}
-                              onChange={() => toggleAttendee(member.id)}
-                              style={{ display: "none" }}
-                              type="checkbox"
-                            />
-                            <MemberAvatar member={member} size="small" />
-                            <span>{member.name}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="cal-form-actions">
-                  {isEditing && (
-                    <button className="danger-button cal-delete-btn" onClick={deleteEvent} type="button">
-                      <Trash2 size={15} />
-                      Radera
-                    </button>
-                  )}
-                  <button
-                    className="primary-button"
-                    disabled={!form.title.trim() || !form.startsAt || !form.endsAt}
-                    onClick={submitForm}
-                    style={{ flex: 1 }}
-                    type="button"
-                  >
-                    {isEditing ? "Spara ändringar" : "Spara händelse"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {eventModalOverlay}
     </div>
   );
 }

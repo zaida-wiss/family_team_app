@@ -109,6 +109,9 @@ function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
             roles={settingsProps.roles}
             onAddEvent={memberContentProps.onAddCalendarEvent}
             onCreateCalendar={memberContentProps.onCreateCalendar}
+            onUpdateCalendarColor={memberContentProps.onUpdateCalendarColor}
+            onRenameCalendar={memberContentProps.onRenameCalendar}
+            onTransferCalendar={memberContentProps.onTransferCalendar}
             onDeleteCalendar={memberContentProps.onDeleteCalendar}
             onImportCalendar={memberContentProps.onImportCalendar}
             onShareCalendar={memberContentProps.onShareCalendar}

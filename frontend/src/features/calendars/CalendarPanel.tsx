@@ -1,5 +1,5 @@
-import { CalendarDays, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
-import { useState } from "react";
+import { CalendarDays, Check, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { calendarsApi } from "../../api";
 import {
   canEditSharedResource,
@@ -44,7 +44,10 @@ type CalendarPanelProps = {
     calendarId: Id,
     event: Omit<ImportedCalendarEvent, "notes"> & { notes?: string | null }
   ) => void;
-  onCreateCalendar: (name: string) => void;
+  onCreateCalendar: (name: string, color: string) => void;
+  onUpdateCalendarColor: (calendarId: Id, color: string) => void;
+  onRenameCalendar: (calendarId: Id, name: string) => void;
+  onTransferCalendar: (calendarId: Id, newOwnerId: Id) => void;
   onDeleteCalendar: (calendarId: Id) => void;
   onImportCalendar: (
     calendarId: Id,
@@ -67,6 +70,9 @@ export function CalendarPanel({
   managementOnly = false,
   onAddEvent,
   onCreateCalendar,
+  onUpdateCalendarColor,
+  onRenameCalendar,
+  onTransferCalendar,
   onDeleteCalendar,
   onImportCalendar,
   onRemoveCalendarShare,
@@ -91,7 +97,7 @@ export function CalendarPanel({
     );
   });
   const firstEditableCalendar = visibleCalendars.find((calendar) =>
-    canEditCalendar(currentMember, roles, calendar)
+    canEditCalendar(currentMember, roles, calendar, members)
   );
   const [selectedCalendarId, setSelectedCalendarId] = useState(
     firstEditableCalendar?.id ?? visibleCalendars[0]?.id ?? ""
@@ -101,6 +107,16 @@ export function CalendarPanel({
     visibleCalendars[0] ??
     null;
   const [calendarName, setCalendarName] = useState("");
+  const [newCalendarColor, setNewCalendarColor] = useState(currentMember.color ?? "#2f7d6d");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(selectedCalendar?.name ?? "");
+  const [transferOwnerId, setTransferOwnerId] = useState(selectedCalendar?.ownerId ?? "");
+
+  useEffect(() => {
+    setIsRenaming(false);
+    setRenameValue(selectedCalendar?.name ?? "");
+    setTransferOwnerId(selectedCalendar?.ownerId ?? "");
+  }, [selectedCalendarId]);
   const [eventTitle, setEventTitle] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
@@ -131,17 +147,37 @@ export function CalendarPanel({
   const canImport = hasPermission(currentMember, roles, "canImportCalendar");
   const canEditSelectedCalendar =
     selectedCalendar !== null &&
-    canEditCalendar(currentMember, roles, selectedCalendar);
+    canEditCalendar(currentMember, roles, selectedCalendar, members);
 
   function createCalendar() {
     const name = calendarName.trim();
-
-    if (!name || !canCreateCalendar) {
-      return;
-    }
-
-    onCreateCalendar(name);
+    if (!name || !canCreateCalendar) return;
+    onCreateCalendar(name, newCalendarColor);
     setCalendarName("");
+  }
+
+  const activeOtherMembers = members.filter(
+    (m) => m.id !== currentMember.id && m.deletedAt === null
+  );
+
+  function toggleFamilyShared() {
+    if (!selectedCalendar || !canEditSelectedCalendar) return;
+    const isSharedWithAll =
+      activeOtherMembers.length > 0 &&
+      activeOtherMembers.every((m) =>
+        selectedCalendar.sharedWith.some((s) => s.memberId === m.id)
+      );
+    if (isSharedWithAll) {
+      for (const share of selectedCalendar.sharedWith) {
+        onRemoveCalendarShare(selectedCalendar.id, share.memberId);
+      }
+    } else {
+      for (const m of activeOtherMembers) {
+        if (!selectedCalendar.sharedWith.some((s) => s.memberId === m.id)) {
+          onShareCalendar(selectedCalendar.id, m.id, "view");
+        }
+      }
+    }
   }
 
   const canImportToSelected = !!selectedCalendar && canImport && canEditSelectedCalendar;
@@ -273,7 +309,15 @@ export function CalendarPanel({
           <p className="eyebrow">Ny kalender</p>
           <h3>Skapa privat kalender</h3>
         </div>
-        <div className="shopping-add-row">
+        <div className="shopping-add-row cal-create-row">
+          <input
+            className="cal-color-input"
+            disabled={!canCreateCalendar}
+            onChange={(e) => setNewCalendarColor(e.target.value)}
+            title="Välj kalenderfärg"
+            type="color"
+            value={newCalendarColor}
+          />
           <input
             className="text-input"
             disabled={!canCreateCalendar}
@@ -314,6 +358,122 @@ export function CalendarPanel({
             </select>
           </label>
 
+          {canEditSelectedCalendar && isRenaming && (
+            <div className="cal-rename-row">
+              <input
+                autoFocus
+                className="text-input"
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const name = renameValue.trim();
+                    if (name && name !== selectedCalendar.name) {
+                      onRenameCalendar(selectedCalendar.id, name);
+                    }
+                    setIsRenaming(false);
+                  }
+                  if (e.key === "Escape") {
+                    setRenameValue(selectedCalendar.name);
+                    setIsRenaming(false);
+                  }
+                }}
+                placeholder="Kalendernamn"
+                value={renameValue}
+              />
+              <button
+                className="icon-button"
+                disabled={!renameValue.trim()}
+                onClick={() => {
+                  const name = renameValue.trim();
+                  if (name && name !== selectedCalendar.name) {
+                    onRenameCalendar(selectedCalendar.id, name);
+                  }
+                  setIsRenaming(false);
+                }}
+                title="Spara nytt namn"
+                type="button"
+              >
+                <Check size={16} />
+              </button>
+            </div>
+          )}
+
+          {canEditSelectedCalendar && (
+            <>
+
+              <label className="cal-owner-label">
+                Tilldelad till
+                <div className="cal-owner-row">
+                  <select
+                    className="text-input"
+                    onChange={(e) => setTransferOwnerId(e.target.value)}
+                    value={transferOwnerId}
+                  >
+                    {members
+                      .filter((m) => m.deletedAt === null)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                  </select>
+                  {transferOwnerId !== selectedCalendar.ownerId && (
+                    <button
+                      className="icon-button"
+                      onClick={() => onTransferCalendar(selectedCalendar.id, transferOwnerId)}
+                      title="Tilldela kalender"
+                      type="button"
+                    >
+                      <Check size={16} />
+                    </button>
+                  )}
+                </div>
+              </label>
+            </>
+          )}
+
+          {canEditSelectedCalendar && (
+            <div className="cal-settings-row">
+              <label className="cal-color-label">
+                <span>Färg</span>
+                <input
+                  className="cal-color-input"
+                  onChange={(e) => onUpdateCalendarColor(selectedCalendar.id, e.target.value)}
+                  title="Kalenderfärg"
+                  type="color"
+                  value={selectedCalendar.color}
+                />
+              </label>
+              <button
+                className={`secondary-button cal-share-toggle ${
+                  activeOtherMembers.length > 0 &&
+                  activeOtherMembers.every((m) =>
+                    selectedCalendar.sharedWith.some((s) => s.memberId === m.id)
+                  )
+                    ? "cal-share-toggle--shared"
+                    : ""
+                }`}
+                onClick={toggleFamilyShared}
+                title={
+                  activeOtherMembers.length > 0 &&
+                  activeOtherMembers.every((m) =>
+                    selectedCalendar.sharedWith.some((s) => s.memberId === m.id)
+                  )
+                    ? "Gör kalendern privat"
+                    : "Dela med hela familjen"
+                }
+                type="button"
+              >
+                {activeOtherMembers.length > 0 &&
+                activeOtherMembers.every((m) =>
+                  selectedCalendar.sharedWith.some((s) => s.memberId === m.id)
+                )
+                  ? "Delas med familjen"
+                  : "Dela med familjen"}
+              </button>
+            </div>
+          )}
+
           <div className="calendar-actions">
             <button
               className="icon-button danger"
@@ -327,6 +487,18 @@ export function CalendarPanel({
               type="button"
             >
               <X size={16} />
+            </button>
+            <button
+              className={`icon-button${isRenaming ? " icon-button--active" : ""}`}
+              disabled={!canEditSelectedCalendar}
+              onClick={() => {
+                setRenameValue(selectedCalendar.name);
+                setIsRenaming((v) => !v);
+              }}
+              title="Byt namn"
+              type="button"
+            >
+              <Pencil size={16} />
             </button>
             <label className="secondary-button">
               <Upload size={16} />
@@ -761,11 +933,15 @@ function PreviewSelector({ events, selectedIds, onChangeSelected, onConfirm }: P
   );
 }
 
-function canEditCalendar(member: Member, roles: Role[], calendar: Calendar) {
-  return (
-    hasPermission(member, roles, "canEditCalendar") &&
-    canEditSharedResource(member, calendar)
-  );
+function canEditCalendar(member: Member, roles: Role[], calendar: Calendar, members: Member[]) {
+  if (!hasPermission(member, roles, "canEditCalendar")) return false;
+  if (canEditSharedResource(member, calendar)) return true;
+  // Non-child members can edit calendars owned by children or by unknown/deleted owners
+  if (!member.isChild) {
+    const owner = members.find((m) => m.id === calendar.ownerId);
+    if (!owner || owner.isChild) return true;
+  }
+  return false;
 }
 
 function getMemberName(memberId: Id, members: Member[]) {

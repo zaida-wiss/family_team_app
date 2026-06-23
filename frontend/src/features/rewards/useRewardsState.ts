@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { rewardsApi } from "../../api";
-import { rewards as initialRewards } from "../../data/sampleData";
 import type { Id, Reward } from "@shared/types";
 
 export function useRewardsState() {
-  const [rewards, setRewards] = useState<Reward[]>(initialRewards);
+  const [rewards, setRewards] = useState<Reward[]>([]);
   const [wishTitle, setWishTitle] = useState("");
   const [wishStars, setWishStars] = useState<Record<Id, number>>({});
 

@@ -231,6 +231,11 @@ export const calendarsApi = {
       method: "PATCH",
       body: JSON.stringify({ memberId, status })
     }),
+  update: (id: string, patch: { color?: string; name?: string; ownerId?: string }) =>
+    request<{ ok: boolean }>(api(`calendars/${id}`), {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), { method: "DELETE" }),
   restore: (id: string) =>

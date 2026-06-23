@@ -202,6 +202,9 @@ export function MemberShellContent({
         canSeeCalendar={canSeeCalendar}
         onSelectMember={onSelectMember}
         onOpenCalendar={() => onNavigate("calendar")}
+        onAddEvent={onAddCalendarEvent}
+        onUpdateEvent={onUpdateCalendarEvent}
+        onDeleteEvent={onDeleteCalendarEvent}
       />
     );
   }
@@ -220,6 +223,9 @@ export function MemberShellContent({
         canSeeCalendar={canSeeCalendar}
         onSelectMember={onSelectMember}
         onOpenCalendar={() => onNavigate("calendar")}
+        onAddEvent={onAddCalendarEvent}
+        onUpdateEvent={onUpdateCalendarEvent}
+        onDeleteEvent={onDeleteCalendarEvent}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>
