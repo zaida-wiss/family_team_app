@@ -322,8 +322,8 @@ export function useCalendarsState() {
   }
 
   function removeSubscription(calendarId: Id, subId: Id) {
-    const deletedAt = new Date().toISOString();
     calendarsApi.deleteSubscription(calendarId, subId).catch(console.error);
+    const deletedAt = new Date().toISOString();
     setCalendars((current) =>
       current.map((cal) => {
         if (cal.id !== calendarId) return cal;

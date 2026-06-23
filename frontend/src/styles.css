@@ -1342,6 +1342,7 @@ h3 {
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  min-width: 0;
 }
 .ics-filter-row {
   display: flex;
@@ -1489,12 +1490,18 @@ h3 {
   flex-direction: column;
   gap: 8px;
   margin-bottom: 12px;
+  min-width: 0;
+}
+
+.ics-sub-form .secondary-button {
+  width: 100%;
 }
 
 .ics-sub-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .ics-sub-row {
@@ -1505,6 +1512,9 @@ h3 {
   background: var(--muted);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ics-sub-info {

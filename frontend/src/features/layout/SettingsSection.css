@@ -58,6 +58,7 @@
 }
 
 .settings-section--open .settings-section-inner {
+  overflow: hidden;
   padding-bottom: 4px;
 }
 

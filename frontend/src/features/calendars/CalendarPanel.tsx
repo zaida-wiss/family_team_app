@@ -111,12 +111,6 @@ export function CalendarPanel({
   const [newSubUrl, setNewSubUrl] = useState("");
   const [newSubIncludeWords, setNewSubIncludeWords] = useState<string[]>([]);
   const [newSubExcludeWords, setNewSubExcludeWords] = useState<string[]>([]);
-  const [newSubFrom, setNewSubFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [newSubTo, setNewSubTo] = useState(() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
-  });
   const [addingSub, setAddingSub] = useState(false);
   const [syncingSubId, setSyncingSubId] = useState<string | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
@@ -172,23 +166,29 @@ export function CalendarPanel({
   }
 
   function shareCalendar() {
-    if (!selectedCalendar || !shareMemberId || !canEditSelectedCalendar) return;
-    onShareCalendar(selectedCalendar.id, shareMemberId, shareAccess);
+    const canShare = !!selectedCalendar && !!shareMemberId && canEditSelectedCalendar;
+    if (!canShare) return;
+    onShareCalendar(selectedCalendar!.id, shareMemberId, shareAccess);
   }
 
   async function importCalendar(file: File | null) {
-    if (!file || !canImportToSelected || !selectedCalendar) return;
-    const events = filterByDateRange(parseIcsEvents(await file.text()), fileFilterFrom, fileFilterTo);
-    setPreviewSource(file.name);
+    const ready = file !== null && canImportToSelected && selectedCalendar !== null;
+    if (!ready) return;
+    const events = filterByDateRange(parseIcsEvents(await file!.text()), fileFilterFrom, fileFilterTo);
+    setPreviewSource(file!.name);
     setPreviewEvents(events);
     setSelectedEventIds(new Set(events.map((_, i) => String(i))));
+  }
+
+  function isActiveParentOf(m: Member) {
+    return !m.isChild && m.deletedAt === null && m.id !== selectedCalendar?.ownerId;
   }
 
   function copySchoolClosedToParents(events: ImportedCalendarEvent[], sourceName: string) {
     if (!selectedCalendar) return;
     const schoolClosed = events.filter((ev) => SCHOOL_CLOSED_RE.test(ev.title));
     if (schoolClosed.length === 0) return;
-    for (const m of members.filter((m) => !m.isChild && m.deletedAt === null && m.id !== selectedCalendar.ownerId)) {
+    for (const m of members.filter(isActiveParentOf)) {
       const cal = calendars.find((c) => c.ownerId === m.id && c.deletedAt === null);
       if (cal) onImportCalendar(cal.id, sourceName, schoolClosed);
     }
@@ -207,15 +207,16 @@ export function CalendarPanel({
 
   async function addSubscription() {
     const url = newSubUrl.trim();
-    if (!url || !selectedCalendar || !canImportToSelected) return;
+    const canAdd = !!url && !!selectedCalendar && canImportToSelected;
+    if (!canAdd) return;
     setAddingSub(true);
     try {
       await onAddSubscription(selectedCalendar.id, {
         url,
         includeWords: newSubIncludeWords,
         excludeWords: newSubExcludeWords,
-        dateFrom: newSubFrom || null,
-        dateTo: newSubTo || null
+        dateFrom: null,
+        dateTo: null
       });
       setNewSubUrl("");
       setNewSubIncludeWords([]);
@@ -389,26 +390,6 @@ export function CalendarPanel({
                   words={newSubExcludeWords}
                   onChangeWords={setNewSubExcludeWords}
                 />
-                <div className="ics-filter-row">
-                  <label className="ics-filter-label">
-                    Från
-                    <input
-                      className="text-input"
-                      onChange={(e) => setNewSubFrom(e.target.value)}
-                      type="date"
-                      value={newSubFrom}
-                    />
-                  </label>
-                  <label className="ics-filter-label">
-                    Till
-                    <input
-                      className="text-input"
-                      onChange={(e) => setNewSubTo(e.target.value)}
-                      type="date"
-                      value={newSubTo}
-                    />
-                  </label>
-                </div>
                 <button
                   className="secondary-button"
                   disabled={!newSubUrl.trim() || addingSub}
@@ -925,18 +906,17 @@ function WordTagInput({
   const [draft, setDraft] = useState("");
 
   function commit() {
-    const w = draft.trim().replace(/,+$/, "");
-    if (w && !words.includes(w)) onChangeWords([...words, w]);
+    const word = draft.trim().replace(/,+$/, "");
+    const isNew = word.length > 0 && !words.includes(word);
+    if (isNew) onChangeWords([...words, word]);
     setDraft("");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      commit();
-    } else if (e.key === "Backspace" && !draft && words.length > 0) {
-      onChangeWords(words.slice(0, -1));
-    }
+    const isCommit = e.key === "Enter" || e.key === ",";
+    const isBackspaceOnEmpty = e.key === "Backspace" && !draft && words.length > 0;
+    if (isCommit) { e.preventDefault(); commit(); }
+    else if (isBackspaceOnEmpty) { onChangeWords(words.slice(0, -1)); }
   }
 
   return (

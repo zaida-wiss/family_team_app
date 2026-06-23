@@ -220,7 +220,6 @@ calendarsRouter.delete("/:id/subscriptions/:subId", requireAuth, async (request,
   if (!calendar) { response.status(404).json({ error: "Kalender hittades inte" }); return; }
   const subId = request.params.subId;
   const now = new Date().toISOString();
-  // Soft-delete all events from this subscription
   for (const ev of calendar.events) {
     if (ev.subscriptionId === subId && !ev.deletedAt) {
       ev.deletedAt = now;
