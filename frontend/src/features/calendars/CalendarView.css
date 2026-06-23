@@ -63,7 +63,7 @@
 }
 
 .cal-day-names--wk {
-  grid-template-columns: 28px repeat(7, 1fr);
+  grid-template-columns: 18px repeat(7, 1fr);
 }
 
 .cal-wk-label {
@@ -87,7 +87,7 @@
 }
 
 .cal-grid--wk {
-  grid-template-columns: 28px repeat(7, 1fr);
+  grid-template-columns: 18px repeat(7, 1fr);
 }
 
 .cal-wk-num {
