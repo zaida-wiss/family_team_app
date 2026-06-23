@@ -1,28 +1,18 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { RoleModel } from "../db/models/Role.js";
+import * as roles from "../services/rolesService.js";
 
 export const rolesRouter = Router();
 
-rolesRouter.get("/", async (_request, response) => {
-  const roles = await RoleModel.find({}, { _id: 0, __v: 0 });
-  response.json(roles);
+rolesRouter.get("/", async (_req, res) => {
+  res.json(await roles.getAllRoles());
 });
 
-rolesRouter.post("/", requireAuth, async (request, response) => {
-  const role = new RoleModel(request.body);
-  await role.save();
-  response.status(201).json({ id: role.id });
+rolesRouter.post("/", requireAuth, async (req, res) => {
+  res.status(201).json(await roles.createRole(req.body));
 });
 
-rolesRouter.patch("/:id/permissions", requireAuth, async (request, response) => {
-  const role = await RoleModel.findOne({ id: request.params.id });
-  if (!role) {
-    response.status(404).json({ error: "Roll hittades inte" });
-    return;
-  }
-  role.permissions = { ...role.permissions, ...request.body };
-  role.markModified("permissions");
-  await role.save();
-  response.json({ ok: true });
+rolesRouter.patch("/:id/permissions", requireAuth, async (req, res) => {
+  await roles.updatePermissions(req.params.id, req.body);
+  res.json({ ok: true });
 });

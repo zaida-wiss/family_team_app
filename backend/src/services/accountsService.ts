@@ -1,4 +1,3 @@
-import type { Request, Response } from "express";
 import { z } from "zod";
 import { AccountModel } from "../db/models/Account.js";
 import { CalendarModel } from "../db/models/Calendar.js";
@@ -9,6 +8,7 @@ import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { TodoModel } from "../db/models/Todo.js";
 import { UserModel } from "../db/models/User.js";
 import { validate } from "../utils/validate.js";
+import { AppError } from "../utils/errors.js";
 import type { PermissionKey } from "../../../shared/types.js";
 
 const setupSchema = z.object({
@@ -44,13 +44,12 @@ function makePermissions(enabled: PermissionKey[]) {
   return Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, enabled.includes(k)])) as Record<PermissionKey, boolean>;
 }
 
-export async function setupAccount(req: Request, res: Response) {
-  const { name } = validate(setupSchema, req.body);
+export async function setupAccount(userId: string, data: unknown) {
+  const { name } = validate(setupSchema, data);
 
-  const user = await UserModel.findOne({ id: req.userId });
+  const user = await UserModel.findOne({ id: userId });
   if (!user) {
-    res.status(401).json({ error: "Användare hittades inte" });
-    return;
+    throw new AppError(401, "Användare hittades inte");
   }
 
   const accountId = `account-${crypto.randomUUID()}`;
@@ -89,43 +88,37 @@ export async function setupAccount(req: Request, res: Response) {
   const savedMember = await MemberModel.findOne({ id: memberId }, { _id: 0, __v: 0 });
   const savedAccount = await AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 });
 
-  res.status(201).json({ membership: { member: savedMember, account: savedAccount } });
+  return { membership: { member: savedMember, account: savedAccount } };
 }
 
-export async function getAccount(req: Request, res: Response) {
-  const account = await AccountModel.findOne({ id: req.params.id }, { _id: 0, __v: 0 });
+export async function getAccount(id: string) {
+  const account = await AccountModel.findOne({ id }, { _id: 0, __v: 0 });
   if (!account) {
-    res.status(404).json({ error: "Konto hittades inte" });
-    return;
+    throw new AppError(404, "Konto hittades inte");
   }
-  res.json(account);
+  return account;
 }
 
-export async function updateAccount(req: Request, res: Response) {
-  const account = await AccountModel.findOne({ id: req.params.id });
+export async function updateAccount(id: string, patch: unknown) {
+  const account = await AccountModel.findOne({ id });
   if (!account) {
-    res.status(404).json({ error: "Konto hittades inte" });
-    return;
+    throw new AppError(404, "Konto hittades inte");
   }
-  Object.assign(account, req.body);
+  Object.assign(account, patch);
   await account.save();
-  res.json({ ok: true });
 }
 
-export async function exportAccount(req: Request, res: Response) {
-  const member = await MemberModel.findOne({ id: req.memberId });
+export async function exportAccount(accountId: string, memberId: string | null | undefined) {
+  const member = await MemberModel.findOne({ id: memberId });
   if (!member) {
-    res.status(403).json({ error: "Åtkomst nekad" });
-    return;
+    throw new AppError(403, "Åtkomst nekad");
   }
 
-  const accountId = req.params.id;
   if (member.accountId !== accountId) {
-    res.status(403).json({ error: "Åtkomst nekad" });
-    return;
+    throw new AppError(403, "Åtkomst nekad");
   }
 
-  const [account, members, roles, todos, calendars, shoppingLists, rewards] = await Promise.all([
+  const [account, members, , todos, calendars, shoppingLists, rewards] = await Promise.all([
     AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 }),
     MemberModel.find({ accountId }, { _id: 0, __v: 0 }),
     RoleModel.find({ id: { $in: [] } }, { _id: 0, __v: 0 }), // populated below
@@ -138,7 +131,7 @@ export async function exportAccount(req: Request, res: Response) {
   const roleIds = (members as Array<{ roleId: string }>).map((m) => m.roleId);
   const populatedRoles = await RoleModel.find({ id: { $in: roleIds } }, { _id: 0, __v: 0 });
 
-  const exportData = {
+  return {
     exportedAt: new Date().toISOString(),
     gdprNote: "Exporterad enligt GDPR Art. 20 – rätten till dataportabilitet.",
     account,
@@ -149,30 +142,23 @@ export async function exportAccount(req: Request, res: Response) {
     shoppingLists,
     rewards
   };
-
-  res.setHeader("Content-Disposition", `attachment; filename="bmad-export-${accountId}.json"`);
-  res.json(exportData);
 }
 
-export async function deleteAccount(req: Request, res: Response) {
-  const member = await MemberModel.findOne({ id: req.memberId });
+export async function deleteAccount(accountId: string, memberId: string | null | undefined) {
+  const member = await MemberModel.findOne({ id: memberId });
   if (!member) {
-    res.status(403).json({ error: "Åtkomst nekad" });
-    return;
+    throw new AppError(403, "Åtkomst nekad");
   }
 
-  const account = await AccountModel.findOne({ id: req.params.id });
+  const account = await AccountModel.findOne({ id: accountId });
   if (!account) {
-    res.status(404).json({ error: "Konto hittades inte" });
-    return;
+    throw new AppError(404, "Konto hittades inte");
   }
 
   if (account.id !== member.accountId) {
-    res.status(403).json({ error: "Åtkomst nekad" });
-    return;
+    throw new AppError(403, "Åtkomst nekad");
   }
 
   account.deletedAt = new Date().toISOString();
   await account.save();
-  res.json({ ok: true });
 }
