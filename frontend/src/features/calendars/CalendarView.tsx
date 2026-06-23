@@ -37,7 +37,13 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
     calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
+    searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds,
   } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, onAddEvent, onUpdateEvent, onDeleteEvent);
+
+  const sharedListProps = {
+    searchQuery, setSearchQuery,
+    hiddenCalendarIds, setHiddenCalendarIds,
+  };
 
   if (visible.length === 0 && !displayOnly) {
     return (
@@ -103,6 +109,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           showHolidays={showHolidays}
           holidayBgColor={holidayBgColor}
           holidayTextColor={holidayTextColor}
+          {...sharedListProps}
           onEventClick={setDetailEvent}
           onClearDay={() => setSelectedDay(null)}
           onNewEvent={editableCalendars.length > 0 && onAddEvent ? () => openNew() : undefined}
@@ -163,6 +170,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         showHolidays={showHolidays}
         holidayBgColor={holidayBgColor}
         holidayTextColor={holidayTextColor}
+        {...sharedListProps}
         onEventClick={openEdit}
         onClearDay={() => setSelectedDay(null)}
         onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}

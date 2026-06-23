@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
 import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
@@ -31,6 +31,10 @@ export function useCalendarView(
   const [form, setForm] = useState<FormState>(blankForm());
   const [detailEvent, setDetailEvent] = useState<EnrichedEvent | null>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => { setSearchQuery(""); setHiddenCalendarIds(new Set()); }, [viewYear, viewMonth]);
 
   // ── Permission filtering ──
   const visible = calendars.filter((cal) => {
@@ -60,9 +64,23 @@ export function useCalendarView(
     (ev) => ev.attendees?.some((a) => a.memberId === currentMember.id && a.status === "pending")
   );
 
-  // ── Events per day ──
+  // ── Shared filter predicate ──
+  const q = searchQuery.trim().toLowerCase();
+  function matchesFilter(ev: EnrichedEvent) {
+    if (hiddenCalendarIds.size > 0 && hiddenCalendarIds.has(ev.calendarId)) return false;
+    if (!q) return true;
+    return (
+      ev.title.toLowerCase().includes(q) ||
+      ev.calendarName.toLowerCase().includes(q) ||
+      (ev.location?.toLowerCase().includes(q) ?? false) ||
+      (ev.notes?.replace(/\\n/g, " ").toLowerCase().includes(q) ?? false)
+    );
+  }
+
+  // ── Events per day (grid uses this — filtered) ──
   function eventsForDay(dateStr: string) {
     return expandedEvents
+      .filter(matchesFilter)
       .filter((ev) => {
         const start = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
         const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
@@ -76,9 +94,23 @@ export function useCalendarView(
   const monthFirstDay = `${monthPrefix}-01`;
   const monthLastDay = `${monthPrefix}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, "0")}`;
 
+  const hasFilter = !!q || hiddenCalendarIds.size > 0;
+  const todayYM = todayStr.slice(0, 7);
+  const viewYM = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+  const isCurrentMonthView = viewYM === todayYM;
+  const hidePast = isCurrentMonthView && !selectedDay && !hasFilter;
+
   const listEvents = selectedDay
     ? eventsForDay(selectedDay)
     : expandedEvents
+        .filter(matchesFilter)
+        .filter((ev) => {
+          if (hidePast) {
+            const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
+            return end >= todayStr;
+          }
+          return true;
+        })
         .filter((ev) => {
           const evStart = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
           const evEnd = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
@@ -231,6 +263,10 @@ export function useCalendarView(
     enrichedEvents,
     expandedEvents,
     pendingInvitations,
+    searchQuery,
+    setSearchQuery,
+    hiddenCalendarIds,
+    setHiddenCalendarIds,
     eventsForDay,
     listEvents,
     prevMonth,

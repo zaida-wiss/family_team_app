@@ -1,7 +1,7 @@
 import { Filter, MapPin, Plus, Repeat, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Calendar, CalendarEvent } from "@shared/types";
-import { fmtFullDate, fmtTime, isHolidayEvent, toLocalDateStr } from "./calendarHelpers";
+import { fmtFullDate, fmtTime, isHolidayEvent } from "./calendarHelpers";
 
 export type EnrichedEvent = CalendarEvent & { calendarColor: string; calendarName: string; calendarOwnerId?: string | null };
 
@@ -16,22 +16,23 @@ export type EventListProps = {
   showHolidays: boolean;
   holidayBgColor: string;
   holidayTextColor: string;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  hiddenCalendarIds: Set<string>;
+  setHiddenCalendarIds: (ids: Set<string>) => void;
   onEventClick: (ev: EnrichedEvent) => void;
   onClearDay?: () => void;
   onNewEvent?: () => void;
 };
 
 export function CalendarEventList({
-  allEvents, selectedDay, viewYear, viewMonth, todayStr,
-  visible, calendarDisplayColor, showHolidays, holidayBgColor, holidayTextColor,
+  allEvents, selectedDay, visible,
+  calendarDisplayColor, holidayBgColor, holidayTextColor,
+  searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds,
   onEventClick, onClearDay, onNewEvent,
 }: EventListProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
   const [showFilter, setShowFilter] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setSearchQuery(""); setHiddenCalendarIds(new Set()); }, [viewYear, viewMonth]);
 
   useEffect(() => {
     if (!showFilter) return;
@@ -42,32 +43,7 @@ export function CalendarEventList({
     return () => document.removeEventListener("mousedown", handler);
   }, [showFilter]);
 
-  const q = searchQuery.trim().toLowerCase();
-  const hasFilter = !!q || hiddenCalendarIds.size > 0;
-
-  // When viewing the current month without filters: hide past events.
-  // When browsing a past or future month: show everything (user navigated there intentionally).
-  const todayYM = todayStr.slice(0, 7); // "YYYY-MM"
-  const viewYM = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-  const isCurrentMonth = viewYM === todayYM;
-  const hidePast = isCurrentMonth && !selectedDay && !hasFilter;
-
-  const filtered = allEvents
-    .filter((ev) => hiddenCalendarIds.size === 0 || !hiddenCalendarIds.has(ev.calendarId))
-    .filter((ev) => showHolidays || !isHolidayEvent(ev))
-    .filter((ev) => {
-      if (hidePast) {
-        const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-        return end >= todayStr;
-      }
-      return true;
-    })
-    .filter((ev) => !q || (
-      ev.title.toLowerCase().includes(q) ||
-      ev.calendarName.toLowerCase().includes(q) ||
-      (ev.location?.toLowerCase().includes(q) ?? false) ||
-      (ev.notes?.replace(/\\n/g, " ").toLowerCase().includes(q) ?? false)
-    ));
+  const hasFilter = !!searchQuery.trim() || hiddenCalendarIds.size > 0;
 
   return (
     <div className="cal-event-list">
@@ -88,11 +64,9 @@ export function CalendarEventList({
                   <input
                     checked={!hiddenCalendarIds.has(cal.id)}
                     onChange={(e) => {
-                      setHiddenCalendarIds((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
-                        return next;
-                      });
+                      const next = new Set(hiddenCalendarIds);
+                      if (e.target.checked) next.delete(cal.id); else next.add(cal.id);
+                      setHiddenCalendarIds(next);
                     }}
                     type="checkbox"
                   />
@@ -123,7 +97,7 @@ export function CalendarEventList({
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {allEvents.length === 0 ? (
         <p className="cal-empty-note">
           {hasFilter
             ? "Inga händelser matchar filtret."
@@ -132,7 +106,7 @@ export function CalendarEventList({
               : "Inga händelser denna månad."}
         </p>
       ) : (
-        filtered.map((ev) => {
+        allEvents.map((ev) => {
           const holiday = isHolidayEvent(ev);
           return (
             <div
