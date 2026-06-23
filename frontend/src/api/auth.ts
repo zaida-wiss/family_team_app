@@ -16,5 +16,9 @@ export const authApi = {
       body: JSON.stringify({ email, password })
     }),
   refresh: () => request<LoginResponse>(api("auth/refresh"), { method: "POST", body: "{}" }, true),
-  logout: () => request<{ ok: boolean }>(api("auth/logout"), { method: "POST", body: "{}" })
+  logout: () => request<{ ok: boolean }>(api("auth/logout"), { method: "POST", body: "{}" }),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean }>(api("auth/forgot-password"), { method: "POST", body: JSON.stringify({ email }) }),
+  resetPassword: (token: string, password: string) =>
+    request<{ ok: boolean }>(api("auth/reset-password"), { method: "POST", body: JSON.stringify({ token, password }) })
 };

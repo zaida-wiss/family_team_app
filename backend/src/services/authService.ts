@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { UserModel, registerSchema, loginSchema } from "../db/models/User.js";
 import { validate } from "../utils/validate.js";
 import { signAccess, signRefresh, verifyRefresh, fetchMemberships } from "../utils/tokens.js";
 import { AppError } from "../utils/errors.js";
+import { sendPasswordResetEmail } from "../utils/email.js";
 
 export async function register(email: string, password: string, name: string) {
   validate(registerSchema, { email, password, name });
@@ -79,4 +81,38 @@ export async function refresh(cookie: string | undefined) {
 
 export function logout() {
   // Nothing to do server-side; cookie is cleared by the route
+}
+
+export async function forgotPassword(email: string) {
+  const user = await UserModel.findOne({ email: email.toLowerCase() });
+  if (!user) return; // Reveal nothing — always succeed silently
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const expiry = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+  user.passwordResetTokenHash = tokenHash;
+  user.passwordResetExpiry = expiry;
+  await user.save();
+
+  await sendPasswordResetEmail(user.email, token);
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  if (!token || newPassword.length < 8) {
+    throw new AppError(400, "Ogiltigt token eller lösenord för kort");
+  }
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const user = await UserModel.findOne({ passwordResetTokenHash: tokenHash });
+
+  if (!user || !user.passwordResetExpiry || new Date(user.passwordResetExpiry) < new Date()) {
+    throw new AppError(400, "Länken är ogiltig eller har gått ut");
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  user.tokenVersion += 1; // Invalidate all existing sessions
+  user.passwordResetTokenHash = null;
+  user.passwordResetExpiry = null;
+  await user.save();
 }

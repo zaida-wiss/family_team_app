@@ -14,7 +14,7 @@ export function AppRouter() {
     return <AcceptInvitePage token={nav.token} onAccepted={nav.onAccepted} />;
   }
   if (nav.screen === "auth") {
-    return <AuthPage onLogin={nav.onLogin} onRegister={nav.onRegister} />;
+    return <AuthPage onLogin={nav.onLogin} onRegister={nav.onRegister} resetToken={nav.resetToken} />;
   }
   if (nav.screen === "picker") {
     return (

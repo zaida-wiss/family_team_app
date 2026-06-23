@@ -2,7 +2,12 @@ import { Schema, model } from "mongoose";
 import { z } from "zod";
 import type { User } from "../../../../shared/types.js";
 
-type UserDoc = User & { passwordHash: string; tokenVersion: number };
+type UserDoc = User & {
+  passwordHash: string;
+  tokenVersion: number;
+  passwordResetTokenHash: string | null;
+  passwordResetExpiry: string | null;
+};
 
 const userSchema = new Schema<UserDoc>({
   id: { type: String, required: true, unique: true },
@@ -10,7 +15,9 @@ const userSchema = new Schema<UserDoc>({
   passwordHash: { type: String, required: true },
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
-  tokenVersion: { type: Number, default: 0 }
+  tokenVersion: { type: Number, default: 0 },
+  passwordResetTokenHash: { type: String, default: null },
+  passwordResetExpiry: { type: String, default: null }
 });
 
 export const UserModel = model<UserDoc>("User", userSchema);

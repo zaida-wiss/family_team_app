@@ -30,3 +30,15 @@ authRouter.post("/logout", (_req, res) => {
   clearRefreshCookie(res);
   res.json({ ok: true });
 });
+
+authRouter.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  await authService.forgotPassword(email ?? "");
+  res.json({ ok: true }); // Always succeed to avoid email enumeration
+});
+
+authRouter.post("/reset-password", async (req, res) => {
+  const { token, password } = req.body;
+  await authService.resetPassword(token, password);
+  res.json({ ok: true });
+});

@@ -7,7 +7,7 @@ import type { Membership, User } from "@shared/types";
 type Screen =
   | { screen: "loading" }
   | { screen: "invite"; token: string; onAccepted: (s: AcceptedSession) => void }
-  | { screen: "auth"; onLogin: ReturnType<typeof useAuth>["login"]; onRegister: ReturnType<typeof useAuth>["register"] }
+  | { screen: "auth"; onLogin: ReturnType<typeof useAuth>["login"]; onRegister: ReturnType<typeof useAuth>["register"]; resetToken?: string }
   | { screen: "picker"; user: User; memberships: Membership[]; onSelect: (m: Membership) => void; onLogout: () => void; onMembershipsUpdated: (ms: Membership[]) => void }
   | { screen: "shell"; activeMembership: Membership; onLogout: () => Promise<void>; onSwitchAccount: () => void };
 
@@ -16,6 +16,7 @@ export function useAppNavigation(): Screen {
   const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
 
   const inviteToken = window.location.pathname.match(/^\/invite\/([^/]+)/)?.[1] ?? null;
+  const resetToken = window.location.pathname.match(/^\/reset-password\/([^/]+)/)?.[1] ?? null;
 
   useEffect(() => {
     if (authState.status !== "authenticated" || activeMembership) return;
@@ -50,7 +51,7 @@ export function useAppNavigation(): Screen {
   }
 
   if (authState.status === "unauthenticated") {
-    return { screen: "auth", onLogin: login, onRegister: register };
+    return { screen: "auth", onLogin: login, onRegister: register, resetToken: resetToken ?? undefined };
   }
 
   const { user, memberships } = authState;
