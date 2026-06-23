@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
 import "./CalendarView.css";
 import { CalendarEventList } from "./CalendarEventList";
@@ -7,8 +8,9 @@ import { CalendarEventModal } from "./CalendarEventModal";
 import { CalendarEventDetail } from "./CalendarEventDetail";
 import { CalendarMonthGrid } from "./CalendarMonthGrid";
 import { useCalendarView } from "./useCalendarView";
+import type { CalendarFilter } from "./calendarTypes";
 
-export type { FormState, ModalMode } from "./calendarTypes";
+export type { FormState, ModalMode, CalendarFilter } from "./calendarTypes";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +21,7 @@ type Props = {
   roles: Role[];
   displayOnly?: boolean;
   calendarSettings?: CalendarSettings;
+  filter?: CalendarFilter;
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
@@ -27,7 +30,15 @@ type Props = {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, filter, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+  const [internalSearch, setInternalSearch] = useState("");
+  const [internalHidden, setInternalHidden] = useState<Set<string>>(new Set());
+
+  const searchQuery = filter?.searchQuery ?? internalSearch;
+  const setSearchQuery = filter?.setSearchQuery ?? setInternalSearch;
+  const hiddenCalendarIds = filter?.hiddenCalendarIds ?? internalHidden;
+  const setHiddenCalendarIds = filter?.setHiddenCalendarIds ?? setInternalHidden;
+
   const {
     todayStr, viewYear, viewMonth, selectedDay, setSelectedDay,
     modal, form, setForm, detailEvent, setDetailEvent, longPressRef,
@@ -37,13 +48,9 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
     calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
-    searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds,
-  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, onAddEvent, onUpdateEvent, onDeleteEvent);
+  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent);
 
-  const sharedListProps = {
-    searchQuery, setSearchQuery,
-    hiddenCalendarIds, setHiddenCalendarIds,
-  };
+  const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds };
 
   if (visible.length === 0 && !displayOnly) {
     return (

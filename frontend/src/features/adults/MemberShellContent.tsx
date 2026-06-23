@@ -1,8 +1,8 @@
 import type { ComponentProps } from "react";
 import { ChildDashboard } from "../children/ChildDashboard";
 import { Dashboard } from "./Dashboard";
-import { MemberOverview } from "../layout/MemberOverview";
-import { CalendarView } from "../calendars/CalendarView";
+import { CalendarPage } from "../../pages/CalendarPage";
+import { HomePage } from "../../pages/HomePage";
 import { ShoppingView } from "../shopping/ShoppingView";
 import { TodosView } from "../todos/TodosView";
 import { getRewardPathProgress } from "../todos/selectors";
@@ -89,10 +89,10 @@ export function MemberShellContent({
   onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings
 }: Props) {
 
-  // ── Kalender-vy (nav) — snygg presentation, ingen hantering ──────────────
+  // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   if (activePanel === "calendar") {
     return (
-      <CalendarView
+      <CalendarPage
         calendars={canSeeCalendar ? calendars : []}
         currentMember={currentMember}
         activeMembers={activeMembers}
@@ -191,10 +191,11 @@ export function MemberShellContent({
     );
   }
 
-  // Vald vuxen → hemvy för den personen (samma layout som hem)
+  // Vald vuxen → hemvy för den personen
   if (selectedDashboardMember) {
     return (
-      <MemberOverview
+      <HomePage
+        key={selectedDashboardMember.id}
         currentMember={selectedDashboardMember}
         accountName={accountName}
         roles={roles}
@@ -216,7 +217,7 @@ export function MemberShellContent({
   const children = activeMembers.filter((m) => m.isChild);
   return (
     <>
-      <MemberOverview
+      <HomePage
         currentMember={currentMember}
         accountName={accountName}
         roles={roles}

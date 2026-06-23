@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
 import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
@@ -17,6 +17,8 @@ export function useCalendarView(
   activeMembers: Member[],
   roles: Role[],
   calendarSettings: CalendarSettings | undefined,
+  searchQuery: string,
+  hiddenCalendarIds: Set<string>,
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void,
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void,
   onDeleteEvent?: (calendarId: string, eventId: string) => void,
@@ -31,10 +33,6 @@ export function useCalendarView(
   const [form, setForm] = useState<FormState>(blankForm());
   const [detailEvent, setDetailEvent] = useState<EnrichedEvent | null>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => { setSearchQuery(""); setHiddenCalendarIds(new Set()); }, [viewYear, viewMonth]);
 
   // ── Permission filtering ──
   const visible = calendars.filter((cal) => {
@@ -263,10 +261,6 @@ export function useCalendarView(
     enrichedEvents,
     expandedEvents,
     pendingInvitations,
-    searchQuery,
-    setSearchQuery,
-    hiddenCalendarIds,
-    setHiddenCalendarIds,
     eventsForDay,
     listEvents,
     prevMonth,
