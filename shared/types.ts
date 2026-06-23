@@ -2,12 +2,21 @@ export type Id = string;
 
 export type AccountType = "family";
 
+export type CalendarSettings = {
+  showWeekNumbers: boolean;
+  showHolidays: boolean;
+  holidayBgColor: string;
+  holidayTextColor: string;
+  subscriptionUrl: string | null;
+};
+
 export type Account = {
   id: Id;
   name: string;
   type: AccountType;
   createdBy: Id;
   deletedAt: string | null;
+  calendarSettings?: CalendarSettings;
 };
 
 export type DashboardThemeId =

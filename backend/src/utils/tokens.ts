@@ -5,7 +5,8 @@ import { AccountModel } from "../db/models/Account.js";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret";
-const IS_PROD = process.env.NODE_ENV === "production";
+const IS_PROD = (process.env.FRONTEND_URL ?? "http://localhost").startsWith("https://");
+const COOKIE_SAME_SITE = IS_PROD ? "none" : "lax";
 
 export type AccessPayload = { userId: string };
 
@@ -25,7 +26,7 @@ export function setRefreshCookie(res: Response, token: string) {
   res.cookie("refresh_token", token, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: IS_PROD ? "strict" : "lax",
+    sameSite: COOKIE_SAME_SITE,
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
 }
@@ -34,7 +35,7 @@ export function clearRefreshCookie(res: Response) {
   res.clearCookie("refresh_token", {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: IS_PROD ? "strict" : "lax"
+    sameSite: COOKIE_SAME_SITE
   });
 }
 
