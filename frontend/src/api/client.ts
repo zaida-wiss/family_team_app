@@ -22,7 +22,11 @@ export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
 }
 
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  skipUnauthorizedHandler = false
+): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -41,7 +45,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const isJson = response.headers.get("content-type")?.includes("application/json");
 
   if (response.status === 401) {
-    onUnauthorized?.();
+    if (!skipUnauthorizedHandler) onUnauthorized?.();
     throw new Error("Inte autentiserad");
   }
 

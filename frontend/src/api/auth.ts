@@ -15,6 +15,6 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),
-  refresh: () => request<LoginResponse>(api("auth/refresh"), { method: "POST", body: "{}" }),
+  refresh: () => request<LoginResponse>(api("auth/refresh"), { method: "POST", body: "{}" }, true),
   logout: () => request<{ ok: boolean }>(api("auth/logout"), { method: "POST", body: "{}" })
 };
