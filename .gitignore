@@ -3,3 +3,4 @@ dist
 .test-dist
 .DS_Store
 .env
+.claude/
