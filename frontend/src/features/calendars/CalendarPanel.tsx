@@ -1,5 +1,6 @@
 import { CalendarDays, Check, Copy, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import EmojiPicker from "emoji-picker-react";
 import { calendarsApi } from "../../api";
 import {
   canEditSharedResource,
@@ -131,6 +132,8 @@ export function CalendarPanel({
   const [editIncludeWords, setEditIncludeWords] = useState<string[]>([]);
   const [editExcludeWords, setEditExcludeWords] = useState<string[]>([]);
   const [editDisplaySymbol, setEditDisplaySymbol] = useState("");
+  const [symbolPickerSubId, setSymbolPickerSubId] = useState<string | null>(null);
+  const symbolPickerRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteSubId, setConfirmDeleteSubId] = useState<string | null>(null);
   const [fileFilterFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [fileFilterTo] = useState(() => {
@@ -197,6 +200,17 @@ export function CalendarPanel({
     setStartsAt("");
     setEndsAt("");
   }
+
+  useEffect(() => {
+    if (!symbolPickerSubId) return;
+    function handler(e: MouseEvent) {
+      if (symbolPickerRef.current && !symbolPickerRef.current.contains(e.target as Node)) {
+        setSymbolPickerSubId(null);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [symbolPickerSubId]);
 
   function shareCalendar() {
     const canShare = !!selectedCalendar && !!shareMemberId && canEditSelectedCalendar;
@@ -610,21 +624,29 @@ export function CalendarPanel({
                         </div>
                       ) : (
                         <>
-                          <input
-                            className="ics-sub-symbol-inline"
-                            defaultValue={sub.displaySymbol ?? ""}
-                            key={sub.id + (sub.displaySymbol ?? "")}
-                            maxLength={4}
-                            onBlur={(e) => {
-                              const val = e.target.value.trim();
-                              if (val !== (sub.displaySymbol ?? "")) {
-                                void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: val || null });
-                              }
-                            }}
-                            placeholder="＋"
-                            title="Symbol som visas i kalendern"
-                            type="text"
-                          />
+                          <div className="ics-sub-symbol-wrap" ref={symbolPickerSubId === sub.id ? symbolPickerRef : null}>
+                            <button
+                              className="ics-sub-symbol-btn"
+                              onClick={() => setSymbolPickerSubId(symbolPickerSubId === sub.id ? null : sub.id)}
+                              title="Välj symbol"
+                              type="button"
+                            >
+                              {sub.displaySymbol ?? "＋"}
+                            </button>
+                            {symbolPickerSubId === sub.id && (
+                              <div className="ics-sub-symbol-picker">
+                                <EmojiPicker
+                                  height={380}
+                                  onEmojiClick={(data) => {
+                                    void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: data.emoji });
+                                    setSymbolPickerSubId(null);
+                                  }}
+                                  previewConfig={{ showPreview: false }}
+                                  width={300}
+                                />
+                              </div>
+                            )}
+                          </div>
                           <div className="ics-sub-info">
                             <span className="ics-sub-url" title={sub.url}>
                               {sub.url.replace(/^https?:\/\//, "").slice(0, 48)}…
