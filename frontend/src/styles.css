@@ -3961,6 +3961,7 @@ h3 {
   .child-dashboard-left {
     grid-area: auto;
     min-height: 0;
+    width: 80%;
   }
 
   .child-dashboard-main {
@@ -4656,7 +4657,7 @@ h3 {
   }
 
   .child-tl-days {
-    padding-right: 3px;
+    padding: 0px 2px 0px 2px ;
   }
 
   .child-tl-event {
