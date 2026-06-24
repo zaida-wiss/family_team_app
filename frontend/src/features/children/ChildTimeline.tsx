@@ -131,11 +131,11 @@ export function ChildTimeline({ calendars, child, roles }: Props) {
     <section className="child-timeline" aria-label="Min dag">
       <div className="child-tl-nav">
         <button className="icon-button" onClick={() => setOffset((o) => o - 1)} type="button" aria-label="Föregående dag">
-          <ChevronLeft size={12} />
+          <ChevronLeft size={10} />
         </button>
         <span className={`child-tl-week-label ${selectedDayColorClass}`}>{selectedDayLabel}</span>
         <button className="icon-button" onClick={() => setOffset((o) => o + 1)} type="button" aria-label="Nästa dag">
-          <ChevronRight size={12} />
+          <ChevronRight size={10} />
         </button>
       </div>
 
