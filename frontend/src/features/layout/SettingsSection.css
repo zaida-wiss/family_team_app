@@ -54,50 +54,77 @@
 
 .settings-section-inner {
   overflow: hidden;
-  padding: 0;
+  padding: 0 18px;
 }
 
-.settings-section--open .settings-section-inner {
-  overflow: hidden;
-  padding-bottom: 4px;
+/* ── Subsection: one functional group within a SettingsSection ── */
+.settings-sub {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
 }
 
-/* Hide redundant inner section headers (accordion btn is the heading) */
-.settings-section-inner .account-settings > header,
-.settings-section-inner .account-setup > header {
-  display: none;
+.settings-sub:last-child {
+  border-bottom: none;
 }
 
-/* Strip redundant card chrome from inner components */
-.settings-section-inner .account-setup {
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  padding: 16px 18px;
-  margin-top: 0;
+.settings-sub-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-fg);
 }
 
-.settings-section-inner .dashboard-list {
-  margin-top: 0;
-  padding: 12px 0;
+.settings-sub-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted-fg);
+  line-height: 1.4;
 }
 
-.settings-section-inner .danger-zone {
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  padding: 16px 18px;
-  margin-top: 0;
-}
-
-.settings-section-inner .role-layout,
+/* ── Strip card chrome from inner panel components ── */
+.settings-section-inner .calendar-panel,
 .settings-section-inner .trash-view {
   border: none;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  padding: 16px 18px;
-  margin-top: 0;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ── Danger zone inside .settings-sub ── */
+.settings-sub .danger-zone {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.settings-sub .danger-zone > header {
+  display: none;
+}
+
+/* ── InviteForm inside .settings-sub ── */
+.settings-sub .invite-form {
+  margin: 0;
+  padding: 0;
+  border: none;
+  gap: 12px;
+}
+
+.settings-sub .invite-form > h3 {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-fg);
+  margin: 0;
 }

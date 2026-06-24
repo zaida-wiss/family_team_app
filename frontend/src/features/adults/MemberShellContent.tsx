@@ -163,8 +163,14 @@ export function MemberShellContent({
   const selectedDashboardMember =
     activeMembers.find((m) => m.id === selectedDashboardMemberId) ?? null;
 
+  const selectedMemberRole = selectedDashboardMember
+    ? roles.find((r) => r.id === selectedDashboardMember.roleId)
+    : null;
+  const selectedMemberIsChild =
+    !!selectedDashboardMember && (selectedDashboardMember.isChild || !!selectedMemberRole?.isChildRole);
+
   // Valt barn → barnens dashboard (enda vyn som är annorlunda)
-  if (selectedDashboardMember?.isChild) {
+  if (selectedMemberIsChild && selectedDashboardMember) {
     const now = Date.now();
     const activeReward =
       rewards.find((r) => r.wishedBy === selectedDashboardMember.id && r.status === "active") ?? null;
@@ -186,6 +192,8 @@ export function MemberShellContent({
     return (
       <ChildDashboard
         child={selectedDashboardMember}
+        calendars={calendars}
+        roles={roles}
         activeReward={activeReward}
         rewardProgress={rewardProgress}
         suggestedRewards={suggestedRewards}

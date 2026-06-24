@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import {
   availablePermissions,
@@ -24,89 +24,106 @@ export function RoleEditor({
 }: RoleEditorProps) {
   const [roleName, setRoleName] = useState("");
   const [draftPermissions, setDraftPermissions] = useState<PermissionKey[]>([]);
+  const [showDraftPerms, setShowDraftPerms] = useState(false);
+  const [openRoleId, setOpenRoleId] = useState<string | null>(null);
 
   function toggleDraftPermission(permission: PermissionKey) {
-    setDraftPermissions((current) => {
-      if (current.includes(permission)) {
-        return current.filter((item) => item !== permission);
-      }
-
-      return [...current, permission];
-    });
+    setDraftPermissions((current) =>
+      current.includes(permission)
+        ? current.filter((item) => item !== permission)
+        : [...current, permission]
+    );
   }
 
   function handleCreateRole() {
     const trimmedName = roleName.trim();
-
-    if (!trimmedName) {
-      return;
-    }
-
+    if (!trimmedName) return;
     onCreateRole({
       id: `role-${crypto.randomUUID()}`,
       name: trimmedName,
       isChildRole: false,
       permissions: createPermissionMap(draftPermissions)
     });
-
     setRoleName("");
     setDraftPermissions([]);
+    setShowDraftPerms(false);
   }
 
   return (
-    <article className="role-editor">
-      <header className="section-header">
-        <div>
-          <p className="eyebrow">Inställningar</p>
-          <h2>Roller och behörigheter</h2>
-        </div>
-        <ShieldCheck size={24} />
-      </header>
-
-      <div className="role-layout">
-        <section className="role-create-panel" aria-labelledby="new-role-title">
-          <h3 id="new-role-title">Skapa roll</h3>
-          <label className="field-label">
-            Rollnamn
-            <input
-              className="text-input"
-              onChange={(event) => setRoleName(event.target.value)}
-              placeholder="Till exempel Barnvakt"
-              value={roleName}
-            />
-          </label>
-
-          <PermissionGrid
-            selectedPermissions={draftPermissions}
-            onToggle={toggleDraftPermission}
+    <>
+      <div className="settings-sub">
+        <h3 className="settings-sub-title">Skapa roll</h3>
+        <label className="field-label">
+          Rollnamn
+          <input
+            className="text-input"
+            onChange={(event) => setRoleName(event.target.value)}
+            placeholder="Till exempel Barnvakt"
+            value={roleName}
           />
-
-          <button className="primary-button" onClick={handleCreateRole} type="button">
-            Spara roll
+        </label>
+        <div className={`role-perms-wrap${showDraftPerms ? " role-perms-wrap--open" : ""}`}>
+          <button
+            className="role-perms-toggle"
+            onClick={() => setShowDraftPerms((v) => !v)}
+            type="button"
+          >
+            <span>
+              Behörigheter
+              {draftPermissions.length > 0 && (
+                <span className="role-perms-badge">{draftPermissions.length}</span>
+              )}
+            </span>
+            <ChevronDown className="settings-chevron" size={16} />
           </button>
-        </section>
-
-        <section className="role-list-panel" aria-label="Befintliga roller">
-          {roles.map((role) => (
-            <div className="role-card" key={role.id}>
-              <div className="role-card-header">
-                <h3>{role.name}</h3>
-                <span>{countEnabledPermissions(role)} aktiva</span>
-              </div>
-
+          <div className="role-perms-body">
+            <div className="role-perms-inner">
               <PermissionGrid
-                selectedPermissions={availablePermissions
-                  .filter((permission) => role.permissions[permission.key])
-                  .map((permission) => permission.key)}
-                onToggle={(permission) => onTogglePermission(role.id, permission)}
+                selectedPermissions={draftPermissions}
+                onToggle={toggleDraftPermission}
               />
             </div>
-          ))}
-        </section>
+          </div>
+        </div>
+        <button className="primary-button" onClick={handleCreateRole} type="button">
+          Spara roll
+        </button>
       </div>
 
-      <section className="member-role-panel" aria-label="Tilldela roller">
-        <h3>Tilldela roll</h3>
+      <div className="settings-sub">
+        <h3 className="settings-sub-title">Befintliga roller</h3>
+        {roles.map((role) => {
+          const isOpen = openRoleId === role.id;
+          return (
+            <div className={`role-card${isOpen ? " role-card--open" : ""}`} key={role.id}>
+              <button
+                className="role-card-toggle"
+                onClick={() => setOpenRoleId(isOpen ? null : role.id)}
+                type="button"
+              >
+                <span className="role-card-name">{role.name}</span>
+                <div className="role-card-toggle-right">
+                  <span>{countEnabledPermissions(role)} aktiva</span>
+                  <ChevronDown className="settings-chevron" size={16} />
+                </div>
+              </button>
+              <div className="role-perms-body">
+                <div className="role-perms-inner">
+                  <PermissionGrid
+                    selectedPermissions={availablePermissions
+                      .filter((p) => role.permissions[p.key])
+                      .map((p) => p.key)}
+                    onToggle={(permission) => onTogglePermission(role.id, permission)}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="settings-sub">
+        <h3 className="settings-sub-title">Tilldela roll</h3>
         <div className="member-role-grid">
           {members.map((member) => (
             <label className="member-role-row" key={member.id}>
@@ -116,16 +133,14 @@ export function RoleEditor({
                 value={member.roleId}
               >
                 {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
+                  <option key={role.id} value={role.id}>{role.name}</option>
                 ))}
               </select>
             </label>
           ))}
         </div>
-      </section>
-    </article>
+      </div>
+    </>
   );
 }
 
@@ -160,6 +175,5 @@ function PermissionGrid({
 }
 
 function countEnabledPermissions(role: Role) {
-  return availablePermissions.filter((permission) => role.permissions[permission.key])
-    .length;
+  return availablePermissions.filter((permission) => role.permissions[permission.key]).length;
 }

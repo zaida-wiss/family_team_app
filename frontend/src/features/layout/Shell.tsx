@@ -54,15 +54,20 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             currentMember={currentMember}
             members={settingsProps.members}
             roles={settingsProps.roles}
+            calendars={settingsProps.calendars}
             onCreateMember={settingsProps.onCreateMember}
             onDeleteMember={settingsProps.onDeleteMember}
             onDeleteOwnData={settingsProps.onDeleteOwnData}
             onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
             onUpdateMemberColor={settingsProps.onUpdateMemberColor}
             onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
+            onShareCalendar={memberContentProps.onShareCalendar}
+            onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
           />
           {canManageMembers && (
-            <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
+            <div className="settings-sub">
+              <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
+            </div>
           )}
         </SettingsSection>
         <SettingsSection title="Kalendrar">
@@ -130,21 +135,25 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
           </SettingsSection>
         )}
         <SettingsSection title="Radera konto">
-          <DeleteAccountSection
-            accountId={activeAccount.id}
-            accountName={activeAccount.name}
-            onConfirm={settingsProps.onDeleteAccount}
-          />
+          <div className="settings-sub">
+            <DeleteAccountSection
+              accountId={activeAccount.id}
+              accountName={activeAccount.name}
+              onConfirm={settingsProps.onDeleteAccount}
+            />
+          </div>
         </SettingsSection>
         <SettingsSection title="Logga ut">
-          <button
-            className="settings-logout-btn"
-            onClick={() => void onLogout()}
-            type="button"
-          >
-            <LogOut size={18} />
-            Logga ut från Familjeappen
-          </button>
+          <div className="settings-sub">
+            <button
+              className="settings-logout-btn"
+              onClick={() => void onLogout()}
+              type="button"
+            >
+              <LogOut size={18} />
+              Logga ut från Familjeappen
+            </button>
+          </div>
         </SettingsSection>
       </div>
     );

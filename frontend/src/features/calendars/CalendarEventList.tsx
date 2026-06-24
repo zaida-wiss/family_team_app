@@ -118,8 +118,7 @@ export function CalendarEventList({
               <div className="cal-event-color-dot" style={{ background: holiday ? holidayBgColor : (ev.color ?? calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor) }} />
               <div className="cal-event-row-info">
                 <span className="cal-event-row-title">
-                  {ev.displaySymbol && <span style={{ marginRight: 4 }}>{ev.displaySymbol}</span>}
-                  {ev.title}
+                  {ev.displaySymbol && <span style={{ marginRight: '0.4em' }}>{ev.displaySymbol}</span>}{ev.title}
                   {ev.recurrence?.type !== "none" && <Repeat size={12} style={{ marginLeft: 5, opacity: 0.55, verticalAlign: "middle" }} />}
                 </span>
                 <span className="cal-event-row-meta" style={holiday ? { color: holidayTextColor } : undefined}>

@@ -1,9 +1,10 @@
 import { ChildDashboard } from "./ChildDashboard";
 import { getRewardPathProgress } from "../todos/selectors";
-import type { Member, Reward, Role, Todo } from "@shared/types";
+import type { Calendar, Member, Reward, Role, Todo } from "@shared/types";
 
 type Props = {
   currentMember: Member;
+  calendars: Calendar[];
   todos: Todo[];
   rewards: Reward[];
   roles: Role[];
@@ -26,6 +27,7 @@ function isTodoVisibleNow(
 
 export function ChildShellContent({
   currentMember,
+  calendars,
   todos,
   rewards,
   roles,
@@ -57,6 +59,8 @@ export function ChildShellContent({
   return (
     <ChildDashboard
       child={currentMember}
+      calendars={calendars}
+      roles={roles}
       activeReward={activeReward}
       rewardProgress={rewardProgress}
       suggestedRewards={suggestedRewards}

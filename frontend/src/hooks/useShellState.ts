@@ -65,6 +65,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
 
   const childContentProps = {
     currentMember,
+    calendars,
     todos,
     rewards,
     roles,

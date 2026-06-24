@@ -1,8 +1,11 @@
 import { Star, Sparkles } from "lucide-react";
-import type { Id, Member, Reward, RewardPathProgress, Todo } from "@shared/types";
+import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
+import { ChildWeekView } from "./ChildWeekView";
 
 type Props = {
   child: Member;
+  calendars: Calendar[];
+  roles: Role[];
   activeReward: Reward | null;
   rewardProgress: RewardPathProgress | null;
   suggestedRewards: Reward[];
@@ -17,6 +20,8 @@ type Props = {
 
 export function ChildDashboard({
   child,
+  calendars,
+  roles,
   activeReward,
   rewardProgress,
   suggestedRewards,
@@ -155,6 +160,8 @@ export function ChildDashboard({
           })}
         </div>
       )}
+
+      <ChildWeekView calendars={calendars} child={child} roles={roles} />
     </article>
   );
 }

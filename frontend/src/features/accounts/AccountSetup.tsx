@@ -16,12 +16,8 @@ export function AccountSetup({ account, onUpdateAccount }: AccountSetupProps) {
   }
 
   return (
-    <article className="account-setup">
-      <div>
-        <p className="eyebrow">Familjekonto</p>
-        <h2>Kontonamn</h2>
-      </div>
-
+    <div className="settings-sub">
+      <h3 className="settings-sub-title">Kontonamn</h3>
       <label className="field-label">
         Familjens namn
         <input
@@ -31,10 +27,9 @@ export function AccountSetup({ account, onUpdateAccount }: AccountSetupProps) {
           value={name}
         />
       </label>
-
       <button className="primary-button" onClick={saveAccount} type="button">
         Spara
       </button>
-    </article>
+    </div>
   );
 }
