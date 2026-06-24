@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as authService from "../services/authService.js";
+import { requireAuth } from "../middleware/auth.js";
 import { setRefreshCookie, clearRefreshCookie } from "../utils/tokens.js";
 
 export const authRouter = Router();
@@ -29,6 +30,14 @@ authRouter.post("/logout", (_req, res) => {
   authService.logout();
   clearRefreshCookie(res);
   res.json({ ok: true });
+});
+
+authRouter.patch("/preferences", requireAuth, async (req, res) => {
+  res.json({
+    user: await authService.updatePreferences(req.userId!, {
+      lastActiveMemberId: req.body.lastActiveMemberId ?? null
+    })
+  });
 });
 
 authRouter.post("/forgot-password", async (req, res) => {

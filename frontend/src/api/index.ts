@@ -1,4 +1,13 @@
-export { API_BASE, api, request, setAccessToken, setApiMemberId, setApiErrorHandler, setUnauthorizedHandler } from "./client";
+export {
+  API_BASE,
+  api,
+  request,
+  setAccessToken,
+  setApiMemberId,
+  setApiErrorHandler,
+  setRefreshSessionHandler,
+  setUnauthorizedHandler
+} from "./client";
 export { authApi } from "./auth";
 export { invitationsApi } from "./invitations";
 export { membersApi } from "./members";

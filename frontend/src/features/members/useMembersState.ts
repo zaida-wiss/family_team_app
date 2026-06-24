@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { membersApi } from "../../api";
-import type { DashboardThemeId, Id, Member } from "@shared/types";
+import type { AppPanel, CalendarViewMode, DashboardThemeId, Id, Member } from "@shared/types";
 
 export function useMembersState() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -97,6 +97,33 @@ export function useMembersState() {
     );
   }
 
+  function updateVisibleCalendarIds(memberId: Id, visibleCalendarIds: Id[]) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) return member;
+        membersApi.update(memberId, { visibleCalendarIds }).catch(console.error);
+        return { ...member, visibleCalendarIds };
+      })
+    );
+  }
+
+  function updateMemberNavigation(
+    memberId: Id,
+    patch: {
+      lastActivePanel?: AppPanel;
+      lastSelectedDashboardMemberId?: Id | null;
+      calendarView?: CalendarViewMode;
+    }
+  ) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) return member;
+        membersApi.update(memberId, patch).catch(console.error);
+        return { ...member, ...patch };
+      })
+    );
+  }
+
   return {
     members,
     createMember,
@@ -105,6 +132,8 @@ export function useMembersState() {
     updateMemberTheme,
     updateMemberAvatar,
     updateMemberColor,
+    updateVisibleCalendarIds,
+    updateMemberNavigation,
     assignRole,
     clearMemberAvatar
   };

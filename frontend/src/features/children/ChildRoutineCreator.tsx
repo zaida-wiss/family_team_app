@@ -35,11 +35,51 @@ function isoToTimeInput(iso: string | null) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
+function recurrenceKey(todo: Todo): string {
+  if (todo.recurrence.type === "weekly") {
+    return `weekly:${[...todo.recurrence.daysOfWeek].sort().join(",")}`;
+  }
+  if (todo.recurrence.type === "interval") {
+    return `interval:${todo.recurrence.every}:${todo.recurrence.unit}`;
+  }
+  return "none";
+}
+
+function routineGroupKey(todo: Todo): string {
+  return [
+    todo.title.trim().toLocaleLowerCase("sv"),
+    todo.visual.type,
+    todo.visual.value,
+    String(todo.starValue),
+    todo.visibleFrom ?? "",
+    todo.expiresAt ?? "",
+    todo.routineCategory ?? "",
+    recurrenceKey(todo)
+  ].join("|");
+}
+
+function getStartSortValue(todo: Todo): number {
+  if (!todo.visibleFrom) return Number.POSITIVE_INFINITY;
+  const date = new Date(todo.visibleFrom);
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function getRoutineDays(todo: Todo): Weekday[] {
+  return todo.recurrence.type === "weekly" ? todo.recurrence.daysOfWeek : [];
+}
+
+type RoutineGroup = {
+  key: string;
+  todos: Todo[];
+  children: Member[];
+};
+
 type Props = {
   currentMember: Member;
   children: Member[];
   roles: Role[];
   todos: Todo[];
+  showTitle?: boolean;
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: string, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: string) => void;
@@ -51,6 +91,7 @@ export function ChildRoutineCreator({
   children,
   roles,
   todos,
+  showTitle = true,
   onCreateTodo,
   onUpdateTodo,
   onRefreshRoutine,
@@ -71,7 +112,7 @@ export function ChildRoutineCreator({
   const [days, setDays] = useState<Weekday[]>([
     "monday", "tuesday", "wednesday", "thursday", "friday",
   ]);
-  const [editingRoutineId, setEditingRoutineId] = useState<Id | null>(null);
+  const [editingRoutineIds, setEditingRoutineIds] = useState<Id[]>([]);
   const [routinesOpen, setRoutinesOpen] = useState(false);
 
   // ── dropdown open states ─────────────────────────────────────
@@ -119,6 +160,23 @@ export function ChildRoutineCreator({
       t.recurringSourceId === null &&
       t.deletedAt === null
   );
+  const routineGroups = [...existingRoutines.reduce((groups, routine) => {
+    const key = routineGroupKey(routine);
+    const group = groups.get(key) ?? { key, todos: [], children: [] };
+    group.todos.push(routine);
+
+    const child = children.find((c) => c.id === routine.assignedTo);
+    if (child && !group.children.some((c) => c.id === child.id)) {
+      group.children.push(child);
+    }
+
+    groups.set(key, group);
+    return groups;
+  }, new Map<string, RoutineGroup>()).values()].sort((a, b) => {
+    const primary = getStartSortValue(a.todos[0]) - getStartSortValue(b.todos[0]);
+    if (primary !== 0) return primary;
+    return a.todos[0].title.localeCompare(b.todos[0].title, "sv");
+  });
 
   function resetForm() {
     setTitle("");
@@ -128,7 +186,7 @@ export function ChildRoutineCreator({
     setStartTime("");
     setEndTime("");
     setDays(["monday", "tuesday", "wednesday", "thursday", "friday"]);
-    setEditingRoutineId(null);
+    setEditingRoutineIds([]);
     if (children.length > 1) setSelectedChildIds([]);
   }
 
@@ -155,61 +213,90 @@ export function ChildRoutineCreator({
 
   const stars = Math.max(1, Math.min(99, parseInt(starsRaw, 10) || 1));
 
+  function createRoutineForChild(childId: Id, trimmedTitle: string) {
+    onCreateTodo({
+      id: `routine-${crypto.randomUUID()}` as Id,
+      title: trimmedTitle,
+      createdBy: currentMember.id,
+      assignedTo: childId,
+      isShared: false,
+      status: "pending",
+      starValue: stars,
+      visual: { type: "lucide-icon", value: emoji },
+      recurrence: { type: "weekly", daysOfWeek: days },
+      recurringSourceId: null,
+      occurrenceDate: null,
+      visibleFrom: timeToAnchorISO(startTime),
+      expiresAt: timeToAnchorISO(endTime),
+      completedAt: null,
+      approvedBy: null,
+      approvedAt: null,
+      rejectedBy: null,
+      rejectedAt: null,
+      deletedAt: null,
+      deletedBy: null,
+      routineCategory: category || null,
+    });
+  }
+
   function submit() {
     const t = title.trim();
     if (!t || selectedChildIds.length === 0 || days.length === 0) return;
 
-    if (editingRoutineId) {
-      onUpdateTodo(editingRoutineId, {
+    if (editingRoutineIds.length > 0) {
+      const editedRoutines = existingRoutines.filter((routine) =>
+        editingRoutineIds.includes(routine.id)
+      );
+      const editedByChild = new Map(
+        editedRoutines
+          .filter((routine): routine is Todo & { assignedTo: Id } => routine.assignedTo !== null)
+          .map((routine) => [routine.assignedTo, routine])
+      );
+      const selectedChildIdSet = new Set(selectedChildIds);
+      const patch: Partial<Todo> = {
         title: t,
-        assignedTo: selectedChildIds[0],
         starValue: stars,
         visual: { type: "lucide-icon", value: emoji },
         recurrence: { type: "weekly", daysOfWeek: days },
         visibleFrom: timeToAnchorISO(startTime),
         expiresAt: timeToAnchorISO(endTime),
         routineCategory: category || null,
-      });
+      };
+
+      for (const childId of selectedChildIds) {
+        const existing = editedByChild.get(childId);
+        if (existing) {
+          onUpdateTodo(existing.id, { ...patch, assignedTo: childId });
+        } else {
+          createRoutineForChild(childId, t);
+        }
+      }
+
+      for (const routine of editedRoutines) {
+        if (routine.assignedTo && !selectedChildIdSet.has(routine.assignedTo)) {
+          onDeleteTodo(routine.id);
+        }
+      }
+
       resetForm();
       return;
     }
 
     for (const childId of selectedChildIds) {
-      onCreateTodo({
-        id: `routine-${crypto.randomUUID()}` as Id,
-        title: t,
-        createdBy: currentMember.id,
-        assignedTo: childId,
-        isShared: false,
-        status: "pending",
-        starValue: stars,
-        visual: { type: "lucide-icon", value: emoji },
-        recurrence: { type: "weekly", daysOfWeek: days },
-        recurringSourceId: null,
-        occurrenceDate: null,
-        visibleFrom: timeToAnchorISO(startTime),
-        expiresAt: timeToAnchorISO(endTime),
-        completedAt: null,
-        approvedBy: null,
-        approvedAt: null,
-        rejectedBy: null,
-        rejectedAt: null,
-        deletedAt: null,
-        deletedBy: null,
-        routineCategory: category || null,
-      });
+      createRoutineForChild(childId, t);
     }
 
     resetForm();
   }
 
-  function startEditingRoutine(todo: Todo) {
-    setEditingRoutineId(todo.id);
+  function startEditingRoutine(group: RoutineGroup) {
+    const todo = group.todos[0];
+    setEditingRoutineIds(group.todos.map((routine) => routine.id));
     setEmoji(todo.visual.value);
     setTitle(todo.title);
     setStarsRaw(String(todo.starValue));
     setCategory(todo.routineCategory ?? "");
-    setSelectedChildIds(todo.assignedTo ? [todo.assignedTo] : []);
+    setSelectedChildIds(group.children.map((child) => child.id));
     setStartTime(isoToTimeInput(todo.visibleFrom));
     setEndTime(isoToTimeInput(todo.expiresAt));
     setDays(todo.recurrence.type === "weekly" ? todo.recurrence.daysOfWeek : []);
@@ -225,10 +312,10 @@ export function ChildRoutineCreator({
 
   return (
     <div className="rcr">
-      <h4 className="rcr-title">Rutiner</h4>
+      {showTitle && <h4 className="rcr-title">Rutiner</h4>}
 
       {/* ── existing routines list ─────────────────────────── */}
-      {existingRoutines.length > 0 && (
+      {routineGroups.length > 0 && (
         <div className="rcr-list">
           <button
             className="rcr-list-toggle"
@@ -237,52 +324,113 @@ export function ChildRoutineCreator({
             aria-expanded={routinesOpen}
           >
             <span>Inlagda rutiner</span>
-            <small>{existingRoutines.length}</small>
+            <small>{routineGroups.length}</small>
             <ChevronDown size={12} />
           </button>
           {routinesOpen && (
             <div className="rcr-list-menu">
-              {existingRoutines.map((t) => {
-                const child = children.find((c) => c.id === t.assignedTo) ?? null;
-                return (
-                  <div key={t.id} className="rcr-list-row">
-                    <span className="rcr-list-emoji">{t.visual.value}</span>
-                    {child && <MemberAvatar member={child} size="small" />}
-                    <span className="rcr-list-name">{t.title}</span>
-                    {t.visibleFrom && (
-                      <span className="rcr-list-time">
-                        {fmtTime(t.visibleFrom)}
-                        {t.expiresAt ? `–${fmtTime(t.expiresAt)}` : ""}
-                      </span>
-                    )}
-                    <span className="rcr-list-stars">{t.starValue}★</span>
-                    <button
-                      className="rcr-list-action"
-                      type="button"
-                      onClick={() => startEditingRoutine(t)}
-                      aria-label={`Redigera ${t.title}`}
-                    >
-                      <Pencil size={8} />
-                    </button>
-                    <button
-                      className="rcr-list-action"
-                      type="button"
-                      onClick={() => onRefreshRoutine(t.id)}
-                      aria-label={`Visa ${t.title} igen idag`}
-                    >
-                      <RefreshCw size={8} />
-                    </button>
-                    <button
-                      className="rcr-list-action"
-                      type="button"
-                      onClick={() => onDeleteTodo(t.id)}
-                      aria-label={`Ta bort ${t.title}`}
-                    >
-                      <Trash2 size={8} />
-                    </button>
-                  </div>
-                );
-              })}
+              <table className="rcr-list-table" aria-label="Inlagda rutiner">
+                <colgroup>
+                  <col className="rcr-list-col-icon" />
+                  <col className="rcr-list-col-time" />
+                  <col className="rcr-list-col-title" />
+                  <col className="rcr-list-col-days" />
+                  <col className="rcr-list-col-children" />
+                  <col className="rcr-list-col-value" />
+                  <col className="rcr-list-col-action" />
+                  <col className="rcr-list-col-refresh" />
+                  <col className="rcr-list-col-action" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">Ikon</th>
+                    <th scope="col">Tid</th>
+                    <th scope="col">Titel</th>
+                    <th scope="col">Veckodagar</th>
+                    <th scope="col">Barn</th>
+                    <th scope="col">Värde</th>
+                    <th scope="col">Ändra</th>
+                    <th scope="col">Refrecha</th>
+                    <th scope="col">Deleta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {routineGroups.map((group) => {
+                    const t = group.todos[0];
+                    return (
+                      <tr key={group.key}>
+                        <td className="rcr-list-icon">{t.visual.value}</td>
+                        <td className="rcr-list-time">
+                          {t.visibleFrom ? (
+                            <>
+                              {fmtTime(t.visibleFrom)}
+                              {t.expiresAt ? (
+                                <span className="rcr-list-time-end">–{fmtTime(t.expiresAt)}</span>
+                              ) : null}
+                            </>
+                          ) : "--:--"}
+                        </td>
+                        <td className="rcr-list-name">
+                          <span>{t.title}</span>
+                        </td>
+                        <td className="rcr-list-days" aria-label="Veckodagar">
+                          {WEEKDAYS.map(({ key, short }) => {
+                            const isActive = getRoutineDays(t).includes(key);
+                            return (
+                              <span
+                                key={key}
+                                className={`rcr-list-day${isActive ? " rcr-list-day--on" : ""}`}
+                                aria-label={isActive ? `${short} har rutinen` : `${short} har inte rutinen`}
+                                title={isActive ? "Rutin denna dag" : "Ingen rutin denna dag"}
+                              >
+                                {short}
+                              </span>
+                            );
+                          })}
+                        </td>
+                        <td className="rcr-list-children">
+                          <span className="rcr-list-child-icons">
+                            {group.children.map((child) => (
+                              <MemberAvatar key={child.id} member={child} size="xs" />
+                            ))}
+                          </span>
+                        </td>
+                        <td className="rcr-list-stars">{t.starValue}★</td>
+                        <td className="rcr-list-action-cell">
+                          <button
+                            className="rcr-list-action"
+                            type="button"
+                            onClick={() => startEditingRoutine(group)}
+                            aria-label={`Redigera ${t.title}`}
+                          >
+                            <Pencil size={8} />
+                          </button>
+                        </td>
+                        <td className="rcr-list-action-cell">
+                          <button
+                            className="rcr-list-action"
+                            type="button"
+                            onClick={() => group.todos.forEach((routine) => onRefreshRoutine(routine.id))}
+                            aria-label={`Visa ${t.title} igen idag`}
+                          >
+                            <RefreshCw size={8} />
+                          </button>
+                        </td>
+                        <td className="rcr-list-action-cell">
+                          <button
+                            className="rcr-list-action"
+                            type="button"
+                            onClick={() => group.todos.forEach((routine) => onDeleteTodo(routine.id))}
+                            aria-label={`Ta bort ${t.title}`}
+                          >
+                            <Trash2 size={8} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -433,11 +581,11 @@ export function ChildRoutineCreator({
             type="button"
             onClick={submit}
             disabled={!title.trim() || selectedChildIds.length === 0 || days.length === 0}
-            aria-label={editingRoutineId ? "Spara rutin" : "Lägg till rutin"}
+            aria-label={editingRoutineIds.length > 0 ? "Spara rutin" : "Lägg till rutin"}
           >
-            {editingRoutineId ? <Check size={14} /> : <Plus size={14} />}
+            {editingRoutineIds.length > 0 ? <Check size={14} /> : <Plus size={14} />}
           </button>
-          {editingRoutineId && (
+          {editingRoutineIds.length > 0 && (
             <button
               className="rcr-add-btn rcr-add-btn--muted"
               type="button"

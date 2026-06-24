@@ -8,8 +8,9 @@ import { HomePage } from "../../pages/HomePage";
 import { ShoppingView } from "../shopping/ShoppingView";
 import { TodosView } from "../todos/TodosView";
 import { getRewardPathProgress } from "../todos/selectors";
+import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarSettings, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarSettings, CalendarViewMode, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
 
 type DashboardProps = ComponentProps<typeof Dashboard>;
 
@@ -51,6 +52,8 @@ type Props = {
   onDeleteCalendarEvent: (calendarId: string, eventId: string) => void;
   onRsvpCalendarEvent: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
   onCreateCalendar: DashboardProps["onCreateCalendar"];
+  onUpdateVisibleCalendarIds: (memberId: string, visibleCalendarIds: string[]) => void;
+  onUpdateCalendarView: (view: CalendarViewMode) => void;
   onImportCalendar: DashboardProps["onImportCalendar"];
   onShareCalendar: DashboardProps["onShareCalendar"];
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
@@ -88,16 +91,42 @@ export function MemberShellContent({
   onCancelEditingTodo, onCreateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
+  onUpdateVisibleCalendarIds, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
-  const [calHidden, setCalHidden] = useState<Set<string>>(new Set());
   const [homeSearch, setHomeSearch] = useState("");
-  const [homeHidden, setHomeHidden] = useState<Set<string>>(new Set());
 
-  const calendarFilter: CalendarFilter = { searchQuery: calSearch, setSearchQuery: setCalSearch, hiddenCalendarIds: calHidden, setHiddenCalendarIds: setCalHidden };
-  const homeFilter: CalendarFilter = { searchQuery: homeSearch, setSearchQuery: setHomeSearch, hiddenCalendarIds: homeHidden, setHiddenCalendarIds: setHomeHidden };
+  const accessibleCalendarIds = calendars
+    .filter((calendar) => {
+      if (calendar.deletedAt !== null) return false;
+      if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
+      return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, calendar);
+    })
+    .map((calendar) => calendar.id);
+  const savedVisibleCalendarIds = currentMember.visibleCalendarIds;
+  const hiddenCalendarIds = savedVisibleCalendarIds
+    ? new Set(accessibleCalendarIds.filter((id) => !savedVisibleCalendarIds.includes(id)))
+    : new Set<string>();
+
+  function setPersonalHiddenCalendarIds(nextHiddenCalendarIds: Set<string>) {
+    const visibleCalendarIds = accessibleCalendarIds.filter((id) => !nextHiddenCalendarIds.has(id));
+    onUpdateVisibleCalendarIds(currentMember.id, visibleCalendarIds);
+  }
+
+  const calendarFilter: CalendarFilter = {
+    searchQuery: calSearch,
+    setSearchQuery: setCalSearch,
+    hiddenCalendarIds,
+    setHiddenCalendarIds: setPersonalHiddenCalendarIds
+  };
+  const homeFilter: CalendarFilter = {
+    searchQuery: homeSearch,
+    setSearchQuery: setHomeSearch,
+    hiddenCalendarIds,
+    setHiddenCalendarIds: setPersonalHiddenCalendarIds
+  };
 
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   if (activePanel === "calendar") {
@@ -108,7 +137,9 @@ export function MemberShellContent({
         activeMembers={activeMembers}
         roles={roles}
         calendarSettings={calendarSettings}
+        calendarView={currentMember.calendarView ?? "month"}
         filter={calendarFilter}
+        onCalendarViewChange={onUpdateCalendarView}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}

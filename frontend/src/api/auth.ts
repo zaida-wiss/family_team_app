@@ -17,6 +17,11 @@ export const authApi = {
     }),
   refresh: () => request<LoginResponse>(api("auth/refresh"), { method: "POST", body: "{}" }, true),
   logout: () => request<{ ok: boolean }>(api("auth/logout"), { method: "POST", body: "{}" }),
+  updatePreferences: (patch: Pick<User, "lastActiveMemberId">) =>
+    request<{ user: User }>(api("auth/preferences"), {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }),
   forgotPassword: (email: string) =>
     request<{ ok: boolean }>(api("auth/forgot-password"), { method: "POST", body: JSON.stringify({ email }) }),
   resetPassword: (token: string, password: string) =>

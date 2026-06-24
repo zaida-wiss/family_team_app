@@ -15,6 +15,7 @@ const userSchema = new Schema<UserDoc>({
   passwordHash: { type: String, required: true },
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
+  lastActiveMemberId: { type: String, default: null },
   tokenVersion: { type: Number, default: 0 },
   passwordResetTokenHash: { type: String, default: null },
   passwordResetExpiry: { type: String, default: null }

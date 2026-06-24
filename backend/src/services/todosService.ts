@@ -86,10 +86,29 @@ export async function rejectTodo(id: string, memberId: string | null) {
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
   }
+  if (canRetryRejectedTodo({ expiresAt: todo.expiresAt })) {
+    todo.status = "pending";
+    todo.completedAt = null;
+    todo.approvedBy = null;
+    todo.approvedAt = null;
+    todo.rejectedBy = null;
+    todo.rejectedAt = null;
+    await todo.save();
+    return;
+  }
+
   todo.status = "rejected";
   todo.rejectedBy = memberId;
   todo.rejectedAt = new Date().toISOString();
   await todo.save();
+}
+
+function canRetryRejectedTodo(todo: { expiresAt: string | null }, now = Date.now()) {
+  if (!todo.expiresAt) {
+    return true;
+  }
+
+  return new Date(todo.expiresAt).getTime() > now;
 }
 
 export async function deleteTodo(id: string, memberId: string | null) {

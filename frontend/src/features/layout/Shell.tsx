@@ -1,15 +1,6 @@
-import { ChildShellContent } from "../children/ChildShellContent";
-import { MemberShellContent } from "../adults/MemberShellContent";
+import { lazy, Suspense, type ReactNode } from "react";
 import { HeroBar } from "./HeroBar";
-import { AccountSettings } from "../accounts/AccountSettings";
 import { AccountSetup } from "../accounts/AccountSetup";
-import { DeleteAccountSection } from "../accounts/DeleteAccountSection";
-import { InviteForm } from "../invitations/InviteForm";
-import { RoleEditor } from "../roles/RoleEditor";
-import { TrashView } from "../trash/TrashView";
-import { CalendarPanel } from "../calendars/CalendarPanel";
-import { ShoppingListsPanel } from "../shopping/ShoppingListsPanel";
-import { MembersView } from "../members/MembersView";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
 import { LogOut } from "lucide-react";
@@ -17,6 +8,40 @@ import { useShellState } from "../../hooks/useShellState";
 import type { Membership } from "@shared/types";
 
 export type ShellProps = { activeMembership: Membership; onLogout: () => Promise<void>; onSwitchAccount: () => void };
+
+const AccountSettings = lazy(() =>
+  import("../accounts/AccountSettings").then((module) => ({ default: module.AccountSettings }))
+);
+const CalendarPanel = lazy(() =>
+  import("../calendars/CalendarPanel").then((module) => ({ default: module.CalendarPanel }))
+);
+const ChildSettings = lazy(() =>
+  import("../children/ChildSettings").then((module) => ({ default: module.ChildSettings }))
+);
+const ChildShellContent = lazy(() =>
+  import("../children/ChildShellContent").then((module) => ({ default: module.ChildShellContent }))
+);
+const DeleteAccountSection = lazy(() =>
+  import("../accounts/DeleteAccountSection").then((module) => ({ default: module.DeleteAccountSection }))
+);
+const InviteForm = lazy(() =>
+  import("../invitations/InviteForm").then((module) => ({ default: module.InviteForm }))
+);
+const MemberShellContent = lazy(() =>
+  import("../adults/MemberShellContent").then((module) => ({ default: module.MemberShellContent }))
+);
+const MembersView = lazy(() =>
+  import("../members/MembersView").then((module) => ({ default: module.MembersView }))
+);
+const RoleEditor = lazy(() =>
+  import("../roles/RoleEditor").then((module) => ({ default: module.RoleEditor }))
+);
+const ShoppingListsPanel = lazy(() =>
+  import("../shopping/ShoppingListsPanel").then((module) => ({ default: module.ShoppingListsPanel }))
+);
+const TrashView = lazy(() =>
+  import("../trash/TrashView").then((module) => ({ default: module.TrashView }))
+);
 
 export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
   const {
@@ -27,7 +52,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
 
   const { canManageMembers, canManageRoles, canViewTrash } = settingsProps;
 
-  let panelContent: React.ReactNode;
+  let panelContent: ReactNode;
 
   if (currentMember.isChild) {
     panelContent = <ChildShellContent {...childContentProps} />;
@@ -55,7 +80,6 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             members={settingsProps.members}
             roles={settingsProps.roles}
             calendars={settingsProps.calendars}
-            todos={settingsProps.todos}
             onCreateMember={settingsProps.onCreateMember}
             onDeleteMember={settingsProps.onDeleteMember}
             onDeleteOwnData={settingsProps.onDeleteOwnData}
@@ -64,16 +88,31 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
             onShareCalendar={memberContentProps.onShareCalendar}
             onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
-            onCreateTodo={settingsProps.onCreateTodo}
-            onUpdateTodo={settingsProps.onUpdateTodo}
-            onRefreshRoutine={settingsProps.onRefreshRoutine}
-            onDeleteTodo={settingsProps.onDeleteTodo}
           />
           {canManageMembers && (
             <div className="settings-sub">
               <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
             </div>
           )}
+        </SettingsSection>
+        <SettingsSection title="Barn">
+          <ChildSettings
+            currentMember={currentMember}
+            members={settingsProps.members}
+            roles={settingsProps.roles}
+            todos={settingsProps.todos}
+            rewards={settingsProps.rewards}
+            wishStars={settingsProps.wishStars}
+            onSetWishStars={settingsProps.onSetWishStars}
+            onApproveTodo={settingsProps.onApproveTodo}
+            onRejectTodo={settingsProps.onRejectTodo}
+            onApproveWish={settingsProps.onApproveWish}
+            onRejectWish={settingsProps.onRejectWish}
+            onCreateTodo={settingsProps.onCreateTodo}
+            onUpdateTodo={settingsProps.onUpdateTodo}
+            onRefreshRoutine={settingsProps.onRefreshRoutine}
+            onDeleteTodo={settingsProps.onDeleteTodo}
+          />
         </SettingsSection>
         <SettingsSection title="Kalendrar">
           <CalendarPanel
@@ -191,7 +230,9 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
         />
       )}
       <div className={`app-shell-content${isChild ? " app-shell-full" : ""}`}>
-        {panelContent}
+        <Suspense fallback={<p className="empty-note">Laddar...</p>}>
+          {panelContent}
+        </Suspense>
         {themePickerMember && (
           <ThemePicker
             member={themePickerMember}

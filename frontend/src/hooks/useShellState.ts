@@ -9,6 +9,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember,
     updateMemberTheme, updateMemberAvatar, updateMemberColor, assignRole, clearMemberAvatar,
+    updateVisibleCalendarIds, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
     currentMember, activeMembers,
     selectedDashboardMemberId, setSelectedDashboardMemberId,
@@ -109,6 +110,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
       rsvpCalendarEvent(calendarId, eventId, currentMember.id, status),
     onCreateCalendar: (name: string, color: string) => createCalendar(name, currentMember.id, color),
     onUpdateCalendarColor: updateCalendarColor,
+    onUpdateVisibleCalendarIds: updateVisibleCalendarIds,
+    onUpdateCalendarView: (view: "month" | "week" | "timeline") =>
+      updateMemberNavigation(currentMember.id, { calendarView: view }),
     onRenameCalendar: renameCalendar,
     onTransferCalendar: transferCalendar,
     onDeleteCalendar: (calendarId: string) => deleteCalendar(calendarId, currentMember.id),
@@ -144,8 +148,10 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     members,
     roles,
     todos,
+    rewards,
     calendars,
     shoppingLists,
+    wishStars,
     canManageMembers: permissions.canManageMembers,
     canManageRoles: permissions.canManageRoles,
     canViewTrash: permissions.canViewTrash,
@@ -157,6 +163,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDeleteOwnData: deleteOwnData,
     onUpdateMemberAvatar: updateMemberAvatar,
     onUpdateMemberColor: updateMemberColor,
+    onUpdateVisibleCalendarIds: updateVisibleCalendarIds,
+    onUpdateCalendarView: (view: "month" | "week" | "timeline") =>
+      updateMemberNavigation(currentMember.id, { calendarView: view }),
     onAssignRole: assignRole,
     onCreateRole: createRole,
     onTogglePermission: toggleRolePermission,
@@ -168,7 +177,13 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onCreateTodo: createTodo,
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,
-    onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles)
+    onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles),
+    onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
+    onRejectTodo: (todoId: string) => rejectTodo(todoId, currentMember.id),
+    onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
+    onRejectWish: (rewardId: string) => rejectWish(rewardId, currentMember.id),
+    onSetWishStars: (rewardId: string, stars: number) =>
+      setWishStars((prev) => ({ ...prev, [rewardId]: stars }))
   };
 
   return {

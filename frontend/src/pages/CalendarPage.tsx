@@ -1,6 +1,6 @@
 import { CalendarView } from "../features/calendars/CalendarView";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
-import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarSettings, CalendarViewMode, Id, Member, Role } from "@shared/types";
 
 type Props = {
   calendars: Calendar[];
@@ -8,14 +8,16 @@ type Props = {
   activeMembers: Member[];
   roles: Role[];
   calendarSettings?: CalendarSettings;
+  calendarView?: CalendarViewMode;
   filter: CalendarFilter;
+  onCalendarViewChange?: (view: CalendarViewMode) => void;
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
 };
 
-export function CalendarPage({ calendars, currentMember, activeMembers, roles, calendarSettings, filter, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+export function CalendarPage({ calendars, currentMember, activeMembers, roles, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
   return (
     <CalendarView
       calendars={calendars}
@@ -23,7 +25,9 @@ export function CalendarPage({ calendars, currentMember, activeMembers, roles, c
       activeMembers={activeMembers}
       roles={roles}
       calendarSettings={calendarSettings}
+      calendarView={calendarView}
       filter={filter}
+      onCalendarViewChange={onCalendarViewChange}
       onAddEvent={onAddEvent}
       onUpdateEvent={onUpdateEvent}
       onDeleteEvent={onDeleteEvent}

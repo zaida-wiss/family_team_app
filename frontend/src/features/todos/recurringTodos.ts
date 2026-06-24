@@ -32,7 +32,11 @@ export function isRecurringTemplate(todo: Todo): boolean {
 }
 
 export function getDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+  ].join("-");
 }
 
 function isRecurrenceDue(
@@ -51,11 +55,11 @@ function isRecurrenceDue(
   }
 
   if (recurrence.type === "weekly") {
-    return recurrence.daysOfWeek.includes(weekdays[now.getUTCDay()]);
+    return recurrence.daysOfWeek.includes(weekdays[now.getDay()]);
   }
 
   const elapsedDays = Math.floor(
-    (startOfUtcDay(now).getTime() - startOfUtcDay(startDate).getTime()) /
+    (startOfLocalDay(now).getTime() - startOfLocalDay(startDate).getTime()) /
       86_400_000
   );
   const intervalDays =
@@ -127,20 +131,16 @@ function withOccurrenceDate(value: string | null, dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
 
   return new Date(
-    Date.UTC(
-      year,
-      month - 1,
-      day,
-      sourceDate.getUTCHours(),
-      sourceDate.getUTCMinutes(),
-      sourceDate.getUTCSeconds(),
-      sourceDate.getUTCMilliseconds()
-    )
+    year,
+    month - 1,
+    day,
+    sourceDate.getHours(),
+    sourceDate.getMinutes(),
+    sourceDate.getSeconds(),
+    sourceDate.getMilliseconds()
   ).toISOString();
 }
 
-function startOfUtcDay(date: Date) {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

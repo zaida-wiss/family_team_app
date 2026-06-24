@@ -11,6 +11,10 @@ const memberSchema = new Schema<Member>({
   avatarUrl: { type: String, default: null },
   color: { type: String, default: null },
   dashboardTheme: { type: String, default: null },
+  visibleCalendarIds: { type: [String], default: undefined },
+  lastActivePanel: { type: String, default: undefined },
+  lastSelectedDashboardMemberId: { type: String, default: null },
+  calendarView: { type: String, default: undefined },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });

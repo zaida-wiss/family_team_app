@@ -7,15 +7,9 @@ import { useRewardsState } from "../features/rewards/useRewardsState";
 import { useRolesState } from "../features/roles/useRolesState";
 import { useShoppingState } from "../features/shopping/useShoppingState";
 import { useTodosState } from "../features/todos/useTodosState";
-import type { Account, Id, Member } from "@shared/types";
+import type { Account, AppPanel, Id, Member } from "@shared/types";
 
-export type ShellPanel =
-  | "home"
-  | "calendar"
-  | "shopping"
-  | "todos"
-  | "members"
-  | "settings";
+export type ShellPanel = AppPanel;
 
 type ActiveMembership = { member: Member; account: Account };
 
@@ -30,6 +24,8 @@ export function useAppState(initialMembership: ActiveMembership) {
     updateMemberTheme,
     updateMemberAvatar,
     updateMemberColor,
+    updateVisibleCalendarIds,
+    updateMemberNavigation,
     assignRole,
     clearMemberAvatar
   } = useMembersState();
@@ -38,17 +34,31 @@ export function useAppState(initialMembership: ActiveMembership) {
   const shoppingState = useShoppingState();
   const rewardsState = useRewardsState();
 
-  const [selectedDashboardMemberId, setSelectedDashboardMemberId] = useState<Id | null>(null);
+  const [selectedDashboardMemberId, setSelectedDashboardMemberIdRaw] = useState<Id | null>(
+    initialMembership.member.lastSelectedDashboardMemberId ?? null
+  );
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
-  const [activePanel, setActivePanelRaw] = useState<ShellPanel>("home");
+  const [activePanel, setActivePanelRaw] = useState<ShellPanel>(
+    initialMembership.member.lastActivePanel ?? "home"
+  );
   const [apiError, setApiError] = useState<string | null>(null);
 
   function setActivePanel(panel: ShellPanel) {
     setActivePanelRaw(panel);
-    if (panel !== "home") setSelectedDashboardMemberId(null);
+    updateMemberNavigation(initialMembership.member.id, { lastActivePanel: panel });
+    if (panel !== "home") setSelectedDashboardMemberIdRaw(null);
   }
 
-  const currentMember = initialMembership.member;
+  function setSelectedDashboardMemberId(memberId: Id | null) {
+    setSelectedDashboardMemberIdRaw(memberId);
+    updateMemberNavigation(initialMembership.member.id, {
+      lastSelectedDashboardMemberId: memberId
+    });
+  }
+
+  const currentMember =
+    members.find((member) => member.id === initialMembership.member.id) ??
+    initialMembership.member;
 
   useEffect(() => {
     setApiMemberId(currentMember.id);
@@ -78,6 +88,8 @@ export function useAppState(initialMembership: ActiveMembership) {
     updateMemberTheme,
     updateMemberAvatar,
     updateMemberColor,
+    updateVisibleCalendarIds,
+    updateMemberNavigation,
     assignRole,
     clearMemberAvatar,
     todosState,

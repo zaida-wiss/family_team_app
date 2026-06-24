@@ -5,6 +5,8 @@ let accessToken: string | null = null;
 let currentMemberId: string | null = null;
 let onApiError: ((message: string) => void) | null = null;
 let onUnauthorized: (() => void) | null = null;
+let refreshSession: (() => Promise<void>) | null = null;
+let refreshPromise: Promise<void> | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -22,20 +24,26 @@ export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
 }
 
+export function setRefreshSessionHandler(handler: () => Promise<void>) {
+  refreshSession = handler;
+}
+
+function buildHeaders() {
+  return {
+    "Content-Type": "application/json",
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(currentMemberId ? { "x-member-id": currentMemberId } : {})
+  };
+}
+
 export async function request<T>(
   path: string,
   options: RequestInit = {},
   skipUnauthorizedHandler = false
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    ...(currentMemberId ? { "x-member-id": currentMemberId } : {})
-  };
-
   let response: Response;
   try {
-    response = await fetch(path, { ...options, headers, credentials: "include" });
+    response = await fetch(path, { ...options, headers: buildHeaders(), credentials: "include" });
   } catch {
     const message = "Servern är inte nåbar";
     onApiError?.(message);
@@ -45,9 +53,29 @@ export async function request<T>(
   const isJson = response.headers.get("content-type")?.includes("application/json");
 
   if (response.status === 401) {
+    if (!skipUnauthorizedHandler && refreshSession) {
+      try {
+        refreshPromise ??= refreshSession().finally(() => {
+          refreshPromise = null;
+        });
+        await refreshPromise;
+        response = await fetch(path, { ...options, headers: buildHeaders(), credentials: "include" });
+        if (response.status !== 401) {
+          return handleResponse<T>(response);
+        }
+      } catch {
+        // Fall through to the explicit unauthorized handling below.
+      }
+    }
     if (!skipUnauthorizedHandler) onUnauthorized?.();
     throw new Error("Inte autentiserad");
   }
+
+  return handleResponse<T>(response);
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  const isJson = response.headers.get("content-type")?.includes("application/json");
 
   if (!response.ok) {
     const body = isJson ? await response.json().catch(() => ({})) : {};

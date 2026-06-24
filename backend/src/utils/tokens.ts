@@ -7,6 +7,7 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret";
 const IS_PROD = (process.env.FRONTEND_URL ?? "http://localhost").startsWith("https://");
 const COOKIE_SAME_SITE = IS_PROD ? "none" : "lax";
+const REFRESH_MAX_AGE_MS = 400 * 24 * 60 * 60 * 1000;
 
 export type AccessPayload = { userId: string };
 
@@ -15,7 +16,7 @@ export function signAccess(userId: string) {
 }
 
 export function signRefresh(userId: string, tokenVersion: number) {
-  return jwt.sign({ userId, tokenVersion }, REFRESH_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId, tokenVersion }, REFRESH_SECRET, { expiresIn: "400d" });
 }
 
 export function verifyRefresh(token: string): { userId: string; tokenVersion: number } {
@@ -27,7 +28,7 @@ export function setRefreshCookie(res: Response, token: string) {
     httpOnly: true,
     secure: IS_PROD,
     sameSite: COOKIE_SAME_SITE,
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    maxAge: REFRESH_MAX_AGE_MS
   });
 }
 

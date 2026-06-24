@@ -19,6 +19,16 @@ export type Account = {
   calendarSettings?: CalendarSettings;
 };
 
+export type AppPanel =
+  | "home"
+  | "calendar"
+  | "shopping"
+  | "todos"
+  | "members"
+  | "settings";
+
+export type CalendarViewMode = "month" | "week" | "timeline";
+
 export type DashboardThemeId =
   | "space"
   | "rainbow"
@@ -37,6 +47,7 @@ export type User = {
   email: string;
   name: string;
   createdAt: string;
+  lastActiveMemberId?: Id | null;
 };
 
 export type Invitation = {
@@ -68,6 +79,10 @@ export type Member = {
   avatarUrl: string | null;
   color: string | null;
   dashboardTheme: DashboardThemeId | null;
+  visibleCalendarIds?: Id[];
+  lastActivePanel?: AppPanel;
+  lastSelectedDashboardMemberId?: Id | null;
+  calendarView?: CalendarViewMode;
   deletedAt: string | null;
   deletedBy: Id | null;
 };

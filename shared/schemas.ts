@@ -11,6 +11,10 @@ export const AccountSchema = z.object({
   createdBy: IdSchema
 });
 
+export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "members", "settings"]);
+
+export const CalendarViewModeSchema = z.enum(["month", "week", "timeline"]);
+
 export const DashboardThemeIdSchema = z.enum([
   "space",
   "rainbow",
@@ -33,6 +37,10 @@ export const MemberSchema = z.object({
   isChild: z.boolean(),
   avatarUrl: z.string().nullable(),
   dashboardTheme: DashboardThemeIdSchema.nullable(),
+  visibleCalendarIds: z.array(IdSchema).optional(),
+  lastActivePanel: AppPanelSchema.optional(),
+  lastSelectedDashboardMemberId: IdSchema.nullable().optional(),
+  calendarView: CalendarViewModeSchema.optional(),
   deletedAt: z.string().nullable(),
   deletedBy: IdSchema.nullable()
 });

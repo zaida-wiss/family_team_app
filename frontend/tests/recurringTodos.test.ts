@@ -1,4 +1,4 @@
-import { getDueRecurringTodoOccurrences } from "../src/features/todos/recurringTodos.js";
+import { getDateKey, getDueRecurringTodoOccurrences } from "../src/features/todos/recurringTodos.js";
 import { createTodo, expectEqual, type TestCase } from "./testUtils.js";
 
 const monday = new Date("2026-06-08T08:00:00.000Z");
@@ -99,6 +99,31 @@ const tests: TestCase[] = [
       const occurrences = getDueRecurringTodoOccurrences([template], monday);
 
       expectEqual(occurrences.length, 0);
+    }
+  },
+  {
+    name: "routine anchor time stays at the same local clock time",
+    run: () => {
+      const template = createTodo({
+        id: "todo-local-time",
+        recurrence: { type: "weekly", daysOfWeek: ["monday"] },
+        visibleFrom: new Date(2000, 0, 1, 7, 0, 0, 0).toISOString(),
+        expiresAt: new Date(2000, 0, 1, 8, 30, 0, 0).toISOString()
+      });
+      const occurrenceDate = new Date(2026, 5, 8, 7, 15, 0, 0);
+      const occurrences = getDueRecurringTodoOccurrences([template], occurrenceDate);
+      const occ = occurrences[0];
+      if (!occ) throw new Error("Expected an occurrence");
+
+      expectEqual(occ.occurrenceDate, "2026-06-08");
+      expectEqual(occ.visibleFrom, new Date(2026, 5, 8, 7, 0, 0, 0).toISOString());
+      expectEqual(occ.expiresAt, new Date(2026, 5, 8, 8, 30, 0, 0).toISOString());
+    }
+  },
+  {
+    name: "date keys use the local calendar day",
+    run: () => {
+      expectEqual(getDateKey(new Date(2026, 5, 8, 0, 30, 0, 0)), "2026-06-08");
     }
   }
 ];

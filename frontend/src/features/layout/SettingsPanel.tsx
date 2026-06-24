@@ -59,10 +59,6 @@ export function SettingsPanel({
   onUpdateMemberColor,
   onShareCalendar,
   onRemoveCalendarShare,
-  onCreateTodo,
-  onUpdateTodo,
-  onRefreshRoutine,
-  onDeleteTodo,
   onAssignRole,
   onCreateRole,
   onTogglePermission,
@@ -83,7 +79,6 @@ export function SettingsPanel({
         members={members}
         roles={roles}
         calendars={calendars}
-        todos={todos}
         onCreateMember={onCreateMember}
         onDeleteMember={onDeleteMember}
         onDeleteOwnData={onDeleteOwnData}
@@ -92,10 +87,6 @@ export function SettingsPanel({
         onUpdateCalendarSettings={onUpdateCalendarSettings}
         onShareCalendar={onShareCalendar}
         onRemoveCalendarShare={onRemoveCalendarShare}
-        onCreateTodo={onCreateTodo}
-        onUpdateTodo={onUpdateTodo}
-        onRefreshRoutine={onRefreshRoutine}
-        onDeleteTodo={onDeleteTodo}
       />
       {canManageMembers && (
         <InviteForm

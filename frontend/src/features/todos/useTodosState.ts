@@ -184,6 +184,18 @@ export function useTodosState() {
         }
 
         todosApi.reject(todoId).catch(console.error);
+        if (canRetryRejectedTodo(todo)) {
+          return {
+            ...todo,
+            status: "pending" as const,
+            completedAt: null,
+            approvedBy: null,
+            approvedAt: null,
+            rejectedBy: null,
+            rejectedAt: null
+          };
+        }
+
         return {
           ...todo,
           status: "rejected" as const,
@@ -277,6 +289,14 @@ export function useTodosState() {
     softDeleteTodosForMember,
     refreshRoutineOccurrence
   };
+}
+
+function canRetryRejectedTodo(todo: Todo, now = Date.now()) {
+  if (!todo.expiresAt) {
+    return true;
+  }
+
+  return new Date(todo.expiresAt).getTime() > now;
 }
 
 async function persistTodoIfGeneratedOccurrence(todo: Todo) {

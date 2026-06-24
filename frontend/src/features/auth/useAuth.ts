@@ -3,6 +3,7 @@ import {
   authApi,
   setAccessToken,
   setApiMemberId,
+  setRefreshSessionHandler,
   setUnauthorizedHandler
 } from "../../api";
 import type { Membership, User } from "@shared/types";
@@ -28,6 +29,10 @@ export function useAuth() {
 
   useEffect(() => {
     setUnauthorizedHandler(clearSession);
+    setRefreshSessionHandler(async () => {
+      const { accessToken, user, memberships } = await authApi.refresh();
+      applySession(user, memberships ?? [], accessToken);
+    });
 
     authApi
       .refresh()
@@ -60,5 +65,11 @@ export function useAuth() {
     );
   }
 
-  return { state, login, register, logout, updateMemberships, applySession };
+  function updateUser(user: User) {
+    setState((prev) =>
+      prev.status === "authenticated" ? { ...prev, user } : prev
+    );
+  }
+
+  return { state, login, register, logout, updateMemberships, updateUser, applySession };
 }

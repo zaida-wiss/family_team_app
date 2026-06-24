@@ -6,6 +6,16 @@ import { signAccess, signRefresh, verifyRefresh, fetchMemberships } from "../uti
 import { AppError } from "../utils/errors.js";
 import { sendPasswordResetEmail } from "../utils/email.js";
 
+function toPublicUser(user: { id: string; email: string; name: string; createdAt: string; lastActiveMemberId?: string | null }) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt,
+    lastActiveMemberId: user.lastActiveMemberId ?? null
+  };
+}
+
 export async function register(email: string, password: string, name: string) {
   validate(registerSchema, { email, password, name });
 
@@ -30,7 +40,7 @@ export async function register(email: string, password: string, name: string) {
   return {
     refreshToken,
     accessToken,
-    user: { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt }
+    user: toPublicUser(user)
   };
 }
 
@@ -47,7 +57,7 @@ export async function login(email: string, password: string) {
   return {
     refreshToken,
     accessToken,
-    user: { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt },
+    user: toPublicUser(user),
     memberships: await fetchMemberships(user.id)
   };
 }
@@ -74,9 +84,23 @@ export async function refresh(cookie: string | undefined) {
   return {
     refreshToken,
     accessToken,
-    user: { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt },
+    user: toPublicUser(user),
     memberships: await fetchMemberships(user.id)
   };
+}
+
+export async function updatePreferences(userId: string, patch: { lastActiveMemberId?: string | null }) {
+  const user = await UserModel.findOne({ id: userId });
+  if (!user) {
+    throw new AppError(404, "Användare hittades inte");
+  }
+
+  if ("lastActiveMemberId" in patch) {
+    user.lastActiveMemberId = patch.lastActiveMemberId ?? null;
+  }
+
+  await user.save();
+  return toPublicUser(user);
 }
 
 export function logout() {

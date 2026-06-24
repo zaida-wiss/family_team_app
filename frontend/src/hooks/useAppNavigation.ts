@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { setAccessToken, setApiMemberId } from "../api";
+import { authApi, setAccessToken, setApiMemberId } from "../api";
 import { useAuth } from "../features/auth/useAuth";
 import type { AcceptedSession } from "../features/invitations/AcceptInvitePage";
 import type { Membership, User } from "@shared/types";
@@ -12,7 +12,7 @@ type Screen =
   | { screen: "shell"; activeMembership: Membership; onLogout: () => Promise<void>; onSwitchAccount: () => void };
 
 export function useAppNavigation(): Screen {
-  const { state: authState, login, register, logout, updateMemberships, applySession } = useAuth();
+  const { state: authState, login, register, logout, updateMemberships, updateUser, applySession } = useAuth();
   const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
 
   const inviteToken = window.location.pathname.match(/^\/invite\/([^/]+)/)?.[1] ?? null;
@@ -20,8 +20,10 @@ export function useAppNavigation(): Screen {
 
   useEffect(() => {
     if (authState.status !== "authenticated" || activeMembership) return;
-    if (authState.memberships.length !== 1) return;
-    const m = authState.memberships[0];
+    const m =
+      authState.memberships.find((membership) => membership.member.id === authState.user.lastActiveMemberId) ??
+      (authState.memberships.length === 1 ? authState.memberships[0] : null);
+    if (!m) return;
     setActiveMembership(m);
     setApiMemberId(m.member.id);
   }, [authState, activeMembership]);
@@ -29,6 +31,10 @@ export function useAppNavigation(): Screen {
   function selectMembership(m: Membership) {
     setActiveMembership(m);
     setApiMemberId(m.member.id);
+    authApi
+      .updatePreferences({ lastActiveMemberId: m.member.id })
+      .then(({ user }) => updateUser(user))
+      .catch(console.error);
   }
 
   async function handleLogout() {

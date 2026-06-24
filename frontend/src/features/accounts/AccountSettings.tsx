@@ -2,9 +2,8 @@ import { Eraser, Filter, ImagePlus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { MemberAvatar } from "../../components/MemberAvatar";
-import { ChildRoutineCreator } from "../children/ChildRoutineCreator";
 import { canViewResource, hasPermission } from "../../utils/permissions";
-import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role, Todo } from "@shared/types";
+import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role } from "@shared/types";
 
 const DEFAULT_CALENDAR_SETTINGS: CalendarSettings = {
   showWeekNumbers: false,
@@ -20,7 +19,6 @@ type AccountSettingsProps = {
   members: Member[];
   roles: Role[];
   calendars: Calendar[];
-  todos: Todo[];
   onCreateMember: (member: Member) => void;
   onDeleteMember: (memberId: string) => void;
   onDeleteOwnData: () => void;
@@ -29,10 +27,6 @@ type AccountSettingsProps = {
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onShareCalendar: (calendarId: string, memberId: string, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
-  onCreateTodo: (todo: Todo) => void;
-  onUpdateTodo: (todoId: string, patch: Partial<Todo>) => void;
-  onRefreshRoutine: (routineId: string) => void;
-  onDeleteTodo: (todoId: string) => void;
 };
 
 export function AccountSettings({
@@ -41,7 +35,6 @@ export function AccountSettings({
   members,
   roles,
   calendars,
-  todos,
   onCreateMember,
   onDeleteMember,
   onDeleteOwnData,
@@ -50,10 +43,6 @@ export function AccountSettings({
   onUpdateCalendarSettings,
   onShareCalendar,
   onRemoveCalendarShare,
-  onCreateTodo,
-  onUpdateTodo,
-  onRefreshRoutine,
-  onDeleteTodo,
 }: AccountSettingsProps) {
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
@@ -228,27 +217,6 @@ export function AccountSettings({
           </div>
         </div>
       )}
-
-      {canManageMembers && (() => {
-        const childMembers = activeMembers.filter(
-          (m) => m.isChild || roles.find((r) => r.id === m.roleId)?.isChildRole
-        );
-        if (childMembers.length === 0) return null;
-        return (
-          <div className="settings-sub">
-            <ChildRoutineCreator
-              currentMember={currentMember}
-              children={childMembers}
-              roles={roles}
-              todos={todos}
-              onCreateTodo={onCreateTodo}
-              onUpdateTodo={onUpdateTodo}
-              onRefreshRoutine={onRefreshRoutine}
-              onDeleteTodo={onDeleteTodo}
-            />
-          </div>
-        );
-      })()}
 
       {canManageMembers && (
         <div className="settings-sub">
