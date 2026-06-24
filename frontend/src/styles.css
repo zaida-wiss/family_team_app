@@ -57,7 +57,7 @@ button {
   }
 
   .app-shell-content {
-    padding: 10px;
+    padding: 10px 10px 30px 10px;
     background: var(--background);
     min-height: 100vh;
   }
@@ -2496,6 +2496,7 @@ h3 {
 }
 
 .child-tl-week-label {
+  text-align: center;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   border: 2px solid rgba(255, 255, 255, 0.84);
