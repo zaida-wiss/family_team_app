@@ -1,4 +1,4 @@
-import { CalendarDays, Check, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
+import { CalendarDays, Check, Copy, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { calendarsApi } from "../../api";
 import {
@@ -576,6 +576,19 @@ export function CalendarPanel({
                     <div className="ics-sub-row" key={sub.id}>
                       {editingSubId === sub.id ? (
                         <div className="ics-sub-edit">
+                          <div className="ics-sub-edit-url">
+                            <span className="ics-sub-edit-url-text" title={sub.url}>
+                              {sub.url.replace(/^https?:\/\//, "")}
+                            </span>
+                            <button
+                              className="icon-button"
+                              onClick={() => void navigator.clipboard.writeText(sub.url)}
+                              title="Kopiera länk"
+                              type="button"
+                            >
+                              <Copy size={12} />
+                            </button>
+                          </div>
                           <WordTagInput
                             label="Inkludera händelser med ord"
                             placeholder="Skriv ord + Enter"
