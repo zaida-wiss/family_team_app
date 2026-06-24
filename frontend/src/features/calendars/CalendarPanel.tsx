@@ -576,19 +576,14 @@ export function CalendarPanel({
                     <div className="ics-sub-row" key={sub.id}>
                       {editingSubId === sub.id ? (
                         <div className="ics-sub-edit">
-                          <div className="ics-sub-edit-url">
-                            <span className="ics-sub-edit-url-text" title={sub.url}>
-                              {sub.url.replace(/^https?:\/\//, "")}
-                            </span>
-                            <button
-                              className="icon-button"
-                              onClick={() => void navigator.clipboard.writeText(sub.url)}
-                              title="Kopiera länk"
-                              type="button"
-                            >
-                              <Copy size={12} />
-                            </button>
-                          </div>
+                          <button
+                            className="icon-button"
+                            onClick={() => void navigator.clipboard.writeText(sub.url)}
+                            title={sub.url}
+                            type="button"
+                          >
+                            <Copy size={13} />
+                          </button>
                           <WordTagInput
                             label="Inkludera händelser med ord"
                             placeholder="Skriv ord + Enter"

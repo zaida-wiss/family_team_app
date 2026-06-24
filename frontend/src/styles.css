@@ -1751,24 +1751,6 @@ h3 {
   flex: 1;
 }
 
-.ics-sub-edit-url {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  border-radius: 5px;
-  background: var(--hover);
-}
-
-.ics-sub-edit-url-text {
-  flex: 1;
-  font-size: 0.72rem;
-  color: var(--fg-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
 
 .ics-sub-edit-actions {
   display: flex;
