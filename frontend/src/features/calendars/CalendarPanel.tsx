@@ -578,17 +578,6 @@ export function CalendarPanel({
                     <div className="ics-sub-row" key={sub.id}>
                       {editingSubId === sub.id ? (
                         <div className="ics-sub-edit">
-                          <label className="ics-sub-symbol-row">
-                            <span>Symbol i kalendern</span>
-                            <input
-                              className="ics-sub-symbol-input"
-                              maxLength={4}
-                              onChange={(e) => setEditDisplaySymbol(e.target.value)}
-                              placeholder="🗓️"
-                              type="text"
-                              value={editDisplaySymbol}
-                            />
-                          </label>
                           <WordTagInput
                             label="Inkludera händelser med ord"
                             placeholder="Skriv ord + Enter"
@@ -621,6 +610,21 @@ export function CalendarPanel({
                         </div>
                       ) : (
                         <>
+                          <input
+                            className="ics-sub-symbol-inline"
+                            defaultValue={sub.displaySymbol ?? ""}
+                            key={sub.id + (sub.displaySymbol ?? "")}
+                            maxLength={4}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              if (val !== (sub.displaySymbol ?? "")) {
+                                void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: val || null });
+                              }
+                            }}
+                            placeholder="＋"
+                            title="Symbol som visas i kalendern"
+                            type="text"
+                          />
                           <div className="ics-sub-info">
                             <span className="ics-sub-url" title={sub.url}>
                               {sub.url.replace(/^https?:\/\//, "").slice(0, 48)}…
