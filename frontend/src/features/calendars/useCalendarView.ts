@@ -48,11 +48,25 @@ export function useCalendarView(
   const canEditEvent = (ev: CalendarEvent) =>
     editableCalendars.some((cal) => cal.id === ev.calendarId);
 
+  // ── Subscription symbol lookup ──
+  const subSymbols = new Map<string, string>();
+  for (const cal of visible) {
+    for (const sub of cal.subscriptions ?? []) {
+      if (sub.displaySymbol) subSymbols.set(sub.id, sub.displaySymbol);
+    }
+  }
+
   // ── All events with color ──
   const enrichedEvents: EnrichedEvent[] = visible.flatMap((cal) =>
     cal.events
       .filter((ev) => ev.deletedAt === null)
-      .map((ev) => ({ ...ev, calendarColor: cal.color, calendarName: cal.name, calendarOwnerId: cal.ownerId }))
+      .map((ev) => ({
+        ...ev,
+        calendarColor: cal.color,
+        calendarName: cal.name,
+        calendarOwnerId: cal.ownerId,
+        displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : null,
+      }))
   );
 
   const expandedEvents = expandForMonth(enrichedEvents, viewYear, viewMonth);

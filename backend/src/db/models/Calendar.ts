@@ -10,7 +10,8 @@ const subscriptionSchema = new Schema(
     excludeWords: [{ type: String }],
     dateFrom: { type: String, default: null },
     dateTo: { type: String, default: null },
-    lastSyncedAt: { type: String, default: null }
+    lastSyncedAt: { type: String, default: null },
+    displaySymbol: { type: String, default: null }
   },
   { id: false }
 );

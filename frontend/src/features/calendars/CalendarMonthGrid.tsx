@@ -100,7 +100,9 @@ export function CalendarMonthGrid({
                             title={ev.title}
                             onClick={(e) => { e.stopPropagation(); onEventClick?.(ev); }}
                           >
-                            {!ev.isAllDay && `${fmtTime(ev.startsAt)} `}{ev.title}
+                            {ev.displaySymbol
+                              ? ev.displaySymbol
+                              : <>{!ev.isAllDay && `${fmtTime(ev.startsAt)} `}{ev.title}</>}
                             {ev.recurrence?.type !== "none" && <Repeat size={8} style={{ marginLeft: 2, opacity: 0.7 }} />}
                           </div>
                         );

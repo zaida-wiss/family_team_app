@@ -181,7 +181,7 @@ export async function createSubscription(calendarId: string, body: unknown) {
   if (!calendar) {
     throw new AppError(404, "Kalender hittades inte");
   }
-  const b = body as { url: string; includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null };
+  const b = body as { url: string; includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null; displaySymbol?: string | null };
   const sub: IcsSubscription = {
     id: `sub-${crypto.randomUUID()}`,
     calendarId,
@@ -190,7 +190,8 @@ export async function createSubscription(calendarId: string, body: unknown) {
     excludeWords: b.excludeWords ?? [],
     dateFrom: b.dateFrom ?? null,
     dateTo: b.dateTo ?? null,
-    lastSyncedAt: null
+    lastSyncedAt: null,
+    displaySymbol: b.displaySymbol ?? null
   };
   calendar.subscriptions.push(sub as any);
   calendar.markModified("subscriptions");
@@ -209,11 +210,12 @@ export async function updateSubscription(calendarId: string, subId: string, patc
   if (!sub) {
     throw new AppError(404, "Prenumeration hittades inte");
   }
-  const { includeWords, excludeWords, dateFrom, dateTo } = patch as { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string; dateTo?: string };
+  const { includeWords, excludeWords, dateFrom, dateTo, displaySymbol } = patch as { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string; dateTo?: string; displaySymbol?: string | null };
   if (includeWords !== undefined) sub.includeWords = includeWords;
   if (excludeWords !== undefined) sub.excludeWords = excludeWords;
   if (dateFrom !== undefined) sub.dateFrom = dateFrom;
   if (dateTo !== undefined) sub.dateTo = dateTo;
+  if (displaySymbol !== undefined) (sub as IcsSubscription).displaySymbol = displaySymbol;
   calendar.markModified("subscriptions");
   await calendar.save();
 }

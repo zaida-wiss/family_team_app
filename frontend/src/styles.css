@@ -1752,6 +1752,25 @@ h3 {
 }
 
 
+.ics-sub-symbol-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+.ics-sub-symbol-input {
+  width: 3rem;
+  text-align: center;
+  font-size: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: var(--surface);
+  color: var(--fg);
+}
+
 .ics-sub-edit-actions {
   display: flex;
   gap: 6px;

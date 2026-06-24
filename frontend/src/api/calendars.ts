@@ -60,7 +60,7 @@ export const calendarsApi = {
       method: "POST",
       body: JSON.stringify(sub)
     }),
-  updateSubscription: (calendarId: string, subId: string, patch: { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null }) =>
+  updateSubscription: (calendarId: string, subId: string, patch: { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null; displaySymbol?: string | null }) =>
     request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}`), {
       method: "PATCH",
       body: JSON.stringify(patch)

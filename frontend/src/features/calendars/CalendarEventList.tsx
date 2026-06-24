@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Calendar, CalendarEvent } from "@shared/types";
 import { fmtFullDate, fmtTime, isHolidayEvent } from "./calendarHelpers";
 
-export type EnrichedEvent = CalendarEvent & { calendarColor: string; calendarName: string; calendarOwnerId?: string | null };
+export type EnrichedEvent = CalendarEvent & { calendarColor: string; calendarName: string; calendarOwnerId?: string | null; displaySymbol?: string | null };
 
 export type EventListProps = {
   allEvents: EnrichedEvent[];

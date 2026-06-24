@@ -127,6 +127,7 @@ export type IcsSubscription = {
   dateFrom: string | null;
   dateTo: string | null;
   lastSyncedAt: string | null;
+  displaySymbol: string | null;
 };
 
 export type Calendar = OwnedSharedResource & {

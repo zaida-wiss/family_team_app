@@ -130,6 +130,7 @@ export function CalendarPanel({
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [editIncludeWords, setEditIncludeWords] = useState<string[]>([]);
   const [editExcludeWords, setEditExcludeWords] = useState<string[]>([]);
+  const [editDisplaySymbol, setEditDisplaySymbol] = useState("");
   const [confirmDeleteSubId, setConfirmDeleteSubId] = useState<string | null>(null);
   const [fileFilterFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [fileFilterTo] = useState(() => {
@@ -262,7 +263,8 @@ export function CalendarPanel({
     if (!selectedCalendar) return;
     await onUpdateSubscription(selectedCalendar.id, sub.id, {
       includeWords: editIncludeWords,
-      excludeWords: editExcludeWords
+      excludeWords: editExcludeWords,
+      displaySymbol: editDisplaySymbol.trim() || null,
     });
     setEditingSubId(null);
     await syncSub(sub.id);
@@ -576,6 +578,17 @@ export function CalendarPanel({
                     <div className="ics-sub-row" key={sub.id}>
                       {editingSubId === sub.id ? (
                         <div className="ics-sub-edit">
+                          <label className="ics-sub-symbol-row">
+                            <span>Symbol i kalendern</span>
+                            <input
+                              className="ics-sub-symbol-input"
+                              maxLength={4}
+                              onChange={(e) => setEditDisplaySymbol(e.target.value)}
+                              placeholder="🗓️"
+                              type="text"
+                              value={editDisplaySymbol}
+                            />
+                          </label>
                           <WordTagInput
                             label="Inkludera händelser med ord"
                             placeholder="Skriv ord + Enter"
@@ -629,6 +642,7 @@ export function CalendarPanel({
                                 setEditingSubId(sub.id);
                                 setEditIncludeWords([...sub.includeWords]);
                                 setEditExcludeWords([...sub.excludeWords]);
+                                setEditDisplaySymbol(sub.displaySymbol ?? "");
                               }}
                               title="Redigera ord"
                               type="button"

@@ -330,7 +330,7 @@ export function useCalendarsState() {
     }).catch(console.error);
   }
 
-  async function updateSubscription(calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "dateFrom" | "dateTo">>) {
+  async function updateSubscription(calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "dateFrom" | "dateTo" | "displaySymbol">>) {
     setCalendars((current) =>
       current.map((cal) =>
         cal.id !== calendarId ? cal : {
