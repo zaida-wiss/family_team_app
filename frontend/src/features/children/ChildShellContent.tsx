@@ -10,7 +10,7 @@ type Props = {
   roles: Role[];
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
-  onCreateWish: (childId: string) => void;
+  onCreateWish: (childId: string, starsNeeded: number) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
@@ -55,6 +55,18 @@ export function ChildShellContent({
       t.deletedAt === null &&
       isTodoVisibleNow(t, now)
   );
+  const pendingApprovalTodos = todos.filter(
+    (t) =>
+      t.assignedTo === currentMember.id &&
+      t.status === "done" &&
+      t.deletedAt === null
+  );
+  const rejectedTodos = todos.filter(
+    (t) =>
+      t.assignedTo === currentMember.id &&
+      t.status === "rejected" &&
+      t.deletedAt === null
+  );
 
   return (
     <ChildDashboard
@@ -65,6 +77,8 @@ export function ChildShellContent({
       rewardProgress={rewardProgress}
       suggestedRewards={suggestedRewards}
       activeChildTodos={activeChildTodos}
+      pendingApprovalTodos={pendingApprovalTodos}
+      rejectedTodos={rejectedTodos}
       wishTitle={wishTitle}
       onSetWishTitle={onSetWishTitle}
       onCreateWish={onCreateWish}

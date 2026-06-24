@@ -156,38 +156,91 @@ export const shoppingLists: ShoppingList[] = [
 export const todos: Todo[] = [
   {
     id: "todo-1",
-    title: "Badda sangen",
+    title: "Bädda sängen",
     createdBy: "member-parent-1",
     assignedTo: "member-child-1",
     isShared: false,
     status: "pending",
     starValue: 2,
-    visual: { type: "lucide-icon", value: "Bed" },
+    visual: { type: "lucide-icon", value: "🛏️" },
     recurrence: {
       type: "weekly",
       daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"]
     },
     recurringSourceId: null,
     occurrenceDate: null,
-    visibleFrom: "2026-06-10T07:00:00",
-    expiresAt: "2026-06-10T09:00:00",
+    visibleFrom: new Date("2000-01-01T07:00:00").toISOString(),
+    expiresAt: new Date("2000-01-01T08:00:00").toISOString(),
     completedAt: null,
     approvedBy: null,
     approvedAt: null,
     rejectedBy: null,
     rejectedAt: null,
     deletedAt: null,
-    deletedBy: null
+    deletedBy: null,
+    routineCategory: "Hälsa & trivsel"
+  },
+  {
+    id: "todo-4",
+    title: "Borsta tänderna",
+    createdBy: "member-parent-1",
+    assignedTo: "member-child-1",
+    isShared: false,
+    status: "pending",
+    starValue: 1,
+    visual: { type: "lucide-icon", value: "🦷" },
+    recurrence: {
+      type: "weekly",
+      daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    },
+    recurringSourceId: null,
+    occurrenceDate: null,
+    visibleFrom: new Date("2000-01-01T07:00:00").toISOString(),
+    expiresAt: new Date("2000-01-01T08:30:00").toISOString(),
+    completedAt: null,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    deletedAt: null,
+    deletedBy: null,
+    routineCategory: "Hälsa & trivsel"
+  },
+  {
+    id: "todo-5",
+    title: "Häng upp jackan",
+    createdBy: "member-parent-1",
+    assignedTo: "member-child-1",
+    isShared: false,
+    status: "pending",
+    starValue: 1,
+    visual: { type: "lucide-icon", value: "🧥" },
+    recurrence: {
+      type: "weekly",
+      daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    },
+    recurringSourceId: null,
+    occurrenceDate: null,
+    visibleFrom: new Date("2000-01-01T15:00:00").toISOString(),
+    expiresAt: new Date("2000-01-01T17:00:00").toISOString(),
+    completedAt: null,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    deletedAt: null,
+    deletedBy: null,
+    routineCategory: "Hemmet"
   },
   {
     id: "todo-2",
-    title: "Lasa 20 minuter",
+    title: "Läs 20 minuter",
     createdBy: "member-parent-1",
     assignedTo: "member-child-1",
     isShared: false,
     status: "done",
     starValue: 3,
-    visual: { type: "lucide-icon", value: "BookOpen" },
+    visual: { type: "lucide-icon", value: "📖" },
     recurrence: { type: "none" },
     recurringSourceId: null,
     occurrenceDate: null,
@@ -199,7 +252,8 @@ export const todos: Todo[] = [
     rejectedBy: null,
     rejectedAt: null,
     deletedAt: null,
-    deletedBy: null
+    deletedBy: null,
+    routineCategory: null
   },
   {
     id: "todo-3",
@@ -209,7 +263,7 @@ export const todos: Todo[] = [
     isShared: false,
     status: "approved",
     starValue: 4,
-    visual: { type: "lucide-icon", value: "Utensils" },
+    visual: { type: "lucide-icon", value: "🍽️" },
     recurrence: { type: "none" },
     recurringSourceId: null,
     occurrenceDate: null,
@@ -221,7 +275,8 @@ export const todos: Todo[] = [
     rejectedBy: null,
     rejectedAt: null,
     deletedAt: null,
-    deletedBy: null
+    deletedBy: null,
+    routineCategory: "Hemmet"
   }
 ];
 

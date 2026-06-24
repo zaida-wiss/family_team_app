@@ -1,6 +1,15 @@
-import { Star, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Star, Sparkles, Trophy, Clock } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
-import { ChildWeekView } from "./ChildWeekView";
+import { ChildTimeline } from "./ChildTimeline";
+
+const CATEGORY_META: Record<string, { icon: string; desc: string }> = {
+  "Hälsa":           { icon: "❤️",  desc: "Kropp och välmående" },
+  "Trivsel":         { icon: "✨",  desc: "Hemmet och trivsel" },
+  "Pengar":          { icon: "💰",  desc: "Sparande och ekonomi" },
+  "Hälsa & trivsel": { icon: "❤️",  desc: "Vardagsrutiner som håller hemmet och oss själva i ordning." },
+  "Hemmet":          { icon: "🏠",  desc: "Ordning och reda hemma" },
+};
 
 type Props = {
   child: Member;
@@ -10,9 +19,11 @@ type Props = {
   rewardProgress: RewardPathProgress | null;
   suggestedRewards: Reward[];
   activeChildTodos: Todo[];
+  pendingApprovalTodos: Todo[];
+  rejectedTodos: Todo[];
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
-  onCreateWish: (childId: Id) => void;
+  onCreateWish: (childId: Id, starsNeeded: number) => void;
   onCompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
@@ -26,142 +37,321 @@ export function ChildDashboard({
   rewardProgress,
   suggestedRewards,
   activeChildTodos,
+  pendingApprovalTodos,
+  rejectedTodos,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
-  onThemePickerOpen
+  onThemePickerOpen,
 }: Props) {
+  const [wishStars, setWishStars] = useState(10);
+  const [heldTodoId, setHeldTodoId] = useState<Id | null>(null);
+  const [completedCue, setCompletedCue] = useState<{
+    id: Id;
+    title: string;
+    visual: string;
+    starValue: number;
+  } | null>(null);
+  const completeHoldRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const completeCueRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  const taskGroups = useMemo(() => {
+    const map = new Map<string, Todo[]>();
+    for (const todo of activeChildTodos) {
+      const cat = todo.routineCategory ?? "";
+      const bucket = map.get(cat) ?? [];
+      bucket.push(todo);
+      map.set(cat, bucket);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => {
+        if (!a && b) return 1;
+        if (a && !b) return -1;
+        return a.localeCompare(b, "sv");
+      })
+      .map(([category, todos]) => ({ category, todos }));
+  }, [activeChildTodos]);
+
+  const allRewards = [
+    ...(activeReward ? [activeReward] : []),
+    ...suggestedRewards,
+  ];
+
+  const pendingApproval = pendingApprovalTodos;
+  const rejected = rejectedTodos;
+
+  function clearCompleteHold() {
+    if (completeHoldRef.current !== null) {
+      window.clearTimeout(completeHoldRef.current);
+      completeHoldRef.current = null;
+    }
+    setHeldTodoId(null);
+  }
+
+  function startCompleteHold(todoId: Id) {
+    const todo = activeChildTodos.find((item) => item.id === todoId);
+    if (!todo) {
+      return;
+    }
+
+    clearCompleteHold();
+    setHeldTodoId(todoId);
+    completeHoldRef.current = window.setTimeout(() => {
+      setCompletedCue({
+        id: todo.id,
+        title: todo.title,
+        visual: todo.visual.value,
+        starValue: todo.starValue
+      });
+      onCompleteTodo(todoId);
+      completeHoldRef.current = null;
+      setHeldTodoId(null);
+      if (completeCueRef.current !== null) {
+        window.clearTimeout(completeCueRef.current);
+      }
+      completeCueRef.current = window.setTimeout(() => {
+        setCompletedCue(null);
+        completeCueRef.current = null;
+      }, 1800);
+    }, 2000);
+  }
+
+  useEffect(
+    () => () => {
+      if (completeHoldRef.current !== null) {
+        window.clearTimeout(completeHoldRef.current);
+      }
+      if (completeCueRef.current !== null) {
+        window.clearTimeout(completeCueRef.current);
+      }
+    },
+    []
+  );
+
   return (
     <article
       className={`child-dashboard theme-${child.dashboardTheme ?? "space"}`}
       onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest("button, input, select")) {
-          return;
-        }
-
+        if ((event.target as HTMLElement).closest("button, input, select")) return;
         let timeoutId: number;
-        timeoutId = window.setTimeout(() => {
-          onThemePickerOpen(child.id);
-        }, 650);
-
+        timeoutId = window.setTimeout(() => onThemePickerOpen(child.id), 650);
         event.currentTarget.onpointerup = () => window.clearTimeout(timeoutId);
         event.currentTarget.onpointerleave = () => window.clearTimeout(timeoutId);
       }}
     >
-      <header className="section-header">
-        <div>
-          <p className="eyebrow">Barn-dashboard</p>
-          <h2>{child.name}</h2>
+      <div className="child-dashboard-body">
+        {/* LEFT — weekly timeline */}
+        <div className="child-dashboard-left">
+          <ChildTimeline calendars={calendars} child={child} roles={roles} />
         </div>
-        <Sparkles size={24} />
-      </header>
 
-      {activeReward && rewardProgress ? (
-        <div className="reward-card">
-          <span className="reward-label">{activeReward.title}</span>
-          <strong>{rewardProgress.starsLeft} stjärnor kvar</strong>
-        </div>
-      ) : (
-        <div className="wish-section">
-          {suggestedRewards.length > 0 && (
-            <ul className="suggested-rewards">
-              {suggestedRewards.map((r) => (
-                <li key={r.id}>
-                  <span>{r.title}</span>
-                  <small>Väntar på godkännande</small>
-                </li>
-              ))}
-            </ul>
+        {/* CENTER — tasks, routines and status panels */}
+        <div className="child-dashboard-main">
+          <header className="section-header">
+            <h2 className="section-title">Hej {child.name}!</h2>
+            <Sparkles size={22} />
+          </header>
+
+          {/* Tasks today */}
+          {taskGroups.length > 0 && (
+            <section className="child-tasks-section" aria-label="Uppgifter idag">
+              <h3 className="child-tasks-heading">Dina uppgifter idag</h3>
+              {taskGroups.map(({ category, todos }) => {
+                const meta = CATEGORY_META[category];
+                return (
+                  <div key={category} className="child-tasks-group">
+                    {category && (
+                      <div className="child-tasks-cat-head">
+                        {meta ? (
+                          <span className="child-tasks-cat-icon">{meta.icon}</span>
+                        ) : null}
+                        <span className="child-tasks-cat-name">{category}</span>
+                        {meta?.desc && (
+                          <span className="child-tasks-cat-desc">{meta.desc}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="child-tasks-grid">
+                      {todos.map((todo, i) => (
+                        <button
+                          key={todo.id}
+                          className={`child-task-card${heldTodoId === todo.id ? " child-task-card--holding" : ""}`}
+                          style={{ animationDelay: `${i * 80}ms` }}
+                          onPointerDown={() => startCompleteHold(todo.id)}
+                          onPointerLeave={clearCompleteHold}
+                          onPointerCancel={clearCompleteHold}
+                          onPointerUp={clearCompleteHold}
+                          type="button"
+                        >
+                          <div className="child-task-icon-circle">
+                            <span className="child-task-icon">{todo.visual.value}</span>
+                          </div>
+                          <span className="child-task-name">{todo.title}</span>
+                          <span className="child-task-star-badge">
+                            <Star size={14} fill="currentColor" />
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
           )}
-          <form
-            className="wish-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onCreateWish(child.id);
-            }}
-          >
-            <input
-              type="text"
-              value={wishTitle}
-              onChange={(e) => onSetWishTitle(e.target.value)}
-              placeholder="Vad önskar du dig?"
-              aria-label="Önskning"
-            />
-            <button type="submit">Önska</button>
-          </form>
-        </div>
-      )}
 
-      <section className="falling-todos" aria-label="Aktiva uppgifter">
-        {activeChildTodos.length === 0 ? (
-          <p className="empty-note">Inga aktiva uppgifter just nu.</p>
-        ) : (
-          activeChildTodos.map((todo, index) => (
-            <button
-              className="falling-todo-card"
-              key={todo.id}
-              style={{ animationDelay: `${index * 120}ms` }}
-              onClick={() => onCompleteTodo(todo.id)}
-              type="button"
-            >
-              <span>{todo.visual.value.slice(0, 1)}</span>
-              <strong>{todo.title}</strong>
-              <small>Tryck när du är klar: {todo.starValue} stjärnor</small>
-            </button>
-          ))
-        )}
-      </section>
+          {activeChildTodos.length === 0 && (
+            <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>
+          )}
 
-      {rewardProgress && rewardProgress.rejectedTodos.length > 0 && (
-        <section className="rejected-notice" aria-label="Nekade uppgifter">
-          {rewardProgress.rejectedTodos.map((todo) => (
-            <div className="rejected-todo-card" key={todo.id}>
-              <span>{todo.visual.value.slice(0, 1)}</span>
-              <div>
-                <strong>{todo.title}</strong>
-                <small>Den här gick inte igenom – prova igen!</small>
+          {/* Rejected */}
+          {rejected.length > 0 && (
+            <section className="rejected-notice" aria-label="Nekade uppgifter">
+              {rejected.map((todo) => (
+                <div className="rejected-todo-card" key={todo.id}>
+                  <span>{todo.visual.value}</span>
+                  <div>
+                    <strong>{todo.title}</strong>
+                    <small>Den här gick inte igenom – prova igen!</small>
+                  </div>
+                  <button
+                    className="rejected-dismiss"
+                    type="button"
+                    onClick={() => onDismissRejectedTodo(todo.id)}
+                    aria-label="Stäng"
+                  >
+                    Okej
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {/* Bottom panels */}
+          <div className="child-bottom-panels">
+            {/* Waiting for approval */}
+            <div className="child-panel">
+              <div className="child-panel-head">
+                <Clock size={18} />
+                <span>Väntar på godkännande</span>
               </div>
-              <button
-                className="rejected-dismiss"
-                type="button"
-                onClick={() => onDismissRejectedTodo(todo.id)}
-                aria-label="Stäng"
-              >
-                Okej
-              </button>
+              {pendingApproval.length === 0 ? (
+                <p className="child-panel-empty">Inget just nu</p>
+              ) : (
+                pendingApproval.map((todo) => (
+                  <div key={todo.id} className="child-pending-row">
+                    <div className="child-pending-icon-wrap">
+                      <span>{todo.visual.value}</span>
+                    </div>
+                    <span className="child-pending-title">{todo.title}</span>
+                    <span className="child-pending-stars">+{todo.starValue} <Star size={11} fill="currentColor" /></span>
+                  </div>
+                ))
+              )}
             </div>
-          ))}
-        </section>
-      )}
 
-      {rewardProgress && (
-        <div className="reward-path" aria-label="Belöningsbana">
-          {Array.from({ length: 10 }).map((_, index) => {
-            const item = rewardProgress.pathItems[index];
-            const isApproved = item?.type === "approved-star";
-            const pendingTodo = item?.type === "pending-task" ? item.todo : null;
-
-            return (
-              <span
-                className={`path-step ${isApproved ? "approved" : ""} ${pendingTodo ? "pending" : ""}`}
-                key={index}
+            {/* Wishes */}
+            <div className="child-panel">
+              <div className="child-panel-head">
+                <Sparkles size={18} />
+                <span>Önskningar</span>
+              </div>
+              {allRewards.map((r) => (
+                <div key={r.id} className="child-wish-row">
+                  <Trophy size={20} className="child-wish-trophy" />
+                  <div className="child-wish-info">
+                    <span className="child-wish-title">{r.title}</span>
+                    <small>{r.starsNeeded} stjärnor · {r.status === "active" ? "Aktiv" : "Väntar godkännande"}</small>
+                  </div>
+                </div>
+              ))}
+              <form
+                className="wish-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onCreateWish(child.id, wishStars);
+                }}
               >
-                {isApproved ? (
-                  <Star size={18} fill="currentColor" />
-                ) : pendingTodo ? (
-                  pendingTodo.visual.value.slice(0, 1)
-                ) : (
-                  ""
-                )}
+                <input
+                  type="text"
+                  className="wish-form-input"
+                  value={wishTitle}
+                  onChange={(e) => onSetWishTitle(e.target.value)}
+                  placeholder="Jag önskar mig…"
+                  aria-label="Ny önskning"
+                />
+                <input
+                  type="number"
+                  className="wish-form-stars"
+                  value={wishStars}
+                  min={1}
+                  max={999}
+                  onChange={(e) => setWishStars(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  aria-label="Antal stjärnor"
+                />
+                <button className="wish-form-btn" type="submit">Önska</button>
+              </form>
+            </div>
+          </div>
+          {completedCue && (
+            <div className="child-complete-cue" role="status" aria-live="polite">
+              <div className="child-complete-cue-icon">
+                <span>{completedCue.visual}</span>
+              </div>
+              <div>
+                <strong>{completedCue.title}</strong>
+                <small>Flyttad till väntar på godkännande</small>
+              </div>
+              <span className="child-complete-cue-stars">
+                +{completedCue.starValue} <Star size={12} fill="currentColor" />
               </span>
-            );
-          })}
+            </div>
+          )}
         </div>
-      )}
 
-      <ChildWeekView calendars={calendars} child={child} roles={roles} />
+        <aside className="child-dashboard-reward" aria-label="Belöningsbana">
+          <div className="child-reward-rail">
+            <div className="child-reward-card-top">
+              <div className="child-reward-card-label">
+                <Trophy size={15} />
+                <span>Belöningsbana</span>
+              </div>
+              {activeReward && rewardProgress ? (
+                <div className="child-reward-stars-count">
+                  <Star size={13} fill="currentColor" />
+                  <span>{rewardProgress.approvedStars}</span>
+                  <span className="child-reward-stars-of">/ {activeReward.starsNeeded}</span>
+                </div>
+              ) : null}
+            </div>
+            {activeReward && rewardProgress ? (
+              <>
+                <div className="child-reward-goal">{activeReward.title}</div>
+                <small className="child-reward-left">{rewardProgress.starsLeft} stjärnor kvar</small>
+                <div className="child-reward-track child-reward-track--vertical">
+                  {Array.from({ length: Math.min(activeReward.starsNeeded, 14) }).map((_, i) => {
+                    const item = rewardProgress.pathItems[i];
+                    const isApproved = item?.type === "approved-star";
+                    const pendingTodo = item?.type === "pending-task" ? item.todo : null;
+                    const isLast = i === Math.min(activeReward.starsNeeded, 14) - 1;
+                    return (
+                      <div
+                        key={i}
+                        className={`child-reward-step${isApproved ? " child-reward-step--done" : ""}${pendingTodo ? " child-reward-step--pending" : ""}`}
+                      >
+                        {isLast ? <Trophy size={14} /> : isApproved ? <Star size={12} fill="currentColor" /> : pendingTodo ? <span>{pendingTodo.visual.value}</span> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="child-panel-empty">Ingen aktiv önskning ännu.</p>
+            )}
+          </div>
+        </aside>
+      </div>
     </article>
   );
 }

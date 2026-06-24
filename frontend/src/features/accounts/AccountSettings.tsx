@@ -1,8 +1,10 @@
 import { Eraser, Filter, ImagePlus, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { MemberAvatar } from "../../components/MemberAvatar";
+import { ChildRoutineCreator } from "../children/ChildRoutineCreator";
 import { canViewResource, hasPermission } from "../../utils/permissions";
-import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role } from "@shared/types";
+import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role, Todo } from "@shared/types";
 
 const DEFAULT_CALENDAR_SETTINGS: CalendarSettings = {
   showWeekNumbers: false,
@@ -18,6 +20,7 @@ type AccountSettingsProps = {
   members: Member[];
   roles: Role[];
   calendars: Calendar[];
+  todos: Todo[];
   onCreateMember: (member: Member) => void;
   onDeleteMember: (memberId: string) => void;
   onDeleteOwnData: () => void;
@@ -26,6 +29,10 @@ type AccountSettingsProps = {
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onShareCalendar: (calendarId: string, memberId: string, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
+  onCreateTodo: (todo: Todo) => void;
+  onUpdateTodo: (todoId: string, patch: Partial<Todo>) => void;
+  onRefreshRoutine: (routineId: string) => void;
+  onDeleteTodo: (todoId: string) => void;
 };
 
 export function AccountSettings({
@@ -34,6 +41,7 @@ export function AccountSettings({
   members,
   roles,
   calendars,
+  todos,
   onCreateMember,
   onDeleteMember,
   onDeleteOwnData,
@@ -42,23 +50,16 @@ export function AccountSettings({
   onUpdateCalendarSettings,
   onShareCalendar,
   onRemoveCalendarShare,
+  onCreateTodo,
+  onUpdateTodo,
+  onRefreshRoutine,
+  onDeleteTodo,
 }: AccountSettingsProps) {
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [confirmOwnDataDelete, setConfirmOwnDataDelete] = useState(false);
   const [openCalFilterId, setOpenCalFilterId] = useState<string | null>(null);
-  const calFilterRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!openCalFilterId) return;
-    function handler(e: MouseEvent) {
-      if (calFilterRef.current && !calFilterRef.current.contains(e.target as Node)) {
-        setOpenCalFilterId(null);
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [openCalFilterId]);
+  const [calFilterPos, setCalFilterPos] = useState({ top: 0, left: 0 });
 
   const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
   const calSettings: CalendarSettings = account.calendarSettings ?? DEFAULT_CALENDAR_SETTINGS;
@@ -190,34 +191,22 @@ export function AccountSettings({
                   if (childCals.length === 0) return null;
                   const isOpen = openCalFilterId === member.id;
                   return (
-                    <div className="cal-filter-wrap" ref={isOpen ? calFilterRef : null}>
-                      <button
-                        className={`icon-button${isOpen ? " icon-button--active" : ""}`}
-                        onClick={() => setOpenCalFilterId(isOpen ? null : member.id)}
-                        title={`Kalenderåtkomst för ${member.name}`}
-                        type="button"
-                      >
-                        <Filter size={16} />
-                      </button>
-                      {isOpen && (
-                        <div className="cal-filter-dropdown">
-                          {childCals.map((cal) => (
-                            <label className="cal-filter-item" key={cal.id}>
-                              <input
-                                type="checkbox"
-                                checked={canViewResource(member, cal)}
-                                onChange={(e) => {
-                                  if (e.target.checked) onShareCalendar(cal.id, member.id, "view");
-                                  else onRemoveCalendarShare(cal.id, member.id);
-                                }}
-                              />
-                              <span className="cal-filter-dot" style={{ background: cal.color }} />
-                              <span>{cal.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      className={`icon-button${isOpen ? " icon-button--active" : ""}`}
+                      onClick={(e) => {
+                        if (isOpen) {
+                          setOpenCalFilterId(null);
+                        } else {
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          setCalFilterPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+                          setOpenCalFilterId(member.id);
+                        }
+                      }}
+                      title={`Kalenderåtkomst för ${member.name}`}
+                      type="button"
+                    >
+                      <Filter size={16} />
+                    </button>
                   );
                 })()}
                 <button
@@ -239,6 +228,27 @@ export function AccountSettings({
           </div>
         </div>
       )}
+
+      {canManageMembers && (() => {
+        const childMembers = activeMembers.filter(
+          (m) => m.isChild || roles.find((r) => r.id === m.roleId)?.isChildRole
+        );
+        if (childMembers.length === 0) return null;
+        return (
+          <div className="settings-sub">
+            <ChildRoutineCreator
+              currentMember={currentMember}
+              children={childMembers}
+              roles={roles}
+              todos={todos}
+              onCreateTodo={onCreateTodo}
+              onUpdateTodo={onUpdateTodo}
+              onRefreshRoutine={onRefreshRoutine}
+              onDeleteTodo={onDeleteTodo}
+            />
+          </div>
+        );
+      })()}
 
       {canManageMembers && (
         <div className="settings-sub">
@@ -312,6 +322,41 @@ export function AccountSettings({
           {confirmOwnDataDelete ? "Bekräfta radering" : "Radera min data"}
         </button>
       </div>
+
+      {/* Calendar filter dropdown portal — renders outside the clipping SettingsSection */}
+      {openCalFilterId && (() => {
+        const m = activeMembers.find((am) => am.id === openCalFilterId);
+        if (!m) return null;
+        const childCals = calendars.filter((c) => c.ownerId !== m.id && c.deletedAt === null);
+        return createPortal(
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+              onClick={() => setOpenCalFilterId(null)}
+            />
+            <div
+              className="cal-filter-dropdown"
+              style={{ position: "absolute", top: calFilterPos.top, left: calFilterPos.left, zIndex: 9999 }}
+            >
+              {childCals.map((cal) => (
+                <label className="cal-filter-item" key={cal.id}>
+                  <input
+                    type="checkbox"
+                    checked={canViewResource(m, cal)}
+                    onChange={(e) => {
+                      if (e.target.checked) onShareCalendar(cal.id, m.id, "view");
+                      else onRemoveCalendarShare(cal.id, m.id);
+                    }}
+                  />
+                  <span className="cal-filter-dot" style={{ background: cal.color }} />
+                  <span>{cal.name}</span>
+                </label>
+              ))}
+            </div>
+          </>,
+          document.body
+        );
+      })()}
     </>
   );
 }

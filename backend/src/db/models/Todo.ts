@@ -24,7 +24,8 @@ const todoSchema = new Schema<Todo>({
   rejectedBy: { type: String, default: null },
   rejectedAt: { type: String, default: null },
   deletedAt: { type: String, default: null },
-  deletedBy: { type: String, default: null }
+  deletedBy: { type: String, default: null },
+  routineCategory: { type: String, default: null }
 });
 
 export const TodoModel = model<Todo>("Todo", todoSchema);

@@ -188,6 +188,18 @@ export function MemberShellContent({
         t.deletedAt === null &&
         isTodoVisibleNow(t, now)
     );
+    const pendingApprovalTodos = todos.filter(
+      (t) =>
+        t.assignedTo === selectedDashboardMember.id &&
+        t.status === "done" &&
+        t.deletedAt === null
+    );
+    const rejectedTodos = todos.filter(
+      (t) =>
+        t.assignedTo === selectedDashboardMember.id &&
+        t.status === "rejected" &&
+        t.deletedAt === null
+    );
 
     return (
       <ChildDashboard
@@ -198,6 +210,8 @@ export function MemberShellContent({
         rewardProgress={rewardProgress}
         suggestedRewards={suggestedRewards}
         activeChildTodos={activeChildTodos}
+        pendingApprovalTodos={pendingApprovalTodos}
+        rejectedTodos={rejectedTodos}
         wishTitle={wishTitle}
         onSetWishTitle={onSetWishTitle}
         onCreateWish={onCreateWish}

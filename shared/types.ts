@@ -240,6 +240,7 @@ export type Todo = {
   rejectedAt: string | null;
   deletedAt: string | null;
   deletedBy: Id | null;
+  routineCategory?: string | null;
 };
 
 export type Reward = {

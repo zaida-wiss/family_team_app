@@ -33,10 +33,11 @@ function parseIcsEvents(text: string) {
       };
 
       const startsAt = parseDate(dtstart);
-      const endsAt = parseDate(dtend) ?? startsAt;
-      if (!startsAt || !endsAt) return null;
+      const parsedEndsAt = parseDate(dtend) ?? startsAt;
+      if (!startsAt || !parsedEndsAt) return null;
 
       const isAllDay = /^\d{8}$/.test(dtstart ?? "");
+      const endsAt = normalizeAllDayIcsEnd(startsAt, parsedEndsAt, dtstart, dtend);
       const desc = get("DESCRIPTION");
       const loc = get("LOCATION");
       const notes = [desc, loc].filter(Boolean).join(" · ") || null;
@@ -44,6 +45,17 @@ function parseIcsEvents(text: string) {
       return { title, startsAt, endsAt, isAllDay, uid, notes };
     })
     .filter((e): e is NonNullable<typeof e> => e !== null);
+}
+
+function normalizeAllDayIcsEnd(
+  startsAt: string,
+  endsAt: string,
+  rawStart: string | null,
+  rawEnd: string | null
+) {
+  if (!/^\d{8}$/.test(rawStart ?? "") || !/^\d{8}$/.test(rawEnd ?? "")) return endsAt;
+  if (endsAt <= startsAt) return startsAt;
+  return new Date(new Date(endsAt).getTime() - 86400000).toISOString();
 }
 
 function applyFilters(

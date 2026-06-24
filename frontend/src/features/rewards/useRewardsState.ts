@@ -11,7 +11,7 @@ export function useRewardsState() {
     rewardsApi.getAll().then(setRewards).catch(console.error);
   }, []);
 
-  function createWish(childId: Id) {
+  function createWish(childId: Id, starsNeeded = 10) {
     const title = wishTitle.trim();
     if (!title) return;
 
@@ -19,7 +19,7 @@ export function useRewardsState() {
       id: `reward-${Date.now()}`,
       title,
       wishedBy: childId,
-      starsNeeded: 10,
+      starsNeeded,
       status: "suggested",
       approvedBy: null,
       approvedAt: null,

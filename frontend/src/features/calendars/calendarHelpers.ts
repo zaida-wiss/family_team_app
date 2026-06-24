@@ -96,6 +96,48 @@ export function isHolidayEvent(ev: { title: string; calendarName: string }): boo
   return HELGDAG_RE.test(ev.title) || HELGDAG_RE.test(ev.calendarName);
 }
 
+export function expandForRange<T extends {
+  id: string; startsAt: string; endsAt: string;
+  calendarColor: string; calendarName: string;
+  recurrence?: { type: EventRecurrence["type"]; interval: number; until: string | null } | null;
+}>(events: T[], from: Date, to: Date): T[] {
+  const result: T[] = [];
+  for (const ev of events) {
+    const rec = ev.recurrence ?? { type: "none" as const, interval: 1, until: null };
+    if (rec.type === "none") {
+      if (new Date(ev.startsAt) <= to && new Date(ev.endsAt) >= from) result.push(ev);
+      continue;
+    }
+    const origStart = new Date(ev.startsAt);
+    if (origStart > to) continue;
+    const duration = new Date(ev.endsAt).getTime() - origStart.getTime();
+    const until = rec.until ? new Date(rec.until) : null;
+    const msPerStep =
+      rec.type === "yearly" ? rec.interval * 365.25 * 86400000
+      : rec.type === "monthly" ? rec.interval * 30.44 * 86400000
+      : rec.type === "weekly" ? rec.interval * 7 * 86400000
+      : rec.interval * 86400000;
+    let cur = new Date(origStart);
+    if (cur < from) {
+      const skip = Math.max(0, Math.floor((from.getTime() - cur.getTime()) / msPerStep) - 2);
+      for (let i = 0; i < skip; i++) cur = addInterval(cur, rec.type, rec.interval);
+      while (cur < from) cur = addInterval(cur, rec.type, rec.interval);
+    }
+    let guard = 0;
+    while (cur <= to && guard++ < 50) {
+      if (until && cur > until) break;
+      result.push({
+        ...ev,
+        id: `${ev.id}~${cur.getTime()}`,
+        startsAt: cur.toISOString(),
+        endsAt: new Date(cur.getTime() + duration).toISOString(),
+      });
+      cur = addInterval(new Date(cur), rec.type, rec.interval);
+    }
+  }
+  return result;
+}
+
 export function getMonthCells(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
   const startDow = (firstDay.getDay() + 6) % 7;

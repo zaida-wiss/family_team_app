@@ -5,6 +5,11 @@ export const todosApi = {
   getAll: () => request<Todo[]>(api("todos")),
   create: (todo: Todo) =>
     request<{ id: string }>(api("todos"), { method: "POST", body: JSON.stringify(todo) }),
+  update: (id: string, patch: Partial<Todo>) =>
+    request<{ ok: boolean }>(api(`todos/${id}`), {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }),
   complete: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}/complete`), {
       method: "PATCH",

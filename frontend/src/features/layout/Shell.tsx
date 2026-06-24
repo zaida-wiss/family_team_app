@@ -55,6 +55,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             members={settingsProps.members}
             roles={settingsProps.roles}
             calendars={settingsProps.calendars}
+            todos={settingsProps.todos}
             onCreateMember={settingsProps.onCreateMember}
             onDeleteMember={settingsProps.onDeleteMember}
             onDeleteOwnData={settingsProps.onDeleteOwnData}
@@ -63,6 +64,10 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
             onShareCalendar={memberContentProps.onShareCalendar}
             onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+            onCreateTodo={settingsProps.onCreateTodo}
+            onUpdateTodo={settingsProps.onUpdateTodo}
+            onRefreshRoutine={settingsProps.onRefreshRoutine}
+            onDeleteTodo={settingsProps.onDeleteTodo}
           />
           {canManageMembers && (
             <div className="settings-sub">

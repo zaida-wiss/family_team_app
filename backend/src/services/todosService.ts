@@ -1,14 +1,52 @@
 import { TodoModel } from "../db/models/Todo.js";
 import { AppError } from "../utils/errors.js";
+import type { Todo } from "../../../shared/types.js";
 
 export async function getAllTodos() {
   return TodoModel.find({}, { _id: 0, __v: 0 });
 }
 
 export async function createTodo(data: unknown) {
+  const existingId = getTodoId(data);
+  if (existingId) {
+    const existingTodo = await TodoModel.findOne({ id: existingId });
+    if (existingTodo) {
+      return { id: existingTodo.id };
+    }
+  }
+
   const todo = new TodoModel(data);
-  await todo.save();
+  try {
+    await todo.save();
+  } catch (error) {
+    if (existingId && isDuplicateKeyError(error)) {
+      const existingTodo = await TodoModel.findOne({ id: existingId });
+      if (existingTodo) {
+        return { id: existingTodo.id };
+      }
+    }
+
+    throw error;
+  }
   return { id: todo.id };
+}
+
+function getTodoId(data: unknown) {
+  if (!data || typeof data !== "object" || !("id" in data)) {
+    return null;
+  }
+
+  const id = (data as Partial<Todo>).id;
+  return typeof id === "string" ? id : null;
+}
+
+function isDuplicateKeyError(error: unknown) {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: unknown }).code === 11000
+  );
 }
 
 export async function completeTodo(id: string, memberId: string | null) {
@@ -19,6 +57,17 @@ export async function completeTodo(id: string, memberId: string | null) {
   todo.status = "done";
   todo.completedAt = new Date().toISOString();
   await todo.save();
+}
+
+export async function updateTodo(id: string, patch: unknown) {
+  const todo = await TodoModel.findOne({ id });
+  if (!todo) {
+    throw new AppError(404, "Todo hittades inte");
+  }
+
+  Object.assign(todo, patch);
+  await todo.save();
+  return { ok: true };
 }
 
 export async function approveTodo(id: string, memberId: string | null) {

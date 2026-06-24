@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Calendar, Member, Role } from "@shared/types";
-import { addInterval, fmtTime, getISOWeek, toLocalDateStr } from "../calendars/calendarHelpers";
+import { addInterval, expandForRange, fmtTime, getISOWeek, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 
@@ -21,45 +21,6 @@ function fmtShort(d: Date): string {
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 }
 
-function expandForRange(events: EnrichedEvent[], from: Date, to: Date): EnrichedEvent[] {
-  const result: EnrichedEvent[] = [];
-  for (const ev of events) {
-    const rec = ev.recurrence;
-    if (rec.type === "none") {
-      const s = new Date(ev.startsAt);
-      const e = new Date(ev.endsAt);
-      if (s <= to && e >= from) result.push(ev);
-      continue;
-    }
-    const origStart = new Date(ev.startsAt);
-    if (origStart > to) continue;
-    const duration = new Date(ev.endsAt).getTime() - origStart.getTime();
-    const until = rec.until ? new Date(rec.until) : null;
-    const msPerStep =
-      rec.type === "yearly" ? rec.interval * 365.25 * 86400000
-      : rec.type === "monthly" ? rec.interval * 30.44 * 86400000
-      : rec.type === "weekly" ? rec.interval * 7 * 86400000
-      : rec.interval * 86400000;
-    let cur = new Date(origStart);
-    if (cur < from) {
-      const skip = Math.max(0, Math.floor((from.getTime() - cur.getTime()) / msPerStep) - 2);
-      for (let i = 0; i < skip; i++) cur = addInterval(cur, rec.type, rec.interval);
-      while (cur < from) cur = addInterval(cur, rec.type, rec.interval);
-    }
-    let guard = 0;
-    while (cur <= to && guard++ < 50) {
-      if (until && cur > until) break;
-      result.push({
-        ...ev,
-        id: `${ev.id}~${cur.getTime()}`,
-        startsAt: cur.toISOString(),
-        endsAt: new Date(cur.getTime() + duration).toISOString(),
-      });
-      cur = addInterval(new Date(cur), rec.type, rec.interval);
-    }
-  }
-  return result;
-}
 
 type Props = {
   calendars: Calendar[];

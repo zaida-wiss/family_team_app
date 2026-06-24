@@ -24,6 +24,12 @@ type Props = {
   onDeleteOwnData: () => void;
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
   onUpdateMemberColor: (memberId: string, color: string | null) => void;
+  onShareCalendar: (calendarId: string, memberId: string, access: "view" | "edit") => void;
+  onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
+  onCreateTodo: (todo: Todo) => void;
+  onUpdateTodo: (todoId: string, patch: Partial<Todo>) => void;
+  onRefreshRoutine: (routineId: string) => void;
+  onDeleteTodo: (todoId: string) => void;
   onAssignRole: (memberId: string, roleId: string) => void;
   onCreateRole: (role: Role) => void;
   onTogglePermission: (roleId: string, key: PermissionKey) => void;
@@ -51,6 +57,12 @@ export function SettingsPanel({
   onDeleteOwnData,
   onUpdateMemberAvatar,
   onUpdateMemberColor,
+  onShareCalendar,
+  onRemoveCalendarShare,
+  onCreateTodo,
+  onUpdateTodo,
+  onRefreshRoutine,
+  onDeleteTodo,
   onAssignRole,
   onCreateRole,
   onTogglePermission,
@@ -70,12 +82,20 @@ export function SettingsPanel({
         currentMember={currentMember}
         members={members}
         roles={roles}
+        calendars={calendars}
+        todos={todos}
         onCreateMember={onCreateMember}
         onDeleteMember={onDeleteMember}
         onDeleteOwnData={onDeleteOwnData}
         onUpdateMemberAvatar={onUpdateMemberAvatar}
         onUpdateMemberColor={onUpdateMemberColor}
         onUpdateCalendarSettings={onUpdateCalendarSettings}
+        onShareCalendar={onShareCalendar}
+        onRemoveCalendarShare={onRemoveCalendarShare}
+        onCreateTodo={onCreateTodo}
+        onUpdateTodo={onUpdateTodo}
+        onRefreshRoutine={onRefreshRoutine}
+        onDeleteTodo={onDeleteTodo}
       />
       {canManageMembers && (
         <InviteForm

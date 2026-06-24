@@ -1,67 +1,92 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { todosApi } from "../../api";
 import { canCompleteTodo, canDeleteTodo, canEditTodo } from "../../utils/permissions";
-import { getDueRecurringTodoOccurrences } from "./recurringTodos";
+import { getDateKey, getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
 
 export function useTodosState() {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const todosRef = useRef<Todo[]>([]);
   const [editingTodoId, setEditingTodoId] = useState<Id | null>(null);
   const [editingTodoTitle, setEditingTodoTitle] = useState("");
 
   useEffect(() => {
-    todosApi.getAll().then(setTodos).catch(console.error);
+    todosApi.getAll().then((loadedTodos) => {
+      todosRef.current = loadedTodos;
+      setTodos(loadedTodos);
+      syncScheduledTodos(loadedTodos);
+    }).catch(console.error);
   }, []);
 
   useEffect(() => {
-    function syncScheduledTodos() {
-      const currentDate = new Date();
-      const currentTime = currentDate.getTime();
-
-      setTodos((current) =>
-        [
-          ...current,
-          ...getDueRecurringTodoOccurrences(current, currentDate)
-        ].map((todo) => {
-          if (
-            todo.status !== "pending" ||
-            todo.deletedAt !== null ||
-            !todo.expiresAt ||
-            new Date(todo.expiresAt).getTime() > currentTime
-          ) {
-            return todo;
-          }
-
-          return { ...todo, status: "expired" as const };
-        })
-      );
-    }
-
-    syncScheduledTodos();
     const intervalId = window.setInterval(syncScheduledTodos, 30_000);
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
+
+  async function syncScheduledTodos(baseTodos = todosRef.current) {
+    const currentDate = new Date();
+    const currentTime = currentDate.getTime();
+    const occurrences = getDueRecurringTodoOccurrences(baseTodos, currentDate);
+    const savedOccurrences = await Promise.all(
+      occurrences.map(async (todo) => {
+        try {
+          await todosApi.create(todo);
+          return todo;
+        } catch (error) {
+          console.error(error);
+          return null;
+        }
+      })
+    );
+
+    setTodos((current) =>
+      expirePendingTodos(
+        addMissingTodos(
+          current,
+          savedOccurrences.filter((todo): todo is Todo => todo !== null)
+        ),
+        currentTime
+      )
+    );
+  }
 
   function createTodo(todo: Todo) {
     todosApi.create(todo).catch(console.error);
     setTodos((current) => [...current, todo]);
   }
 
-  function completeTodo(member: Member, todoId: Id, roles: Role[]) {
+  function updateTodo(todoId: Id, patch: Partial<Todo>) {
+    todosApi.update(todoId, patch).catch(console.error);
     setTodos((current) =>
-      current.map((todo) => {
-        if (todo.id !== todoId || !canCompleteTodo(member, roles, todo)) {
-          return todo;
-        }
+      current.map((todo) => (todo.id === todoId ? { ...todo, ...patch } : todo))
+    );
+  }
 
-        todosApi.complete(todoId).catch(console.error);
-        return {
-          ...todo,
-          status: "done" as const,
-          completedAt: new Date().toISOString()
-        };
-      })
+  function completeTodo(member: Member, todoId: Id, roles: Role[]) {
+    const todoToComplete = todos.find((todo) => todo.id === todoId);
+    if (!todoToComplete || !canCompleteTodo(member, roles, todoToComplete)) {
+      return;
+    }
+
+    persistTodoIfGeneratedOccurrence(todoToComplete)
+      .then(() => todosApi.complete(todoId))
+      .catch(console.error);
+
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id !== todoId
+          ? todo
+          : {
+              ...todo,
+              status: "done" as const,
+              completedAt: new Date().toISOString()
+            }
+      )
     );
   }
 
@@ -199,12 +224,47 @@ export function useTodosState() {
     );
   }
 
+  function refreshRoutineOccurrence(routineId: Id) {
+    const current = todosRef.current;
+    const routine = current.find((todo) => todo.id === routineId);
+    if (!routine) {
+      return;
+    }
+
+    const today = getDateKey(new Date());
+    const existingOccurrence = current.find(
+      (todo) => todo.recurringSourceId === routineId && todo.occurrenceDate === today
+    );
+    const pendingPatch: Partial<Todo> = {
+      status: "pending",
+      completedAt: null,
+      approvedBy: null,
+      approvedAt: null,
+      rejectedBy: null,
+      rejectedAt: null,
+      deletedAt: null,
+      deletedBy: null
+    };
+
+    if (existingOccurrence) {
+      updateTodo(existingOccurrence.id, pendingPatch);
+      return;
+    }
+
+    const [newOccurrence] = getDueRecurringTodoOccurrences([routine], new Date());
+    if (newOccurrence) {
+      todosApi.create(newOccurrence).catch(console.error);
+      setTodos((items) => addMissingTodos(items, [newOccurrence]));
+    }
+  }
+
   return {
     todos,
     editingTodoId,
     editingTodoTitle,
     setEditingTodoTitle,
     createTodo,
+    updateTodo,
     completeTodo,
     startEditingTodo,
     saveTodoTitle,
@@ -214,6 +274,38 @@ export function useTodosState() {
     approveTodo,
     rejectTodo,
     dismissRejectedTodo,
-    softDeleteTodosForMember
+    softDeleteTodosForMember,
+    refreshRoutineOccurrence
   };
+}
+
+async function persistTodoIfGeneratedOccurrence(todo: Todo) {
+  if (!todo.recurringSourceId || !todo.occurrenceDate) {
+    return;
+  }
+
+  await todosApi.create(todo);
+}
+
+function addMissingTodos(current: Todo[], incoming: Todo[]) {
+  const existingIds = new Set(current.map((todo) => todo.id));
+  return [
+    ...current,
+    ...incoming.filter((todo) => !existingIds.has(todo.id))
+  ];
+}
+
+function expirePendingTodos(current: Todo[], currentTime: number) {
+  return current.map((todo) => {
+    if (
+      todo.status !== "pending" ||
+      todo.deletedAt !== null ||
+      !todo.expiresAt ||
+      new Date(todo.expiresAt).getTime() > currentTime
+    ) {
+      return todo;
+    }
+
+    return { ...todo, status: "expired" as const };
+  });
 }

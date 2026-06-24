@@ -7,6 +7,8 @@ import type { EnrichedEvent } from "./CalendarEventList";
 import { CalendarEventModal } from "./CalendarEventModal";
 import { CalendarEventDetail } from "./CalendarEventDetail";
 import { CalendarMonthGrid } from "./CalendarMonthGrid";
+import { CalendarWeekView } from "./CalendarWeekView";
+import { CalendarTimelineView } from "./CalendarTimelineView";
 import { useCalendarView } from "./useCalendarView";
 import type { CalendarFilter } from "./calendarTypes";
 
@@ -33,6 +35,7 @@ type Props = {
 export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, filter, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
   const [internalSearch, setInternalSearch] = useState("");
   const [internalHidden, setInternalHidden] = useState<Set<string>>(new Set());
+  const [calView, setCalView] = useState<"month" | "week" | "timeline">("month");
 
   const searchQuery = filter?.searchQuery ?? internalSearch;
   const setSearchQuery = filter?.setSearchQuery ?? setInternalSearch;
@@ -160,28 +163,73 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           ))}
         </div>
       )}
-      <CalendarMonthGrid
-        {...sharedGridProps}
-        variant="full"
-        onEventClick={openEdit}
-      />
-      <CalendarEventList
-        key={`${viewYear}-${viewMonth}`}
-        allEvents={listEvents}
-        selectedDay={selectedDay}
-        viewYear={viewYear}
-        viewMonth={viewMonth}
-        todayStr={todayStr}
-        visible={visible}
-        calendarDisplayColor={calendarDisplayColor}
-        showHolidays={showHolidays}
-        holidayBgColor={holidayBgColor}
-        holidayTextColor={holidayTextColor}
-        {...sharedListProps}
-        onEventClick={openEdit}
-        onClearDay={() => setSelectedDay(null)}
-        onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}
-      />
+
+      <div className="cal-view-tabs">
+        <button
+          className={`cal-view-tab${calView === "month" ? " cal-view-tab--active" : ""}`}
+          onClick={() => setCalView("month")}
+          type="button"
+        >
+          Månad
+        </button>
+        <button
+          className={`cal-view-tab${calView === "week" ? " cal-view-tab--active" : ""}`}
+          onClick={() => setCalView("week")}
+          type="button"
+        >
+          Vecka
+        </button>
+        <button
+          className={`cal-view-tab${calView === "timeline" ? " cal-view-tab--active" : ""}`}
+          onClick={() => setCalView("timeline")}
+          type="button"
+        >
+          Tidslinje
+        </button>
+      </div>
+
+      {calView === "week" ? (
+        <CalendarWeekView
+          visible={visible}
+          calendarDisplayColor={calendarDisplayColor}
+          todayStr={todayStr}
+          showWeekNumbers={showWeekNumbers}
+          onEventClick={openEdit}
+        />
+      ) : calView === "timeline" ? (
+        <CalendarTimelineView
+          visible={visible}
+          calendarDisplayColor={calendarDisplayColor}
+          todayStr={todayStr}
+          showWeekNumbers={showWeekNumbers}
+          onEventClick={openEdit}
+        />
+      ) : (
+        <>
+          <CalendarMonthGrid
+            {...sharedGridProps}
+            variant="full"
+            onEventClick={openEdit}
+          />
+          <CalendarEventList
+            key={`${viewYear}-${viewMonth}`}
+            allEvents={listEvents}
+            selectedDay={selectedDay}
+            viewYear={viewYear}
+            viewMonth={viewMonth}
+            todayStr={todayStr}
+            visible={visible}
+            calendarDisplayColor={calendarDisplayColor}
+            showHolidays={showHolidays}
+            holidayBgColor={holidayBgColor}
+            holidayTextColor={holidayTextColor}
+            {...sharedListProps}
+            onEventClick={openEdit}
+            onClearDay={() => setSelectedDay(null)}
+            onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}
+          />
+        </>
+      )}
       {eventModal}
     </div>
   );

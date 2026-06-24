@@ -265,7 +265,8 @@ export function CalendarPanel({
         includeWords: newSubIncludeWords,
         excludeWords: newSubExcludeWords,
         dateFrom: null,
-        dateTo: null
+        dateTo: null,
+        displaySymbol: null
       });
       setNewSubUrl("");
       setNewSubIncludeWords([]);
@@ -1020,11 +1021,12 @@ function parseIcsEvents(text: string): ImportedCalendarEvent[] {
       const dtstart = getIcsValue(block, "DTSTART");
       const dtend = getIcsValue(block, "DTEND") ?? getIcsValue(block, "DURATION");
       const startsAt = parseIcsDate(dtstart);
-      const endsAt = parseIcsDate(dtend) ?? startsAt;
+      const parsedEndsAt = parseIcsDate(dtend) ?? startsAt;
 
-      if (!startsAt || !endsAt) return null;
+      if (!startsAt || !parsedEndsAt) return null;
 
       const isAllDay = /^\d{8}$/.test(dtstart ?? "");
+      const endsAt = normalizeAllDayIcsEnd(startsAt, parsedEndsAt, dtstart, dtend);
       const color = SCHOOL_CLOSED_RE.test(title) ? SCHOOL_CLOSED_COLOR : null;
 
       const description = getIcsValue(block, "DESCRIPTION");
@@ -1038,6 +1040,17 @@ function parseIcsEvents(text: string): ImportedCalendarEvent[] {
       return { title, startsAt, endsAt, isAllDay, color, notes, categories };
     })
     .filter((event): event is ImportedCalendarEvent => event !== null);
+}
+
+function normalizeAllDayIcsEnd(
+  startsAt: string,
+  endsAt: string,
+  rawStart: string | null,
+  rawEnd: string | null
+) {
+  if (!/^\d{8}$/.test(rawStart ?? "") || !/^\d{8}$/.test(rawEnd ?? "")) return endsAt;
+  if (endsAt <= startsAt) return startsAt;
+  return new Date(new Date(endsAt).getTime() - 86400000).toISOString();
 }
 
 function getIcsValue(block: string, key: string) {

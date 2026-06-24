@@ -106,7 +106,7 @@
 }
 
 .cal-cell {
-  min-height: 74px;
+  min-height: 54px;
   background: var(--background);
   border-radius: 10px;
   padding: 5px 5px 4px;

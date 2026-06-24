@@ -12,6 +12,10 @@ todosRouter.post("/", requireAuth, async (req, res) => {
   res.status(201).json(await todos.createTodo(req.body));
 });
 
+todosRouter.patch("/:id", requireAuth, async (req, res) => {
+  res.json(await todos.updateTodo(req.params.id, req.body));
+});
+
 todosRouter.patch("/:id/complete", requireAuth, async (req, res) => {
   await todos.completeTodo(req.params.id, req.memberId ?? null);
   res.json({ ok: true });
