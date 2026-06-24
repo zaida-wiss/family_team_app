@@ -1,5 +1,6 @@
 import { CalendarDays, Check, Copy, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import EmojiPicker from "emoji-picker-react";
 import { calendarsApi } from "../../api";
 import {
@@ -56,7 +57,7 @@ type CalendarPanelProps = {
   onShareCalendar: (calendarId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
   onAddSubscription: (calendarId: Id, sub: Omit<IcsSubscription, "id" | "calendarId" | "lastSyncedAt">) => void;
-  onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords">>) => Promise<void>;
+  onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "displaySymbol">>) => Promise<void>;
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
 };
@@ -133,6 +134,7 @@ export function CalendarPanel({
   const [editExcludeWords, setEditExcludeWords] = useState<string[]>([]);
   const [editDisplaySymbol, setEditDisplaySymbol] = useState("");
   const [symbolPickerSubId, setSymbolPickerSubId] = useState<string | null>(null);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const symbolPickerRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteSubId, setConfirmDeleteSubId] = useState<string | null>(null);
   const [fileFilterFrom] = useState(() => new Date().toISOString().slice(0, 10));
@@ -624,29 +626,42 @@ export function CalendarPanel({
                         </div>
                       ) : (
                         <>
-                          <div className="ics-sub-symbol-wrap" ref={symbolPickerSubId === sub.id ? symbolPickerRef : null}>
+                          <div className="ics-sub-symbol-wrap">
                             <button
                               className="ics-sub-symbol-btn"
-                              onClick={() => setSymbolPickerSubId(symbolPickerSubId === sub.id ? null : sub.id)}
+                              onClick={(e) => {
+                                if (symbolPickerSubId === sub.id) {
+                                  setSymbolPickerSubId(null);
+                                } else {
+                                  const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                  setPickerPos({ top: rect.bottom + 6, left: rect.left });
+                                  setSymbolPickerSubId(sub.id);
+                                }
+                              }}
                               title="Välj symbol"
                               type="button"
                             >
                               {sub.displaySymbol ?? "＋"}
                             </button>
-                            {symbolPickerSubId === sub.id && (
-                              <div className="ics-sub-symbol-picker">
-                                <EmojiPicker
-                                  height={380}
-                                  onEmojiClick={(data) => {
-                                    void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: data.emoji });
-                                    setSymbolPickerSubId(null);
-                                  }}
-                                  previewConfig={{ showPreview: false }}
-                                  width={300}
-                                />
-                              </div>
-                            )}
                           </div>
+                          {symbolPickerSubId === sub.id && createPortal(
+                            <div
+                              className="ics-sub-symbol-picker"
+                              ref={symbolPickerRef}
+                              style={{ top: pickerPos.top, left: pickerPos.left }}
+                            >
+                              <EmojiPicker
+                                height={380}
+                                onEmojiClick={(data) => {
+                                  void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: data.emoji });
+                                  setSymbolPickerSubId(null);
+                                }}
+                                previewConfig={{ showPreview: false }}
+                                width={300}
+                              />
+                            </div>,
+                            document.body
+                          )}
                           <div className="ics-sub-info">
                             <span className="ics-sub-url" title={sub.url}>
                               {sub.url.replace(/^https?:\/\//, "").slice(0, 48)}…
