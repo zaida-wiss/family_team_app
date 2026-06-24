@@ -576,14 +576,6 @@ export function CalendarPanel({
                     <div className="ics-sub-row" key={sub.id}>
                       {editingSubId === sub.id ? (
                         <div className="ics-sub-edit">
-                          <button
-                            className="icon-button"
-                            onClick={() => void navigator.clipboard.writeText(sub.url)}
-                            title={sub.url}
-                            type="button"
-                          >
-                            <Copy size={13} />
-                          </button>
                           <WordTagInput
                             label="Inkludera händelser med ord"
                             placeholder="Skriv ord + Enter"
@@ -642,6 +634,14 @@ export function CalendarPanel({
                               type="button"
                             >
                               <Pencil size={14} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              onClick={() => void navigator.clipboard.writeText(sub.url)}
+                              title={sub.url}
+                              type="button"
+                            >
+                              <Copy size={14} />
                             </button>
                             <button
                               className="icon-button"
