@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
 import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
@@ -12,6 +11,7 @@ type Props = {
   calendars: Calendar[];
   canSeeCalendar: boolean;
   calendarSettings?: CalendarSettings;
+  calendarFilter: CalendarFilter;
   onSelectMember: (memberId: string) => void;
   onOpenCalendar?: () => void;
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
@@ -19,12 +19,7 @@ type Props = {
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
 };
 
-export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent }: Props) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<Set<string>>(new Set());
-
-  const calendarFilter: CalendarFilter = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds };
-
+export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent }: Props) {
   return (
     <MemberOverview
       currentMember={currentMember}

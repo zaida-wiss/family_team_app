@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { ComponentProps } from "react";
+import type { CalendarFilter } from "../calendars/CalendarView";
 import { ChildDashboard } from "../children/ChildDashboard";
 import { Dashboard } from "./Dashboard";
 import { CalendarPage } from "../../pages/CalendarPage";
@@ -77,6 +79,7 @@ function isTodoVisibleNow(
 
 export function MemberShellContent({
   activePanel, accountName,
+
   currentMember, activeMembers, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
@@ -88,6 +91,13 @@ export function MemberShellContent({
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings
 }: Props) {
+  const [calSearch, setCalSearch] = useState("");
+  const [calHidden, setCalHidden] = useState<Set<string>>(new Set());
+  const [homeSearch, setHomeSearch] = useState("");
+  const [homeHidden, setHomeHidden] = useState<Set<string>>(new Set());
+
+  const calendarFilter: CalendarFilter = { searchQuery: calSearch, setSearchQuery: setCalSearch, hiddenCalendarIds: calHidden, setHiddenCalendarIds: setCalHidden };
+  const homeFilter: CalendarFilter = { searchQuery: homeSearch, setSearchQuery: setHomeSearch, hiddenCalendarIds: homeHidden, setHiddenCalendarIds: setHomeHidden };
 
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   if (activePanel === "calendar") {
@@ -98,6 +108,7 @@ export function MemberShellContent({
         activeMembers={activeMembers}
         roles={roles}
         calendarSettings={calendarSettings}
+        filter={calendarFilter}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
@@ -203,6 +214,7 @@ export function MemberShellContent({
         selectedMemberId={selectedDashboardMember.id}
         calendars={canSeeCalendar ? calendars : []}
         canSeeCalendar={canSeeCalendar}
+        calendarFilter={homeFilter}
         onSelectMember={onSelectMember}
         onOpenCalendar={() => onNavigate("calendar")}
         calendarSettings={calendarSettings}
@@ -225,6 +237,7 @@ export function MemberShellContent({
         selectedMemberId=""
         calendars={canSeeCalendar ? calendars : []}
         canSeeCalendar={canSeeCalendar}
+        calendarFilter={homeFilter}
         onSelectMember={onSelectMember}
         onOpenCalendar={() => onNavigate("calendar")}
         calendarSettings={calendarSettings}
