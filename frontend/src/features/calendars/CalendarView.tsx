@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { CalendarDays, CalendarRange, Clock3, List } from "lucide-react";
 import type { Calendar, CalendarEvent, CalendarSettings, CalendarViewMode, Id, Member, Role } from "@shared/types";
 import "./CalendarView.css";
 import { CalendarEventList } from "./CalendarEventList";
@@ -7,6 +8,7 @@ import type { EnrichedEvent } from "./CalendarEventList";
 import { CalendarEventModal } from "./CalendarEventModal";
 import { CalendarEventDetail } from "./CalendarEventDetail";
 import { CalendarMonthGrid } from "./CalendarMonthGrid";
+import { CalendarMonthLayout } from "./CalendarMonthLayout";
 import { CalendarWeekView } from "./CalendarWeekView";
 import { CalendarTimelineView } from "./CalendarTimelineView";
 import { useCalendarView } from "./useCalendarView";
@@ -38,6 +40,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
   const [internalSearch, setInternalSearch] = useState("");
   const [internalHidden, setInternalHidden] = useState<Set<string>>(new Set());
   const [internalCalView, setInternalCalView] = useState<CalendarViewMode>("month");
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const searchQuery = filter?.searchQuery ?? internalSearch;
   const setSearchQuery = filter?.setSearchQuery ?? setInternalSearch;
@@ -48,9 +51,10 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
   const {
     todayStr, viewYear, viewMonth, selectedDay, setSelectedDay,
+    weekStart, weekEnd,
     modal, form, setForm, detailEvent, setDetailEvent, longPressRef,
     visible, editableCalendars, canEditEvent, pendingInvitations,
-    eventsForDay, listEvents, prevMonth, nextMonth,
+    eventsForDay, listEvents, weekEvents, allListEvents, prevMonth, nextMonth, prevWeek, nextWeek,
     openNew, openEdit, closeModal, submitForm, deleteEvent,
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
@@ -59,6 +63,25 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
   const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds };
   const filteredVisible = visible.filter((calendar) => !hiddenCalendarIds.has(calendar.id));
+
+  function startSwipe(e: React.TouchEvent<HTMLElement>) {
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function endSwipe(e: React.TouchEvent<HTMLElement>, onPrev: () => void, onNext: () => void) {
+    const start = touchStartRef.current;
+    const touch = e.changedTouches[0];
+    touchStartRef.current = null;
+    if (!start || !touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+    if (deltaX < 0) onNext();
+    else onPrev();
+  }
 
   if (visible.length === 0 && !displayOnly) {
     return (
@@ -95,6 +118,62 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     />
   ) : null;
 
+  const detailModal = detailEvent ? (
+    <CalendarEventDetail
+      event={detailEvent}
+      calendarDisplayColor={calendarDisplayColor}
+      activeMembers={activeMembers}
+      canEditEvent={canEditEvent}
+      onUpdateEvent={onUpdateEvent}
+      onClose={() => setDetailEvent(null)}
+      onEdit={(ev: EnrichedEvent) => {
+        setDetailEvent(null);
+        openEdit(ev);
+      }}
+    />
+  ) : null;
+
+  const viewTabs = (
+    <div className="cal-view-tabs" aria-label="Kalendervy" role="group">
+      <button
+        aria-label="Månadsvy"
+        className={`cal-view-tab${calView === "month" ? " cal-view-tab--active" : ""}`}
+        onClick={() => setCalView("month")}
+        title="Månadsvy"
+        type="button"
+      >
+        <CalendarDays size={16} />
+      </button>
+      <button
+        aria-label="Veckovy"
+        className={`cal-view-tab${calView === "week" ? " cal-view-tab--active" : ""}`}
+        onClick={() => setCalView("week")}
+        title="Veckovy"
+        type="button"
+      >
+        <CalendarRange size={16} />
+      </button>
+      <button
+        aria-label="Lista"
+        className={`cal-view-tab${calView === "list" ? " cal-view-tab--active" : ""}`}
+        onClick={() => setCalView("list")}
+        title="Lista"
+        type="button"
+      >
+        <List size={16} />
+      </button>
+      <button
+        aria-label="Tidslinje"
+        className={`cal-view-tab${calView === "timeline" ? " cal-view-tab--active" : ""}`}
+        onClick={() => setCalView("timeline")}
+        title="Tidslinje"
+        type="button"
+      >
+        <Clock3 size={16} />
+      </button>
+    </div>
+  );
+
   if (displayOnly) {
     const handleDayTouchStart = (dateStr: string) => {
       if (editableCalendars.length === 0 || !onAddEvent) return;
@@ -105,41 +184,106 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     };
 
     return (
-      <div className="cal-overview-wrap">
-        <CalendarMonthGrid
-          {...sharedGridProps}
-          variant="mini"
-          onDayTouchStart={handleDayTouchStart}
-          onDayTouchEnd={handleDayTouchEnd}
-        />
-        <CalendarEventList
-          key={`${viewYear}-${viewMonth}`}
-          allEvents={listEvents}
-          selectedDay={selectedDay}
-          viewYear={viewYear}
-          viewMonth={viewMonth}
-          todayStr={todayStr}
-          visible={visible}
-          calendarDisplayColor={calendarDisplayColor}
-          showHolidays={showHolidays}
-          holidayBgColor={holidayBgColor}
-          holidayTextColor={holidayTextColor}
-          {...sharedListProps}
-          onEventClick={setDetailEvent}
-          onClearDay={() => setSelectedDay(null)}
-          onNewEvent={editableCalendars.length > 0 && onAddEvent ? () => openNew() : undefined}
-        />
-        {detailEvent && (
-          <CalendarEventDetail
-            event={detailEvent}
+      <div className="cal-view cal-view--overview">
+        {calView === "week" ? (
+          <div
+            className="cal-view-with-list cal-swipe-region"
+            onTouchEnd={(e) => endSwipe(e, prevWeek, nextWeek)}
+            onTouchStart={startSwipe}
+          >
+            <CalendarWeekView
+              weekEvents={weekEvents}
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+              todayStr={todayStr}
+              showWeekNumbers={showWeekNumbers}
+              eventDisplay="dots"
+              onPrevWeek={prevWeek}
+              onNextWeek={nextWeek}
+              navExtra={viewTabs}
+              onEventClick={setDetailEvent}
+            />
+            <CalendarEventList
+              key={`week-${weekStart.toISOString()}`}
+              allEvents={weekEvents}
+              selectedDay={null}
+              scope="week"
+              viewYear={weekStart.getFullYear()}
+              viewMonth={weekStart.getMonth()}
+              todayStr={todayStr}
+              visible={visible}
+              calendarDisplayColor={calendarDisplayColor}
+              showHolidays={showHolidays}
+              holidayBgColor={holidayBgColor}
+              holidayTextColor={holidayTextColor}
+              {...sharedListProps}
+              onEventClick={setDetailEvent}
+              onNewEvent={editableCalendars.length > 0 && onAddEvent ? () => openNew() : undefined}
+            />
+          </div>
+        ) : calView === "list" ? (
+          <CalendarEventList
+            key="list"
+            allEvents={allListEvents}
+            selectedDay={null}
+            scope="all"
+            viewYear={viewYear}
+            viewMonth={viewMonth}
+            todayStr={todayStr}
+            visible={visible}
             calendarDisplayColor={calendarDisplayColor}
-            activeMembers={activeMembers}
-            canEditEvent={canEditEvent}
-            onUpdateEvent={onUpdateEvent}
-            onClose={() => setDetailEvent(null)}
-            onEdit={(ev: EnrichedEvent) => openEdit(ev)}
+            showHolidays={showHolidays}
+            holidayBgColor={holidayBgColor}
+            holidayTextColor={holidayTextColor}
+            {...sharedListProps}
+            navExtra={viewTabs}
+            onEventClick={setDetailEvent}
+            onNewEvent={editableCalendars.length > 0 && onAddEvent ? () => openNew() : undefined}
           />
+        ) : calView === "timeline" ? (
+          <CalendarTimelineView
+            visible={filteredVisible}
+            calendarDisplayColor={calendarDisplayColor}
+            todayStr={todayStr}
+            showWeekNumbers={showWeekNumbers}
+            navExtra={viewTabs}
+            onEventClick={setDetailEvent}
+          />
+        ) : (
+          <CalendarMonthLayout
+            className="cal-swipe-region"
+            onTouchEnd={(e) => endSwipe(e, prevMonth, nextMonth)}
+            onTouchStart={startSwipe}
+            variant="overview"
+          >
+            <CalendarMonthGrid
+              {...sharedGridProps}
+              variant="mini"
+              navExtra={viewTabs}
+              onDayTouchStart={handleDayTouchStart}
+              onDayTouchEnd={handleDayTouchEnd}
+            />
+            <CalendarEventList
+              key={`${viewYear}-${viewMonth}`}
+              allEvents={listEvents}
+              selectedDay={selectedDay}
+              scope="month"
+              viewYear={viewYear}
+              viewMonth={viewMonth}
+              todayStr={todayStr}
+              visible={visible}
+              calendarDisplayColor={calendarDisplayColor}
+              showHolidays={showHolidays}
+              holidayBgColor={holidayBgColor}
+              holidayTextColor={holidayTextColor}
+              {...sharedListProps}
+              onEventClick={setDetailEvent}
+              onClearDay={() => setSelectedDay(null)}
+              onNewEvent={editableCalendars.length > 0 && onAddEvent ? () => openNew() : undefined}
+            />
+          </CalendarMonthLayout>
         )}
+        {detailModal}
         {eventModal}
       </div>
     );
@@ -169,37 +313,59 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         </div>
       )}
 
-      <div className="cal-view-tabs">
-        <button
-          className={`cal-view-tab${calView === "month" ? " cal-view-tab--active" : ""}`}
-          onClick={() => setCalView("month")}
-          type="button"
-        >
-          Månad
-        </button>
-        <button
-          className={`cal-view-tab${calView === "week" ? " cal-view-tab--active" : ""}`}
-          onClick={() => setCalView("week")}
-          type="button"
-        >
-          Vecka
-        </button>
-        <button
-          className={`cal-view-tab${calView === "timeline" ? " cal-view-tab--active" : ""}`}
-          onClick={() => setCalView("timeline")}
-          type="button"
-        >
-          Tidslinje
-        </button>
-      </div>
-
       {calView === "week" ? (
-        <CalendarWeekView
-          visible={filteredVisible}
-          calendarDisplayColor={calendarDisplayColor}
+        <div
+          className="cal-view-with-list cal-swipe-region"
+          onTouchEnd={(e) => endSwipe(e, prevWeek, nextWeek)}
+          onTouchStart={startSwipe}
+        >
+          <CalendarWeekView
+            weekEvents={weekEvents}
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+            todayStr={todayStr}
+            showWeekNumbers={showWeekNumbers}
+            onPrevWeek={prevWeek}
+            onNextWeek={nextWeek}
+            navExtra={viewTabs}
+            onEventClick={setDetailEvent}
+          />
+          <CalendarEventList
+            key={`week-${weekStart.toISOString()}`}
+            allEvents={weekEvents}
+            selectedDay={null}
+            scope="week"
+            viewYear={weekStart.getFullYear()}
+            viewMonth={weekStart.getMonth()}
+            todayStr={todayStr}
+            visible={visible}
+            calendarDisplayColor={calendarDisplayColor}
+            showHolidays={showHolidays}
+            holidayBgColor={holidayBgColor}
+            holidayTextColor={holidayTextColor}
+            {...sharedListProps}
+            onEventClick={setDetailEvent}
+            onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}
+          />
+        </div>
+      ) : calView === "list" ? (
+        <CalendarEventList
+          key="list"
+          allEvents={allListEvents}
+          selectedDay={null}
+          scope="all"
+          viewYear={viewYear}
+          viewMonth={viewMonth}
           todayStr={todayStr}
-          showWeekNumbers={showWeekNumbers}
-          onEventClick={openEdit}
+          visible={visible}
+          calendarDisplayColor={calendarDisplayColor}
+          showHolidays={showHolidays}
+          holidayBgColor={holidayBgColor}
+          holidayTextColor={holidayTextColor}
+          {...sharedListProps}
+          navExtra={viewTabs}
+          onEventClick={setDetailEvent}
+          onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}
         />
       ) : calView === "timeline" ? (
         <CalendarTimelineView
@@ -207,19 +373,26 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           calendarDisplayColor={calendarDisplayColor}
           todayStr={todayStr}
           showWeekNumbers={showWeekNumbers}
-          onEventClick={openEdit}
+          navExtra={viewTabs}
+          onEventClick={setDetailEvent}
         />
       ) : (
-        <>
+        <CalendarMonthLayout
+          className="cal-swipe-region"
+          onTouchEnd={(e) => endSwipe(e, prevMonth, nextMonth)}
+          onTouchStart={startSwipe}
+        >
           <CalendarMonthGrid
             {...sharedGridProps}
             variant="full"
-            onEventClick={openEdit}
+            navExtra={viewTabs}
+            onEventClick={setDetailEvent}
           />
           <CalendarEventList
             key={`${viewYear}-${viewMonth}`}
             allEvents={listEvents}
             selectedDay={selectedDay}
+            scope="month"
             viewYear={viewYear}
             viewMonth={viewMonth}
             todayStr={todayStr}
@@ -229,12 +402,13 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             holidayBgColor={holidayBgColor}
             holidayTextColor={holidayTextColor}
             {...sharedListProps}
-            onEventClick={openEdit}
+            onEventClick={setDetailEvent}
             onClearDay={() => setSelectedDay(null)}
             onNewEvent={editableCalendars.length > 0 ? () => openNew() : undefined}
           />
-        </>
+        </CalendarMonthLayout>
       )}
+      {detailModal}
       {eventModal}
     </div>
   );

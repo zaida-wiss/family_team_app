@@ -27,7 +27,7 @@ export type AppPanel =
   | "members"
   | "settings";
 
-export type CalendarViewMode = "month" | "week" | "timeline";
+export type CalendarViewMode = "month" | "week" | "list" | "timeline";
 
 export type CalendarFilterKey = "home" | "calendar";
 

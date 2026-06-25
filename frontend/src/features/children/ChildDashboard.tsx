@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Star, Sparkles, Trophy, X } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, ShoppingBag, Star, Trophy, X } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 import { ChildTimeline } from "./ChildTimeline";
 
@@ -21,9 +21,86 @@ type Props = {
 };
 
 type TaskCardStyle = CSSProperties & {
-  "--task-timer-bg"?: string;
+  "--task-accent"?: string;
+  "--task-bg"?: string;
   "--task-time-left"?: string;
 };
+
+type DayPillStyle = CSSProperties & {
+  "--day-bg"?: string;
+  "--day-fg"?: string;
+};
+
+type TaskColor = {
+  accent: string;
+  bg: string;
+};
+
+const CHILD_TASK_COLORS = [
+  { accent: "#7aa986", bg: "#edf5e9" },
+  { accent: "#d98c82", bg: "#fae4df" },
+  { accent: "#7fa4d2", bg: "#e8f1fb" },
+  { accent: "#b985d0", bg: "#f0e2f7" },
+  { accent: "#d8b765", bg: "#f8edce" },
+];
+
+const CATEGORY_TASK_COLORS: Record<string, TaskColor> = {
+  fritid: { accent: "#b985d0", bg: "#f0e2f7" },
+  familj: { accent: "#d98c82", bg: "#fae4df" },
+  hem: { accent: "#d3a46f", bg: "#f5e8d8" },
+  hushåll: { accent: "#d3a46f", bg: "#f5e8d8" },
+  hälsa: { accent: "#7aa986", bg: "#edf5e9" },
+  hygien: { accent: "#7fa4d2", bg: "#e8f1fb" },
+  mat: { accent: "#d8b765", bg: "#f8edce" },
+  måltid: { accent: "#d8b765", bg: "#f8edce" },
+  rörelse: { accent: "#cf8980", bg: "#f8e2dd" },
+  skola: { accent: "#7d9fca", bg: "#e9f0fa" },
+  sömn: { accent: "#82a98d", bg: "#e8f3e8" },
+};
+
+const WEEKDAY_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
+const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const NPF_DAY_COLORS = [
+  { bg: "#f9dcd8", fg: "#7b1f1f" },
+  { bg: "#dff1e4", fg: "#345f42" },
+  { bg: "#dcecff", fg: "#173c72" },
+  { bg: "#e8edf4", fg: "#1f3d68" },
+  { bg: "#f1dfcf", fg: "#4d3329" },
+  { bg: "#f1dfd1", fg: "#4f342b" },
+  { bg: "#f8d8ef", fg: "#7a2d5c" },
+];
+
+function getWeekStripDays(now = new Date()) {
+  const monday = new Date(now);
+  const dow = (now.getDay() + 6) % 7;
+  monday.setDate(now.getDate() - dow);
+  monday.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return date;
+  });
+}
+
+function getTodayHeading(date: Date) {
+  return new Intl.DateTimeFormat("sv-SE", { weekday: "long" }).format(date);
+}
+
+function getTaskColorForCategory(category: string): TaskColor {
+  const normalized = category.trim().toLocaleLowerCase("sv-SE");
+  if (!normalized) {
+    return CHILD_TASK_COLORS[0];
+  }
+
+  const matchedKey = Object.keys(CATEGORY_TASK_COLORS).find((key) => normalized.includes(key));
+  if (matchedKey) {
+    return CATEGORY_TASK_COLORS[matchedKey];
+  }
+
+  const hash = [...normalized].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return CHILD_TASK_COLORS[hash % CHILD_TASK_COLORS.length];
+}
 
 function getTodoTimeLeftPercent(todo: Todo, now: number) {
   if (!todo.visibleFrom || !todo.expiresAt) {
@@ -38,11 +115,6 @@ function getTodoTimeLeftPercent(todo: Todo, now: number) {
   }
 
   return Math.max(0, Math.min(100, ((endsAt - now) / (endsAt - startsAt)) * 100));
-}
-
-function getTodoTimerBackground(timeLeftPercent: number) {
-  const hue = Math.round((timeLeftPercent / 100) * 128);
-  return `hsl(${hue} 86% 72%)`;
 }
 
 function isWithinLastDay(isoStr: string | null, now: number) {
@@ -89,6 +161,11 @@ export function ChildDashboard({
   const [isWishModalOpen, setIsWishModalOpen] = useState(false);
   const [heldTodoId, setHeldTodoId] = useState<Id | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  });
   const [completedCue, setCompletedCue] = useState<{
     id: Id;
     title: string;
@@ -129,6 +206,19 @@ export function ChildDashboard({
         isSameLocalDay(todo.approvedAt ?? todo.completedAt, new Date(nowMs))
     )
     .reduce((sum, todo) => sum + todo.starValue, 0);
+  const pendingApprovalTodos = timelineTodos
+    .filter(
+      (todo) =>
+        todo.assignedTo === child.id &&
+        todo.status === "done" &&
+        todo.deletedAt === null
+    )
+    .sort((a, b) => {
+      const timeA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const timeB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return timeB - timeA;
+    })
+    .slice(0, 8);
   const modalRewards = childRewards
     .filter((reward) => {
       if (reward.status === "rejected") {
@@ -146,6 +236,9 @@ export function ChildDashboard({
       };
       return order[a.status] - order[b.status] || a.title.localeCompare(b.title, "sv");
     });
+  const today = new Date(nowMs);
+  const weekStripDays = getWeekStripDays(selectedDay);
+  const totalApprovedStars = approvedStarsTotal;
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setTimerNow(Date.now()), 1000);
@@ -188,6 +281,15 @@ export function ChildDashboard({
     }, 2000);
   }
 
+  function moveSelectedWeek(direction: -1 | 1) {
+    setSelectedDay((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() + direction * 7);
+      next.setHours(0, 0, 0, 0);
+      return next;
+    });
+  }
+
   useEffect(
     () => () => {
       if (completeHoldRef.current !== null) {
@@ -205,29 +307,91 @@ export function ChildDashboard({
       <div className="child-dashboard-body">
         {/* LEFT — weekly timeline */}
         <div className="child-dashboard-left">
-          <ChildTimeline calendars={calendars} child={child} roles={roles} todos={timelineTodos} />
+          <ChildTimeline
+            calendars={calendars}
+            child={child}
+            roles={roles}
+            selectedDay={selectedDay}
+            todos={timelineTodos}
+          />
         </div>
 
         {/* CENTER — tasks, routines and status panels */}
         <div className="child-dashboard-main">
-          <header className="section-header">
-            <h2 className="section-title">Hej {child.name}!</h2>
-            <Sparkles size={22} />
+          <div className="child-week-nav">
+            <button
+              className="child-week-arrow"
+              type="button"
+              onClick={() => moveSelectedWeek(-1)}
+              aria-label="Föregående vecka"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="child-day-strip" aria-label="Veckodagar">
+              {weekStripDays.map((day) => {
+                const isSelected = isSameLocalDay(day.toISOString(), selectedDay);
+                const dayColor = NPF_DAY_COLORS[day.getDay()];
+                const dayStyle: DayPillStyle = {
+                  "--day-bg": dayColor.bg,
+                  "--day-fg": dayColor.fg,
+                };
+
+                return (
+                  <button
+                    className={`child-day-pill${isSelected ? " child-day-pill--selected" : ""}`}
+                    key={day.toISOString()}
+                    type="button"
+                    style={dayStyle}
+                    onClick={() => setSelectedDay(day)}
+                    aria-pressed={isSelected}
+                  >
+                    <span>{WEEKDAY_SHORT[day.getDay()]}</span>
+                    <strong>{day.getDate()}</strong>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="child-week-arrow"
+              type="button"
+              onClick={() => moveSelectedWeek(1)}
+              aria-label="Nästa vecka"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          <header className="child-hero">
+            <div>
+              <p className="child-hero-month">{MONTHS_SHORT[today.getMonth()]}</p>
+              <h2 className="section-title">Hej {child.name}! <span aria-hidden="true">👋</span></h2>
+              <p>Tryck på dina uppgifter när du är klar. Håll fingret länge för att lämna in.</p>
+            </div>
+            <div className="child-hero-avatar" aria-hidden="true">
+              {child.avatarUrl ? <img src={child.avatarUrl} alt="" /> : <span>🦊</span>}
+            </div>
           </header>
 
           {/* Tasks today */}
           {taskGroups.length > 0 && (
             <section className="child-tasks-section" aria-label="Uppgifter idag">
-              <h3 className="child-tasks-heading">Dina uppgifter idag</h3>
+              <div className="child-tasks-head">
+                <h3 className="child-tasks-heading">Dina uppgifter idag</h3>
+                <span>{getTodayHeading(today)}</span>
+              </div>
               <div className="child-tasks-grid">
-                {taskGroups.flatMap(({ todos }) => todos).map((todo, i) => {
+                {taskGroups.flatMap(({ category, todos }) =>
+                  todos.map((todo) => ({ category, todo }))
+                ).map(({ category, todo }, i) => {
                   const timeLeftPercent = getTodoTimeLeftPercent(todo, timerNow);
+                  const color = getTaskColorForCategory(category);
                   const taskStyle: TaskCardStyle = {
                     animationDelay: `${i * 80}ms`,
+                    "--task-accent": color.accent,
+                    "--task-bg": color.bg,
                     ...(timeLeftPercent === null
                       ? {}
                       : {
-                        "--task-timer-bg": getTodoTimerBackground(timeLeftPercent),
                         "--task-time-left": `${timeLeftPercent}%`,
                       }),
                   };
@@ -250,9 +414,12 @@ export function ChildDashboard({
                       <div className="child-task-icon-circle">
                         <span className="child-task-icon">{todo.visual.value}</span>
                       </div>
-                      <span className="child-task-name">{todo.title}</span>
+                      <span className="child-task-copy">
+                        <span className="child-task-name">{todo.title}</span>
+                      </span>
                       <span className="child-task-star-badge">
                         <Star size={14} fill="currentColor" />
+                        <span>{todo.starValue}</span>
                       </span>
                     </button>
                   );
@@ -290,46 +457,50 @@ export function ChildDashboard({
 
           {/* Bottom panels */}
           <div className="child-bottom-panels">
-            {/* Wishes */}
-            <div className="child-panel child-wish-compact-panel">
-              <div className="child-panel-head">
-                <Sparkles size={18} />
-                <span>Önskningar</span>
+            <div className="child-stars-panel">
+              {pendingApprovalTodos.length > 0 && (
+                <div className="child-pending-symbols" aria-label="Väntar på godkännande">
+                  {pendingApprovalTodos.map((todo) => (
+                    <span className="child-pending-symbol" key={todo.id} title={todo.title}>
+                      {todo.visual.value}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="child-stars-stat">
+                <span>Stjärnor idag</span>
+                <strong><Star size={34} fill="currentColor" /> {approvedStarsToday}</strong>
               </div>
-              <form
-                className="wish-form child-wish-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  onCreateWish(child.id, wishStars);
-                }}
-              >
-                <input
-                  type="text"
-                  className="wish-form-input"
-                  value={wishTitle}
-                  onChange={(e) => onSetWishTitle(e.target.value)}
-                  placeholder="Jag önskar mig…"
-                  aria-label="Ny önskning"
-                />
-                <input
-                  type="number"
-                  className="wish-form-stars"
-                  value={wishStars}
-                  min={1}
-                  max={999}
-                  onChange={(e) => setWishStars(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  aria-label="Antal stjärnor"
-                />
-                <button className="wish-form-btn" type="submit">Önska</button>
-              </form>
+              <div className="child-stars-stat child-stars-stat--total">
+                <span>Totalt</span>
+                <strong><Star size={34} fill="currentColor" /> {totalApprovedStars}</strong>
+              </div>
               <button
-                className="child-wish-modal-button"
+                className="child-shop-card"
                 type="button"
                 onClick={() => setIsWishModalOpen(true)}
               >
-                <Trophy size={15} />
-                <span>Visa önskningar</span>
+                <ShoppingBag size={28} />
+                <span>
+                  <strong>Shop</strong>
+                  <small>Använd dina stjärnor</small>
+                </span>
               </button>
+              <div className="child-money-card" aria-label={`${approvedStarsTotal} stjärnor är ${approvedStarsTotal} kronor`}>
+                <Banknote size={28} />
+                <span>
+                  <strong>{approvedStarsTotal} stjärnor</strong>
+                  <small>= {approvedStarsTotal} kr</small>
+                </span>
+              </div>
+              {activeReward && rewardProgress && (
+                <div className="child-active-reward-mini">
+                  <Trophy size={16} />
+                  <span>{activeReward.title}</span>
+                  <small>{rewardProgress.starsLeft} stjärnor kvar</small>
+                </div>
+              )}
+              <small className="child-stars-footnote">1 stjärna = 1 kr</small>
             </div>
           </div>
           {completedCue && (
@@ -348,52 +519,6 @@ export function ChildDashboard({
           )}
         </div>
 
-        <aside className="child-dashboard-reward" aria-label="Belöningsbana">
-          <div className="child-reward-rail">
-            <div className="child-reward-day-stars" aria-label="Stjärnor idag">
-              <span>Idag</span>
-              <strong>{approvedStarsToday}</strong>
-              <Star size={13} fill="currentColor" />
-            </div>
-            <div className="child-reward-card-top">
-              <div className="child-reward-card-label">
-                <Trophy size={15} />
-                <span>Belöningsbana</span>
-              </div>
-              {activeReward && rewardProgress ? (
-                <div className="child-reward-stars-count">
-                  <Star size={13} fill="currentColor" />
-                  <span>{rewardProgress.approvedStars}</span>
-                  <span className="child-reward-stars-of">/ {activeReward.starsNeeded}</span>
-                </div>
-              ) : null}
-            </div>
-            {activeReward && rewardProgress ? (
-              <>
-                <div className="child-reward-goal">{activeReward.title}</div>
-                <small className="child-reward-left">{rewardProgress.starsLeft} stjärnor kvar</small>
-                <div className="child-reward-track child-reward-track--vertical">
-                  {Array.from({ length: Math.min(activeReward.starsNeeded, 14) }).map((_, i) => {
-                    const item = rewardProgress.pathItems[i];
-                    const isApproved = item?.type === "approved-star";
-                    const pendingTodo = item?.type === "pending-task" ? item.todo : null;
-                    const isLast = i === Math.min(activeReward.starsNeeded, 14) - 1;
-                    return (
-                      <div
-                        key={i}
-                        className={`child-reward-step${isApproved ? " child-reward-step--done" : ""}${pendingTodo ? " child-reward-step--pending" : ""}`}
-                      >
-                        {isLast ? <Trophy size={14} /> : isApproved ? <Star size={12} fill="currentColor" /> : pendingTodo ? <span>{pendingTodo.visual.value}</span> : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <p className="child-panel-empty">Ingen aktiv önskning ännu.</p>
-            )}
-          </div>
-        </aside>
       </div>
       {isWishModalOpen && (
         <div className="child-wish-modal-backdrop" onClick={() => setIsWishModalOpen(false)}>
@@ -422,6 +547,32 @@ export function ChildDashboard({
               </button>
             </div>
             <div className="child-wish-modal-list">
+              <form
+                className="wish-form child-wish-form child-wish-modal-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onCreateWish(child.id, wishStars);
+                }}
+              >
+                <input
+                  type="text"
+                  className="wish-form-input"
+                  value={wishTitle}
+                  onChange={(e) => onSetWishTitle(e.target.value)}
+                  placeholder="Jag önskar mig..."
+                  aria-label="Ny önskning"
+                />
+                <input
+                  type="number"
+                  className="wish-form-stars"
+                  value={wishStars}
+                  min={1}
+                  max={999}
+                  onChange={(e) => setWishStars(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  aria-label="Antal stjärnor"
+                />
+                <button className="wish-form-btn" type="submit">Önska</button>
+              </form>
               {modalRewards.length === 0 ? (
                 <p className="child-panel-empty">Inga önskningar ännu.</p>
               ) : (

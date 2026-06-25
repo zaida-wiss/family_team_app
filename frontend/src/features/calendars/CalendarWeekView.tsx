@@ -1,67 +1,39 @@
-import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Calendar } from "@shared/types";
-import { expandForRange, fmtTime, getISOWeek, toLocalDateStr } from "./calendarHelpers";
+import type { ReactNode } from "react";
+import { fmtTime, getISOWeek, toLocalDateStr } from "./calendarHelpers";
 import type { EnrichedEvent } from "./CalendarEventList";
+
+type CalendarCssVars = React.CSSProperties & {
+  "--event-color"?: string;
+};
 
 const DOW_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
 const MONTHS_SHORT = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
-
-function getWeekMonday(offset: number): Date {
-  const today = new Date();
-  const dow = (today.getDay() + 6) % 7;
-  const d = new Date(today);
-  d.setDate(today.getDate() - dow + offset * 7);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 function fmtShort(d: Date): string {
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 }
 
 type Props = {
-  visible: Calendar[];
-  calendarDisplayColor: Map<string, string>;
+  weekEvents: EnrichedEvent[];
+  weekStart: Date;
+  weekEnd: Date;
   todayStr: string;
   showWeekNumbers?: boolean;
+  eventDisplay?: "dots" | "text";
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
+  navExtra?: ReactNode;
   onEventClick?: (ev: EnrichedEvent) => void;
 };
 
-export function CalendarWeekView({ visible, calendarDisplayColor, todayStr, showWeekNumbers, onEventClick }: Props) {
-  const [offset, setOffset] = useState(0);
-
-  const monday = getWeekMonday(offset);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  const weekNum = getISOWeek(monday);
-
-  const subSymbols = new Map<string, string>();
-  for (const cal of visible) {
-    for (const sub of cal.subscriptions ?? []) {
-      if (sub.displaySymbol) subSymbols.set(sub.id, sub.displaySymbol);
-    }
-  }
-
-  const enriched: EnrichedEvent[] = visible.flatMap((cal) =>
-    cal.events
-      .filter((ev) => ev.deletedAt === null)
-      .map((ev) => ({
-        ...ev,
-        calendarColor: calendarDisplayColor.get(cal.id) ?? cal.color,
-        calendarName: cal.name,
-        calendarOwnerId: cal.ownerId,
-        displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : null,
-      }))
-  );
-
-  const weekEvents = expandForRange(enriched, monday, sunday);
+export function CalendarWeekView({ weekEvents, weekStart, weekEnd, todayStr, showWeekNumbers, eventDisplay = "text", onPrevWeek, onNextWeek, navExtra, onEventClick }: Props) {
+  const weekNum = getISOWeek(weekStart);
 
   function getEventsForDay(dayStr: string): EnrichedEvent[] {
     return weekEvents.filter((ev) => {
       if (ev.isAllDay) return ev.startsAt.slice(0, 10) <= dayStr && dayStr <= ev.endsAt.slice(0, 10);
-      return toLocalDateStr(new Date(ev.startsAt)) === dayStr;
+      return toLocalDateStr(new Date(ev.startsAt)) <= dayStr && dayStr <= toLocalDateStr(new Date(ev.endsAt));
     }).sort((a, b) => {
       if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
       return a.startsAt.localeCompare(b.startsAt);
@@ -69,22 +41,23 @@ export function CalendarWeekView({ visible, calendarDisplayColor, todayStr, show
   }
 
   const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
     return d;
   });
 
   return (
     <div className="cal-week-view">
       <div className="cal-week-nav">
-        <button className="icon-button" onClick={() => setOffset((o) => o - 1)} type="button" aria-label="Föregående vecka">
+        <button className="icon-button" onClick={onPrevWeek} type="button" aria-label="Föregående vecka">
           <ChevronLeft size={18} />
         </button>
         <div className="cal-week-title">
           {showWeekNumbers && <span className="cal-wk-num-inline">v.{weekNum}</span>}
-          <strong>{fmtShort(monday)} – {fmtShort(sunday)}</strong>
+          <strong>{fmtShort(weekStart)} – {fmtShort(weekEnd)}</strong>
+          {navExtra}
         </div>
-        <button className="icon-button" onClick={() => setOffset((o) => o + 1)} type="button" aria-label="Nästa vecka">
+        <button className="icon-button" onClick={onNextWeek} type="button" aria-label="Nästa vecka">
           <ChevronRight size={18} />
         </button>
       </div>
@@ -104,24 +77,38 @@ export function CalendarWeekView({ visible, calendarDisplayColor, todayStr, show
                 </div>
               </div>
               <div className="cal-week-col-events">
-                {events.map((ev) => {
-                  const color = ev.color ?? ev.calendarColor;
-                  return (
-                    <div
-                      key={ev.id}
-                      className="cal-week-col-event"
-                      style={{ background: color }}
-                      onClick={() => onEventClick?.(ev)}
-                      title={ev.isAllDay ? ev.title : `${fmtTime(ev.startsAt)} ${ev.title}`}
-                    >
-                      {ev.displaySymbol && <span>{ev.displaySymbol} </span>}
-                      {!ev.isAllDay && (
-                        <span className="cal-week-col-event-time">{fmtTime(ev.startsAt)}</span>
-                      )}
-                      {ev.title}
-                    </div>
-                  );
-                })}
+                {eventDisplay === "dots" ? (
+                  <div className="cal-week-col-dots">
+                    {events.slice(0, 8).map((ev) => (
+                      <span
+                        key={ev.id}
+                        className="cal-cell-dot"
+                        style={{ "--dot-color": ev.color ?? ev.calendarColor } as CalendarCssVars}
+                        title={ev.title}
+                      />
+                    ))}
+                    {events.length > 8 && <span className="cal-cell-dot-more">+{events.length - 8}</span>}
+                  </div>
+                ) : (
+                  events.map((ev) => {
+                    const color = ev.color ?? ev.calendarColor;
+                    return (
+                      <div
+                        key={ev.id}
+                        className="cal-week-col-event"
+                        style={{ "--event-color": color } as CalendarCssVars}
+                        onClick={() => onEventClick?.(ev)}
+                        title={ev.isAllDay ? ev.title : `${fmtTime(ev.startsAt)} ${ev.title}`}
+                      >
+                        {ev.displaySymbol && <span>{ev.displaySymbol} </span>}
+                        {!ev.isAllDay && (
+                          <span className="cal-week-col-event-time">{fmtTime(ev.startsAt)}</span>
+                        )}
+                        {ev.title}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           );

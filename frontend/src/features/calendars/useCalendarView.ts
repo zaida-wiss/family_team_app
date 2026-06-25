@@ -5,11 +5,40 @@ import type { EnrichedEvent } from "./CalendarEventList";
 import type { FormState, ModalMode } from "./CalendarView";
 import {
   blankForm,
+  expandForRange,
   expandForMonth,
   getMonthCells,
   toLocalDateStr,
   toLocalDateTimeStr,
 } from "./calendarHelpers";
+
+function getWeekMonday(offset: number): Date {
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7;
+  const d = new Date(today);
+  d.setDate(today.getDate() - dow + offset * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getEventStartDay(ev: EnrichedEvent) {
+  return ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
+}
+
+function getEventEndDay(ev: EnrichedEvent) {
+  return ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
+}
+
+function sortEvents(a: EnrichedEvent, b: EnrichedEvent) {
+  const aTime = new Date(a.startsAt).getTime();
+  const bTime = new Date(b.startsAt).getTime();
+  const aDay = getEventStartDay(a);
+  const bDay = getEventStartDay(b);
+
+  if (aDay !== bDay) return aTime - bTime;
+  if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
+  return aTime - bTime;
+}
 
 export function useCalendarView(
   calendars: Calendar[],
@@ -28,6 +57,7 @@ export function useCalendarView(
 
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalMode | null>(null);
   const [form, setForm] = useState<FormState>(blankForm());
@@ -48,6 +78,17 @@ export function useCalendarView(
   const canEditEvent = (ev: CalendarEvent) =>
     editableCalendars.some((cal) => cal.id === ev.calendarId);
 
+  const calendarDisplayColor = new Map<string, string>();
+  for (const member of activeMembers) {
+    const memberCals = visible.filter((c) => c.ownerId === member.id);
+    const baseColor = member.color ?? null;
+    memberCals.forEach((cal, idx) => {
+      if (!baseColor) calendarDisplayColor.set(cal.id, cal.color);
+      else if (idx === 0) calendarDisplayColor.set(cal.id, baseColor);
+      else calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
+    });
+  }
+
   // ── Subscription symbol lookup ──
   const subSymbols = new Map<string, string>();
   for (const cal of visible) {
@@ -62,7 +103,7 @@ export function useCalendarView(
       .filter((ev) => ev.deletedAt === null)
       .map((ev) => ({
         ...ev,
-        calendarColor: cal.color,
+        calendarColor: calendarDisplayColor.get(cal.id) ?? cal.color,
         calendarName: cal.name,
         calendarOwnerId: cal.ownerId,
         displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : null,
@@ -94,11 +135,9 @@ export function useCalendarView(
     return expandedEvents
       .filter(matchesFilter)
       .filter((ev) => {
-        const start = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
-        const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-        return start <= dateStr && dateStr <= end;
+        return getEventStartDay(ev) <= dateStr && dateStr <= getEventEndDay(ev);
       })
-      .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+      .sort(sortEvents);
   }
 
   // ── List events below grid ──
@@ -106,33 +145,37 @@ export function useCalendarView(
   const monthFirstDay = `${monthPrefix}-01`;
   const monthLastDay = `${monthPrefix}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, "0")}`;
 
-  const hasFilter = !!q || hiddenCalendarIds.size > 0;
-  const todayYM = todayStr.slice(0, 7);
-  const viewYM = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-  const isCurrentMonthView = viewYM === todayYM;
-  const hidePast = isCurrentMonthView && !selectedDay && !hasFilter;
-
   const listEvents = selectedDay
     ? eventsForDay(selectedDay)
     : expandedEvents
         .filter(matchesFilter)
         .filter((ev) => {
-          if (hidePast) {
-            const end = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-            return end >= todayStr;
-          }
-          return true;
+          return getEventStartDay(ev) <= monthLastDay && getEventEndDay(ev) >= monthFirstDay;
         })
-        .filter((ev) => {
-          const evStart = ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
-          const evEnd = ev.isAllDay ? ev.endsAt.slice(0, 10) : toLocalDateStr(new Date(ev.endsAt));
-          return evStart <= monthLastDay && evEnd >= monthFirstDay;
-        })
-        .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+        .sort(sortEvents);
+
+  const weekStart = getWeekMonday(weekOffset);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  const weekFirstDay = toLocalDateStr(weekStart);
+  const weekLastDay = toLocalDateStr(weekEnd);
+  const weekEvents = expandForRange(enrichedEvents, weekStart, weekEnd)
+    .filter(matchesFilter)
+    .filter((ev) => getEventStartDay(ev) <= weekLastDay && getEventEndDay(ev) >= weekFirstDay)
+    .sort(sortEvents);
+
+  const listRangeStart = new Date(now.getFullYear() - 1, 0, 1);
+  const listRangeEnd = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59, 999);
+  const allListEvents = expandForRange(enrichedEvents, listRangeStart, listRangeEnd)
+    .filter(matchesFilter)
+    .sort(sortEvents);
 
   // ── Navigation ──
   function prevMonth() { setSelectedDay(null); setViewMonth((m) => { if (m === 0) { setViewYear((y) => y - 1); return 11; } return m - 1; }); }
   function nextMonth() { setSelectedDay(null); setViewMonth((m) => { if (m === 11) { setViewYear((y) => y + 1); return 0; } return m + 1; }); }
+  function prevWeek() { setSelectedDay(null); setWeekOffset((offset) => offset - 1); }
+  function nextWeek() { setSelectedDay(null); setWeekOffset((offset) => offset + 1); }
 
   // ── Open modal ──
   function openNew(dateStr?: string) {
@@ -242,17 +285,6 @@ export function useCalendarView(
   const holidayBgColor = calendarSettings?.holidayBgColor ?? "#ffe4e6";
   const holidayTextColor = calendarSettings?.holidayTextColor ?? "#9f1239";
 
-  const calendarDisplayColor = new Map<string, string>();
-  for (const member of activeMembers) {
-    const memberCals = visible.filter((c) => c.ownerId === member.id);
-    const baseColor = member.color ?? null;
-    memberCals.forEach((cal, idx) => {
-      if (!baseColor) calendarDisplayColor.set(cal.id, cal.color);
-      else if (idx === 0) calendarDisplayColor.set(cal.id, baseColor);
-      else calendarDisplayColor.set(cal.id, `color-mix(in srgb, ${baseColor} ${Math.max(40, 80 - idx * 20)}%, white)`);
-    });
-  }
-
   const isEditing = modal?.kind === "edit";
   const eventIsEditable = isEditing && canEditEvent(modal.event);
   const otherMembers = activeMembers.filter((m) => m.id !== currentMember.id);
@@ -261,6 +293,8 @@ export function useCalendarView(
     todayStr,
     viewYear,
     viewMonth,
+    weekStart,
+    weekEnd,
     selectedDay,
     setSelectedDay,
     modal,
@@ -277,8 +311,12 @@ export function useCalendarView(
     pendingInvitations,
     eventsForDay,
     listEvents,
+    weekEvents,
+    allListEvents,
     prevMonth,
     nextMonth,
+    prevWeek,
+    nextWeek,
     openNew,
     openEdit,
     closeModal,

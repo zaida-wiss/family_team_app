@@ -1,9 +1,15 @@
 import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { EnrichedEvent } from "./CalendarEventList";
 import { DAYS, MONTHS, fmtTime, getISOWeek, isHolidayEvent, toLocalDateStr } from "./calendarHelpers";
 
 type CalDay = { date: Date; isCurrentMonth: boolean };
+
+type CalendarCssVars = React.CSSProperties & {
+  "--dot-color"?: string;
+  "--event-color"?: string;
+  "--event-fg"?: string;
+};
 
 type Props = {
   viewYear: number;
@@ -21,6 +27,7 @@ type Props = {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDay: (dateStr: string) => void;
+  navExtra?: ReactNode;
   onDayTouchStart?: (dateStr: string) => void;
   onDayTouchEnd?: () => void;
   onEventClick?: (ev: EnrichedEvent) => void;
@@ -31,13 +38,16 @@ export function CalendarMonthGrid({
   showWeekNumbers, eventsForDay, showHolidays,
   holidayBgColor, holidayTextColor, calendarDisplayColor,
   variant, onPrevMonth, onNextMonth, onSelectDay,
-  onDayTouchStart, onDayTouchEnd, onEventClick,
+  navExtra, onDayTouchStart, onDayTouchEnd, onEventClick,
 }: Props) {
   return (
     <div className="cal-grid-card">
       <div className="cal-grid-nav">
         <button className="icon-button" onClick={onPrevMonth} type="button"><ChevronLeft size={18} /></button>
-        <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
+        <div className="cal-grid-nav-center">
+          <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
+          {navExtra}
+        </div>
         <button className="icon-button" onClick={onNextMonth} type="button"><ChevronRight size={18} /></button>
       </div>
 
@@ -80,7 +90,7 @@ export function CalendarMonthGrid({
                         <span
                           key={ev.id}
                           className="cal-cell-dot"
-                          style={{ background: isHolidayEvent(ev) ? holidayBgColor : (calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor) }}
+                          style={{ "--dot-color": isHolidayEvent(ev) ? holidayBgColor : (calendarDisplayColor.get(ev.calendarId) ?? ev.calendarColor) } as CalendarCssVars}
                           title={ev.title}
                         />
                       ))}
@@ -93,15 +103,15 @@ export function CalendarMonthGrid({
                         return (
                           <div
                             key={ev.id}
-                            className="cal-event-pill"
+                            className={`cal-event-pill${holiday ? " cal-event-pill--holiday" : ""}`}
                             style={holiday
-                              ? { "--event-color": holidayBgColor, color: holidayTextColor } as React.CSSProperties
-                              : { "--event-color": ev.calendarColor } as React.CSSProperties}
+                              ? { "--event-color": holidayBgColor, "--event-fg": holidayTextColor } as CalendarCssVars
+                              : { "--event-color": ev.calendarColor } as CalendarCssVars}
                             title={ev.title}
                             onClick={(e) => { e.stopPropagation(); onEventClick?.(ev); }}
                           >
                             {ev.displaySymbol ?? ev.title}
-                            {ev.recurrence?.type !== "none" && <Repeat size={8} style={{ marginLeft: 2, opacity: 0.7 }} />}
+                            {ev.recurrence?.type !== "none" && <Repeat className="cal-event-pill-repeat" size={8} />}
                           </div>
                         );
                       })}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Calendar } from "@shared/types";
 import { expandForRange, fmtTime, getISOWeek, toLocalDateStr } from "./calendarHelpers";
@@ -60,10 +61,11 @@ type Props = {
   calendarDisplayColor: Map<string, string>;
   todayStr: string;
   showWeekNumbers?: boolean;
+  navExtra?: ReactNode;
   onEventClick?: (ev: EnrichedEvent) => void;
 };
 
-export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, showWeekNumbers, onEventClick }: Props) {
+export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, showWeekNumbers, navExtra, onEventClick }: Props) {
   const [offset, setOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +131,7 @@ export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, 
         <div className="cal-week-title">
           {showWeekNumbers && <span className="cal-wk-num-inline">v.{weekNum}</span>}
           <strong>{fmtShort(monday)} – {fmtShort(sunday)}</strong>
+          {navExtra}
         </div>
         <button className="icon-button" onClick={() => setOffset((o) => o + 1)} type="button" aria-label="Nästa vecka">
           <ChevronRight size={18} />

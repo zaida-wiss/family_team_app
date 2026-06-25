@@ -13,7 +13,7 @@ export const AccountSchema = z.object({
 
 export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "members", "settings"]);
 
-export const CalendarViewModeSchema = z.enum(["month", "week", "timeline"]);
+export const CalendarViewModeSchema = z.enum(["month", "week", "list", "timeline"]);
 
 export const CalendarFilterKeySchema = z.enum(["home", "calendar"]);
 

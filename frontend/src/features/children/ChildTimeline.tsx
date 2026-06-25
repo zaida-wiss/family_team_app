@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, MapPin, Star, X } from "lucide-react";
+import { MapPin, Star, X } from "lucide-react";
 import type { Calendar, Member, Role, Todo } from "@shared/types";
 import { expandForRange, fmtTime, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
@@ -14,18 +14,6 @@ type TimelineRange = {
   endMinute: number;
 };
 
-function getDayByOffset(offset: number): Date {
-  const today = new Date();
-  const d = new Date(today);
-  d.setDate(today.getDate() + offset);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function fmtShort(d: Date): string {
-  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
-}
-
 function fmtDayLabel(isoStr: string): string {
   const d = new Date(isoStr);
   return `${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
@@ -34,6 +22,10 @@ function fmtDayLabel(isoStr: string): string {
 function fmtEventTime(ev: EnrichedEvent): string {
   if (ev.isAllDay) return "Heldag";
   return `${fmtTime(ev.startsAt)}-${fmtTime(ev.endsAt)}`;
+}
+
+function fmtHourLabel(minute: number): string {
+  return String(Math.floor(minute / 60)).padStart(2, "0");
 }
 
 function fmtDaysFromToday(isoStr: string): string {
@@ -171,19 +163,21 @@ function assignLanes(events: EnrichedEvent[]): LanedEvent[] {
   return result.map((ev) => ({ ...ev, lanes }));
 }
 
-type Props = { calendars: Calendar[]; child: Member; roles: Role[]; todos: Todo[] };
+type Props = {
+  calendars: Calendar[];
+  child: Member;
+  roles: Role[];
+  selectedDay: Date;
+  todos: Todo[];
+};
 
-export function ChildTimeline({ calendars, child, roles, todos }: Props) {
-  const [offset, setOffset] = useState(0);
+export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: Props) {
   const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
   const todayStr = toLocalDateStr(new Date());
 
-  const selectedDay = getDayByOffset(offset);
   const selectedDayEnd = new Date(selectedDay);
   selectedDayEnd.setHours(23, 59, 59, 999);
   const selectedDayStr = toLocalDateStr(selectedDay);
-  const selectedDayLabel = `${DOW_SHORT[selectedDay.getDay()]} ${fmtShort(selectedDay)}`;
-  const selectedDayColorClass = `child-tl-day-color-${selectedDay.getDay()}`;
   const timelineRange = getTimelineRange(child);
 
   const visible = calendars.filter((cal) => {
@@ -246,6 +240,18 @@ export function ChildTimeline({ calendars, child, roles, todos }: Props) {
   const nowPct = showNowLine ? timePct(now.toISOString(), timelineRange) : -1;
   const allDay = allDayForDay(selectedDayStr);
   const laned = assignLanes(timedForDay(selectedDayStr));
+  const hourLabels = [];
+  for (
+    let minute = Math.ceil(timelineRange.startMinute / 60) * 60;
+    minute <= timelineRange.endMinute;
+    minute += 60
+  ) {
+    hourLabels.push({
+      minute,
+      label: fmtHourLabel(minute),
+      top: ((minute - timelineRange.startMinute) / (timelineRange.endMinute - timelineRange.startMinute)) * 100,
+    });
+  }
   const upcomingTodoMarkers = assignTodoMarkerLanes(
     todos.filter((todo) => {
       if (
@@ -280,20 +286,17 @@ export function ChildTimeline({ calendars, child, roles, todos }: Props) {
 
   return (
     <section className="child-timeline" aria-label="Min dag">
-      <div className="child-tl-nav">
-        <button className="icon-button" onClick={() => setOffset((o) => o - 1)} type="button" aria-label="Föregående dag">
-          <ChevronLeft size={10} />
-        </button>
-        <span className={`child-tl-week-label ${selectedDayColorClass}`}>{selectedDayLabel}</span>
-        <button className="icon-button" onClick={() => setOffset((o) => o + 1)} type="button" aria-label="Nästa dag">
-          <ChevronRight size={10} />
-        </button>
-      </div>
-
       <div className="child-tl-days">
             <div className={`child-tl-day${isSelectedToday ? " child-tl-day--today" : ""}`}>
               <div className="child-tl-day-track">
-                {/* Red now line */}
+                <div className="child-tl-hour-labels" aria-hidden="true">
+                  {hourLabels.map((hour) => (
+                    <span key={hour.minute} style={{ top: `${hour.top}%` }}>
+                      {hour.label}
+                    </span>
+                  ))}
+                </div>
+
                 {showNowLine && (
                   <div className="child-tl-now" style={{ top: `${nowPct}%` }} />
                 )}

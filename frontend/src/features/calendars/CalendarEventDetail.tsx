@@ -1,7 +1,11 @@
-import { MapPin, X } from "lucide-react";
+import { MapPin, Pencil, X } from "lucide-react";
 import type { CalendarEvent, Member } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
 import { fmtFullDate, fmtTime } from "./calendarHelpers";
+
+type CalendarCssVars = React.CSSProperties & {
+  "--event-color"?: string;
+};
 
 type Props = {
   event: EnrichedEvent;
@@ -18,18 +22,23 @@ export function CalendarEventDetail({
   canEditEvent, onUpdateEvent, onClose, onEdit,
 }: Props) {
   const owner = activeMembers.find((m) => m.id === event.calendarOwnerId);
+  const eventColorStyle: CalendarCssVars = {
+    "--event-color": event.color ?? calendarDisplayColor.get(event.calendarId) ?? event.calendarColor,
+  };
 
   return (
     <div className="cal-form-overlay" onClick={onClose}>
-      <div className="cal-form-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="cal-form-modal cal-event-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="cal-form-hdr">
           <span>Händelse</span>
-          <button className="icon-button" onClick={onClose} type="button"><X size={18} /></button>
+          <button aria-label="Stäng händelse" className="icon-button" onClick={onClose} title="Stäng" type="button">
+            <X size={18} />
+          </button>
         </div>
-        <div className="cal-form-body">
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <div className="cal-event-color-dot" style={{ background: event.color ?? calendarDisplayColor.get(event.calendarId) ?? event.calendarColor }} />
-            <p style={{ fontWeight: 700, fontSize: "1.1rem", margin: 0 }}>{event.title}</p>
+        <div className="cal-form-body cal-event-detail-body">
+          <div className="cal-event-detail-title-row">
+            <div className="cal-event-color-dot" style={eventColorStyle} />
+            <h2 className="cal-event-detail-title">{event.title}</h2>
           </div>
           <p className="cal-event-row-meta">
             {event.isAllDay
@@ -37,25 +46,25 @@ export function CalendarEventDetail({
               : `${fmtFullDate(event.startsAt)} · ${fmtTime(event.startsAt)}–${fmtTime(event.endsAt)}`}
           </p>
           {event.location && (
-            <p className="cal-event-row-meta" style={{ marginTop: 4 }}>
-              <MapPin size={13} style={{ verticalAlign: "middle" }} /> {event.location}
+            <p className="cal-event-row-meta cal-event-detail-location">
+              <MapPin className="cal-meta-icon" size={13} /> {event.location}
             </p>
           )}
           {event.notes && (
-            <p style={{ fontSize: "0.875rem", marginTop: 8, whiteSpace: "pre-wrap" }}>
+            <p className="cal-event-detail-notes">
               {event.notes.replace(/\\n/g, "\n")}
             </p>
           )}
-          <p className="cal-event-row-meta" style={{ marginTop: 8 }}>
+          <p className="cal-event-row-meta cal-event-detail-calendar-meta">
             {event.calendarName}{owner && <> · {owner.name}</>}
           </p>
           {canEditEvent(event) && onUpdateEvent && (
             <button
               className="primary-button"
               onClick={() => { onClose(); onEdit(event); }}
-              style={{ marginTop: 12, width: "100%" }}
               type="button"
             >
+              <Pencil size={16} />
               Redigera händelse
             </button>
           )}
