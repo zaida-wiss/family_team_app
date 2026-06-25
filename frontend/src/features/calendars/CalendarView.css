@@ -106,14 +106,14 @@
 }
 
 .cal-cell {
-  min-height: 54px;
+  min-height: 24px;
   background: var(--background);
   border-radius: 10px;
   padding: 5px 5px 4px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   overflow: hidden;
   transition: background 0.12s;
   border: 1.5px solid transparent;

@@ -5022,7 +5022,7 @@ h3 {
 }
 
 /* ── Responsive: child dashboard + routine creator ──────────────────────── */
-@media (max-width: 759px) {
+@media (max-width: 859px) {
   .child-dashboard {
     height: calc(100dvh - 56px);
     max-height: calc(100dvh - 56px);
