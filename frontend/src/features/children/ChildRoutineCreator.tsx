@@ -5,6 +5,7 @@ import EmojiPicker from "emoji-picker-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
+import "./ChildRoutineCreator.css";
 
 const WEEKDAYS: { key: Weekday; short: string }[] = [
   { key: "monday",    short: "M" },

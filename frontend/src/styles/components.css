@@ -1,0 +1,178 @@
+/* ==========================================================================
+   Shared component primitives
+   ========================================================================== */
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.field-label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.text-input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  background: white;
+  color: var(--foreground);
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  background: var(--muted);
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.secondary-button.danger-action {
+  border-color: #e8a69d;
+  background: #fff1ee;
+  color: #94372d;
+}
+
+.secondary-button.danger-action.confirming {
+  background: #a13b2f;
+  color: white;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.icon-button.danger {
+  border-color: #f2c3bd;
+  color: #a13b2f;
+}
+
+.icon-button--active {
+  background: color-mix(in oklch, var(--primary) 15%, var(--card));
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.todo-list,
+.dashboard-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.calendar-actions,
+.calendar-event-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.calendar-event-form .text-input {
+  flex: 1 1 160px;
+}
+
+.share-list {
+  display: grid;
+  gap: 8px;
+}
+
+.share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: white;
+}
+
+.share-row span {
+  display: grid;
+  gap: 2px;
+  font-weight: 800;
+}
+
+.share-row small,
+.empty-note {
+  color: var(--muted-fg);
+}
+
+.share-row small {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+@media (max-width: 759px) {
+  .section-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .calendar-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .calendar-actions .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

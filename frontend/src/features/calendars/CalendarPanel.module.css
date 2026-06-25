@@ -1,0 +1,394 @@
+.createCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: var(--muted);
+}
+
+.createRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.toolCard {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.toolCard h3 {
+  overflow-wrap: break-word;
+  word-break: break-all;
+  min-width: 0;
+}
+
+.toolCard label {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.colorInput {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.renameRow,
+.ownerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.ownerLabel {
+  display: grid !important;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600 !important;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.colorLabel {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600 !important;
+}
+
+.colorLabel span {
+  white-space: nowrap;
+}
+
+.shareToggle {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+.shareToggleShared {
+  background: color-mix(in oklch, var(--primary) 15%, var(--card));
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.importBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.previewCount {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #888);
+}
+
+.bulkButton {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.categoryButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  opacity: 0.55;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.categoryButtonOn {
+  opacity: 1;
+  border-color: var(--accent, #2f7d6d);
+  background: color-mix(in srgb, var(--accent, #2f7d6d) 10%, transparent);
+}
+
+.categoryButtonPartial {
+  opacity: 0.8;
+  border-color: var(--accent, #2f7d6d);
+  border-style: dashed;
+}
+
+.categoryButtonSpecial.categoryButtonOn {
+  border-color: #e07000;
+  background: color-mix(in srgb, #e07000 12%, transparent);
+}
+
+.categoryButtonSpecial .categoryName {
+  color: #e07000;
+}
+
+.categoryName {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.categoryCount {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #888);
+}
+
+.keywordLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary, #888);
+  margin: 0;
+}
+
+.keywordRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.keywordRow .categoryButton {
+  flex-direction: row;
+  align-items: center;
+  padding: 4px 10px;
+  gap: 5px;
+  font-size: 0.78rem;
+}
+
+.subForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.fullButton {
+  width: 100%;
+}
+
+.subList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.subRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.subInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.subUrl {
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subInfo small {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+}
+
+.subActions,
+.subEditActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.subEditActions {
+  gap: 6px;
+}
+
+.confirmDelete {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  color: var(--destructive);
+  border-color: var(--destructive);
+}
+
+.subEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.subSymbolWrap {
+  position: relative;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.subSymbolButton {
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.subSymbolPicker {
+  position: fixed;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tagFieldWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tagLabel {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tagInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 8px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: text;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px 2px 10px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tagRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.tagRemove:hover {
+  opacity: 1;
+}
+
+.tagDraft {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.85rem;
+  min-width: 100px;
+  flex: 1;
+  color: var(--foreground);
+}
+
+.tagDraft::placeholder {
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 759px) {
+  .toolCard {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}

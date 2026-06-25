@@ -9,6 +9,7 @@ import {
   canViewResource,
   hasPermission
 } from "../../utils/permissions";
+import styles from "./CalendarPanel.module.css";
 import type { AddEventInput } from "./useCalendarsState";
 import type { AccessLevel, Calendar, Id, IcsSubscription, Member, Role } from "@shared/types";
 
@@ -319,14 +320,14 @@ export function CalendarPanel({
 
   return (
     <div className="dashboard-list">
-      <section className="shopping-create-card" aria-label="Skapa kalender">
+      <section className={styles.createCard} aria-label="Skapa kalender">
         <div>
           <p className="eyebrow">Ny kalender</p>
           <h3>Skapa privat kalender</h3>
         </div>
-        <div className="shopping-add-row cal-create-row">
+        <div className={styles.createRow}>
           <input
-            className="cal-color-input"
+            className={styles.colorInput}
             disabled={!canCreateCalendar}
             onChange={(e) => setNewCalendarColor(e.target.value)}
             title="Välj kalenderfärg"
@@ -357,7 +358,7 @@ export function CalendarPanel({
       </section>
 
       {selectedCalendar ? (
-        <section className="calendar-tool-card" aria-label="Kalenderverktyg">
+        <section className={styles.toolCard} aria-label="Kalenderverktyg">
           <label>
             Kalender
             <select
@@ -374,7 +375,7 @@ export function CalendarPanel({
           </label>
 
           {canEditSelectedCalendar && isRenaming && (
-            <div className="cal-rename-row">
+            <div className={styles.renameRow}>
               <input
                 autoFocus
                 className="text-input"
@@ -416,9 +417,9 @@ export function CalendarPanel({
           {canEditSelectedCalendar && (
             <>
 
-              <label className="cal-owner-label">
+              <label className={styles.ownerLabel}>
                 Tilldelad till
-                <div className="cal-owner-row">
+                <div className={styles.ownerRow}>
                   <select
                     className="text-input"
                     onChange={(e) => setTransferOwnerId(e.target.value)}
@@ -448,11 +449,11 @@ export function CalendarPanel({
           )}
 
           {canEditSelectedCalendar && (
-            <div className="cal-settings-row">
-              <label className="cal-color-label">
+            <div className={styles.settingsRow}>
+              <label className={styles.colorLabel}>
                 <span>Färg</span>
                 <input
-                  className="cal-color-input"
+                  className={styles.colorInput}
                   onChange={(e) => onUpdateCalendarColor(selectedCalendar.id, e.target.value)}
                   title="Kalenderfärg"
                   type="color"
@@ -460,12 +461,12 @@ export function CalendarPanel({
                 />
               </label>
               <button
-                className={`secondary-button cal-share-toggle ${
+                className={`secondary-button ${styles.shareToggle} ${
                   activeOtherMembers.length > 0 &&
                   activeOtherMembers.every((m) =>
                     selectedCalendar.sharedWith.some((s) => s.memberId === m.id)
                   )
-                    ? "cal-share-toggle--shared"
+                    ? styles.shareToggleShared
                     : ""
                 }`}
                 onClick={toggleFamilyShared}
@@ -541,7 +542,7 @@ export function CalendarPanel({
           </div>
 
           {previewEvents !== null && (
-            <div className="ics-import-block">
+            <div className={styles.importBlock}>
               <p className="eyebrow">Välj händelser att importera</p>
               <PreviewSelector
                 events={previewEvents}
@@ -553,11 +554,11 @@ export function CalendarPanel({
           )}
 
           {canImport && canEditSelectedCalendar && (
-            <div className="ics-import-block">
+            <div className={styles.importBlock}>
               <p className="eyebrow">Prenumerationer</p>
 
               {/* New subscription form */}
-              <div className="ics-sub-form">
+              <div className={styles.subForm}>
                 <input
                   className="text-input"
                   onChange={(e) => setNewSubUrl(e.target.value)}
@@ -578,7 +579,7 @@ export function CalendarPanel({
                   onChangeWords={setNewSubExcludeWords}
                 />
                 <button
-                  className="secondary-button"
+                  className={`secondary-button ${styles.fullButton}`}
                   disabled={!newSubUrl.trim() || addingSub}
                   onClick={() => void addSubscription()}
                   type="button"
@@ -590,11 +591,11 @@ export function CalendarPanel({
 
               {/* Existing subscriptions */}
               {(selectedCalendar.subscriptions ?? []).length > 0 && (
-                <div className="ics-sub-list">
+                <div className={styles.subList}>
                   {(selectedCalendar.subscriptions ?? []).map((sub) => (
-                    <div className="ics-sub-row" key={sub.id}>
+                    <div className={styles.subRow} key={sub.id}>
                       {editingSubId === sub.id ? (
-                        <div className="ics-sub-edit">
+                        <div className={styles.subEdit}>
                           <WordTagInput
                             label="Inkludera händelser med ord"
                             placeholder="Skriv ord + Enter"
@@ -607,7 +608,7 @@ export function CalendarPanel({
                             words={editExcludeWords}
                             onChangeWords={setEditExcludeWords}
                           />
-                          <div className="ics-sub-edit-actions">
+                          <div className={styles.subEditActions}>
                             <button
                               className="secondary-button"
                               onClick={() => void saveSubEdit(sub as IcsSubscription)}
@@ -627,9 +628,9 @@ export function CalendarPanel({
                         </div>
                       ) : (
                         <>
-                          <div className="ics-sub-symbol-wrap">
+                          <div className={styles.subSymbolWrap}>
                             <button
-                              className="ics-sub-symbol-btn"
+                              className={styles.subSymbolButton}
                               onClick={(e) => {
                                 if (symbolPickerSubId === sub.id) {
                                   setSymbolPickerSubId(null);
@@ -647,7 +648,7 @@ export function CalendarPanel({
                           </div>
                           {symbolPickerSubId === sub.id && createPortal(
                             <div
-                              className="ics-sub-symbol-picker"
+                              className={styles.subSymbolPicker}
                               ref={symbolPickerRef}
                               style={{ top: pickerPos.top, left: pickerPos.left }}
                             >
@@ -663,8 +664,8 @@ export function CalendarPanel({
                             </div>,
                             document.body
                           )}
-                          <div className="ics-sub-info">
-                            <span className="ics-sub-url" title={sub.url}>
+                          <div className={styles.subInfo}>
+                            <span className={styles.subUrl} title={sub.url}>
                               {sub.url.replace(/^https?:\/\//, "").slice(0, 48)}…
                             </span>
                             {sub.includeWords.length > 0 && (
@@ -677,7 +678,7 @@ export function CalendarPanel({
                               <small>Senast synkad: {new Date(sub.lastSyncedAt).toLocaleString("sv-SE")}</small>
                             )}
                           </div>
-                          <div className="ics-sub-actions">
+                          <div className={styles.subActions}>
                             <button
                               className="icon-button"
                               onClick={() => {
@@ -711,7 +712,7 @@ export function CalendarPanel({
                             {confirmDeleteSubId === sub.id ? (
                               <>
                                 <button
-                                  className="secondary-button ics-confirm-del"
+                                  className={`secondary-button ${styles.confirmDelete}`}
                                   onClick={() => {
                                     onRemoveSubscription(selectedCalendar.id, sub.id);
                                     setConfirmDeleteSubId(null);
@@ -751,7 +752,7 @@ export function CalendarPanel({
       ) : null}
 
       {selectedCalendar ? (
-        <section className="calendar-tool-card" aria-label="Dela kalender">
+        <section className={styles.toolCard} aria-label="Dela kalender">
           <div>
             <p className="eyebrow">Delning</p>
             <h3>Dela {selectedCalendar.name}</h3>
@@ -821,7 +822,7 @@ export function CalendarPanel({
       ) : null}
 
       {!managementOnly && selectedCalendar ? (
-        <section className="calendar-tool-card" aria-label="Lägg till kalenderhändelse">
+        <section className={styles.toolCard} aria-label="Lägg till kalenderhändelse">
           <div className="calendar-event-form">
             <input
               className="text-input"
@@ -947,35 +948,40 @@ function PreviewSelector({ events, selectedIds, onChangeSelected, onConfirm }: P
     const selectedCount = indices.filter((i) => selectedIds.has(String(i))).length;
     const allOn = selectedCount === indices.length;
     const someOn = selectedCount > 0 && !allOn;
-    const cls = ["ics-cat-btn", allOn && "ics-cat-btn--on", someOn && "ics-cat-btn--partial", modifier]
+    const cls = [
+      styles.categoryButton,
+      allOn && styles.categoryButtonOn,
+      someOn && styles.categoryButtonPartial,
+      modifier
+    ]
       .filter(Boolean).join(" ");
     return (
       <button key={label} className={cls} onClick={() => toggleGroup(indices)} type="button">
-        <span className="ics-cat-name">{label}</span>
-        <span className="ics-cat-count">{selectedCount}/{indices.length}</span>
+        <span className={styles.categoryName}>{label}</span>
+        <span className={styles.categoryCount}>{selectedCount}/{indices.length}</span>
       </button>
     );
   }
 
   return (
-    <div className="ics-preview">
-      <div className="ics-preview-header">
-        <span className="ics-preview-count">{selectedIds.size} av {events.length} händelser valda</span>
-        <button className="ics-bulk-btn" onClick={toggleAll} type="button">
+    <div className={styles.preview}>
+      <div className={styles.previewHeader}>
+        <span className={styles.previewCount}>{selectedIds.size} av {events.length} händelser valda</span>
+        <button className={styles.bulkButton} onClick={toggleAll} type="button">
           {selectedIds.size === events.length ? "Ingen" : "Alla"}
         </button>
       </div>
 
-      <div className="ics-cat-grid">
+      <div className={styles.categoryGrid}>
         {[...groups.entries()].map(([cat, idx]) =>
-          renderChip(cat, idx, cat === "Stängningsdag" ? "ics-cat-btn--special" : undefined)
+          renderChip(cat, idx, cat === "Stängningsdag" ? styles.categoryButtonSpecial : undefined)
         )}
       </div>
 
       {keywords.size > 0 && (
         <>
-          <p className="ics-keyword-label">Nyckelord</p>
-          <div className="ics-keyword-row">
+          <p className={styles.keywordLabel}>Nyckelord</p>
+          <div className={styles.keywordRow}>
             {[...keywords.entries()].map(([word, idx]) => renderChip(word, idx))}
           </div>
         </>
@@ -1168,14 +1174,14 @@ function WordTagInput({
   }
 
   return (
-    <div className="word-tag-field-wrap">
-      {label && <span className="word-tag-label">{label}</span>}
-      <div className="word-tag-input">
+    <div className={styles.tagFieldWrap}>
+      {label && <span className={styles.tagLabel}>{label}</span>}
+      <div className={styles.tagInput}>
         {words.map((w) => (
-          <span key={w} className="word-tag">
+          <span key={w} className={styles.tag}>
             {w}
             <button
-              className="word-tag-remove"
+              className={styles.tagRemove}
               onClick={() => onChangeWords(words.filter((x) => x !== w))}
               type="button"
             >
@@ -1184,7 +1190,7 @@ function WordTagInput({
           </span>
         ))}
         <input
-          className="word-tag-draft"
+          className={styles.tagDraft}
           onBlur={commit}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
