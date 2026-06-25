@@ -1,5 +1,10 @@
+
+/* ==========================================================================
+   01. Design tokens / Global variables
+   ========================================================================== */
+
 :root {
-  /* ── Design tokens ──────────────────────────────── */
+  /* â”€â”€ Design tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --radius: 1rem;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -22,7 +27,7 @@
   --sidebar-border:    oklch(0.88 0.02 75);
   --destructive:       oklch(0.6 0.2 25);
 
-  /* ── Fonts ─────────────────────────────────────── */
+  /* â”€â”€ Fonts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --font-sans:    "Nunito", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
 
@@ -50,19 +55,19 @@ button {
   min-height: 100vh;
 }
 
-/* ── Mobile: fixed bottom nav + scrollable content ───────────── */
-@media (max-width: 759px) {
+/* â”€â”€ Mobile: fixed bottom nav + scrollable content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media (max-width: 1023px) {
   .app-shell {
     display: block;
   }
 
   .app-shell-content {
-    padding: 10px 10px 30px 10px;
+    padding: 10px 10px 80px;
     background: var(--background);
     min-height: 100vh;
   }
 
-  /* Fixed bottom navigation — reachable with thumb */
+  /* Fixed bottom navigation â€” reachable with thumb */
   .hero-bar {
     position: fixed;
     bottom: 0;
@@ -107,13 +112,18 @@ button {
   }
 }
 
+
+/* ==========================================================================
+   02. Settings and member views
+   ========================================================================== */
+
 .settings-accordion {
   display: grid;
   gap: 10px;
 }
 
-/* ── Members view (read-only family list) ─────────────────────── */
-/* ── Members page ─────────────────────────────────────────── */
+/* â”€â”€ Members view (read-only family list) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Members page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .members-page {
   display: flex;
@@ -198,7 +208,7 @@ button {
   color: var(--primary-fg);
 }
 
-/* ── Settings logout button ───────────────────────────────────── */
+/* â”€â”€ Settings logout button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .settings-logout-btn {
   display: flex;
   align-items: center;
@@ -217,8 +227,8 @@ button {
   opacity: 0.75;
 }
 
-/* ── Desktop: sidebar grid layout ────────────────────────────── */
-@media (min-width: 760px) {
+/* Desktop: sidebar grid layout */
+@media (min-width: 1024px) {
   .app-shell {
     display: grid;
     grid-template-columns: 248px 1fr;
@@ -238,6 +248,11 @@ button {
   }
 }
 
+
+/* ==========================================================================
+   03. Panels and navigation base styles
+   ========================================================================== */
+
 .hero-panel,
 .trash-view,
 .calendar-panel,
@@ -256,7 +271,7 @@ button {
   padding: 24px;
 }
 
-/* ── Nav bar ──────────────────────────────────────── */
+/* â”€â”€ Nav bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .hero-bar {
   display: flex;
@@ -310,7 +325,12 @@ button {
   border-color: var(--primary);
 }
 
-/* ── Home overview ────────────────────────────────── */
+/* â”€â”€ Home overview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   04. Home overview
+   ========================================================================== */
 
 .overview-home {
   display: flex;
@@ -381,7 +401,7 @@ button {
   color: var(--foreground);
 }
 
-/* ── Overview calendar wrapper ───────────────────── */
+/* â”€â”€ Overview calendar wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .overview-cal-wrap {
   display: flex;
   flex-direction: column;
@@ -498,7 +518,12 @@ button {
   color: var(--muted-fg);
 }
 
-/* ── Week calendar ────────────────────────────────── */
+/* â”€â”€ Week calendar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   05. Week calendar
+   ========================================================================== */
 
 .week-calendar {
   border: 1px solid color-mix(in oklch, var(--primary) 16%, transparent);
@@ -622,7 +647,12 @@ button {
   margin-left: -4px;
 }
 
-/* ── Week timeline (family dot view) ─────────────────── */
+/* â”€â”€ Week timeline (family dot view) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   06. Week timeline
+   ========================================================================== */
 
 .week-timeline {
   display: flex;
@@ -702,7 +732,12 @@ button {
   cursor: default;
 }
 
-/* ── Avatar xs size ───────────────────────────────── */
+/* â”€â”€ Avatar xs size â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   07. Avatars and account setup
+   ========================================================================== */
 
 .avatar-xs {
   width: 28px;
@@ -882,7 +917,12 @@ button {
   background: color-mix(in oklch, var(--primary) 6%, transparent);
 }
 
-/* ── Auth ─────────────────────────────────────── */
+/* â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   08. Authentication
+   ========================================================================== */
 
 .auth-page {
   min-height: 100vh;
@@ -1265,7 +1305,12 @@ h3 {
   margin-top: 16px;
 }
 
-/* ── CalendarView / add-event form ───────────────────────── */
+/* â”€â”€ CalendarView / add-event form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   09. Calendar forms and calendar tools
+   ========================================================================== */
 
 .cal-add-event {
   display: grid;
@@ -1456,6 +1501,11 @@ h3 {
   color: var(--primary);
 }
 
+
+/* ==========================================================================
+   10. ICS import and subscriptions
+   ========================================================================== */
+
 .ics-import-block {
   display: flex;
   flex-direction: column;
@@ -1603,7 +1653,7 @@ h3 {
   font-size: 0.78rem;
 }
 
-/* ── Subscription management ───────────────────────── */
+/* â”€â”€ Subscription management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ics-sub-form {
   display: flex;
   flex-direction: column;
@@ -1792,6 +1842,11 @@ h3 {
 .spin {
   animation: spin 0.8s linear infinite;
 }
+
+
+/* ==========================================================================
+   11. Calendar actions, sharing, shopping and todos
+   ========================================================================== */
 
 .calendar-actions,
 .calendar-event-form {
@@ -1988,6 +2043,11 @@ h3 {
   touch-action: manipulation;
 }
 
+
+/* ==========================================================================
+   12. Dashboard themes
+   ========================================================================== */
+
 .dashboard.theme-clear {
   background: linear-gradient(180deg, #ffffff 0%, var(--muted) 100%);
 }
@@ -2045,6 +2105,11 @@ h3 {
 .child-dashboard.theme-animal-park {
   background: linear-gradient(180deg, #f7e4c6 0%, #ffffff 72%);
 }
+
+
+/* ==========================================================================
+   13. Theme picker
+   ========================================================================== */
 
 .theme-picker {
   position: fixed;
@@ -2136,6 +2201,11 @@ h3 {
 .reward-card {
   background: #fff3b0;
 }
+
+
+/* ==========================================================================
+   14. Rewards, falling todos and rejected notices
+   ========================================================================== */
 
 .falling-todos {
   display: grid;
@@ -2276,7 +2346,12 @@ h3 {
   color: #7e3bb0;
 }
 
-/* ── Child week view ──────────────────────────────────────────── */
+/* â”€â”€ Child week view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   15. Child week view
+   ========================================================================== */
 
 .child-week-view {
   margin-top: 24px;
@@ -2427,7 +2502,12 @@ h3 {
   opacity: 0.65;
 }
 
-/* ── Child dashboard two-column layout ───────────────────────── */
+/* â”€â”€ Child dashboard two-column layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+
+/* ==========================================================================
+   16. Child dashboard layout and timeline
+   ========================================================================== */
 
 .child-dashboard {
   height: calc(100dvh - 56px);
@@ -2477,7 +2557,7 @@ h3 {
   padding: 18px 14px 14px 0;
 }
 
-/* ── Child timeline — child-only vertical day rail ───────────────────────── */
+/* â”€â”€ Child timeline â€” child-only vertical day rail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .child-timeline {
   height: 100%;
@@ -2833,9 +2913,9 @@ h3 {
   padding: 9px 10px;
 }
 
-/* ── Child dashboard redesign ────────────────────────────────── */
+/* â”€â”€ Child dashboard redesign â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-/* Belöningsbana card */
+/* BelÃ¶ningsbana card */
 .child-reward-card,
 .child-reward-rail {
   background: rgba(255,255,255,0.82);
@@ -2961,7 +3041,7 @@ h3 {
   color: #92400e;
 }
 
-/* ── Tasks today ─────────────────────────────────────────────── */
+/* â”€â”€ Tasks today â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .child-tasks-section {
   min-height: 0;
@@ -3139,7 +3219,7 @@ h3 {
   -webkit-box-orient: vertical;
 }
 
-/* Single orange star badge — no count */
+/* Single orange star badge â€” no count */
 .child-task-star-badge {
   order: 3;
   color: #e07640;
@@ -3154,7 +3234,7 @@ h3 {
   height: 9px;
 }
 
-/* ── Bottom panels ───────────────────────────────────────────── */
+/* â”€â”€ Bottom panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .child-bottom-panels {
   display: grid;
@@ -3263,7 +3343,7 @@ h3 {
   }
 }
 
-/* "Väntar på godkännande" pill rows */
+/* "VÃ¤ntar pÃ¥ godkÃ¤nnande" pill rows */
 .child-pending-row {
   display: flex;
   align-items: center;
@@ -3344,7 +3424,7 @@ h3 {
   transform: translateY(-1px);
 }
 
-/* "Önskningar" wish rows */
+/* "Ã–nskningar" wish rows */
 .child-wish-compact-panel {
   gap: 6px;
 }
@@ -3549,9 +3629,9 @@ h3 {
   background: white;
 }
 
-/* ── ChildRoutineCreator (in AccountSettings) ─────────────────── */
+/* â”€â”€ ChildRoutineCreator (in AccountSettings) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-/* ── ChildRoutineCreator (rcr-*) ──────────────────────────────── */
+/* â”€â”€ ChildRoutineCreator (rcr-*) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .rcr {
   display: flex;
@@ -4086,7 +4166,7 @@ h3 {
   overflow: hidden;
 }
 
-/* ── CalendarWeekView / CalendarTimelineView ─────────────────── */
+/* â”€â”€ CalendarWeekView / CalendarTimelineView â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .cal-view-tabs {
   display: flex;
@@ -4142,7 +4222,7 @@ h3 {
   font-weight: 700;
 }
 
-/* CalendarWeekView — 7 column chip grid */
+/* CalendarWeekView â€” 7 column chip grid */
 
 .cal-week-cols {
   display: grid;
@@ -4227,7 +4307,7 @@ h3 {
   margin-right: 2px;
 }
 
-/* CalendarTimelineView — vertical time grid */
+/* CalendarTimelineView â€” vertical time grid */
 
 .cal-vtl-header {
   display: grid;
@@ -4682,7 +4762,7 @@ h3 {
   font-weight: 700;
 }
 
-/* ── Role card collapsible ────────────────────────── */
+/* â”€â”€ Role card collapsible â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .role-card-toggle {
   display: flex;
@@ -4718,7 +4798,7 @@ h3 {
   font-weight: 700;
 }
 
-/* ── Shared collapsible body (roles + draft perms) ── */
+/* â”€â”€ Shared collapsible body (roles + draft perms) â”€â”€ */
 
 .role-perms-body {
   display: grid;
@@ -4740,7 +4820,7 @@ h3 {
   padding-top: 12px;
 }
 
-/* ── Draft permission toggle button (create form) ── */
+/* â”€â”€ Draft permission toggle button (create form) â”€â”€ */
 
 .role-perms-wrap {
   border: 1px solid var(--border);
@@ -4843,7 +4923,7 @@ h3 {
     gap: 10px;
   }
 
-  /* Panels: flat on mobile (no card border/shadow — just content blocks) */
+  /* Panels: flat on mobile (no card border/shadow â€” just content blocks) */
   .trash-view,
   .calendar-panel,
   .members-panel,
@@ -5021,8 +5101,8 @@ h3 {
   gap: 0.75rem;
 }
 
-/* ── Responsive: child dashboard + routine creator ──────────────────────── */
-@media (max-width: 859px) {
+/* â”€â”€ Responsive: child dashboard + routine creator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media (max-width: 759px) {
   .child-dashboard {
     height: calc(100dvh - 56px);
     max-height: calc(100dvh - 56px);
@@ -5240,8 +5320,8 @@ h3 {
   }
 }
 
-/* ── Medium screens: tighter task grid ───────────────────────────────────── */
-@media (max-width: 540px) {
+/* â”€â”€ Medium screens: tighter task grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media (max-width: 840px) {
   .child-tasks-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5260,7 +5340,7 @@ h3 {
   }
 }
 
-/* ── Desktop sidebar: nav button layout ─────────────────────────────────── */
+/* â”€â”€ Desktop sidebar: nav button layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (min-width: 760px) {
   .hero-nav-btn {
     display: flex;
@@ -5273,5 +5353,90 @@ h3 {
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
     font-weight: 500;
+  }
+}
+
+
+/* ==========================================================================
+   17. Tablet/mobile shell override
+   ========================================================================== */
+
+@media (max-width: 1023px) {
+  .app-shell {
+    display: block;
+  }
+
+  .app-shell-content {
+    padding: 10px 10px 80px;
+  }
+}
+
+
+/* ==========================================================================
+   18. Desktop shell override
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+  }
+}
+
+@media (max-width: 1023px) {
+  .hero-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    z-index: 999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 64px;
+    padding: 8px 12px;
+    margin: 0;
+
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    background: var(--sidebar);
+    box-shadow: 0 -2px 8px color-mix(in oklch, var(--foreground) 6%, transparent);
+  }
+
+  .hero-top,
+  .hero-bottom {
+    display: none;
+  }
+
+  .hero-nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+
+    width: 100%;
+    max-width: 520px;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  .hero-nav-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+
+    display: inline-grid;
+    place-items: center;
+
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .hero-nav-label {
+    display: none;
   }
 }

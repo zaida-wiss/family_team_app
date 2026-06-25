@@ -1,6 +1,6 @@
 /* ── HeroBar – desktop sidebar ────────────────────────────────── */
 
-@media (min-width: 760px) {
+@media (min-width: 1024px) {
   .hero-bar {
     flex-direction: column;
     justify-content: flex-start;
@@ -163,9 +163,9 @@
   }
 }
 
-/* ── HeroBar – mobile bottom bar ─────────────────────────────── */
+/* ── HeroBar – mobile + tablet bottom bar ─────────────────────── */
 
-@media (max-width: 759px) {
+@media (max-width: 1023px) {
   .hero-bar {
     position: fixed;
     bottom: 0;
@@ -173,14 +173,19 @@
     right: 0;
     top: auto;
     z-index: 50;
+
+    display: flex;
+    align-items: center;
     justify-content: center;
+
     padding: 8px 12px;
+    margin-bottom: 0;
+
     border-radius: 0;
     border: none;
     border-top: 1px solid var(--border);
     background: var(--sidebar);
     box-shadow: 0 -2px 8px color-mix(in oklch, var(--foreground) 6%, transparent);
-    margin-bottom: 0;
   }
 
   .hero-top,
@@ -190,17 +195,48 @@
   }
 
   .hero-nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+
     gap: 2px;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+
+    width: 100%;
   }
 
   .hero-nav::-webkit-scrollbar {
     display: none;
   }
 
+  .hero-nav-btn {
+    display: inline-grid;
+    place-items: center;
+
+    width: 44px;
+    height: 44px;
+
+    flex: 0 0 auto;
+
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: none;
+    color: var(--muted-fg);
+    cursor: pointer;
+  }
+
+  .hero-nav-btn.active {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-color: var(--primary);
+  }
+
   .hero-nav-label {
     display: none;
   }
 }
+
+
