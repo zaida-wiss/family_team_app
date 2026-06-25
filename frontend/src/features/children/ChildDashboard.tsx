@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Star, Sparkles, Trophy } from "lucide-react";
+import { Star, Sparkles, Trophy, X } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 import { ChildTimeline } from "./ChildTimeline";
 
@@ -9,7 +9,7 @@ type Props = {
   roles: Role[];
   activeReward: Reward | null;
   rewardProgress: RewardPathProgress | null;
-  suggestedRewards: Reward[];
+  childRewards: Reward[];
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
@@ -45,13 +45,37 @@ function getTodoTimerBackground(timeLeftPercent: number) {
   return `hsl(${hue} 86% 72%)`;
 }
 
+function isWithinLastDay(isoStr: string | null, now: number) {
+  if (!isoStr) return false;
+  const time = new Date(isoStr).getTime();
+  return Number.isFinite(time) && now - time <= 86_400_000;
+}
+
+function isSameLocalDay(isoStr: string | null, date: Date) {
+  if (!isoStr) return false;
+  const candidate = new Date(isoStr);
+  return (
+    candidate.getFullYear() === date.getFullYear() &&
+    candidate.getMonth() === date.getMonth() &&
+    candidate.getDate() === date.getDate()
+  );
+}
+
+function getRewardStatusLabel(status: Reward["status"]) {
+  if (status === "active") return "Godkänd";
+  if (status === "suggested") return "Väntar";
+  if (status === "unlocked") return "Upplåst";
+  if (status === "redeemed") return "Inlöst";
+  return "Nekad";
+}
+
 export function ChildDashboard({
   child,
   calendars,
   roles,
   activeReward,
   rewardProgress,
-  suggestedRewards,
+  childRewards,
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
@@ -62,6 +86,7 @@ export function ChildDashboard({
   onDismissRejectedTodo,
 }: Props) {
   const [wishStars, setWishStars] = useState(10);
+  const [isWishModalOpen, setIsWishModalOpen] = useState(false);
   const [heldTodoId, setHeldTodoId] = useState<Id | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [completedCue, setCompletedCue] = useState<{
@@ -90,12 +115,37 @@ export function ChildDashboard({
       .map(([category, todos]) => ({ category, todos }));
   }, [activeChildTodos]);
 
-  const allRewards = [
-    ...(activeReward ? [activeReward] : []),
-    ...suggestedRewards,
-  ];
-
+  const nowMs = timerNow;
   const rejected = rejectedTodos;
+  const approvedStarsTotal = timelineTodos
+    .filter((todo) => todo.assignedTo === child.id && todo.status === "approved" && todo.deletedAt === null)
+    .reduce((sum, todo) => sum + todo.starValue, 0);
+  const approvedStarsToday = timelineTodos
+    .filter(
+      (todo) =>
+        todo.assignedTo === child.id &&
+        todo.status === "approved" &&
+        todo.deletedAt === null &&
+        isSameLocalDay(todo.approvedAt ?? todo.completedAt, new Date(nowMs))
+    )
+    .reduce((sum, todo) => sum + todo.starValue, 0);
+  const modalRewards = childRewards
+    .filter((reward) => {
+      if (reward.status === "rejected") {
+        return isWithinLastDay(reward.deletedAt, nowMs);
+      }
+      return reward.deletedAt === null;
+    })
+    .sort((a, b) => {
+      const order: Record<Reward["status"], number> = {
+        active: 0,
+        unlocked: 1,
+        redeemed: 2,
+        suggested: 3,
+        rejected: 4,
+      };
+      return order[a.status] - order[b.status] || a.title.localeCompare(b.title, "sv");
+    });
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setTimerNow(Date.now()), 1000);
@@ -241,22 +291,13 @@ export function ChildDashboard({
           {/* Bottom panels */}
           <div className="child-bottom-panels">
             {/* Wishes */}
-            <div className="child-panel">
+            <div className="child-panel child-wish-compact-panel">
               <div className="child-panel-head">
                 <Sparkles size={18} />
                 <span>Önskningar</span>
               </div>
-              {allRewards.map((r) => (
-                <div key={r.id} className="child-wish-row">
-                  <Trophy size={20} className="child-wish-trophy" />
-                  <div className="child-wish-info">
-                    <span className="child-wish-title">{r.title}</span>
-                    <small>{r.starsNeeded} stjärnor · {r.status === "active" ? "Aktiv" : "Väntar godkännande"}</small>
-                  </div>
-                </div>
-              ))}
               <form
-                className="wish-form"
+                className="wish-form child-wish-form"
                 onSubmit={(e) => {
                   e.preventDefault();
                   onCreateWish(child.id, wishStars);
@@ -281,6 +322,14 @@ export function ChildDashboard({
                 />
                 <button className="wish-form-btn" type="submit">Önska</button>
               </form>
+              <button
+                className="child-wish-modal-button"
+                type="button"
+                onClick={() => setIsWishModalOpen(true)}
+              >
+                <Trophy size={15} />
+                <span>Visa önskningar</span>
+              </button>
             </div>
           </div>
           {completedCue && (
@@ -301,6 +350,11 @@ export function ChildDashboard({
 
         <aside className="child-dashboard-reward" aria-label="Belöningsbana">
           <div className="child-reward-rail">
+            <div className="child-reward-day-stars" aria-label="Stjärnor idag">
+              <span>Idag</span>
+              <strong>{approvedStarsToday}</strong>
+              <Star size={13} fill="currentColor" />
+            </div>
             <div className="child-reward-card-top">
               <div className="child-reward-card-label">
                 <Trophy size={15} />
@@ -341,6 +395,53 @@ export function ChildDashboard({
           </div>
         </aside>
       </div>
+      {isWishModalOpen && (
+        <div className="child-wish-modal-backdrop" onClick={() => setIsWishModalOpen(false)}>
+          <section
+            className="child-wish-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Barnets önskningar"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="child-wish-modal-head">
+              <div>
+                <h3>Önskningar</h3>
+                <p>
+                  <Star size={13} fill="currentColor" />
+                  {approvedStarsTotal} stjärnor totalt
+                </p>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="Stäng önskningar"
+                onClick={() => setIsWishModalOpen(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="child-wish-modal-list">
+              {modalRewards.length === 0 ? (
+                <p className="child-panel-empty">Inga önskningar ännu.</p>
+              ) : (
+                modalRewards.map((reward) => (
+                  <div
+                    key={reward.id}
+                    className={`child-wish-row child-wish-row--${reward.status}`}
+                  >
+                    <Trophy size={18} className="child-wish-trophy" />
+                    <div className="child-wish-info">
+                      <span className="child-wish-title">{reward.title}</span>
+                      <small>{reward.starsNeeded} stjärnor · {getRewardStatusLabel(reward.status)}</small>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+      )}
     </article>
   );
 }

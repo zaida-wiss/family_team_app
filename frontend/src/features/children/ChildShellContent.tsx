@@ -41,9 +41,7 @@ export function ChildShellContent({
   const rewardProgress = activeReward
     ? getRewardPathProgress(currentMember, activeReward, todos)
     : null;
-  const suggestedRewards = rewards.filter(
-    (r) => r.wishedBy === currentMember.id && r.status === "suggested"
-  );
+  const childRewards = rewards.filter((r) => r.wishedBy === currentMember.id);
   const now = Date.now();
   const activeChildTodos = todos.filter(
     (t) =>
@@ -67,7 +65,7 @@ export function ChildShellContent({
       roles={roles}
       activeReward={activeReward}
       rewardProgress={rewardProgress}
-      suggestedRewards={suggestedRewards}
+      childRewards={childRewards}
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}

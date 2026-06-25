@@ -209,9 +209,7 @@ export function MemberShellContent({
     const rewardProgress = activeReward
       ? getRewardPathProgress(selectedDashboardMember, activeReward, todos)
       : null;
-    const suggestedRewards = rewards.filter(
-      (r) => r.wishedBy === selectedDashboardMember.id && r.status === "suggested"
-    );
+    const childRewards = rewards.filter((r) => r.wishedBy === selectedDashboardMember.id);
     const activeChildTodos = todos.filter(
       (t) =>
         t.assignedTo === selectedDashboardMember.id &&
@@ -234,7 +232,7 @@ export function MemberShellContent({
         roles={roles}
         activeReward={activeReward}
         rewardProgress={rewardProgress}
-        suggestedRewards={suggestedRewards}
+        childRewards={childRewards}
         timelineTodos={todos}
         activeChildTodos={activeChildTodos}
         rejectedTodos={rejectedTodos}
