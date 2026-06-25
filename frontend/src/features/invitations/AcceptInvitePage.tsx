@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { invitationsApi } from "../../api";
+import authStyles from "../auth/Auth.module.css";
+import inviteStyles from "./InviteForm.module.css";
 import type { Account, Invitation, Membership, Role, User } from "@shared/types";
 
 export type AcceptedSession = { accessToken: string; user: User; memberships: Membership[] };
@@ -55,33 +57,33 @@ export function AcceptInvitePage({ token, onAccepted }: Props) {
 
   if (loadError) {
     return (
-      <main className="auth-page">
-        <div className="auth-card">
-          <h1 className="auth-title">Ogiltig inbjudan</h1>
-          <p className="auth-error">{loadError}</p>
-          <a href="/" className="auth-switch">Gå till startsidan</a>
+      <main className={authStyles.page}>
+        <div className={authStyles.card}>
+          <h1 className={authStyles.title}>Ogiltig inbjudan</h1>
+          <p className={authStyles.error}>{loadError}</p>
+          <a href="/" className={authStyles.switchButton}>Gå till startsidan</a>
         </div>
       </main>
     );
   }
 
   if (!data) {
-    return <main className="auth-page"><div className="auth-card"><p>Laddar inbjudan…</p></div></main>;
+    return <main className={authStyles.page}><div className={authStyles.card}><p>Laddar inbjudan…</p></div></main>;
   }
 
   const { invitation, account, role } = data;
 
   return (
-    <main className="auth-page">
-      <div className="auth-card">
+    <main className={authStyles.page}>
+      <div className={authStyles.card}>
         <p className="eyebrow">Du har blivit inbjuden till</p>
-        <h1 className="auth-title">{account.name}</h1>
+        <h1 className={authStyles.title}>{account.name}</h1>
         <p style={{ margin: 0, color: "#6b8f85" }}>
           Roll: <strong>{role.name}</strong>
           {invitation.isChild ? " · Barnkonto" : ""}
         </p>
 
-        <div className="invite-mode-tabs">
+        <div className={inviteStyles.modeTabs}>
           <button
             className={`tab ${mode === "register" ? "active" : ""}`}
             onClick={() => setMode("register")}
@@ -98,7 +100,7 @@ export function AcceptInvitePage({ token, onAccepted }: Props) {
           </button>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className={authStyles.form} onSubmit={handleSubmit}>
           {mode === "register" && (
             <label className="field-label">
               Namn
@@ -138,7 +140,7 @@ export function AcceptInvitePage({ token, onAccepted }: Props) {
             />
           </label>
 
-          {submitError && <p className="auth-error" role="alert">{submitError}</p>}
+          {submitError && <p className={authStyles.error} role="alert">{submitError}</p>}
 
           <button className="primary-button" disabled={loading} type="submit">
             {loading ? "…" : mode === "register" ? "Skapa konto och gå med" : "Logga in och gå med"}

@@ -5,6 +5,7 @@ import {
   canViewResource,
   hasPermission
 } from "../../utils/permissions";
+import styles from "./ShoppingLists.module.css";
 import type { AccessLevel, Id, Member, Role, ShoppingList } from "@shared/types";
 
 type ShoppingListsPanelProps = {
@@ -118,12 +119,12 @@ export function ShoppingListsPanel({
 
   return (
     <div className="dashboard-list">
-      <section className="shopping-create-card" aria-label="Skapa inköpslista">
+      <section className={styles.createCard} aria-label="Skapa inköpslista">
         <div>
           <p className="eyebrow">Ny lista</p>
           <h3>Skapa inköpslista</h3>
         </div>
-        <div className="shopping-add-row">
+        <div className={styles.addRow}>
           <input
             className="text-input"
             disabled={!canCreateShoppingLists}
@@ -152,8 +153,8 @@ export function ShoppingListsPanel({
         const shareDraft = getShareDraft(list.id);
 
         return (
-          <div className="shopping-card" key={list.id}>
-            <div className="shopping-card-header">
+          <div className={styles.card} key={list.id}>
+            <div className={styles.header}>
               <div>
                 <ShoppingCart size={18} />
                 <strong>{list.name}</strong>
@@ -171,12 +172,12 @@ export function ShoppingListsPanel({
 
             {!managementOnly && (
               <>
-                <ul className="shopping-items">
+                <ul className={styles.items}>
                   {list.items
                     .filter((item) => item.deletedAt === null)
                     .map((item) => (
                       <li key={item.id}>
-                        <label className={item.done ? "done" : ""}>
+                        <label className={item.done ? styles.done : undefined}>
                           <input
                             checked={item.done}
                             disabled={!canEditThisList}
@@ -189,7 +190,7 @@ export function ShoppingListsPanel({
                     ))}
                 </ul>
 
-                <div className="shopping-add-row">
+                <div className={styles.addRow}>
                   <input
                     className="text-input"
                     disabled={!canEditThisList}
@@ -219,7 +220,7 @@ export function ShoppingListsPanel({
               </>
             )}
 
-            <div className="shopping-share-panel">
+            <div className={styles.sharePanel}>
               <div className="calendar-event-form">
                 <select
                   className="text-input"

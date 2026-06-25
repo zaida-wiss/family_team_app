@@ -1,7 +1,57 @@
-/* ── HeroBar – desktop sidebar ────────────────────────────────── */
+.heroBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in oklch, var(--primary) 16%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: 0 4px 16px color-mix(in oklch, var(--foreground) 7%, transparent);
+  margin-bottom: 24px;
+}
+
+.brand {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.navBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--muted-fg);
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s;
+}
+
+.navBtn:hover {
+  background: color-mix(in oklch, var(--primary) 8%, transparent);
+  color: var(--foreground);
+}
+
+.navBtn.active {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
 
 @media (min-width: 1024px) {
-  .hero-bar {
+  .heroBar {
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
@@ -18,7 +68,7 @@
     box-shadow: none;
   }
 
-  .hero-top {
+  .top {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -26,30 +76,30 @@
     margin-bottom: 28px;
   }
 
-  .hero-brand {
+  .brand {
     font-family: var(--font-display);
     font-size: 1.2rem;
     font-weight: 700;
-    letter-spacing: -0.01em;
     color: var(--foreground);
   }
 
-  .hero-account {
+  .account {
     font-size: 0.78rem;
     color: var(--muted-fg);
     font-weight: 400;
   }
 
-  .hero-nav {
+  .nav {
     flex-direction: column;
     align-items: stretch;
     gap: 1px;
     flex: 1;
   }
 
-  .hero-nav-btn {
+  .navBtn {
     width: 100%;
     height: 48px;
+    display: flex;
     justify-content: flex-start;
     gap: 14px;
     padding: 0 14px;
@@ -60,20 +110,20 @@
     transition: background 0.12s, color 0.12s;
   }
 
-  .hero-nav-btn:hover:not(.active) {
+  .navBtn:hover:not(.active) {
     background: color-mix(in oklch, var(--foreground) 5%, transparent);
     color: var(--foreground);
   }
 
-  .hero-nav-btn.active {
+  .navBtn.active {
     color: var(--foreground);
   }
 
-  .hero-nav-label {
+  .navLabel {
     display: inline;
   }
 
-  .hero-bottom {
+  .bottom {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -82,13 +132,13 @@
     margin-top: 12px;
   }
 
-  .hero-bottom-row {
+  .bottomRow {
     display: flex;
     align-items: center;
     gap: 4px;
   }
 
-  .hero-member-btn {
+  .memberBtn {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -103,11 +153,11 @@
     min-width: 0;
   }
 
-  .hero-member-btn:hover {
+  .memberBtn:hover {
     background: color-mix(in oklch, var(--foreground) 5%, transparent);
   }
 
-  .hero-member-info {
+  .memberInfo {
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -115,7 +165,7 @@
     min-width: 0;
   }
 
-  .hero-member-name {
+  .memberName {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--foreground);
@@ -124,12 +174,12 @@
     text-overflow: ellipsis;
   }
 
-  .hero-switch {
+  .switchText {
     font-size: 0.72rem;
     color: var(--muted-fg);
   }
 
-  .hero-theme-btn {
+  .themeBtn {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -144,16 +194,12 @@
     transition: background 0.12s, color 0.12s;
   }
 
-  .hero-theme-btn:hover {
+  .themeBtn:hover {
     background: color-mix(in oklch, var(--foreground) 5%, transparent);
     color: var(--foreground);
   }
 
-  .hero-dots {
-    display: none;
-  }
-
-  .hero-tip {
+  .tip {
     font-size: 0.69rem;
     color: var(--muted-fg);
     line-height: 1.45;
@@ -163,24 +209,20 @@
   }
 }
 
-/* ── HeroBar – mobile + tablet bottom bar ─────────────────────── */
-
 @media (max-width: 1023px) {
-  .hero-bar {
+  .heroBar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     top: auto;
-    z-index: 50;
-
+    z-index: 999;
     display: flex;
     align-items: center;
     justify-content: center;
-
+    height: 64px;
     padding: 8px 12px;
-    margin-bottom: 0;
-
+    margin: 0;
     border-radius: 0;
     border: none;
     border-top: 1px solid var(--border);
@@ -188,55 +230,40 @@
     box-shadow: 0 -2px 8px color-mix(in oklch, var(--foreground) 6%, transparent);
   }
 
-  .hero-top,
-  .hero-account,
-  .hero-bottom {
+  .top,
+  .account,
+  .bottom {
     display: none;
   }
 
-  .hero-nav {
+  .nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
-
-    gap: 2px;
+    justify-content: space-around;
+    width: 100%;
+    max-width: 520px;
+    gap: 4px;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
-
-    width: 100%;
   }
 
-  .hero-nav::-webkit-scrollbar {
+  .nav::-webkit-scrollbar {
     display: none;
   }
 
-  .hero-nav-btn {
-    display: inline-grid;
-    place-items: center;
-
+  .navBtn {
     width: 44px;
     height: 44px;
-
-    flex: 0 0 auto;
-
-    border: 1px solid transparent;
+    flex: 0 0 44px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
     border-radius: 12px;
-    background: none;
-    color: var(--muted-fg);
-    cursor: pointer;
   }
 
-  .hero-nav-btn.active {
-    background: var(--primary);
-    color: var(--primary-fg);
-    border-color: var(--primary);
-  }
-
-  .hero-nav-label {
+  .navLabel {
     display: none;
   }
 }
-
-

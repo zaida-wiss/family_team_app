@@ -10,7 +10,7 @@ import {
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Member } from "@shared/types";
 import type { ShellPanel } from "../../hooks/useAppState";
-import "./HeroBar.css";
+import styles from "./HeroBar.module.css";
 
 type Props = {
   activePanel: ShellPanel;
@@ -32,13 +32,13 @@ export function HeroBar({
   onOpenThemePicker,
 }: Props) {
   return (
-    <nav className="hero-bar">
-      <div className="hero-top">
-        <span className="hero-brand">Familjeappen</span>
-        <span className="hero-account">{accountName}</span>
+    <nav className={styles.heroBar}>
+      <div className={styles.top}>
+        <span className={styles.brand}>Familjeappen</span>
+        <span className={styles.account}>{accountName}</span>
       </div>
 
-      <div className="hero-nav">
+      <div className={styles.nav}>
         <NavBtn icon={<Home size={20} />} label="Hem" panel="home" active={activePanel === "home"} onNavigate={onNavigate} />
         <NavBtn icon={<CalendarDays size={20} />} label="Kalender" panel="calendar" active={activePanel === "calendar"} onNavigate={onNavigate} />
         <NavBtn icon={<ShoppingCart size={20} />} label="Inköp" panel="shopping" active={activePanel === "shopping"} onNavigate={onNavigate} />
@@ -49,20 +49,20 @@ export function HeroBar({
         <NavBtn icon={<Settings size={20} />} label="Inställningar" panel="settings" active={activePanel === "settings"} onNavigate={onNavigate} />
       </div>
 
-      <div className="hero-bottom">
-        <div className="hero-bottom-row">
-          <button className="hero-member-btn" onClick={onSwitchAccount} type="button">
+      <div className={styles.bottom}>
+        <div className={styles.bottomRow}>
+          <button className={styles.memberBtn} onClick={onSwitchAccount} type="button">
             <MemberAvatar member={currentMember} size="xs" />
-            <div className="hero-member-info">
-              <span className="hero-member-name">{currentMember.name}</span>
-              <span className="hero-switch">Byt vy</span>
+            <div className={styles.memberInfo}>
+              <span className={styles.memberName}>{currentMember.name}</span>
+              <span className={styles.switchText}>Byt vy</span>
             </div>
           </button>
-          <button className="hero-theme-btn" onClick={onOpenThemePicker} title="Byt tema" type="button">
+          <button className={styles.themeBtn} onClick={onOpenThemePicker} title="Byt tema" type="button">
             <Palette size={18} />
           </button>
         </div>
-        <p className="hero-tip">Tips: håll fingret länge på bakgrunden för att byta tema.</p>
+        <p className={styles.tip}>Tips: håll fingret länge på bakgrunden för att byta tema.</p>
       </div>
     </nav>
   );
@@ -79,13 +79,13 @@ function NavBtn({
 }) {
   return (
     <button
-      className={`hero-nav-btn${active ? " active" : ""}`}
+      className={`${styles.navBtn}${active ? ` ${styles.active}` : ""}`}
       onClick={() => onNavigate(panel)}
       title={label}
       type="button"
     >
       {icon}
-      <span className="hero-nav-label">{label}</span>
+      <span className={styles.navLabel}>{label}</span>
     </button>
   );
 }

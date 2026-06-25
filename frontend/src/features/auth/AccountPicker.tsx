@@ -2,6 +2,7 @@ import { Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { accountsApi } from "../../api";
 import { CreateAccountForm } from "./CreateAccountForm";
+import styles from "./Auth.module.css";
 import type { Membership, User } from "@shared/types";
 
 type Props = {
@@ -23,10 +24,10 @@ export function AccountPicker({ user, memberships, onSelect, onLogout, onMembers
   }
 
   return (
-    <main className="auth-page">
-      <div className="auth-card">
+    <main className={styles.page}>
+      <div className={styles.card}>
         <p className="eyebrow">Välkommen, {user.name}</p>
-        <h1 className="auth-title">
+        <h1 className={styles.title}>
           {memberships.length === 0 ? "Kom igång" : "Välj konto"}
         </h1>
 
@@ -38,16 +39,16 @@ export function AccountPicker({ user, memberships, onSelect, onLogout, onMembers
         ) : (
           <>
             {memberships.length > 0 && (
-              <div className="account-picker-list">
+              <div className={styles.accountList}>
                 {memberships.map(({ member, account }) => (
                   <button
-                    className="account-picker-row"
+                    className={styles.accountRow}
                     key={member.id}
                     onClick={() => onSelect({ member, account })}
                     type="button"
                   >
-                    <span className="account-icon"><Users size={20} /></span>
-                    <span className="account-picker-info">
+                    <span className={styles.accountIcon}><Users size={20} /></span>
+                    <span className={styles.accountInfo}>
                       <strong>{account?.name ?? "Okänt konto"}</strong>
                       <small>{member.isChild ? "Barnkonto" : member.name}</small>
                     </span>
@@ -63,19 +64,19 @@ export function AccountPicker({ user, memberships, onSelect, onLogout, onMembers
             )}
 
             <button
-              className="account-picker-row"
+              className={styles.accountRow}
               onClick={() => setCreating(true)}
               type="button"
               style={{ marginTop: memberships.length > 0 ? 4 : 0 }}
             >
-              <span className="account-icon"><Plus size={20} /></span>
-              <span className="account-picker-info">
+              <span className={styles.accountIcon}><Plus size={20} /></span>
+              <span className={styles.accountInfo}>
                 <strong>Skapa nytt familjekonto</strong>
                 <small>Bjud sedan in familjemedlemmar</small>
               </span>
             </button>
 
-            <button className="auth-switch" onClick={onLogout} type="button">
+            <button className={styles.switchButton} onClick={onLogout} type="button">
               Logga ut
             </button>
           </>

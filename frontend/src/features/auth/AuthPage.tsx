@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { authApi } from "../../api";
+import styles from "./Auth.module.css";
 
 type Mode = "login" | "register" | "forgot" | "forgot-done";
 
@@ -43,14 +44,14 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
 
   if (mode === "forgot-done") {
     return (
-      <main className="auth-page">
-        <div className="auth-card">
-          <h1 className="auth-title">BMAD</h1>
+      <main className={styles.page}>
+        <div className={styles.card}>
+          <h1 className={styles.title}>BMAD</h1>
           <p className="eyebrow">Kolla din e-post</p>
           <p style={{ marginBottom: "1rem", fontSize: "0.9rem" }}>
             Om e-postadressen finns registrerad har vi skickat en återställningslänk.
           </p>
-          <button className="auth-switch" onClick={() => setMode("login")} type="button">
+          <button className={styles.switchButton} onClick={() => setMode("login")} type="button">
             Tillbaka till inloggning
           </button>
         </div>
@@ -59,14 +60,14 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
   }
 
   return (
-    <main className="auth-page">
-      <div className="auth-card">
-        <h1 className="auth-title">BMAD</h1>
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>BMAD</h1>
         <p className="eyebrow">
           {mode === "login" ? "Logga in" : mode === "register" ? "Skapa konto" : "Återställ lösenord"}
         </p>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit}>
           {mode === "register" && (
             <label className="field-label">
               Namn
@@ -111,7 +112,7 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
             </label>
           )}
 
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && <p className={styles.error} role="alert">{error}</p>}
 
           <button className="primary-button" disabled={loading} type="submit">
             {loading ? "…" : mode === "login" ? "Logga in" : mode === "register" ? "Skapa konto" : "Skicka återställningslänk"}
@@ -119,13 +120,13 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
         </form>
 
         {mode === "login" && (
-          <button className="auth-switch" onClick={() => { setMode("forgot"); setError(null); }} type="button">
+          <button className={styles.switchButton} onClick={() => { setMode("forgot"); setError(null); }} type="button">
             Glömt lösenordet?
           </button>
         )}
 
         <button
-          className="auth-switch"
+          className={styles.switchButton}
           onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(null); }}
           type="button"
         >
@@ -160,9 +161,9 @@ function ResetPasswordForm({ token }: { token: string }) {
 
   if (done) {
     return (
-      <main className="auth-page">
-        <div className="auth-card">
-          <h1 className="auth-title">BMAD</h1>
+      <main className={styles.page}>
+        <div className={styles.card}>
+          <h1 className={styles.title}>BMAD</h1>
           <p className="eyebrow">Lösenord återställt</p>
           <p style={{ marginBottom: "1rem", fontSize: "0.9rem" }}>Du kan nu logga in med ditt nya lösenord.</p>
           <button className="primary-button" onClick={() => window.history.replaceState({}, "", "/")} type="button">
@@ -174,11 +175,11 @@ function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <main className="auth-page">
-      <div className="auth-card">
-        <h1 className="auth-title">BMAD</h1>
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>BMAD</h1>
         <p className="eyebrow">Välj nytt lösenord</p>
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit}>
           <label className="field-label">
             Nytt lösenord
             <input
@@ -205,7 +206,7 @@ function ResetPasswordForm({ token }: { token: string }) {
               value={confirm}
             />
           </label>
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && <p className={styles.error} role="alert">{error}</p>}
           <button className="primary-button" disabled={loading} type="submit">
             {loading ? "…" : "Spara nytt lösenord"}
           </button>

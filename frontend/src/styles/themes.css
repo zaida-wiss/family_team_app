@@ -1,0 +1,142 @@
+.dashboard.theme-clear {
+  background: linear-gradient(180deg, #ffffff 0%, var(--muted) 100%);
+}
+
+.dashboard.theme-focus {
+  background: linear-gradient(180deg, #eef4ff 0%, #ffffff 72%);
+}
+
+.dashboard.theme-warm {
+  background: linear-gradient(180deg, #fff4e6 0%, #ffffff 72%);
+}
+
+.dashboard.theme-dark {
+  background: linear-gradient(180deg, #24312f 0%, #41514d 100%);
+  color: #f4faf7;
+}
+
+.dashboard.theme-dark .eyebrow,
+.dashboard.theme-dark .dashboard-row {
+  color: #f4faf7;
+}
+
+.dashboard.theme-dark .dashboard-row {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dashboard.theme-nature {
+  background: linear-gradient(180deg, #e7f5df 0%, #ffffff 74%);
+}
+
+.child-dashboard.theme-space {
+  background: linear-gradient(180deg, #25215c 0%, #7357b7 55%, #ffffff 100%);
+  color: #ffffff;
+}
+
+.child-dashboard.theme-rainbow {
+  background: linear-gradient(180deg, #ffe1ec 0%, #fff4b8 45%, #e1f5ff 100%);
+}
+
+.child-dashboard.theme-ocean {
+  background: linear-gradient(180deg, #d8f3ff 0%, #ffffff 72%);
+}
+
+.child-dashboard.theme-forest {
+  background: linear-gradient(180deg, #dff5d8 0%, #ffffff 72%);
+}
+
+.child-dashboard.theme-superhero {
+  background: linear-gradient(180deg, #ffe1a6 0%, #ffffff 72%);
+}
+
+.child-dashboard.theme-animal-park {
+  background: linear-gradient(180deg, #f7e4c6 0%, #ffffff 72%);
+}
+
+.theme-picker {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  width: min(420px, calc(100% - 40px));
+  border: 1px solid rgba(47, 125, 109, 0.22);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(30, 56, 50, 0.2);
+}
+
+.theme-picker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.theme-option {
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.theme-option.active {
+  border-color: var(--foreground);
+}
+
+.theme-option.theme-clear {
+  background: var(--muted);
+}
+
+.theme-option.theme-focus {
+  background: #dce8ff;
+}
+
+.theme-option.theme-warm {
+  background: #ffe0b8;
+}
+
+.theme-option.theme-dark {
+  background: #24312f;
+  color: #ffffff;
+}
+
+.theme-option.theme-nature {
+  background: #d9f0ce;
+}
+
+.theme-option.theme-space {
+  background: #7357b7;
+  color: #ffffff;
+}
+
+.theme-option.theme-rainbow {
+  background: #ffd5e5;
+}
+
+.theme-option.theme-ocean {
+  background: #ccefff;
+}
+
+.theme-option.theme-forest {
+  background: #dff5d8;
+}
+
+.theme-option.theme-superhero {
+  background: #ffd36e;
+}
+
+.theme-option.theme-animal-park {
+  background: #f4d8ad;
+}

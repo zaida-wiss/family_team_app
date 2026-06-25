@@ -1,4 +1,5 @@
 import { useState } from "react";
+import styles from "./Auth.module.css";
 
 type Props = {
   onSubmit: (name: string) => Promise<void>;
@@ -24,7 +25,7 @@ export function CreateAccountForm({ onSubmit, onCancel }: Props) {
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={handleSubmit}>
       <p className="eyebrow">Nytt familjekonto</p>
 
       <label className="field-label">
@@ -40,7 +41,7 @@ export function CreateAccountForm({ onSubmit, onCancel }: Props) {
         />
       </label>
 
-      {error && <p className="auth-error" role="alert">{error}</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
 
       <div style={{ display: "flex", gap: 10 }}>
         <button className="primary-button" disabled={loading || !name.trim()} type="submit">

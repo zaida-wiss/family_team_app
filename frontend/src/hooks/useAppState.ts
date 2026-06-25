@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { setApiErrorHandler, setApiMemberId } from "../api";
 import { useAccountState } from "../features/accounts/useAccountState";
 import { useCalendarsState } from "../features/calendars/useCalendarsState";
@@ -72,9 +72,13 @@ export function useAppState(initialMembership: ActiveMembership) {
     });
   }, []);
 
-  const activeMembers = members
-    .filter((m) => m.deletedAt === null)
-    .sort((a, b) => Number(a.isChild) - Number(b.isChild));
+  const activeMembers = useMemo(
+    () =>
+      members
+        .filter((m) => m.deletedAt === null)
+        .sort((a, b) => Number(a.isChild) - Number(b.isChild)),
+    [members]
+  );
 
   return {
     activeAccount,

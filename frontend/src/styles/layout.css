@@ -1,0 +1,40 @@
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+}
+
+@media (max-width: 1023px) {
+  .app-shell {
+    display: block;
+  }
+
+  .app-shell-content {
+    padding: 10px 10px 80px;
+    background: var(--background);
+    min-height: 100vh;
+  }
+
+  .api-error-banner {
+    bottom: 80px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .app-shell-content {
+    padding: 28px 28px 48px;
+    min-height: 100vh;
+    background: var(--background);
+  }
+
+  .app-shell-full {
+    grid-column: 1 / -1;
+  }
+}

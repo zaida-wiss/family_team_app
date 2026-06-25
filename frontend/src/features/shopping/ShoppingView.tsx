@@ -5,6 +5,7 @@ import {
   canViewResource,
   hasPermission
 } from "../../utils/permissions";
+import styles from "./ShoppingLists.module.css";
 import type { Id, Member, Role, ShoppingList } from "@shared/types";
 
 type Props = {
@@ -65,8 +66,8 @@ export function ShoppingView({
         const doneCount = activeItems.filter((i) => i.done).length;
 
         return (
-          <article className="shopping-card" key={list.id}>
-            <div className="shopping-card-header">
+          <article className={styles.card} key={list.id}>
+            <div className={styles.header}>
               <div>
                 <ShoppingCart size={18} />
                 <strong>{list.name}</strong>
@@ -78,10 +79,10 @@ export function ShoppingView({
               )}
             </div>
 
-            <ul className="shopping-items">
+            <ul className={styles.items}>
               {activeItems.map((item) => (
                 <li key={item.id}>
-                  <label className={item.done ? "done" : ""}>
+                  <label className={item.done ? styles.done : undefined}>
                     <input
                       checked={item.done}
                       disabled={!editable}
@@ -95,7 +96,7 @@ export function ShoppingView({
             </ul>
 
             {editable && (
-              <div className="shopping-add-row">
+              <div className={styles.addRow}>
                 <input
                   className="text-input"
                   onChange={(e) =>

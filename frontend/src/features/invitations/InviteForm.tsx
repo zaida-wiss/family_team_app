@@ -1,6 +1,8 @@
 import { Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { invitationsApi } from "../../api";
+import authStyles from "../auth/Auth.module.css";
+import styles from "./InviteForm.module.css";
 import type { Role } from "@shared/types";
 
 type Props = {
@@ -45,14 +47,14 @@ export function InviteForm({ accountId, roles }: Props) {
   }
 
   return (
-    <section className="invite-form" aria-label="Bjud in">
+    <section className={styles.form} aria-label="Bjud in">
       <h3>Bjud in</h3>
 
       {inviteUrl ? (
-        <div className="invite-result">
-          <p className="invite-success">Inbjudan skapad! Dela länken med {name || "personen"}.</p>
-          <div className="invite-url-row">
-            <code className="invite-url">{inviteUrl}</code>
+        <div className={styles.result}>
+          <p className={styles.success}>Inbjudan skapad! Dela länken med {name || "personen"}.</p>
+          <div className={styles.urlRow}>
+            <code className={styles.url}>{inviteUrl}</code>
             <button
               className="icon-button"
               onClick={copy}
@@ -71,7 +73,7 @@ export function InviteForm({ accountId, roles }: Props) {
           </button>
         </div>
       ) : (
-        <div className="invite-fields">
+        <div className={styles.fields}>
           <label className="field-label">
             E-postadress (till den som bjuds in)
             <input
@@ -107,7 +109,7 @@ export function InviteForm({ accountId, roles }: Props) {
             </select>
           </label>
 
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && <p className={authStyles.error} role="alert">{error}</p>}
 
           <button
             className="primary-button"

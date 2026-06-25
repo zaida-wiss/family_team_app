@@ -111,20 +111,3 @@
 .settings-sub .danger-zone > header {
   display: none;
 }
-
-/* ── InviteForm inside .settings-sub ── */
-.settings-sub .invite-form {
-  margin: 0;
-  padding: 0;
-  border: none;
-  gap: 12px;
-}
-
-.settings-sub .invite-form > h3 {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted-fg);
-  margin: 0;
-}

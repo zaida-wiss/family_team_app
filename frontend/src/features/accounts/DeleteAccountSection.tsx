@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { accountsApi } from "../../api";
+import authStyles from "../auth/Auth.module.css";
 
 type Props = {
   accountId: string;
@@ -101,7 +102,7 @@ export function DeleteAccountSection({ accountId, accountName, onConfirm }: Prop
             Jag förstår att kontot och all data raderas permanent
           </label>
 
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && <p className={authStyles.error} role="alert">{error}</p>}
 
           <div className="delete-account-actions">
             <button

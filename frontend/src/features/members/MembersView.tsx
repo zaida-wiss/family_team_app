@@ -1,6 +1,7 @@
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Account, Member, Role } from "@shared/types";
+import styles from "./MembersView.module.css";
 
 type Props = {
   account: Account;
@@ -22,13 +23,13 @@ export function MembersView({ account, currentMember, members, roles, onSelectMe
   }
 
   return (
-    <div className="members-page">
+    <div className={styles.page}>
       <div>
-        <h2 className="members-page-title">Familjemedlemmar</h2>
-        <p className="members-page-sub">Familjen {account.name}</p>
+        <h2 className={styles.title}>Familjemedlemmar</h2>
+        <p className={styles.subtitle}>Familjen {account.name}</p>
       </div>
 
-      <div className="members-grid">
+      <div className={styles.grid}>
         {active.map((member) => {
           const role = roles.find((r) => r.id === member.roleId);
           const isMe = member.id === currentMember.id;
@@ -38,18 +39,18 @@ export function MembersView({ account, currentMember, members, roles, onSelectMe
 
           return (
             <button
-              className={`members-card${isMe ? " members-card--me" : ""}`}
+              className={`${styles.card}${isMe ? ` ${styles.cardMe}` : ""}`}
               key={member.id}
               onClick={() => openMember(member)}
               type="button"
             >
               <MemberAvatar member={member} size="small" />
-              <div className="members-card-info">
-                <span className="members-card-name">
+              <div className={styles.cardInfo}>
+                <span className={styles.cardName}>
                   {member.name}
-                  {isMe && <span className="member-you-tag">Du</span>}
+                  {isMe && <span className={styles.youTag}>Du</span>}
                 </span>
-                <span className="members-card-role">{roleLabel}</span>
+                <span className={styles.cardRole}>{roleLabel}</span>
               </div>
             </button>
           );

@@ -1,5 +1,6 @@
 import type { Account, Member } from "@shared/types";
 import { MemberAvatar } from "../../components/MemberAvatar";
+import styles from "./MemberPicker.module.css";
 
 type Props = {
   account: Account;
@@ -9,14 +10,14 @@ type Props = {
 
 export function MemberPicker({ account, members, onSelect }: Props) {
   return (
-    <main className="member-picker">
+    <main className={styles.picker}>
       <p className="eyebrow">Familj</p>
       <h1>{account.name}</h1>
-      <p className="member-picker-prompt">Vem är du?</p>
-      <div className="member-picker-grid">
+      <p className={styles.prompt}>Vem är du?</p>
+      <div className={styles.grid}>
         {members.map((member) => (
           <button
-            className="member-picker-button"
+            className={styles.button}
             key={member.id}
             onClick={() => onSelect(member.id)}
             type="button"

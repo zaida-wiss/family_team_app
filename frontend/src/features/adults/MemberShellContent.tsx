@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import { ChildDashboard } from "../children/ChildDashboard";
@@ -98,36 +98,69 @@ export function MemberShellContent({
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
 
-  const accessibleCalendarIds = calendars
-    .filter((calendar) => {
-      if (calendar.deletedAt !== null) return false;
-      if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
-      return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, calendar);
-    })
-    .map((calendar) => calendar.id);
-  function createCalendarFilter(
-    filterKey: CalendarFilterKey,
-    searchQuery: string,
-    setSearchQuery: (query: string) => void
-  ): CalendarFilter {
-    const savedVisibleCalendarIds = currentMember.calendarFilterSettings?.[filterKey]?.visibleCalendarIds;
+  const canSeeAllCalendars = hasPermission(currentMember, roles, "canSeeAllCalendar");
+  const canSeeOwnCalendars = hasPermission(currentMember, roles, "canSeeOwnCalendar");
+
+  const accessibleCalendarIds = useMemo(
+    () =>
+      calendars
+        .filter((calendar) => {
+          if (calendar.deletedAt !== null) return false;
+          if (canSeeAllCalendars) return true;
+          return canSeeOwnCalendars && canViewResource(currentMember, calendar);
+        })
+        .map((calendar) => calendar.id),
+    [calendars, canSeeAllCalendars, canSeeOwnCalendars, currentMember]
+  );
+
+  const calendarFilter = useMemo<CalendarFilter>(() => {
+    const savedVisibleCalendarIds = currentMember.calendarFilterSettings?.calendar?.visibleCalendarIds;
     const hiddenCalendarIds = savedVisibleCalendarIds
       ? new Set(accessibleCalendarIds.filter((id) => !savedVisibleCalendarIds.includes(id)))
       : new Set<string>();
 
     return {
-      searchQuery,
-      setSearchQuery,
+      searchQuery: calSearch,
+      setSearchQuery: setCalSearch,
       hiddenCalendarIds,
       setHiddenCalendarIds: (nextHiddenCalendarIds) => {
         const visibleCalendarIds = accessibleCalendarIds.filter((id) => !nextHiddenCalendarIds.has(id));
-        onUpdateCalendarFilterSettings(filterKey, visibleCalendarIds);
+        onUpdateCalendarFilterSettings("calendar", visibleCalendarIds);
       }
     };
-  }
+  }, [accessibleCalendarIds, calSearch, currentMember.calendarFilterSettings, onUpdateCalendarFilterSettings]);
 
-  const calendarFilter = createCalendarFilter("calendar", calSearch, setCalSearch);
-  const homeFilter = createCalendarFilter("home", homeSearch, setHomeSearch);
+  const homeFilter = useMemo<CalendarFilter>(() => {
+    const savedVisibleCalendarIds = currentMember.calendarFilterSettings?.home?.visibleCalendarIds;
+    const hiddenCalendarIds = savedVisibleCalendarIds
+      ? new Set(accessibleCalendarIds.filter((id) => !savedVisibleCalendarIds.includes(id)))
+      : new Set<string>();
+
+    return {
+      searchQuery: homeSearch,
+      setSearchQuery: setHomeSearch,
+      hiddenCalendarIds,
+      setHiddenCalendarIds: (nextHiddenCalendarIds) => {
+        const visibleCalendarIds = accessibleCalendarIds.filter((id) => !nextHiddenCalendarIds.has(id));
+        onUpdateCalendarFilterSettings("home", visibleCalendarIds);
+      }
+    };
+  }, [accessibleCalendarIds, currentMember.calendarFilterSettings, homeSearch, onUpdateCalendarFilterSettings]);
+
+  const selectedDashboardMember = useMemo(
+    () => activeMembers.find((m) => m.id === selectedDashboardMemberId) ?? null,
+    [activeMembers, selectedDashboardMemberId]
+  );
+
+  const selectedMemberRole = useMemo(
+    () => selectedDashboardMember ? roles.find((r) => r.id === selectedDashboardMember.roleId) ?? null : null,
+    [roles, selectedDashboardMember]
+  );
+
+  const children = useMemo(
+    () => activeMembers.filter((m) => m.isChild),
+    [activeMembers]
+  );
 
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   if (activePanel === "calendar") {
@@ -192,12 +225,6 @@ export function MemberShellContent({
   }
 
   // ── Hem-panel ─────────────────────────────────────────────────────────────
-  const selectedDashboardMember =
-    activeMembers.find((m) => m.id === selectedDashboardMemberId) ?? null;
-
-  const selectedMemberRole = selectedDashboardMember
-    ? roles.find((r) => r.id === selectedDashboardMember.roleId)
-    : null;
   const selectedMemberIsChild =
     !!selectedDashboardMember && (selectedDashboardMember.isChild || !!selectedMemberRole?.isChildRole);
 
@@ -271,7 +298,6 @@ export function MemberShellContent({
   }
 
   // Ingen vald → översikten
-  const children = activeMembers.filter((m) => m.isChild);
   return (
     <>
       <HomePage

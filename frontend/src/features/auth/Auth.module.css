@@ -1,0 +1,102 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  padding: 24px;
+}
+
+.card {
+  width: min(420px, 100%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px color-mix(in oklch, var(--foreground) 10%, transparent);
+  padding: 40px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--primary);
+  letter-spacing: -0.01em;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.error {
+  color: #c0392b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.switchButton {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.switchButton:hover {
+  color: var(--primary-dark);
+}
+
+.accountList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.accountRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--muted);
+  border: 1.5px solid color-mix(in oklch, var(--primary) 16%, transparent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 14px 16px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+
+.accountRow:hover {
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  border-color: var(--primary);
+}
+
+.accountIcon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.accountInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accountInfo strong {
+  font-size: 1rem;
+  color: var(--foreground);
+}
+
+.accountInfo small {
+  font-size: 0.8rem;
+  color: var(--muted-fg);
+}

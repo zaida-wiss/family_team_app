@@ -7,6 +7,7 @@ let onApiError: ((message: string) => void) | null = null;
 let onUnauthorized: (() => void) | null = null;
 let refreshSession: (() => Promise<void>) | null = null;
 let refreshPromise: Promise<void> | null = null;
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -40,6 +41,41 @@ export async function request<T>(
   path: string,
   options: RequestInit = {},
   skipUnauthorizedHandler = false
+): Promise<T> {
+  if (isDedupeableGet(options)) {
+    const key = getRequestKey(path, skipUnauthorizedHandler);
+    const existing = inFlightGetRequests.get(key);
+    if (existing) {
+      return existing as Promise<T>;
+    }
+
+    const pending = performRequest<T>(path, options, skipUnauthorizedHandler).finally(() => {
+      inFlightGetRequests.delete(key);
+    });
+    inFlightGetRequests.set(key, pending);
+    return pending;
+  }
+
+  return performRequest<T>(path, options, skipUnauthorizedHandler);
+}
+
+function isDedupeableGet(options: RequestInit) {
+  return !options.body && (!options.method || options.method.toUpperCase() === "GET");
+}
+
+function getRequestKey(path: string, skipUnauthorizedHandler: boolean) {
+  return JSON.stringify({
+    path,
+    accessToken,
+    currentMemberId,
+    skipUnauthorizedHandler
+  });
+}
+
+async function performRequest<T>(
+  path: string,
+  options: RequestInit,
+  skipUnauthorizedHandler: boolean
 ): Promise<T> {
   let response: Response;
   try {

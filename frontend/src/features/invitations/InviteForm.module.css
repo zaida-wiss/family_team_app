@@ -1,0 +1,55 @@
+.form {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.form h3 {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-fg);
+  margin: 0;
+}
+
+.fields {
+  display: grid;
+  gap: 12px;
+}
+
+.result {
+  display: grid;
+  gap: 10px;
+}
+
+.success {
+  color: var(--primary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.urlRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+
+.url {
+  flex: 1;
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: var(--primary-dark);
+}
+
+.modeTabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 4px;
+}

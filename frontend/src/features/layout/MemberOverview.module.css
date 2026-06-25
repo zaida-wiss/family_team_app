@@ -1,0 +1,32 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calendarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.calendarToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 10px;
+}
+
+.calendarLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+}
+
+@media (max-width: 759px) {
+  .home {
+    gap: 10px;
+  }
+}

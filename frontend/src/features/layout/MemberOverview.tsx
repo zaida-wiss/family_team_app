@@ -1,6 +1,7 @@
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
+import styles from "./MemberOverview.module.css";
 
 type Props = {
   currentMember: Member;
@@ -34,11 +35,11 @@ export function MemberOverview({
   calendarSettings,
 }: Props) {
   return (
-    <div className="overview-home">
+    <div className={styles.home}>
       {canSeeCalendar && (
-        <div className="overview-cal-wrap">
-          <div className="overview-cal-toolbar">
-            <span className="overview-cal-label">Familjens kalender</span>
+        <div className={styles.calendarWrap}>
+          <div className={styles.calendarToolbar}>
+            <span className={styles.calendarLabel}>Familjens kalender</span>
           </div>
           <CalendarView
             displayOnly

@@ -5,6 +5,7 @@ import {
   createPermissionMap,
   getPermissionGroups
 } from "./permissionsConfig";
+import styles from "./RoleEditor.module.css";
 import type { Id, Member, PermissionKey, Role } from "@shared/types";
 
 type RoleEditorProps = {
@@ -62,22 +63,22 @@ export function RoleEditor({
             value={roleName}
           />
         </label>
-        <div className={`role-perms-wrap${showDraftPerms ? " role-perms-wrap--open" : ""}`}>
+        <div className={`${styles.permsWrap}${showDraftPerms ? ` ${styles.permsWrapOpen}` : ""}`}>
           <button
-            className="role-perms-toggle"
+            className={styles.permsToggle}
             onClick={() => setShowDraftPerms((v) => !v)}
             type="button"
           >
             <span>
               Behörigheter
               {draftPermissions.length > 0 && (
-                <span className="role-perms-badge">{draftPermissions.length}</span>
+                <span className={styles.permsBadge}>{draftPermissions.length}</span>
               )}
             </span>
             <ChevronDown className="settings-chevron" size={16} />
           </button>
-          <div className="role-perms-body">
-            <div className="role-perms-inner">
+          <div className={styles.permsBody}>
+            <div className={styles.permsInner}>
               <PermissionGrid
                 selectedPermissions={draftPermissions}
                 onToggle={toggleDraftPermission}
@@ -95,20 +96,20 @@ export function RoleEditor({
         {roles.map((role) => {
           const isOpen = openRoleId === role.id;
           return (
-            <div className={`role-card${isOpen ? " role-card--open" : ""}`} key={role.id}>
+            <div className={`${styles.card}${isOpen ? ` ${styles.cardOpen}` : ""}`} key={role.id}>
               <button
-                className="role-card-toggle"
+                className={styles.cardToggle}
                 onClick={() => setOpenRoleId(isOpen ? null : role.id)}
                 type="button"
               >
-                <span className="role-card-name">{role.name}</span>
-                <div className="role-card-toggle-right">
+                <span className={styles.cardName}>{role.name}</span>
+                <div className={styles.cardToggleRight}>
                   <span>{countEnabledPermissions(role)} aktiva</span>
                   <ChevronDown className="settings-chevron" size={16} />
                 </div>
               </button>
-              <div className="role-perms-body">
-                <div className="role-perms-inner">
+              <div className={styles.permsBody}>
+                <div className={styles.permsInner}>
                   <PermissionGrid
                     selectedPermissions={availablePermissions
                       .filter((p) => role.permissions[p.key])
@@ -124,9 +125,9 @@ export function RoleEditor({
 
       <div className="settings-sub">
         <h3 className="settings-sub-title">Tilldela roll</h3>
-        <div className="member-role-grid">
+        <div className={styles.memberRoleGrid}>
           {members.map((member) => (
-            <label className="member-role-row" key={member.id}>
+            <label className={styles.memberRoleRow} key={member.id}>
               <span>{member.name}</span>
               <select
                 onChange={(event) => onAssignRole(member.id, event.target.value)}
@@ -152,14 +153,14 @@ function PermissionGrid({
   onToggle: (permission: PermissionKey) => void;
 }) {
   return (
-    <div className="permission-groups">
+    <div className={styles.permissionGroups}>
       {getPermissionGroups().map((group) => (
-        <fieldset className="permission-group" key={group}>
+        <fieldset className={styles.permissionGroup} key={group}>
           <legend>{group}</legend>
           {availablePermissions
             .filter((permission) => permission.group === group)
             .map((permission) => (
-              <label className="checkbox-row" key={permission.key}>
+              <label className={styles.checkboxRow} key={permission.key}>
                 <input
                   checked={selectedPermissions.includes(permission.key)}
                   onChange={() => onToggle(permission.key)}
