@@ -29,6 +29,17 @@ export type AppPanel =
 
 export type CalendarViewMode = "month" | "week" | "timeline";
 
+export type CalendarFilterKey = "home" | "calendar";
+
+export type CalendarFilterSettings = Partial<Record<CalendarFilterKey, {
+  visibleCalendarIds: Id[];
+}>>;
+
+export type ChildTimelineSettings = {
+  startsAt: string;
+  endsAt: string;
+};
+
 export type DashboardThemeId =
   | "space"
   | "rainbow"
@@ -79,7 +90,8 @@ export type Member = {
   avatarUrl: string | null;
   color: string | null;
   dashboardTheme: DashboardThemeId | null;
-  visibleCalendarIds?: Id[];
+  calendarFilterSettings?: CalendarFilterSettings;
+  childTimelineSettings?: ChildTimelineSettings;
   lastActivePanel?: AppPanel;
   lastSelectedDashboardMemberId?: Id | null;
   calendarView?: CalendarViewMode;

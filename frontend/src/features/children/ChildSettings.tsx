@@ -1,7 +1,9 @@
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { CheckCircle2, Star, Trophy, XCircle } from "lucide-react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
 import { hasPermission } from "../../utils/permissions";
-import type { Id, Member, Reward, Role, Todo } from "@shared/types";
+import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -10,6 +12,7 @@ type Props = {
   todos: Todo[];
   rewards: Reward[];
   wishStars: Record<Id, number>;
+  onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
   onSetWishStars: (rewardId: Id, stars: number) => void;
   onApproveTodo: (todoId: Id) => void;
   onRejectTodo: (todoId: Id) => void;
@@ -17,8 +20,14 @@ type Props = {
   onRejectWish: (rewardId: Id) => void;
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  onUpdateChildTimelineSettings: (memberId: Id, settings: ChildTimelineSettings) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onDeleteTodo: (todoId: Id) => void;
+};
+
+const DEFAULT_CHILD_TIMELINE_SETTINGS: ChildTimelineSettings = {
+  startsAt: "06:00",
+  endsAt: "21:00",
 };
 
 const WISH_STATUS_LABEL: Record<Reward["status"], string> = {
@@ -36,6 +45,7 @@ export function ChildSettings({
   todos,
   rewards,
   wishStars,
+  onCreateWish,
   onSetWishStars,
   onApproveTodo,
   onRejectTodo,
@@ -43,9 +53,14 @@ export function ChildSettings({
   onRejectWish,
   onCreateTodo,
   onUpdateTodo,
+  onUpdateChildTimelineSettings,
   onRefreshRoutine,
   onDeleteTodo,
 }: Props) {
+  const [wishChildId, setWishChildId] = useState("");
+  const [timelineChildId, setTimelineChildId] = useState("");
+  const [wishTitle, setWishTitle] = useState("");
+  const [wishStarsNeeded, setWishStarsNeeded] = useState(10);
   const childMembers = members.filter((member) => {
     const role = roles.find((candidate) => candidate.id === member.roleId);
     return (
@@ -82,6 +97,30 @@ export function ChildSettings({
     return childById.get(memberId)?.name ?? "Barn";
   }
 
+  const selectedWishChildId = wishChildId || childMembers[0]?.id || "";
+  const selectedTimelineChild = childById.get(timelineChildId || childMembers[0]?.id || "");
+  const selectedTimelineSettings =
+    selectedTimelineChild?.childTimelineSettings ?? DEFAULT_CHILD_TIMELINE_SETTINGS;
+  const timelineHasValidRange = selectedTimelineSettings.startsAt < selectedTimelineSettings.endsAt;
+
+  function updateTimelineSetting(patch: Partial<ChildTimelineSettings>) {
+    if (!selectedTimelineChild) return;
+    const nextSettings = {
+      ...DEFAULT_CHILD_TIMELINE_SETTINGS,
+      ...(selectedTimelineChild.childTimelineSettings ?? {}),
+      ...patch,
+    };
+    onUpdateChildTimelineSettings(selectedTimelineChild.id, nextSettings);
+  }
+
+  function submitWish(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedWishChildId || !wishTitle.trim()) return;
+    onCreateWish(selectedWishChildId, wishStarsNeeded, wishTitle);
+    setWishTitle("");
+    setWishStarsNeeded(10);
+  }
+
   if (childMembers.length === 0) {
     return (
       <div className="settings-sub">
@@ -95,6 +134,38 @@ export function ChildSettings({
     <>
       <div className="settings-sub">
         <h3 className="settings-sub-title">Önskningar</h3>
+        <form className="wish-form" onSubmit={submitWish}>
+          {childMembers.length > 1 && (
+            <select
+              aria-label="Barn"
+              className="wish-form-input"
+              onChange={(event) => setWishChildId(event.target.value)}
+              value={selectedWishChildId}
+            >
+              {childMembers.map((child) => (
+                <option key={child.id} value={child.id}>{child.name}</option>
+              ))}
+            </select>
+          )}
+          <input
+            aria-label="Ny önskning"
+            className="wish-form-input"
+            onChange={(event) => setWishTitle(event.target.value)}
+            placeholder="Ny önskning"
+            type="text"
+            value={wishTitle}
+          />
+          <input
+            aria-label="Antal stjärnor"
+            className="wish-form-stars"
+            max={999}
+            min={1}
+            onChange={(event) => setWishStarsNeeded(Math.max(1, parseInt(event.target.value, 10) || 1))}
+            type="number"
+            value={wishStarsNeeded}
+          />
+          <button className="wish-form-btn" type="submit">Lägg till</button>
+        </form>
         {childWishes.length === 0 ? (
           <p className="settings-sub-desc">Inga önskningar ännu.</p>
         ) : (
@@ -111,6 +182,44 @@ export function ChildSettings({
               </div>
             ))}
           </section>
+        )}
+      </div>
+
+      <div className="settings-sub">
+        <h3 className="settings-sub-title">Tidslinje</h3>
+        <div className="child-timeline-settings">
+          {childMembers.length > 1 && (
+            <label>
+              <span>Barn</span>
+              <select
+                onChange={(event) => setTimelineChildId(event.target.value)}
+                value={selectedTimelineChild?.id ?? ""}
+              >
+                {childMembers.map((child) => (
+                  <option key={child.id} value={child.id}>{child.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label>
+            <span>Start</span>
+            <input
+              type="time"
+              value={selectedTimelineSettings.startsAt}
+              onChange={(event) => updateTimelineSetting({ startsAt: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>Slut</span>
+            <input
+              type="time"
+              value={selectedTimelineSettings.endsAt}
+              onChange={(event) => updateTimelineSetting({ endsAt: event.target.value })}
+            />
+          </label>
+        </div>
+        {!timelineHasValidRange && (
+          <p className="settings-sub-desc">Sluttiden behöver vara senare än starttiden.</p>
         )}
       </div>
 

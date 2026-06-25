@@ -1,7 +1,7 @@
 import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
 import { useShellPermissions } from "./useShellPermissions";
-import type { CalendarSettings, DashboardThemeId, Id, Membership } from "@shared/types";
+import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership } from "@shared/types";
 
 export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
   const {
@@ -9,7 +9,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember,
     updateMemberTheme, updateMemberAvatar, updateMemberColor, assignRole, clearMemberAvatar,
-    updateVisibleCalendarIds, updateMemberNavigation,
+    updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
     currentMember, activeMembers,
     selectedDashboardMemberId, setSelectedDashboardMemberId,
@@ -110,8 +110,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
       rsvpCalendarEvent(calendarId, eventId, currentMember.id, status),
     onCreateCalendar: (name: string, color: string) => createCalendar(name, currentMember.id, color),
     onUpdateCalendarColor: updateCalendarColor,
-    onUpdateVisibleCalendarIds: updateVisibleCalendarIds,
-    onUpdateCalendarView: (view: "month" | "week" | "timeline") =>
+    onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
+      updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
+    onUpdateCalendarView: (view: CalendarViewMode) =>
       updateMemberNavigation(currentMember.id, { calendarView: view }),
     onRenameCalendar: renameCalendar,
     onTransferCalendar: transferCalendar,
@@ -163,9 +164,11 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDeleteOwnData: deleteOwnData,
     onUpdateMemberAvatar: updateMemberAvatar,
     onUpdateMemberColor: updateMemberColor,
-    onUpdateVisibleCalendarIds: updateVisibleCalendarIds,
-    onUpdateCalendarView: (view: "month" | "week" | "timeline") =>
+    onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
+      updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
+    onUpdateCalendarView: (view: CalendarViewMode) =>
       updateMemberNavigation(currentMember.id, { calendarView: view }),
+    onUpdateChildTimelineSettings: updateChildTimelineSettings,
     onAssignRole: assignRole,
     onCreateRole: createRole,
     onTogglePermission: toggleRolePermission,
@@ -174,6 +177,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRestoreShoppingList: restoreShoppingList,
     onRestoreTodo: restoreTodo,
     onDeleteAccount: deleteAccount,
+    onCreateWish: createWish,
     onCreateTodo: createTodo,
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,

@@ -15,6 +15,17 @@ export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "
 
 export const CalendarViewModeSchema = z.enum(["month", "week", "timeline"]);
 
+export const CalendarFilterKeySchema = z.enum(["home", "calendar"]);
+
+export const CalendarFilterSettingsSchema = z
+  .record(CalendarFilterKeySchema, z.object({ visibleCalendarIds: z.array(IdSchema) }))
+  .partial();
+
+export const ChildTimelineSettingsSchema = z.object({
+  startsAt: z.string(),
+  endsAt: z.string()
+});
+
 export const DashboardThemeIdSchema = z.enum([
   "space",
   "rainbow",
@@ -37,7 +48,8 @@ export const MemberSchema = z.object({
   isChild: z.boolean(),
   avatarUrl: z.string().nullable(),
   dashboardTheme: DashboardThemeIdSchema.nullable(),
-  visibleCalendarIds: z.array(IdSchema).optional(),
+  calendarFilterSettings: CalendarFilterSettingsSchema.optional(),
+  childTimelineSettings: ChildTimelineSettingsSchema.optional(),
   lastActivePanel: AppPanelSchema.optional(),
   lastSelectedDashboardMemberId: IdSchema.nullable().optional(),
   calendarView: CalendarViewModeSchema.optional(),

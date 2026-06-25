@@ -1,15 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Star, Sparkles, Trophy, Clock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Star, Sparkles, Trophy } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 import { ChildTimeline } from "./ChildTimeline";
-
-const CATEGORY_META: Record<string, { icon: string; desc: string }> = {
-  "Hälsa":           { icon: "❤️",  desc: "Kropp och välmående" },
-  "Trivsel":         { icon: "✨",  desc: "Hemmet och trivsel" },
-  "Pengar":          { icon: "💰",  desc: "Sparande och ekonomi" },
-  "Hälsa & trivsel": { icon: "❤️",  desc: "Vardagsrutiner som håller hemmet och oss själva i ordning." },
-  "Hemmet":          { icon: "🏠",  desc: "Ordning och reda hemma" },
-};
 
 type Props = {
   child: Member;
@@ -18,16 +10,40 @@ type Props = {
   activeReward: Reward | null;
   rewardProgress: RewardPathProgress | null;
   suggestedRewards: Reward[];
+  timelineTodos: Todo[];
   activeChildTodos: Todo[];
-  pendingApprovalTodos: Todo[];
   rejectedTodos: Todo[];
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: Id, starsNeeded: number) => void;
   onCompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
-  onThemePickerOpen: (memberId: Id) => void;
 };
+
+type TaskCardStyle = CSSProperties & {
+  "--task-timer-bg"?: string;
+  "--task-time-left"?: string;
+};
+
+function getTodoTimeLeftPercent(todo: Todo, now: number) {
+  if (!todo.visibleFrom || !todo.expiresAt) {
+    return null;
+  }
+
+  const startsAt = new Date(todo.visibleFrom).getTime();
+  const endsAt = new Date(todo.expiresAt).getTime();
+
+  if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= startsAt) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(100, ((endsAt - now) / (endsAt - startsAt)) * 100));
+}
+
+function getTodoTimerBackground(timeLeftPercent: number) {
+  const hue = Math.round((timeLeftPercent / 100) * 128);
+  return `hsl(${hue} 86% 72%)`;
+}
 
 export function ChildDashboard({
   child,
@@ -36,18 +52,18 @@ export function ChildDashboard({
   activeReward,
   rewardProgress,
   suggestedRewards,
+  timelineTodos,
   activeChildTodos,
-  pendingApprovalTodos,
   rejectedTodos,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
-  onThemePickerOpen,
 }: Props) {
   const [wishStars, setWishStars] = useState(10);
   const [heldTodoId, setHeldTodoId] = useState<Id | null>(null);
+  const [timerNow, setTimerNow] = useState(() => Date.now());
   const [completedCue, setCompletedCue] = useState<{
     id: Id;
     title: string;
@@ -79,8 +95,12 @@ export function ChildDashboard({
     ...suggestedRewards,
   ];
 
-  const pendingApproval = pendingApprovalTodos;
   const rejected = rejectedTodos;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setTimerNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   function clearCompleteHold() {
     if (completeHoldRef.current !== null) {
@@ -131,20 +151,11 @@ export function ChildDashboard({
   );
 
   return (
-    <article
-      className={`child-dashboard theme-${child.dashboardTheme ?? "space"}`}
-      onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest("button, input, select")) return;
-        let timeoutId: number;
-        timeoutId = window.setTimeout(() => onThemePickerOpen(child.id), 650);
-        event.currentTarget.onpointerup = () => window.clearTimeout(timeoutId);
-        event.currentTarget.onpointerleave = () => window.clearTimeout(timeoutId);
-      }}
-    >
+    <article className={`child-dashboard theme-${child.dashboardTheme ?? "space"}`}>
       <div className="child-dashboard-body">
         {/* LEFT — weekly timeline */}
         <div className="child-dashboard-left">
-          <ChildTimeline calendars={calendars} child={child} roles={roles} />
+          <ChildTimeline calendars={calendars} child={child} roles={roles} todos={timelineTodos} />
         </div>
 
         {/* CENTER — tasks, routines and status panels */}
@@ -158,46 +169,45 @@ export function ChildDashboard({
           {taskGroups.length > 0 && (
             <section className="child-tasks-section" aria-label="Uppgifter idag">
               <h3 className="child-tasks-heading">Dina uppgifter idag</h3>
-              {taskGroups.map(({ category, todos }) => {
-                const meta = CATEGORY_META[category];
-                return (
-                  <div key={category} className="child-tasks-group">
-                    {category && (
-                      <div className="child-tasks-cat-head">
-                        {meta ? (
-                          <span className="child-tasks-cat-icon">{meta.icon}</span>
-                        ) : null}
-                        <span className="child-tasks-cat-name">{category}</span>
-                        {meta?.desc && (
-                          <span className="child-tasks-cat-desc">{meta.desc}</span>
-                        )}
+              <div className="child-tasks-grid">
+                {taskGroups.flatMap(({ todos }) => todos).map((todo, i) => {
+                  const timeLeftPercent = getTodoTimeLeftPercent(todo, timerNow);
+                  const taskStyle: TaskCardStyle = {
+                    animationDelay: `${i * 80}ms`,
+                    ...(timeLeftPercent === null
+                      ? {}
+                      : {
+                        "--task-timer-bg": getTodoTimerBackground(timeLeftPercent),
+                        "--task-time-left": `${timeLeftPercent}%`,
+                      }),
+                  };
+
+                  return (
+                    <button
+                      key={todo.id}
+                      className={[
+                        "child-task-card",
+                        heldTodoId === todo.id ? "child-task-card--holding" : "",
+                        timeLeftPercent !== null ? "child-task-card--timed" : "",
+                      ].filter(Boolean).join(" ")}
+                      style={taskStyle}
+                      onPointerDown={() => startCompleteHold(todo.id)}
+                      onPointerLeave={clearCompleteHold}
+                      onPointerCancel={clearCompleteHold}
+                      onPointerUp={clearCompleteHold}
+                      type="button"
+                    >
+                      <div className="child-task-icon-circle">
+                        <span className="child-task-icon">{todo.visual.value}</span>
                       </div>
-                    )}
-                    <div className="child-tasks-grid">
-                      {todos.map((todo, i) => (
-                        <button
-                          key={todo.id}
-                          className={`child-task-card${heldTodoId === todo.id ? " child-task-card--holding" : ""}`}
-                          style={{ animationDelay: `${i * 80}ms` }}
-                          onPointerDown={() => startCompleteHold(todo.id)}
-                          onPointerLeave={clearCompleteHold}
-                          onPointerCancel={clearCompleteHold}
-                          onPointerUp={clearCompleteHold}
-                          type="button"
-                        >
-                          <div className="child-task-icon-circle">
-                            <span className="child-task-icon">{todo.visual.value}</span>
-                          </div>
-                          <span className="child-task-name">{todo.title}</span>
-                          <span className="child-task-star-badge">
-                            <Star size={14} fill="currentColor" />
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+                      <span className="child-task-name">{todo.title}</span>
+                      <span className="child-task-star-badge">
+                        <Star size={14} fill="currentColor" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           )}
 
@@ -230,27 +240,6 @@ export function ChildDashboard({
 
           {/* Bottom panels */}
           <div className="child-bottom-panels">
-            {/* Waiting for approval */}
-            <div className="child-panel">
-              <div className="child-panel-head">
-                <Clock size={18} />
-                <span>Väntar på godkännande</span>
-              </div>
-              {pendingApproval.length === 0 ? (
-                <p className="child-panel-empty">Inget just nu</p>
-              ) : (
-                pendingApproval.map((todo) => (
-                  <div key={todo.id} className="child-pending-row">
-                    <div className="child-pending-icon-wrap">
-                      <span>{todo.visual.value}</span>
-                    </div>
-                    <span className="child-pending-title">{todo.title}</span>
-                    <span className="child-pending-stars">+{todo.starValue} <Star size={11} fill="currentColor" /></span>
-                  </div>
-                ))
-              )}
-            </div>
-
             {/* Wishes */}
             <div className="child-panel">
               <div className="child-panel-head">

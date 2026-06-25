@@ -11,8 +11,8 @@ export function useRewardsState() {
     rewardsApi.getAll().then(setRewards).catch(console.error);
   }, []);
 
-  function createWish(childId: Id, starsNeeded = 10) {
-    const title = wishTitle.trim();
+  function createWish(childId: Id, starsNeeded = 10, titleOverride?: string) {
+    const title = (titleOverride ?? wishTitle).trim();
     if (!title) return;
 
     const newReward: Reward = {
@@ -30,7 +30,9 @@ export function useRewardsState() {
 
     rewardsApi.create(newReward).catch(console.error);
     setRewards((current) => [...current, newReward]);
-    setWishTitle("");
+    if (titleOverride === undefined) {
+      setWishTitle("");
+    }
   }
 
   function approveWish(rewardId: Id, approverId: Id) {

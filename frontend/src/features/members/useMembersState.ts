@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { membersApi } from "../../api";
-import type { AppPanel, CalendarViewMode, DashboardThemeId, Id, Member } from "@shared/types";
+import type {
+  AppPanel,
+  CalendarFilterKey,
+  CalendarViewMode,
+  ChildTimelineSettings,
+  DashboardThemeId,
+  Id,
+  Member
+} from "@shared/types";
 
 export function useMembersState() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -97,12 +105,30 @@ export function useMembersState() {
     );
   }
 
-  function updateVisibleCalendarIds(memberId: Id, visibleCalendarIds: Id[]) {
+  function updateCalendarFilterSettings(
+    memberId: Id,
+    filterKey: CalendarFilterKey,
+    visibleCalendarIds: Id[]
+  ) {
     setMembers((current) =>
       current.map((member) => {
         if (member.id !== memberId) return member;
-        membersApi.update(memberId, { visibleCalendarIds }).catch(console.error);
-        return { ...member, visibleCalendarIds };
+        const calendarFilterSettings = {
+          ...(member.calendarFilterSettings ?? {}),
+          [filterKey]: { visibleCalendarIds }
+        };
+        membersApi.update(memberId, { calendarFilterSettings }).catch(console.error);
+        return { ...member, calendarFilterSettings };
+      })
+    );
+  }
+
+  function updateChildTimelineSettings(memberId: Id, childTimelineSettings: ChildTimelineSettings) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) return member;
+        membersApi.update(memberId, { childTimelineSettings }).catch(console.error);
+        return { ...member, childTimelineSettings };
       })
     );
   }
@@ -132,7 +158,8 @@ export function useMembersState() {
     updateMemberTheme,
     updateMemberAvatar,
     updateMemberColor,
-    updateVisibleCalendarIds,
+    updateCalendarFilterSettings,
+    updateChildTimelineSettings,
     updateMemberNavigation,
     assignRole,
     clearMemberAvatar

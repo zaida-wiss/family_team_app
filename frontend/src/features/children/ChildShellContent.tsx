@@ -13,7 +13,6 @@ type Props = {
   onCreateWish: (childId: string, starsNeeded: number) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
-  onThemePickerOpen: (memberId: string) => void;
 };
 
 function isTodoVisibleNow(
@@ -35,8 +34,7 @@ export function ChildShellContent({
   onSetWishTitle,
   onCreateWish,
   onCompleteTodo,
-  onDismissRejectedTodo,
-  onThemePickerOpen
+  onDismissRejectedTodo
 }: Props) {
   const activeReward =
     rewards.find((r) => r.wishedBy === currentMember.id && r.status === "active") ?? null;
@@ -55,12 +53,6 @@ export function ChildShellContent({
       t.deletedAt === null &&
       isTodoVisibleNow(t, now)
   );
-  const pendingApprovalTodos = todos.filter(
-    (t) =>
-      t.assignedTo === currentMember.id &&
-      t.status === "done" &&
-      t.deletedAt === null
-  );
   const rejectedTodos = todos.filter(
     (t) =>
       t.assignedTo === currentMember.id &&
@@ -76,15 +68,14 @@ export function ChildShellContent({
       activeReward={activeReward}
       rewardProgress={rewardProgress}
       suggestedRewards={suggestedRewards}
+      timelineTodos={todos}
       activeChildTodos={activeChildTodos}
-      pendingApprovalTodos={pendingApprovalTodos}
       rejectedTodos={rejectedTodos}
       wishTitle={wishTitle}
       onSetWishTitle={onSetWishTitle}
       onCreateWish={onCreateWish}
       onCompleteTodo={(todoId) => onCompleteTodo(currentMember, todoId, roles)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}
-      onThemePickerOpen={onThemePickerOpen}
     />
   );
 }

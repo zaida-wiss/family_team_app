@@ -1,12 +1,18 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
-import type { Calendar, Member, Role } from "@shared/types";
+import { ChevronLeft, ChevronRight, MapPin, Star, X } from "lucide-react";
+import type { Calendar, Member, Role, Todo } from "@shared/types";
 import { expandForRange, fmtTime, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 
 const DOW_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
 const MONTHS_SHORT = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+const DEFAULT_TIMELINE_RANGE = { startMinute: 6 * 60, endMinute: 21 * 60 };
+
+type TimelineRange = {
+  startMinute: number;
+  endMinute: number;
+};
 
 function getDayByOffset(offset: number): Date {
   const today = new Date();
@@ -44,14 +50,109 @@ function fmtDaysFromToday(isoStr: string): string {
   return `För ${Math.abs(diffDays)} dagar sedan`;
 }
 
-function timePct(isoStr: string): number {
+function minuteOfDay(isoStr: string): number {
   const d = new Date(isoStr);
-  return ((d.getHours() + d.getMinutes() / 60) / 24) * 100;
+  return d.getHours() * 60 + d.getMinutes();
 }
 
-function durPct(startsAt: string, endsAt: string): number {
-  const ms = new Date(endsAt).getTime() - new Date(startsAt).getTime();
-  return Math.max((ms / 3600000 / 24) * 100, 3);
+function timeInputToMinutes(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const [hour, minute] = value.split(":").map(Number);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return fallback;
+  }
+
+  return hour * 60 + minute;
+}
+
+function getTimelineRange(child: Member): TimelineRange {
+  const startMinute = timeInputToMinutes(
+    child.childTimelineSettings?.startsAt,
+    DEFAULT_TIMELINE_RANGE.startMinute
+  );
+  const endMinute = timeInputToMinutes(
+    child.childTimelineSettings?.endsAt,
+    DEFAULT_TIMELINE_RANGE.endMinute
+  );
+
+  return startMinute < endMinute ? { startMinute, endMinute } : DEFAULT_TIMELINE_RANGE;
+}
+
+function timePct(isoStr: string, range: TimelineRange): number {
+  return ((minuteOfDay(isoStr) - range.startMinute) / (range.endMinute - range.startMinute)) * 100;
+}
+
+function durPct(startsAt: string, endsAt: string, range: TimelineRange): number {
+  const startPct = Math.max(0, Math.min(100, timePct(startsAt, range)));
+  const endsSameDay = toLocalDateStr(new Date(startsAt)) === toLocalDateStr(new Date(endsAt));
+  const rawEndPct = endsSameDay ? timePct(endsAt, range) : 100;
+  const endPct = Math.max(startPct + 3, Math.min(100, rawEndPct));
+  return endPct - startPct;
+}
+
+function markerPct(isoStr: string, range: TimelineRange): number {
+  return Math.max(0, Math.min(100, timePct(isoStr, range)));
+}
+
+function taskWindowPct(startsAt: string, expiresAt: string | null, range: TimelineRange): number {
+  if (!expiresAt) {
+    return 0;
+  }
+
+  const startTime = new Date(startsAt).getTime();
+  const endTime = new Date(expiresAt).getTime();
+
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
+    return 0;
+  }
+
+  const startPct = markerPct(startsAt, range);
+  const endsSameDay = toLocalDateStr(new Date(startsAt)) === toLocalDateStr(new Date(expiresAt));
+  const rawEndPct = endsSameDay ? timePct(expiresAt, range) : 100;
+  const endPct = Math.max(startPct + 2, Math.min(100, rawEndPct));
+  return Math.max(0, endPct - startPct);
+}
+
+type TodoMarker = {
+  todo: Todo;
+  startsAt: string;
+  windowPct: number;
+  lane: number;
+};
+
+function assignTodoMarkerLanes(todos: Todo[], selectedDay: Date, range: TimelineRange): TodoMarker[] {
+  const sorted = [...todos].sort((a, b) => (a.visibleFrom ?? "").localeCompare(b.visibleFrom ?? ""));
+  const laneEnds: number[] = [];
+
+  return sorted.map((todo) => {
+    const startsAt = todo.visibleFrom ?? selectedDay.toISOString();
+    const startTime = new Date(startsAt).getTime();
+    const expiresTime = todo.expiresAt ? new Date(todo.expiresAt).getTime() : startTime;
+    const endTime =
+      Number.isFinite(expiresTime) && expiresTime > startTime ? expiresTime : startTime + 1;
+    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= startTime);
+
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(endTime);
+    } else {
+      laneEnds[lane] = endTime;
+    }
+
+    return {
+      todo,
+      startsAt,
+      windowPct: taskWindowPct(startsAt, todo.expiresAt, range),
+      lane
+    };
+  });
 }
 
 type LanedEvent = EnrichedEvent & { lane: number; lanes: number };
@@ -70,9 +171,9 @@ function assignLanes(events: EnrichedEvent[]): LanedEvent[] {
   return result.map((ev) => ({ ...ev, lanes }));
 }
 
-type Props = { calendars: Calendar[]; child: Member; roles: Role[] };
+type Props = { calendars: Calendar[]; child: Member; roles: Role[]; todos: Todo[] };
 
-export function ChildTimeline({ calendars, child, roles }: Props) {
+export function ChildTimeline({ calendars, child, roles, todos }: Props) {
   const [offset, setOffset] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
   const todayStr = toLocalDateStr(new Date());
@@ -83,6 +184,7 @@ export function ChildTimeline({ calendars, child, roles }: Props) {
   const selectedDayStr = toLocalDateStr(selectedDay);
   const selectedDayLabel = `${DOW_SHORT[selectedDay.getDay()]} ${fmtShort(selectedDay)}`;
   const selectedDayColorClass = `child-tl-day-color-${selectedDay.getDay()}`;
+  const timelineRange = getTimelineRange(child);
 
   const visible = calendars.filter((cal) => {
     if (cal.deletedAt !== null) return false;
@@ -111,7 +213,19 @@ export function ChildTimeline({ calendars, child, roles }: Props) {
 
   function timedForDay(dayStr: string): EnrichedEvent[] {
     return dayEvents.filter(
-      (ev) => !ev.isAllDay && toLocalDateStr(new Date(ev.startsAt)) === dayStr
+      (ev) => {
+        if (ev.isAllDay || toLocalDateStr(new Date(ev.startsAt)) !== dayStr) {
+          return false;
+        }
+
+        const startsMinute = minuteOfDay(ev.startsAt);
+        const endsMinute =
+          toLocalDateStr(new Date(ev.startsAt)) === toLocalDateStr(new Date(ev.endsAt))
+            ? minuteOfDay(ev.endsAt)
+            : timelineRange.endMinute;
+
+        return startsMinute < timelineRange.endMinute && endsMinute > timelineRange.startMinute;
+      }
     );
   }
 
@@ -122,10 +236,47 @@ export function ChildTimeline({ calendars, child, roles }: Props) {
   }
 
   const now = new Date();
+  const nowTime = now.getTime();
   const isSelectedToday = selectedDayStr === todayStr;
-  const nowPct = isSelectedToday ? timePct(now.toISOString()) : -1;
+  const nowMinute = now.getHours() * 60 + now.getMinutes();
+  const showNowLine =
+    isSelectedToday &&
+    nowMinute >= timelineRange.startMinute &&
+    nowMinute <= timelineRange.endMinute;
+  const nowPct = showNowLine ? timePct(now.toISOString(), timelineRange) : -1;
   const allDay = allDayForDay(selectedDayStr);
   const laned = assignLanes(timedForDay(selectedDayStr));
+  const upcomingTodoMarkers = assignTodoMarkerLanes(
+    todos.filter((todo) => {
+      if (
+        todo.assignedTo !== child.id ||
+        todo.status !== "pending" ||
+        todo.recurrence.type !== "none" ||
+        todo.deletedAt !== null ||
+        !todo.visibleFrom
+      ) {
+        return false;
+      }
+
+      const startsAt = new Date(todo.visibleFrom);
+      if (!Number.isFinite(startsAt.getTime())) {
+        return false;
+      }
+
+      if (toLocalDateStr(startsAt) !== selectedDayStr) {
+        return false;
+      }
+
+      const startsMinute = minuteOfDay(todo.visibleFrom);
+      if (startsMinute < timelineRange.startMinute || startsMinute >= timelineRange.endMinute) {
+        return false;
+      }
+
+      return !isSelectedToday || startsAt.getTime() > nowTime;
+    }),
+    selectedDay,
+    timelineRange
+  );
 
   return (
     <section className="child-timeline" aria-label="Min dag">
@@ -143,9 +294,29 @@ export function ChildTimeline({ calendars, child, roles }: Props) {
             <div className={`child-tl-day${isSelectedToday ? " child-tl-day--today" : ""}`}>
               <div className="child-tl-day-track">
                 {/* Red now line */}
-                {isSelectedToday && (
+                {showNowLine && (
                   <div className="child-tl-now" style={{ top: `${nowPct}%` }} />
                 )}
+
+                {upcomingTodoMarkers.map((marker) => {
+                  return (
+                    <div
+                      key={marker.todo.id}
+                      className={`child-tl-task-marker${marker.windowPct > 0 ? " child-tl-task-marker--window" : ""}`}
+                      style={{
+                        top: `${markerPct(marker.startsAt, timelineRange)}%`,
+                        right: `${3 + marker.lane * 8}px`,
+                        height: marker.windowPct > 0 ? `${marker.windowPct}%` : undefined,
+                      }}
+                      title={`${marker.todo.title} · ${fmtTime(marker.startsAt)}${marker.todo.expiresAt ? `-${fmtTime(marker.todo.expiresAt)}` : ""}`}
+                      aria-label={`${marker.todo.title} kommer ${fmtTime(marker.startsAt)}${marker.todo.expiresAt ? ` och kan göras till ${fmtTime(marker.todo.expiresAt)}` : ""}`}
+                    >
+                      <span className="child-tl-task-marker-star">
+                        <Star size={8} fill="currentColor" />
+                      </span>
+                    </div>
+                  );
+                })}
 
                 {/* All-day events: thin bar at top */}
                 {allDay.map((ev) => (
@@ -167,8 +338,8 @@ export function ChildTimeline({ calendars, child, roles }: Props) {
 
                 {/* Timed events positioned by time % */}
                 {laned.map((ev) => {
-                  const top = timePct(ev.startsAt);
-                  const height = durPct(ev.startsAt, ev.endsAt);
+                  const top = Math.max(0, Math.min(100, timePct(ev.startsAt, timelineRange)));
+                  const height = durPct(ev.startsAt, ev.endsAt, timelineRange);
                   const left = ev.lanes > 1 ? `${(ev.lane / ev.lanes) * 100}%` : 0;
                   const width = ev.lanes > 1 ? `${100 / ev.lanes}%` : "100%";
                   return (

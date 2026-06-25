@@ -67,7 +67,9 @@ export async function request<T>(
         // Fall through to the explicit unauthorized handling below.
       }
     }
-    if (!skipUnauthorizedHandler) onUnauthorized?.();
+    if (!skipUnauthorizedHandler) {
+      onApiError?.("Sessionen kunde inte förnyas");
+    }
     throw new Error("Inte autentiserad");
   }
 

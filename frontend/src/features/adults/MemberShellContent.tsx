@@ -10,7 +10,7 @@ import { TodosView } from "../todos/TodosView";
 import { getRewardPathProgress } from "../todos/selectors";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarSettings, CalendarViewMode, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
 
 type DashboardProps = ComponentProps<typeof Dashboard>;
 
@@ -52,7 +52,7 @@ type Props = {
   onDeleteCalendarEvent: (calendarId: string, eventId: string) => void;
   onRsvpCalendarEvent: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
   onCreateCalendar: DashboardProps["onCreateCalendar"];
-  onUpdateVisibleCalendarIds: (memberId: string, visibleCalendarIds: string[]) => void;
+  onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: string[]) => void;
   onUpdateCalendarView: (view: CalendarViewMode) => void;
   onImportCalendar: DashboardProps["onImportCalendar"];
   onShareCalendar: DashboardProps["onShareCalendar"];
@@ -68,7 +68,7 @@ type Props = {
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onSetWishTitle: (title: string) => void;
-  onCreateWish: (childId: string) => void;
+  onCreateWish: (childId: string, starsNeeded?: number, title?: string) => void;
 };
 
 function isTodoVisibleNow(
@@ -91,7 +91,7 @@ export function MemberShellContent({
   onCancelEditingTodo, onCreateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
-  onUpdateVisibleCalendarIds, onUpdateCalendarView,
+  onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings
 }: Props) {
@@ -105,28 +105,29 @@ export function MemberShellContent({
       return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, calendar);
     })
     .map((calendar) => calendar.id);
-  const savedVisibleCalendarIds = currentMember.visibleCalendarIds;
-  const hiddenCalendarIds = savedVisibleCalendarIds
-    ? new Set(accessibleCalendarIds.filter((id) => !savedVisibleCalendarIds.includes(id)))
-    : new Set<string>();
+  function createCalendarFilter(
+    filterKey: CalendarFilterKey,
+    searchQuery: string,
+    setSearchQuery: (query: string) => void
+  ): CalendarFilter {
+    const savedVisibleCalendarIds = currentMember.calendarFilterSettings?.[filterKey]?.visibleCalendarIds;
+    const hiddenCalendarIds = savedVisibleCalendarIds
+      ? new Set(accessibleCalendarIds.filter((id) => !savedVisibleCalendarIds.includes(id)))
+      : new Set<string>();
 
-  function setPersonalHiddenCalendarIds(nextHiddenCalendarIds: Set<string>) {
-    const visibleCalendarIds = accessibleCalendarIds.filter((id) => !nextHiddenCalendarIds.has(id));
-    onUpdateVisibleCalendarIds(currentMember.id, visibleCalendarIds);
+    return {
+      searchQuery,
+      setSearchQuery,
+      hiddenCalendarIds,
+      setHiddenCalendarIds: (nextHiddenCalendarIds) => {
+        const visibleCalendarIds = accessibleCalendarIds.filter((id) => !nextHiddenCalendarIds.has(id));
+        onUpdateCalendarFilterSettings(filterKey, visibleCalendarIds);
+      }
+    };
   }
 
-  const calendarFilter: CalendarFilter = {
-    searchQuery: calSearch,
-    setSearchQuery: setCalSearch,
-    hiddenCalendarIds,
-    setHiddenCalendarIds: setPersonalHiddenCalendarIds
-  };
-  const homeFilter: CalendarFilter = {
-    searchQuery: homeSearch,
-    setSearchQuery: setHomeSearch,
-    hiddenCalendarIds,
-    setHiddenCalendarIds: setPersonalHiddenCalendarIds
-  };
+  const calendarFilter = createCalendarFilter("calendar", calSearch, setCalSearch);
+  const homeFilter = createCalendarFilter("home", homeSearch, setHomeSearch);
 
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   if (activePanel === "calendar") {
@@ -219,12 +220,6 @@ export function MemberShellContent({
         t.deletedAt === null &&
         isTodoVisibleNow(t, now)
     );
-    const pendingApprovalTodos = todos.filter(
-      (t) =>
-        t.assignedTo === selectedDashboardMember.id &&
-        t.status === "done" &&
-        t.deletedAt === null
-    );
     const rejectedTodos = todos.filter(
       (t) =>
         t.assignedTo === selectedDashboardMember.id &&
@@ -240,8 +235,8 @@ export function MemberShellContent({
         activeReward={activeReward}
         rewardProgress={rewardProgress}
         suggestedRewards={suggestedRewards}
+        timelineTodos={todos}
         activeChildTodos={activeChildTodos}
-        pendingApprovalTodos={pendingApprovalTodos}
         rejectedTodos={rejectedTodos}
         wishTitle={wishTitle}
         onSetWishTitle={onSetWishTitle}
@@ -250,7 +245,6 @@ export function MemberShellContent({
         onDismissRejectedTodo={(todoId) =>
           onDismissRejectedTodo(todoId, selectedDashboardMember.id)
         }
-        onThemePickerOpen={onThemePickerOpen}
       />
     );
   }

@@ -103,6 +103,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             todos={settingsProps.todos}
             rewards={settingsProps.rewards}
             wishStars={settingsProps.wishStars}
+            onCreateWish={settingsProps.onCreateWish}
             onSetWishStars={settingsProps.onSetWishStars}
             onApproveTodo={settingsProps.onApproveTodo}
             onRejectTodo={settingsProps.onRejectTodo}
@@ -110,6 +111,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onRejectWish={settingsProps.onRejectWish}
             onCreateTodo={settingsProps.onCreateTodo}
             onUpdateTodo={settingsProps.onUpdateTodo}
+            onUpdateChildTimelineSettings={settingsProps.onUpdateChildTimelineSettings}
             onRefreshRoutine={settingsProps.onRefreshRoutine}
             onDeleteTodo={settingsProps.onDeleteTodo}
           />
