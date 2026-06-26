@@ -28,6 +28,8 @@ export const ChildTimelineSettingsSchema = z.object({
 
 export const DashboardThemeIdSchema = z.enum([
   "space",
+  "cosmic-cobalt",
+  "lavender-blossom",
   "rainbow",
   "ocean",
   "forest",

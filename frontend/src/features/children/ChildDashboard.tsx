@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Banknote, ChevronLeft, ChevronRight, ShoppingBag, Star, Trophy, X } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, Palette, ShoppingBag, Star, Trophy, X } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 import { ChildTimeline } from "./ChildTimeline";
 
@@ -18,6 +18,7 @@ type Props = {
   onCreateWish: (childId: Id, starsNeeded: number) => void;
   onCompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
+  onThemePickerOpen: (memberId: Id) => void;
 };
 
 type TaskCardStyle = CSSProperties & {
@@ -156,6 +157,7 @@ export function ChildDashboard({
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
+  onThemePickerOpen,
 }: Props) {
   const [wishStars, setWishStars] = useState(10);
   const [isWishModalOpen, setIsWishModalOpen] = useState(false);
@@ -367,8 +369,19 @@ export function ChildDashboard({
               <h2 className="section-title">Hej {child.name}! <span aria-hidden="true">👋</span></h2>
               <p>Tryck på dina uppgifter när du är klar. Håll fingret länge för att lämna in.</p>
             </div>
-            <div className="child-hero-avatar" aria-hidden="true">
-              {child.avatarUrl ? <img src={child.avatarUrl} alt="" /> : <span>🦊</span>}
+            <div className="child-hero-actions">
+              <button
+                className="child-theme-button"
+                type="button"
+                onClick={() => onThemePickerOpen(child.id)}
+                aria-label="Byt tema"
+                title="Byt tema"
+              >
+                <Palette size={18} />
+              </button>
+              <div className="child-hero-avatar" aria-hidden="true">
+                {child.avatarUrl ? <img src={child.avatarUrl} alt="" /> : <span>🦊</span>}
+              </div>
             </div>
           </header>
 

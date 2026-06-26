@@ -13,6 +13,7 @@ type Props = {
   onCreateWish: (childId: string, starsNeeded: number) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
+  onThemePickerOpen: (memberId: string) => void;
 };
 
 function isTodoVisibleNow(
@@ -34,7 +35,8 @@ export function ChildShellContent({
   onSetWishTitle,
   onCreateWish,
   onCompleteTodo,
-  onDismissRejectedTodo
+  onDismissRejectedTodo,
+  onThemePickerOpen
 }: Props) {
   const activeReward =
     rewards.find((r) => r.wishedBy === currentMember.id && r.status === "active") ?? null;
@@ -74,6 +76,7 @@ export function ChildShellContent({
       onCreateWish={onCreateWish}
       onCompleteTodo={(todoId) => onCompleteTodo(currentMember, todoId, roles)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}
+      onThemePickerOpen={onThemePickerOpen}
     />
   );
 }

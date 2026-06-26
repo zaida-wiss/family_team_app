@@ -270,6 +270,7 @@ export function MemberShellContent({
         onDismissRejectedTodo={(todoId) =>
           onDismissRejectedTodo(todoId, selectedDashboardMember.id)
         }
+        onThemePickerOpen={onThemePickerOpen}
       />
     );
   }

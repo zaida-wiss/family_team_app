@@ -216,9 +216,10 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
   }
 
   const isChild = currentMember.isChild;
+  const shellTheme = currentMember.dashboardTheme ?? (isChild ? "space" : "clear");
 
   return (
-    <main className={`app-shell${isChild ? ` theme-${currentMember.dashboardTheme ?? "space"}` : ""}`}>
+    <main className={`app-shell theme-${shellTheme}`}>
       {apiError && <div className="api-error-banner" role="alert">{apiError}</div>}
       {!isChild && (
         <HeroBar

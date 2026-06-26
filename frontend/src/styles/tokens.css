@@ -21,6 +21,16 @@
   --sidebar-border: oklch(0.88 0.02 75);
   --destructive: oklch(0.6 0.2 25);
 
+  --cosmic-cobalt-square-0: #362783;
+  --cosmic-cobalt-square-25: #832746;
+  --cosmic-cobalt-square-50: #748327;
+  --cosmic-cobalt-square-75: #278364;
+
+  --lavender-blossom-tetradic-0: #ac7ed8;
+  --lavender-blossom-tetradic-25: #d87eaa;
+  --lavender-blossom-tetradic-50: #aad87e;
+  --lavender-blossom-tetradic-75: #7ed8ac;
+
   --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
 

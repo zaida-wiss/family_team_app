@@ -267,3 +267,46 @@
     display: none;
   }
 }
+
+:global(.app-shell[class*="theme-"]) .heroBar {
+  background: var(--theme-nav-bg, var(--sidebar));
+  border-color: var(--theme-nav-border, var(--sidebar-border));
+  color: var(--theme-nav-fg, var(--foreground));
+}
+
+:global(.app-shell[class*="theme-"]) .brand,
+:global(.app-shell[class*="theme-"]) .memberName {
+  color: var(--theme-nav-fg, var(--foreground));
+}
+
+:global(.app-shell[class*="theme-"]) .account,
+:global(.app-shell[class*="theme-"]) .navBtn,
+:global(.app-shell[class*="theme-"]) .switchText,
+:global(.app-shell[class*="theme-"]) .themeBtn,
+:global(.app-shell[class*="theme-"]) .tip {
+  color: var(--theme-nav-muted, var(--muted-fg));
+}
+
+:global(.app-shell[class*="theme-"]) .navBtn:hover,
+:global(.app-shell[class*="theme-"]) .navBtn:hover:not(.active),
+:global(.app-shell[class*="theme-"]) .memberBtn:hover,
+:global(.app-shell[class*="theme-"]) .themeBtn:hover {
+  background: var(--theme-nav-hover-bg, color-mix(in oklch, var(--foreground) 5%, transparent));
+  color: var(--theme-nav-fg, var(--foreground));
+}
+
+:global(.app-shell[class*="theme-"]) .navBtn.active {
+  background: var(--theme-nav-active-bg, var(--primary));
+  border-color: transparent;
+  color: var(--theme-nav-active-fg, var(--primary-fg));
+}
+
+:global(.app-shell[class*="theme-"]) .bottom {
+  border-top-color: var(--theme-nav-border, var(--sidebar-border));
+}
+
+@media (max-width: 1023px) {
+  :global(.app-shell[class*="theme-"]) .heroBar {
+    border-top-color: var(--theme-nav-border, var(--border));
+  }
+}

@@ -42,6 +42,8 @@ export type ChildTimelineSettings = {
 
 export type DashboardThemeId =
   | "space"
+  | "cosmic-cobalt"
+  | "lavender-blossom"
   | "rainbow"
   | "ocean"
   | "forest"
