@@ -633,6 +633,33 @@ h3 {
   gap: 12px;
 }
 
+.todo-assignees {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.todo-assignees legend {
+  margin-bottom: 6px;
+}
+
+.todo-assignee-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-assignee-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  background: var(--card);
+}
+
 .approval-header,
 .approval-row,
 .approval-actions {

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
+import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
 
 export const todosRouter = Router();
@@ -10,6 +11,15 @@ todosRouter.get("/", async (_req, res) => {
 
 todosRouter.post("/", requireAuth, async (req, res) => {
   res.status(201).json(await todos.createTodo(req.body));
+});
+
+todosRouter.get("/events", requireAuth, async (_req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive"
+  });
+  addTodoEventsClient(res);
 });
 
 todosRouter.patch("/:id", requireAuth, async (req, res) => {

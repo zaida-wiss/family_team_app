@@ -11,11 +11,13 @@ export function useTodosState() {
   const [editingTodoTitle, setEditingTodoTitle] = useState("");
 
   useEffect(() => {
-    todosApi.getAll().then((loadedTodos) => {
-      todosRef.current = loadedTodos;
-      setTodos(loadedTodos);
-      syncScheduledTodos(loadedTodos);
-    }).catch(console.error);
+    refreshTodos().catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    return todosApi.subscribeToChanges(() => {
+      refreshTodos().catch(console.error);
+    });
   }, []);
 
   useEffect(() => {
@@ -27,6 +29,13 @@ export function useTodosState() {
   useEffect(() => {
     todosRef.current = todos;
   }, [todos]);
+
+  async function refreshTodos() {
+    const loadedTodos = await todosApi.getAll();
+    todosRef.current = loadedTodos;
+    setTodos(expirePendingTodos(loadedTodos, Date.now()));
+    await syncScheduledTodos(loadedTodos);
+  }
 
   async function syncScheduledTodos(baseTodos = todosRef.current) {
     const currentDate = new Date();

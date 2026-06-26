@@ -34,6 +34,10 @@ function getTodoSummary(todo: { status: string; starValue: number }) {
   return `${todo.starValue} stjärnor`;
 }
 
+function getAssigneeName(todo: Todo, members: Member[]) {
+  return members.find((member) => member.id === todo.assignedTo)?.name ?? "Okänt barn";
+}
+
 export function TodosView({
   currentMember,
   members,
@@ -99,7 +103,10 @@ export function TodosView({
                   value={editingTodoTitle}
                 />
               ) : (
-                <span>{todo.title}</span>
+                <span>
+                  {todo.title}
+                  <small>{getAssigneeName(todo, members)}</small>
+                </span>
               )}
               <strong>{getTodoSummary(todo)}</strong>
               <div className="todo-row-actions">
@@ -141,7 +148,9 @@ export function TodosView({
               <div className="approval-row" key={todo.id}>
                 <div>
                   <strong>{todo.title}</strong>
-                  <small>{todo.starValue} stjärnor om den godkänns</small>
+                  <small>
+                    {getAssigneeName(todo, members)} · {todo.starValue} stjärnor om den godkänns
+                  </small>
                 </div>
                 <div className="approval-actions">
                   <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">

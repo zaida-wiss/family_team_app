@@ -2,6 +2,7 @@ export {
   API_BASE,
   api,
   request,
+  subscribeToServerEvents,
   setAccessToken,
   setApiMemberId,
   setApiErrorHandler,

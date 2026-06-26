@@ -74,6 +74,10 @@ function getTodoSummary(todo: { status: string; starValue: number }) {
   return `${todo.starValue} stjärnor`;
 }
 
+function getAssigneeName(todo: Todo, members: Member[]) {
+  return members.find((member) => member.id === todo.assignedTo)?.name ?? "Okänt barn";
+}
+
 export function Dashboard({
   member,
   members,
@@ -232,7 +236,10 @@ export function Dashboard({
                     value={editingTodoTitle}
                   />
                 ) : (
-                  <span>{todo.title}</span>
+                  <span>
+                    {todo.title}
+                    <small>{getAssigneeName(todo, members)}</small>
+                  </span>
                 )}
 
                 <strong>{getTodoSummary(todo)}</strong>

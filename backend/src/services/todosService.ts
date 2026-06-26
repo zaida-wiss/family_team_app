@@ -1,4 +1,5 @@
 import { TodoModel } from "../db/models/Todo.js";
+import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { AppError } from "../utils/errors.js";
 import type { Todo } from "../../../shared/types.js";
 
@@ -28,6 +29,7 @@ export async function createTodo(data: unknown) {
 
     throw error;
   }
+  broadcastTodosChanged();
   return { id: todo.id };
 }
 
@@ -57,6 +59,7 @@ export async function completeTodo(id: string, memberId: string | null) {
   todo.status = "done";
   todo.completedAt = new Date().toISOString();
   await todo.save();
+  broadcastTodosChanged();
 }
 
 export async function updateTodo(id: string, patch: unknown) {
@@ -67,6 +70,7 @@ export async function updateTodo(id: string, patch: unknown) {
 
   Object.assign(todo, patch);
   await todo.save();
+  broadcastTodosChanged();
   return { ok: true };
 }
 
@@ -79,6 +83,7 @@ export async function approveTodo(id: string, memberId: string | null) {
   todo.approvedBy = memberId;
   todo.approvedAt = new Date().toISOString();
   await todo.save();
+  broadcastTodosChanged();
 }
 
 export async function rejectTodo(id: string, memberId: string | null) {
@@ -94,6 +99,7 @@ export async function rejectTodo(id: string, memberId: string | null) {
     todo.rejectedBy = null;
     todo.rejectedAt = null;
     await todo.save();
+    broadcastTodosChanged();
     return;
   }
 
@@ -101,6 +107,7 @@ export async function rejectTodo(id: string, memberId: string | null) {
   todo.rejectedBy = memberId;
   todo.rejectedAt = new Date().toISOString();
   await todo.save();
+  broadcastTodosChanged();
 }
 
 function canRetryRejectedTodo(todo: { expiresAt: string | null }, now = Date.now()) {
@@ -119,6 +126,7 @@ export async function deleteTodo(id: string, memberId: string | null) {
   todo.deletedAt = new Date().toISOString();
   todo.deletedBy = memberId;
   await todo.save();
+  broadcastTodosChanged();
 }
 
 export async function restoreTodo(id: string) {
@@ -129,4 +137,5 @@ export async function restoreTodo(id: string) {
   todo.deletedAt = null;
   todo.deletedBy = null;
   await todo.save();
+  broadcastTodosChanged();
 }

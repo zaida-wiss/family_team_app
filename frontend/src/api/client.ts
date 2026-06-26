@@ -59,6 +59,58 @@ export async function request<T>(
   return performRequest<T>(path, options, skipUnauthorizedHandler);
 }
 
+export function subscribeToServerEvents(
+  path: string,
+  onEvent: (eventName: string) => void
+) {
+  let cancelled = false;
+  let abortController: AbortController | null = null;
+
+  async function connect() {
+    while (!cancelled) {
+      abortController = new AbortController();
+
+      try {
+        let response = await fetch(path, {
+          headers: buildHeaders(),
+          credentials: "include",
+          signal: abortController.signal
+        });
+
+        if (response.status === 401 && refreshSession) {
+          await refreshSession();
+          response = await fetch(path, {
+            headers: buildHeaders(),
+            credentials: "include",
+            signal: abortController.signal
+          });
+        }
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Eventströmmen svarade med HTTP ${response.status}`);
+        }
+
+        await readEventStream(response.body, onEvent, () => cancelled);
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+        }
+      }
+
+      if (!cancelled) {
+        await delay(3000);
+      }
+    }
+  }
+
+  void connect();
+
+  return () => {
+    cancelled = true;
+    abortController?.abort();
+  };
+}
+
 function isDedupeableGet(options: RequestInit) {
   return !options.body && (!options.method || options.method.toUpperCase() === "GET");
 }
@@ -110,6 +162,43 @@ async function performRequest<T>(
   }
 
   return handleResponse<T>(response);
+}
+
+async function readEventStream(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (eventName: string) => void,
+  isCancelled: () => boolean
+) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (!isCancelled()) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split("\n\n");
+    buffer = chunks.pop() ?? "";
+
+    for (const chunk of chunks) {
+      const eventName = chunk
+        .split("\n")
+        .find((line) => line.startsWith("event:"))
+        ?.slice("event:".length)
+        .trim();
+
+      if (eventName) {
+        onEvent(eventName);
+      }
+    }
+  }
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {

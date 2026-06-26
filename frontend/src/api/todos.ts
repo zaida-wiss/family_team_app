@@ -1,5 +1,5 @@
 import type { Todo } from "@shared/types";
-import { api, request } from "./client";
+import { api, request, subscribeToServerEvents } from "./client";
 
 export const todosApi = {
   getAll: () => request<Todo[]>(api("todos")),
@@ -31,5 +31,11 @@ export const todosApi = {
     request<{ ok: boolean }>(api(`todos/${id}/restore`), {
       method: "PATCH",
       body: JSON.stringify({})
+    }),
+  subscribeToChanges: (onChange: () => void) =>
+    subscribeToServerEvents(api("todos/events"), (eventName) => {
+      if (eventName === "todos-changed") {
+        onChange();
+      }
     })
 };

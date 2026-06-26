@@ -1,5 +1,5 @@
 import { PlusCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { hasPermission } from "../../utils/permissions";
 import type { Id, Member, RecurrenceRule, Role, Todo } from "@shared/types";
 
@@ -16,11 +16,17 @@ export function TodoCreator({
   roles,
   onCreateTodo
 }: TodoCreatorProps) {
-  const assignableMembers = members.filter((member) => member.deletedAt === null);
+  const assignableMembers = useMemo(() => {
+    const childRoleIds = new Set(roles.filter((role) => role.isChildRole).map((role) => role.id));
+    return members.filter((member) => {
+      return (
+        member.deletedAt === null &&
+        (member.isChild || childRoleIds.has(member.roleId))
+      );
+    });
+  }, [members, roles]);
   const [title, setTitle] = useState("");
-  const [assignedTo, setAssignedTo] = useState<Id | "shared">(
-    assignableMembers[0]?.id ?? "shared"
-  );
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Id[]>([]);
   const [starValue, setStarValue] = useState(1);
   const [visual, setVisual] = useState("Star");
   const [recurrenceType, setRecurrenceType] =
@@ -35,19 +41,30 @@ export function TodoCreator({
     "canScheduleRecurringTodos"
   );
 
+  useEffect(() => {
+    setSelectedMemberIds((current) => {
+      const assignableIds = new Set(assignableMembers.map((member) => member.id));
+      const stillAssignable = current.filter((memberId) => assignableIds.has(memberId));
+
+      if (stillAssignable.length > 0 || assignableMembers.length === 0) {
+        return stillAssignable;
+      }
+
+      return [assignableMembers[0].id];
+    });
+  }, [assignableMembers]);
+
   function createTodo() {
     const trimmedTitle = title.trim();
 
-    if (!trimmedTitle || !canCreateTodo) {
+    if (!trimmedTitle || !canCreateTodo || selectedMemberIds.length === 0) {
       return;
     }
 
-    onCreateTodo({
+    const baseTodo = {
       id: `todo-${crypto.randomUUID()}`,
       title: trimmedTitle,
       createdBy: currentMember.id,
-      assignedTo: assignedTo === "shared" ? null : assignedTo,
-      isShared: assignedTo === "shared",
       status: "pending",
       starValue,
       visual: {
@@ -66,7 +83,16 @@ export function TodoCreator({
       rejectedAt: null,
       deletedAt: null,
       deletedBy: null
-    });
+    } satisfies Omit<Todo, "assignedTo" | "isShared">;
+
+    for (const memberId of selectedMemberIds) {
+      onCreateTodo({
+        ...baseTodo,
+        id: `todo-${crypto.randomUUID()}`,
+        assignedTo: memberId,
+        isShared: false
+      });
+    }
 
     setTitle("");
     setStarValue(1);
@@ -98,22 +124,22 @@ export function TodoCreator({
           />
         </label>
 
-        <label className="field-label">
-          Tilldelas
-          <select
-            className="text-input"
-            disabled={!canCreateTodo}
-            onChange={(event) => setAssignedTo(event.target.value)}
-            value={assignedTo}
-          >
-            <option value="shared">Gemensam</option>
+        <fieldset className="field-label todo-assignees">
+          <legend>Tilldelas barn</legend>
+          <div className="todo-assignee-list">
             {assignableMembers.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
+              <label className="todo-assignee-option" key={member.id}>
+                <input
+                  checked={selectedMemberIds.includes(member.id)}
+                  disabled={!canCreateTodo}
+                  onChange={() => toggleSelectedMember(member.id)}
+                  type="checkbox"
+                />
+                <span>{member.name}</span>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </fieldset>
 
         <label className="field-label">
           Stjärnor
@@ -179,7 +205,7 @@ export function TodoCreator({
 
       <button
         className="primary-button"
-        disabled={!canCreateTodo}
+        disabled={!canCreateTodo || selectedMemberIds.length === 0}
         onClick={createTodo}
         type="button"
       >
@@ -187,6 +213,14 @@ export function TodoCreator({
       </button>
     </section>
   );
+
+  function toggleSelectedMember(memberId: Id) {
+    setSelectedMemberIds((current) =>
+      current.includes(memberId)
+        ? current.filter((id) => id !== memberId)
+        : [...current, memberId]
+    );
+  }
 }
 
 function createRecurrence(type: RecurrenceRule["type"]): RecurrenceRule {
