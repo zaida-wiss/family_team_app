@@ -1,0 +1,166 @@
+
+
+/* ── Extraherat från styles.css ── */
+
+.todo-row strong,
+.dashboard-row strong {
+  color: #b7791f;
+}
+
+.dashboard-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: var(--card);
+}
+
+.dashboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-row span {
+  flex: 1;
+}
+
+.todo-dashboard-row {
+  align-items: center;
+}
+
+.todo-title-input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.todo-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.dashboard-row span small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-fg);
+  font-size: 0.82rem;
+}
+
+.approval-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fffaf0;
+}
+
+.todo-creator {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: var(--muted);
+}
+
+.todo-creator-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.todo-creator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.todo-assignees {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.todo-assignees legend {
+  margin-bottom: 6px;
+}
+
+.todo-assignee-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-assignee-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  background: var(--card);
+}
+
+.approval-header,
+.approval-row,
+.approval-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.approval-header,
+.approval-row {
+  justify-content: space-between;
+}
+
+.approval-header span {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  background: #ffd84d;
+  color: #6f4a00;
+  font-weight: 900;
+}
+
+.approval-row {
+  border-top: 1px solid #eadfc8;
+  padding-top: 10px;
+}
+
+.approval-row div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.approval-row small {
+  color: var(--muted-fg);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.child-settings-panel > .approval-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.stars-input {
+  width: 52px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.reward-card {
+  background: #fff3b0;
+}
+

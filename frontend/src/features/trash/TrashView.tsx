@@ -1,3 +1,4 @@
+import "./TrashView.css";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { hasPermission } from "../../utils/permissions";
 import { getDeletedItemsForTrash } from "./trash";

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MapPin, Star, X } from "lucide-react";
 import type { Calendar, Member, Role, Todo } from "@shared/types";
+import "./ChildTimeline.css";
 import { expandForRange, fmtTime, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";

@@ -198,3 +198,407 @@
     justify-content: center;
   }
 }
+
+
+/* ── Extraherat från styles.css ── */
+
+/* ==========================================================================
+   02. Settings and member views
+   ========================================================================== */
+
+/* â”€â”€ Settings logout button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   03. Panels and navigation base styles
+   ========================================================================== */
+
+/* â”€â”€ Home overview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   04. Home overview
+   ========================================================================== */
+
+@media (max-width: 759px) {
+  .cal-filter-dropdown {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    width: auto;
+    min-width: unset;
+  }
+}
+
+/* â”€â”€ Avatar xs size â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   07. Avatars and account setup
+   ========================================================================== */
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.35rem;
+}
+
+h3 {
+  margin-bottom: 6px;
+}
+
+/* â”€â”€ CalendarView / add-event form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   09. Calendar forms and calendar tools
+   ========================================================================== */
+
+/* â”€â”€ Subscription management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   11. Calendar actions, sharing, shopping and todos
+   ========================================================================== */
+
+/* ==========================================================================
+   14. Rewards, falling todos and rejected notices
+   ========================================================================== */
+
+/* â”€â”€ Child week view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   15. Child week view
+   ========================================================================== */
+
+/* â”€â”€ Child dashboard two-column layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   16. Child dashboard layout and timeline
+   ========================================================================== */
+
+/* â”€â”€ Child timeline â€” child-only vertical day rail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* Red horizontal now-line */
+
+/* All-day events: thin bar across full track width */
+
+/* Timed events positioned by time % */
+
+/* â”€â”€ Child dashboard redesign â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* BelÃ¶ningsbana card */
+
+/* â”€â”€ Tasks today â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* Task card grid */
+
+/* Dark circle behind the emoji */
+
+/* Single orange star badge â€” no count */
+
+/* â”€â”€ Bottom panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* "VÃ¤ntar pÃ¥ godkÃ¤nnande" pill rows */
+
+/* "Ã–nskningar" wish rows */
+
+/* Wish form */
+
+/* Child dashboard: soft timeline layout inspired by the daily planner mockup */
+
+@media (max-width: 759px) {
+  /* Collapse multi-column grids to single column */
+  .overview-grid,
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .account-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Panels: flat on mobile (no card border/shadow â€” just content blocks) */
+  .trash-view,
+  .calendar-panel,
+  .members-panel,
+  .dashboard,
+  .workplace-dashboard {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 14px 0;
+    margin-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Settings: reduce inner padding on narrow screens */
+  .settings-sub {
+    padding: 14px 12px;
+  }
+
+}
+
+.api-error-banner {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #c0392b;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  pointer-events: none;
+  animation: fade-in-up 0.2s ease;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* â”€â”€ Responsive: child dashboard + routine creator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+@media (max-width: 759px) {
+  .child-dashboard {
+    height: calc(100dvh - 56px);
+    max-height: calc(100dvh - 56px);
+    overflow: hidden;
+  }
+
+  .child-dashboard-body {
+    display: grid;
+    grid-template-columns: minmax(0, 25vw) minmax(0, 1fr) minmax(44px, 10vw);
+    grid-template-areas: none;
+    column-gap: 6px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .child-dashboard-left,
+  .child-dashboard-reward {
+    min-height: 0;
+  }
+
+  .child-dashboard-main {
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px;
+    padding-right: 0;
+  }
+
+  .child-bottom-panels {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .child-tasks-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    gap: 6px;
+  }
+
+  .child-task-card {
+    width: 100%;
+    max-width: 132px;
+    min-height: 0;
+    padding: 9px;
+    border-radius: 50%;
+    aspect-ratio: 1;
+  }
+
+  .child-task-icon {
+    font-size: 2.75rem;
+  }
+
+  .child-task-icon-circle {
+    width: 76px;
+    height: 76px;
+  }
+
+  .child-task-name {
+    font-size: 0.78rem;
+  }
+
+  .child-task-star-badge svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .child-tasks-heading {
+    font-size: 1rem;
+  }
+
+  .child-timeline {
+    border-radius: 0 12px 12px 0;
+  }
+
+  .child-tl-nav {
+    padding-right: 3px;
+  }
+
+  .child-tl-week-label {
+    padding: 2px 5px;
+    font-size: 0.58rem;
+  }
+
+  .child-tl-week-range {
+    font-size: 0.48rem;
+  }
+
+  .child-tl-days {
+    padding: 0px 2px 0px 2px ;
+  }
+
+  .child-tl-event {
+    min-height: 38px;
+    padding: 5px 6px;
+    align-items: center;
+  }
+
+  .child-tl-event-symbol {
+    width: 22px;
+    height: 22px;
+    font-size: 0.78rem;
+  }
+
+  .child-tl-event-title {
+    font-size: 0.58rem;
+  }
+
+  .child-tl-event-time {
+    font-size: 0.5rem;
+  }
+
+  .child-reward-track {
+    gap: 3px;
+  }
+
+  .child-reward-step {
+    width: 18px;
+    height: 18px;
+    font-size: 0.58rem;
+  }
+
+  .child-reward-rail {
+    padding: 2px 2px;
+    border-radius: 12px 0 0 12px;
+  }
+
+  .child-reward-card-label span,
+  .child-reward-goal,
+  .child-reward-left,
+  .child-reward-stars-of {
+    display: none;
+  }
+
+  .child-reward-card-top {
+    justify-content: center;
+  }
+
+  .child-reward-stars-count {
+    font-size: 0.68rem;
+  }
+
+  .child-panel {
+    padding: 8px;
+  }
+
+  .child-panel-head {
+    font-size: 0.82rem;
+  }
+
+  .child-pending-row,
+  .child-wish-row {
+    padding: 6px 8px;
+  }
+
+  .wish-form:not(.child-wish-form) {
+    display: none;
+  }
+
+  .child-wish-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px auto;
+    gap: 4px;
+    margin-top: 0;
+  }
+
+  .child-wish-form .wish-form-input,
+  .child-wish-form .wish-form-stars,
+  .child-wish-form .wish-form-btn {
+    min-height: 30px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+  }
+
+  .child-wish-form .wish-form-stars {
+    width: 48px;
+  }
+
+  .child-wish-modal-button {
+    min-height: 28px;
+    font-size: 0.72rem;
+  }
+
+}
+
+/* â”€â”€ Medium screens: tighter task grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* ==========================================================================
+   19. Child dashboard responsive safety net
+   ========================================================================== */
+
+/* Child dashboard mockup lock: keep the left rail visible on touch screens. */
+
+/* Child dashboard week navigation and proportional timeline. */
+
+/* Child dashboard week strip must fill the content column, not inherit button nav sizing. */
+
+/* Compact NPF weekday chips. */
+
+/* Category timer shading: same hue, dark-to-light countdown. */
+
+/* Child dashboard compact viewport fit. */
+
+@media (max-width: 1023px) {
+  .app-shell-content:has(.child-dashboard) {
+    padding: 0 0 64px;
+  }
+
+  .child-dashboard {
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+  }
+}
+
+/* Bottom reward bar: compact, max 15% viewport area. */
+
+/* Weekday chips: two-line planner style. */
+
+/* Task cards: compact two-column mission tiles. */
+
+/* Mission cards: image-first reading for children. */
+
+/* Same-hue gradients: light-to-dark without fading to white. */
+

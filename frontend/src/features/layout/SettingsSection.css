@@ -111,3 +111,113 @@
 .settings-sub .danger-zone > header {
   display: none;
 }
+
+
+/* ── Extraherat från styles.css ── */
+
+.settings-accordion {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--destructive);
+  transition: background 0.15s;
+  padding: 0;
+}
+
+.settings-logout-btn:hover {
+  opacity: 0.75;
+}
+
+.toggle-label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-member-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: white;
+}
+
+.settings-member-info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-member-row small {
+  color: var(--muted-fg);
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.settings-nav-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.settings-nav-button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.account-choice,
+.tab-row,
+.member-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.choice-pill,
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.choice-pill.active,
+.tab.active,
+.account-type-button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+

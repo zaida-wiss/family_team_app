@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Banknote, ChevronLeft, ChevronRight, Palette, ShoppingBag, Star, Trophy, X } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 import { ChildTimeline } from "./ChildTimeline";
+import "./ChildDashboard.css";
 
 type Props = {
   child: Member;

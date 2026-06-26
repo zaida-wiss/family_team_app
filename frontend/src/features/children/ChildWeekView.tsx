@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Calendar, Member, Role } from "@shared/types";
-import { addInterval, expandForRange, fmtTime, getISOWeek, toLocalDateStr } from "../calendars/calendarHelpers";
+import "./ChildWeekView.css";
+import { expandForRange, fmtTime, getISOWeek, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 
