@@ -1,4 +1,3 @@
-import "./members.css";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Account, Member, Role } from "@shared/types";

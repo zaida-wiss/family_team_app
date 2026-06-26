@@ -1,4 +1,3 @@
-import "./TodosView.css";
 import { CheckCircle2, Pencil, Save, Trash2, XCircle } from "lucide-react";
 import type { Id, Member, Reward, Role, Todo } from "@shared/types";
 import { TodoCreator } from "./TodoCreator";

@@ -1,0 +1,48 @@
+.todoCreator {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: var(--muted);
+}
+
+.todoCreatorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.todoCreatorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.todoAssignees {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.todoAssignees legend {
+  margin-bottom: 6px;
+}
+
+.todoAssigneeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todoAssigneeOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  background: var(--card);
+}

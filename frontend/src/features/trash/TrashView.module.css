@@ -1,18 +1,14 @@
-
-
-/* ── Extraherat från styles.css ── */
-
-.trash-view {
+.trashView {
   margin-top: 18px;
   padding: 20px;
 }
 
-.trash-list {
+.trashList {
   display: grid;
   gap: 10px;
 }
 
-.trash-row {
+.trashRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -23,12 +19,11 @@
   background: var(--card);
 }
 
-.trash-row div {
+.trashRow div {
   display: grid;
   gap: 3px;
 }
 
-.trash-row small {
+.trashRow small {
   color: var(--muted-fg);
 }
-

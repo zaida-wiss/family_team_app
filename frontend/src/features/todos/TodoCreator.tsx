@@ -1,3 +1,4 @@
+import styles from "./TodoCreator.module.css";
 import { PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { hasPermission } from "../../utils/permissions";
@@ -103,8 +104,8 @@ export function TodoCreator({
   }
 
   return (
-    <section className="todo-creator" aria-label="Skapa todo">
-      <div className="todo-creator-header">
+    <section className={styles.todoCreator} aria-label="Skapa todo">
+      <div className={styles.todoCreatorHeader}>
         <div>
           <p className="eyebrow">Ny uppgift</p>
           <h3>Skapa todo</h3>
@@ -112,7 +113,7 @@ export function TodoCreator({
         <PlusCircle size={22} />
       </div>
 
-      <div className="todo-creator-grid">
+      <div className={styles.todoCreatorGrid}>
         <label className="field-label">
           Titel
           <input
@@ -124,11 +125,11 @@ export function TodoCreator({
           />
         </label>
 
-        <fieldset className="field-label todo-assignees">
+        <fieldset className={`field-label ${styles.todoAssignees}`}>
           <legend>Tilldelas barn</legend>
-          <div className="todo-assignee-list">
+          <div className={styles.todoAssigneeList}>
             {assignableMembers.map((member) => (
-              <label className="todo-assignee-option" key={member.id}>
+              <label className={styles.todoAssigneeOption} key={member.id}>
                 <input
                   checked={selectedMemberIds.includes(member.id)}
                   disabled={!canCreateTodo}

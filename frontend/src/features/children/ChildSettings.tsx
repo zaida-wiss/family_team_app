@@ -1,3 +1,4 @@
+import "./ChildSettings.css";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, Star, Trophy, XCircle } from "lucide-react";

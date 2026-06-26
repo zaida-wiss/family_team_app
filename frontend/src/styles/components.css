@@ -602,3 +602,240 @@ h3 {
 
 /* Same-hue gradients: light-to-dark without fading to white. */
 
+
+
+/* ── Todos / delade rad-komponenter ── */
+
+.dashboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: var(--card);
+}
+
+.dashboard-row span {
+  flex: 1;
+}
+
+.dashboard-row span small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-fg);
+  font-size: 0.82rem;
+}
+
+.dashboard-row strong {
+  color: #b7791f;
+}
+
+.todo-dashboard-row {
+  align-items: center;
+}
+
+.todo-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.todo-title-input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.approval-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: #fffaf0;
+}
+
+.approval-header,
+.approval-row,
+.approval-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.approval-header,
+.approval-row {
+  justify-content: space-between;
+}
+
+.approval-header span {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  background: #ffd84d;
+  color: #6f4a00;
+  font-weight: 900;
+}
+
+.approval-row {
+  border-top: 1px solid #eadfc8;
+  padding-top: 10px;
+}
+
+.approval-row div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.approval-row small {
+  color: var(--muted-fg);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stars-input {
+  width: 52px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+
+/* ── Settings / delade layout-klasser ── */
+
+.settings-sub {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-sub:last-child {
+  border-bottom: none;
+}
+
+.settings-sub-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-fg);
+}
+
+.settings-sub-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted-fg);
+  line-height: 1.4;
+}
+
+.settings-accordion {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--destructive);
+  transition: background 0.15s;
+  padding: 0;
+}
+
+.settings-logout-btn:hover {
+  opacity: 0.75;
+}
+
+.settings-member-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: white;
+}
+
+.settings-member-info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-member-row small {
+  color: var(--muted-fg);
+}
+
+.toggle-label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+
+/* ── Member color picker ── */
+
+.member-color-picker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.13s;
+}
+
+.member-color-picker:hover {
+  border-color: var(--foreground);
+}
+
+
+/* ── Tab navigation ── */
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  background: var(--muted);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}

@@ -1,3 +1,4 @@
+import "./MemberAvatar.css";
 import { Baby, Users } from "lucide-react";
 import type { Member } from "@shared/types";
 

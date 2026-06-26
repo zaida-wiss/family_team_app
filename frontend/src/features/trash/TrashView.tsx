@@ -1,4 +1,4 @@
-import "./TrashView.css";
+import styles from "./TrashView.module.css";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { hasPermission } from "../../utils/permissions";
 import { getDeletedItemsForTrash } from "./trash";
@@ -48,7 +48,7 @@ export function TrashView({
     deletedTodos.length === 0;
 
   return (
-    <article className="trash-view">
+    <article className={styles.trashView}>
       <header className="section-header">
         <div>
           <p className="eyebrow">Papperskorg</p>
@@ -60,9 +60,9 @@ export function TrashView({
       {isTrashEmpty ? (
         <p className="empty-note">Papperskorgen är tom.</p>
       ) : (
-        <div className="trash-list">
+        <div className={styles.trashList}>
           {deletedMembers.map((member) => (
-            <div className="trash-row" key={member.id}>
+            <div className={styles.trashRow} key={member.id}>
               <div>
                 <strong>{member.name}</strong>
                 <small>
@@ -84,7 +84,7 @@ export function TrashView({
           ))}
 
           {deletedShoppingLists.map((list) => (
-            <div className="trash-row" key={list.id}>
+            <div className={styles.trashRow} key={list.id}>
               <div>
                 <strong>{list.name}</strong>
                 <small>
@@ -106,7 +106,7 @@ export function TrashView({
           ))}
 
           {deletedCalendars.map((calendar) => (
-            <div className="trash-row" key={calendar.id}>
+            <div className={styles.trashRow} key={calendar.id}>
               <div>
                 <strong>{calendar.name}</strong>
                 <small>
@@ -128,7 +128,7 @@ export function TrashView({
           ))}
 
           {deletedTodos.map((todo) => (
-            <div className="trash-row" key={todo.id}>
+            <div className={styles.trashRow} key={todo.id}>
               <div>
                 <strong>{todo.title}</strong>
                 <small>
