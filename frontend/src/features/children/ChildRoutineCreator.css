@@ -104,7 +104,6 @@
 }
 
 .rcr-list-icon { font-size: 0.82rem; text-align: center; }
-.rcr-list-emoji { font-size: 0.82rem; flex-shrink: 0; text-align: center; }
 .rcr-list-name  {
   font-weight: 600;
   min-width: 0;
@@ -120,8 +119,6 @@
   text-overflow: ellipsis;
 }
 
-.rcr-list-badge { font-size: 0.68rem; padding: 1px 5px; border-radius: 10px; background: var(--muted, rgba(0,0,0,0.07)); white-space: nowrap; }
-.rcr-list-child { font-size: 0.72rem; opacity: 0.55; white-space: nowrap; }
 .rcr-list-time  {
   color: var(--foreground);
   font-size: 0.66rem;
