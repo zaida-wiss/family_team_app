@@ -1,0 +1,280 @@
+/* ChildStarsPanel — bottom panels, stars stats, shop/money cards, pending rows, complete cue */
+.child-bottom-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+.child-panel {
+  background: color-mix(in oklch, white 88%, var(--background));
+  border-radius: 14px;
+  border: 1.5px solid color-mix(in oklch, var(--border) 72%, transparent);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+.child-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+.child-panel-empty {
+  font-size: 0.8rem;
+  opacity: 0.45;
+  margin: 0;
+}
+.child-complete-cue {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid color-mix(in oklch, var(--primary, #3d6b4f) 22%, white);
+  border-radius: 18px;
+  background: color-mix(in oklch, var(--primary, #3d6b4f) 9%, white);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.18);
+  transform: translateX(-50%);
+  animation: child-complete-cue-in 1.8s ease both;
+}
+.child-complete-cue-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: color-mix(in oklch, var(--primary, #3d6b4f) 72%, white);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.35rem;
+}
+.child-complete-cue strong {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.15;
+}
+.child-complete-cue small {
+  display: block;
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+.child-complete-cue-stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  color: #e07640;
+  font-weight: 900;
+  white-space: nowrap;
+}
+@keyframes child-complete-cue-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.96);
+  }
+  14%, 82% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px) scale(0.98);
+  }
+}
+.child-pending-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  border-radius: 16px;
+  background: color-mix(in oklch, var(--secondary) 82%, white);
+}
+.child-pending-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #a8d4ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.child-pending-title {
+  flex: 1;
+  font-size: 0.86rem;
+  font-weight: 600;
+  min-width: 110px;
+}
+.child-pending-stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary, #3d6b4f);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.child-pending-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.child-pending-action {
+  min-height: 24px;
+  border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+  border-radius: 999px;
+  background: white;
+  color: var(--foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.child-pending-action--approve {
+  color: var(--primary);
+  border-color: color-mix(in oklch, var(--primary) 36%, transparent);
+  background: color-mix(in oklch, var(--primary) 8%, white);
+}
+.child-pending-action--retry {
+  color: var(--destructive);
+  border-color: color-mix(in oklch, var(--destructive) 28%, transparent);
+  background: color-mix(in oklch, var(--destructive) 7%, white);
+}
+.child-pending-action:hover {
+  transform: translateY(-1px);
+}
+.child-bottom-panels {
+  display: block;
+  overflow: visible;
+}
+.child-stars-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  align-items: center;
+  border-radius: 30px;
+  padding: clamp(22px, 3vw, 36px);
+  color: white;
+  background:
+    radial-gradient(circle at 20% 120%, rgba(109, 94, 206, 0.44), transparent 34%),
+    linear-gradient(135deg, #1e2254 0%, #111331 100%);
+  box-shadow: 0 18px 36px rgba(22, 18, 50, 0.24);
+}
+.child-stars-stat {
+  display: grid;
+  gap: 8px;
+}
+.child-stars-stat span {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2vw, 1.55rem);
+  font-weight: 900;
+}
+.child-stars-stat strong {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+}
+.child-stars-stat svg {
+  color: #ffb000;
+}
+.child-stars-stat--total svg {
+  color: #c45add;
+}
+.child-shop-card,
+.child-money-card,
+.child-active-reward-mini {
+  min-height: 86px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  color: white;
+}
+.child-shop-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: rgba(110, 101, 206, 0.28);
+  cursor: pointer;
+  text-align: left;
+}
+.child-shop-card svg {
+  color: #e178ff;
+  flex-shrink: 0;
+}
+.child-shop-card strong,
+.child-money-card .wish-form-btn,
+.child-active-reward-mini span {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 900;
+}
+.child-shop-card small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255,255,255,0.68);
+}
+.child-money-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px auto;
+  gap: 8px;
+  margin: 0;
+  padding: 18px;
+  background: #dcefcf;
+  color: #486459;
+}
+.child-money-card .wish-form-input,
+.child-money-card .wish-form-stars {
+  background: rgba(255,255,255,0.66);
+  border: 0;
+}
+.child-money-card .wish-form-btn {
+  background: #79a67f;
+  color: white;
+}
+.child-active-reward-mini {
+  grid-column: 1 / -1;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.08);
+}
+.child-active-reward-mini small {
+  margin-left: auto;
+  color: rgba(255,255,255,0.66);
+  font-weight: 800;
+}
+.child-stars-footnote {
+  grid-column: 1 / -1;
+  color: rgba(255,255,255,0.62);
+  text-align: center;
+  font-weight: 800;
+}

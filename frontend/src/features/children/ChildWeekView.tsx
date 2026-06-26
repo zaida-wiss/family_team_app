@@ -135,7 +135,7 @@ export function ChildWeekView({ calendars, child, roles }: Props) {
                       />
                       <div className="child-week-event-body">
                         <span className="child-week-event-title">
-                          {ev.displaySymbol && <span style={{ marginRight: "0.3em" }}>{ev.displaySymbol}</span>}
+                          {ev.displaySymbol && <span className="child-week-event-symbol">{ev.displaySymbol}</span>}
                           {ev.title}
                         </span>
                         <span className="child-week-event-time">

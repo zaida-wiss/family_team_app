@@ -319,7 +319,13 @@ h3 {
 
 /* Wish form */
 
-/* Child dashboard: soft timeline layout inspired by the daily planner mockup */
+.dashboard {
+  background: var(--card);
+  box-shadow: 0 8px 24px color-mix(in oklch, var(--foreground) 6%, transparent);
+  padding: 20px;
+  position: relative;
+  touch-action: manipulation;
+}
 
 @media (max-width: 759px) {
   /* Collapse multi-column grids to single column */
@@ -333,12 +339,8 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  /* Panels: flat on mobile (no card border/shadow â€” just content blocks) */
-  .trash-view,
-  .calendar-panel,
-  .members-panel,
-  .dashboard,
-  .workplace-dashboard {
+  /* Panels: flat on mobile (no card border/shadow — just content blocks) */
+  .dashboard {
     border: none;
     border-radius: 0;
     box-shadow: none;

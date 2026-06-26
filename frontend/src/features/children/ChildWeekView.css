@@ -133,6 +133,10 @@
   min-width: 0;
 }
 
+.child-week-event-symbol {
+  margin-right: 0.3em;
+}
+
 .child-week-event-title {
   font-size: 0.87rem;
   font-weight: 700;
