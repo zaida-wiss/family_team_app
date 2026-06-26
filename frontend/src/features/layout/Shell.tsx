@@ -8,7 +8,11 @@ import { LogOut } from "lucide-react";
 import { useShellState } from "../../hooks/useShellState";
 import type { Membership } from "@shared/types";
 
-export type ShellProps = { activeMembership: Membership; onLogout: () => Promise<void>; onSwitchAccount: () => void };
+export type ShellProps = {
+  activeMembership: Membership;
+  onLogout: () => Promise<void>;
+  onSwitchAccount: () => void;
+};
 
 const AccountSettings = lazy(() =>
   import("../accounts/AccountSettings").then((module) => ({ default: module.AccountSettings }))
@@ -46,10 +50,19 @@ const TrashView = lazy(() =>
 
 export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
   const { fontId, setFontId } = useAppFont();
+
   const {
-    activeAccount, currentMember, activePanel, setActivePanel,
-    themePickerMember, handleThemeSelect, closeThemePicker, apiError,
-    childContentProps, memberContentProps, settingsProps
+    activeAccount,
+    currentMember,
+    activePanel,
+    setActivePanel,
+    themePickerMember,
+    handleThemeSelect,
+    closeThemePicker,
+    apiError,
+    childContentProps,
+    memberContentProps,
+    settingsProps
   } = useShellState(activeMembership, onLogout);
 
   const { canManageMembers, canManageRoles, canViewTrash } = settingsProps;
@@ -75,6 +88,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
         <SettingsSection title="Konto" defaultOpen>
           <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
         </SettingsSection>
+
         <SettingsSection title="Familjemedlemmar">
           <AccountSettings
             account={activeAccount}
@@ -91,12 +105,14 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onShareCalendar={memberContentProps.onShareCalendar}
             onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
           />
+
           {canManageMembers && (
             <div className="settings-sub">
               <InviteForm accountId={activeAccount.id} roles={settingsProps.roles} />
             </div>
           )}
         </SettingsSection>
+
         <SettingsSection title="Barn">
           <ChildSettings
             currentMember={currentMember}
@@ -118,6 +134,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onDeleteTodo={settingsProps.onDeleteTodo}
           />
         </SettingsSection>
+
         <SettingsSection title="Kalendrar">
           <CalendarPanel
             managementOnly
@@ -140,6 +157,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onSyncSubscription={memberContentProps.onSyncSubscription}
           />
         </SettingsSection>
+
         <SettingsSection title="Inköpslistor">
           <ShoppingListsPanel
             managementOnly
@@ -155,6 +173,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             onToggleItem={memberContentProps.onToggleShoppingItem}
           />
         </SettingsSection>
+
         {canManageRoles && (
           <SettingsSection title="Roller & behörigheter">
             <RoleEditor
@@ -166,6 +185,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             />
           </SettingsSection>
         )}
+
         {canViewTrash && (
           <SettingsSection title="Papperskorg">
             <TrashView
@@ -182,6 +202,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             />
           </SettingsSection>
         )}
+
         <SettingsSection title="Radera konto">
           <div className="settings-sub">
             <DeleteAccountSection
@@ -191,6 +212,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             />
           </div>
         </SettingsSection>
+
         <SettingsSection title="Logga ut">
           <div className="settings-sub">
             <button
@@ -217,27 +239,45 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     );
   }
 
-  const isChild = currentMember.isChild;
-  const shellTheme = currentMember.dashboardTheme ?? (isChild ? "space" : "clear");
+  const selectedDashboardMember =
+    settingsProps.members.find(
+      (member) =>
+        member.id === currentMember.lastSelectedDashboardMemberId &&
+        member.deletedAt === null
+    ) ?? currentMember;
+
+  const visibleThemeMember =
+    activePanel === "home" && selectedDashboardMember.isChild
+      ? selectedDashboardMember
+      : currentMember;
+
+  const shellTheme =
+    visibleThemeMember.dashboardTheme ??
+    (visibleThemeMember.isChild ? "space" : "clear");
 
   return (
     <main className={`app-shell theme-${shellTheme}`}>
-      {apiError && <div className="api-error-banner" role="alert">{apiError}</div>}
-      {!isChild && (
-        <HeroBar
-          activePanel={activePanel}
-          accountName={activeAccount.name}
-          currentMember={currentMember}
-          canManageMembers={canManageMembers}
-          onNavigate={setActivePanel}
-          onSwitchAccount={onSwitchAccount}
-          onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
-        />
+      {apiError && (
+        <div className="api-error-banner" role="alert">
+          {apiError}
+        </div>
       )}
-      <div className={`app-shell-content${isChild ? " app-shell-full" : ""}`}>
+
+      <HeroBar
+        activePanel={activePanel}
+        accountName={activeAccount.name}
+        currentMember={currentMember}
+        canManageMembers={canManageMembers}
+        onNavigate={setActivePanel}
+        onSwitchAccount={onSwitchAccount}
+        onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
+      />
+
+      <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>
         <Suspense fallback={<p className="empty-note">Laddar...</p>}>
           {panelContent}
         </Suspense>
+
         {themePickerMember && (
           <ThemePicker
             member={themePickerMember}

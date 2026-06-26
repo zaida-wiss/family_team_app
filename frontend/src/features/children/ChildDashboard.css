@@ -113,3 +113,15 @@
 .rejected-dismiss:hover {
   opacity: 0.88;
 }
+
+@media (max-width: 1023px) {
+  .child-dashboard {
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+    padding-bottom: 0;
+  }
+
+  .app-shell-content:has(.child-dashboard) {
+    padding-bottom: 64px;
+  }
+}

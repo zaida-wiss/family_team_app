@@ -151,3 +151,32 @@
     display: none;
   }
 }
+
+@media (max-width: 1023px) {
+  .heroBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    height: 64px;
+    background: var(--theme-nav-bg);
+    color: var(--theme-nav-fg);
+  }
+
+  .navBtn {
+    height: 64px;
+    border-radius: 0;
+    color: var(--theme-nav-muted);
+  }
+
+  .navBtn.active {
+    background: var(--theme-nav-active-bg);
+    color: var(--theme-nav-active-fg);
+  }
+
+  .navBtn:hover {
+    background: var(--theme-nav-hover-bg);
+    color: var(--theme-nav-fg);
+  }
+}
