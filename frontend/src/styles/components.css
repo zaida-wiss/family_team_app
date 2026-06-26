@@ -82,6 +82,28 @@
   opacity: 0.5;
 }
 
+.danger-button {
+  background: transparent;
+  border: 1.5px solid #e74c3c;
+  color: #e74c3c;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.danger-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .icon-button {
   display: inline-grid;
   place-items: center;

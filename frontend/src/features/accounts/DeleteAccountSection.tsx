@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { accountsApi } from "../../api";
 import authStyles from "../auth/Auth.module.css";
+import "./DeleteAccountSection.css";
 
 type Props = {
   accountId: string;
