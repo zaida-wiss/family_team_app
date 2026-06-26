@@ -3,6 +3,7 @@ import { HeroBar } from "./HeroBar";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
+import { FontPicker, useAppFont } from "../../components/FontPicker";
 import { LogOut } from "lucide-react";
 import { useShellState } from "../../hooks/useShellState";
 import type { Membership } from "@shared/types";
@@ -44,6 +45,7 @@ const TrashView = lazy(() =>
 );
 
 export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
+  const { fontId, setFontId } = useAppFont();
   const {
     activeAccount, currentMember, activePanel, setActivePanel,
     themePickerMember, handleThemeSelect, closeThemePicker, apiError,
@@ -244,6 +246,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
           />
         )}
       </div>
+      <FontPicker fontId={fontId} onSelect={setFontId} />
     </main>
   );
 }
