@@ -2,7 +2,15 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 200;
+  z-index: 1000;
+}
+
+@media (max-width: 1023px) {
+  .font-picker-root {
+    /* HeroBar is 64px in-flow at bottom — push FontPicker above it */
+    bottom: 80px;
+  }
+}
   display: flex;
   flex-direction: column;
   align-items: flex-end;

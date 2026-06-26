@@ -1,3 +1,7 @@
+/* =========================================================
+   ADULT THEMES
+   ========================================================= */
+
 .app-shell.theme-clear {
   --theme-nav-bg: var(--sidebar);
   --theme-nav-border: var(--sidebar-border);
@@ -9,7 +13,7 @@
 }
 
 .app-shell.theme-focus {
-  --theme-nav-bg: linear-gradient(180deg, #eef4ff 0%, #ffffff 100%);
+  --theme-nav-bg: linear-gradient(180deg, #eef4ff 0%, #d6e5ff 100%);
   --theme-nav-border: #c8d8ff;
   --theme-nav-fg: #23375f;
   --theme-nav-muted: #64739b;
@@ -19,7 +23,7 @@
 }
 
 .app-shell.theme-warm {
-  --theme-nav-bg: linear-gradient(180deg, #fff4e6 0%, #ffffff 100%);
+  --theme-nav-bg: linear-gradient(180deg, #fff4e6 0%, #fde2c6 100%);
   --theme-nav-border: #f0cfa6;
   --theme-nav-fg: #5a371d;
   --theme-nav-muted: #9a7650;
@@ -39,7 +43,7 @@
 }
 
 .app-shell.theme-nature {
-  --theme-nav-bg: linear-gradient(180deg, #e7f5df 0%, #ffffff 100%);
+  --theme-nav-bg: linear-gradient(180deg, #e7f5df 0%, #cce8bc 100%);
   --theme-nav-border: #bfd9b5;
   --theme-nav-fg: #274b25;
   --theme-nav-muted: #63845d;
@@ -48,116 +52,16 @@
   --theme-nav-active-fg: #ffffff;
 }
 
-.app-shell.theme-space {
-  --theme-nav-bg: linear-gradient(180deg, #25215c 0%, #7357b7 100%);
-  --theme-nav-border: rgba(255, 255, 255, 0.18);
-  --theme-nav-fg: #ffffff;
-  --theme-nav-muted: rgba(255, 255, 255, 0.7);
-  --theme-nav-hover-bg: rgba(255, 255, 255, 0.12);
-  --theme-nav-active-bg: #f0d8ff;
-  --theme-nav-active-fg: #25215c;
-}
-
-.app-shell.theme-cosmic-cobalt {
-  --theme-nav-bg:
-    linear-gradient(
-      180deg,
-      var(--cosmic-cobalt-square-0),
-      color-mix(in oklch, var(--cosmic-cobalt-square-0) 68%, var(--cosmic-cobalt-square-75))
-    );
-  --theme-nav-border: color-mix(in oklch, var(--cosmic-cobalt-square-75) 44%, white);
-  --theme-nav-fg: #ffffff;
-  --theme-nav-muted: color-mix(in oklch, #ffffff 70%, var(--cosmic-cobalt-square-75));
-  --theme-nav-hover-bg: color-mix(in oklch, var(--cosmic-cobalt-square-75) 22%, transparent);
-  --theme-nav-active-bg:
-    linear-gradient(
-      145deg,
-      var(--cosmic-cobalt-square-25),
-      var(--cosmic-cobalt-square-75)
-    );
-  --theme-nav-active-fg: #ffffff;
-}
-
-.app-shell.theme-lavender-blossom {
-  --theme-nav-bg:
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--lavender-blossom-tetradic-0) 78%, #2f2538),
-      color-mix(in oklch, var(--lavender-blossom-tetradic-25) 54%, #2f2538)
-    );
-  --theme-nav-border: color-mix(in oklch, var(--lavender-blossom-tetradic-75) 48%, white);
-  --theme-nav-fg: #ffffff;
-  --theme-nav-muted: color-mix(in oklch, #ffffff 72%, var(--lavender-blossom-tetradic-75));
-  --theme-nav-hover-bg: color-mix(in oklch, var(--lavender-blossom-tetradic-75) 24%, transparent);
-  --theme-nav-active-bg:
-    linear-gradient(
-      145deg,
-      var(--lavender-blossom-tetradic-25),
-      var(--lavender-blossom-tetradic-0)
-    );
-  --theme-nav-active-fg: #ffffff;
-}
-
-.app-shell.theme-rainbow {
-  --theme-nav-bg: linear-gradient(180deg, #ffe1ec 0%, #fff4b8 100%);
-  --theme-nav-border: #f1bdd0;
-  --theme-nav-fg: #633b50;
-  --theme-nav-muted: #8f6b7b;
-  --theme-nav-hover-bg: rgba(216, 126, 170, 0.14);
-  --theme-nav-active-bg: #d87eaa;
-  --theme-nav-active-fg: #ffffff;
-}
-
-.app-shell.theme-ocean {
-  --theme-nav-bg: linear-gradient(180deg, #d8f3ff 0%, #ffffff 100%);
-  --theme-nav-border: #a8dff2;
-  --theme-nav-fg: #18516a;
-  --theme-nav-muted: #5c8495;
-  --theme-nav-hover-bg: rgba(56, 151, 183, 0.12);
-  --theme-nav-active-bg: #3897b7;
-  --theme-nav-active-fg: #ffffff;
-}
-
-.app-shell.theme-forest {
-  --theme-nav-bg: linear-gradient(180deg, #dff5d8 0%, #ffffff 100%);
-  --theme-nav-border: #b8dab0;
-  --theme-nav-fg: #285327;
-  --theme-nav-muted: #648960;
-  --theme-nav-hover-bg: rgba(73, 132, 62, 0.12);
-  --theme-nav-active-bg: #49843e;
-  --theme-nav-active-fg: #ffffff;
-}
-
-.app-shell.theme-superhero {
-  --theme-nav-bg: linear-gradient(180deg, #ffe1a6 0%, #ffffff 100%);
-  --theme-nav-border: #eec46b;
-  --theme-nav-fg: #573d12;
-  --theme-nav-muted: #8c713d;
-  --theme-nav-hover-bg: rgba(214, 153, 35, 0.14);
-  --theme-nav-active-bg: #d69923;
-  --theme-nav-active-fg: #ffffff;
-}
-
-.app-shell.theme-animal-park {
-  --theme-nav-bg: linear-gradient(180deg, #f7e4c6 0%, #ffffff 100%);
-  --theme-nav-border: #dfc097;
-  --theme-nav-fg: #594127;
-  --theme-nav-muted: #8b7357;
-  --theme-nav-hover-bg: rgba(159, 112, 62, 0.12);
-  --theme-nav-active-bg: #9f703e;
-  --theme-nav-active-fg: #ffffff;
-}
-
 .dashboard.theme-clear {
-  background: linear-gradient(180deg, #ffffff 0%, var(--muted) 100%);
+  background: linear-gradient(180deg, var(--background) 0%, var(--muted) 100%);
 }
 
 .dashboard.theme-focus {
-  background: linear-gradient(180deg, #eef4ff 0%, #ffffff 72%);
+  background: linear-gradient(180deg, #eef4ff 0%, #d6e5ff 72%);
 }
 
 .dashboard.theme-warm {
-  background: linear-gradient(180deg, #fff4e6 0%, #ffffff 72%);
+  background: linear-gradient(180deg, #fff4e6 0%, #fde2c6 72%);
 }
 
 .dashboard.theme-dark {
@@ -176,190 +80,409 @@
 }
 
 .dashboard.theme-nature {
-  background: linear-gradient(180deg, #e7f5df 0%, #ffffff 74%);
+  background: linear-gradient(180deg, #193c04 0%, #77c24b 74%);
 }
 
-.child-dashboard.theme-space {
-  background: linear-gradient(180deg, #25215c 0%, #7357b7 55%, #ffffff 100%);
-  color: #ffffff;
+/* =========================================================
+   CHILD THEME TOKENS
+   8 colors + white/black + contrast text colors
+   ========================================================= */
+
+.app-shell[class*="theme-"],
+.child-dashboard[class*="theme-"] {
+  --white: #ffffff;
+  --black: #000000;
 }
 
+/* Cosmic Cobalt */
+.app-shell.theme-cosmic-cobalt,
 .child-dashboard.theme-cosmic-cobalt {
-  color: #f8f6ff;
-  background:
-    radial-gradient(circle at 76% 18%, color-mix(in oklch, var(--cosmic-cobalt-square-75) 70%, transparent), transparent 30%),
-    radial-gradient(circle at 18% 82%, color-mix(in oklch, var(--cosmic-cobalt-square-25) 58%, transparent), transparent 34%),
-    linear-gradient(
-      135deg,
-      var(--cosmic-cobalt-square-0) 0%,
-      color-mix(in oklch, var(--cosmic-cobalt-square-0) 70%, var(--cosmic-cobalt-square-25)) 48%,
-      color-mix(in oklch, var(--cosmic-cobalt-square-75) 54%, var(--cosmic-cobalt-square-0)) 100%
-    ) !important;
+  --c0: #362783;
+  --c1: #832746;
+  --c2: #278364;
+  --c3: #ffe800;
+  --c4: #130b33;
+  --c5: #6548d8;
+  --c6: #ff4f87;
+  --c7: #4fffc1;
+
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--white);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--white);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 }
 
-.child-dashboard.theme-cosmic-cobalt .child-timeline,
-.child-dashboard.theme-cosmic-cobalt .child-stars-panel {
-  background:
-    radial-gradient(circle at 22% 12%, color-mix(in oklch, var(--cosmic-cobalt-square-75) 42%, transparent), transparent 28%),
-    linear-gradient(180deg, #251a68 0%, #16104a 100%);
-  border-color: color-mix(in oklch, var(--cosmic-cobalt-square-75) 36%, white);
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-hero-month,
-.child-dashboard.theme-cosmic-cobalt .child-tasks-head > span {
-  color: color-mix(in oklch, var(--cosmic-cobalt-square-50) 72%, white);
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-hero p:not(.child-hero-month) {
-  color: color-mix(in oklch, #ffffff 72%, var(--cosmic-cobalt-square-75));
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-hero-avatar,
-.child-dashboard.theme-cosmic-cobalt .child-theme-button,
-.theme-option.theme-cosmic-cobalt {
-  color: #ffffff;
-  background:
-    linear-gradient(
-      145deg,
-      var(--cosmic-cobalt-square-25),
-      var(--cosmic-cobalt-square-0) 48%,
-      var(--cosmic-cobalt-square-75)
-    );
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-theme-button {
-  border-color: color-mix(in oklch, var(--cosmic-cobalt-square-75) 52%, white);
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-theme-button:hover {
-  background:
-    linear-gradient(
-      145deg,
-      var(--cosmic-cobalt-square-75),
-      var(--cosmic-cobalt-square-0)
-    );
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-day-pill--selected {
-  color: #ffffff;
-  background:
-    linear-gradient(
-      145deg,
-      var(--cosmic-cobalt-square-25),
-      var(--cosmic-cobalt-square-75)
-    ) !important;
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-day-pill--selected::after {
-  background: var(--cosmic-cobalt-square-75);
-}
-
-.child-dashboard.theme-cosmic-cobalt .child-task-star-badge,
-.child-dashboard.theme-cosmic-cobalt .child-stars-stat svg,
-.child-dashboard.theme-cosmic-cobalt .child-stars-stat--total svg {
-  color: color-mix(in oklch, var(--cosmic-cobalt-square-50) 82%, white);
-}
-
+/* Lavender Blossom */
+.app-shell.theme-lavender-blossom,
 .child-dashboard.theme-lavender-blossom {
-  color: #2f2538;
-  background:
-    radial-gradient(circle at 78% 16%, color-mix(in oklch, var(--lavender-blossom-tetradic-75) 48%, transparent), transparent 28%),
-    radial-gradient(circle at 18% 78%, color-mix(in oklch, var(--lavender-blossom-tetradic-25) 44%, transparent), transparent 34%),
-    linear-gradient(
-      135deg,
-      color-mix(in oklch, var(--lavender-blossom-tetradic-0) 46%, white) 0%,
-      color-mix(in oklch, var(--lavender-blossom-tetradic-25) 32%, white) 48%,
-      color-mix(in oklch, var(--lavender-blossom-tetradic-75) 36%, white) 100%
-    ) !important;
+  --c0: #ac7ed8;
+  --c1: #d87eaa;
+  --c2: #aad87e;
+  --c3: #d8d27e;
+  --c4: #2f2538;
+  --c5: #f1dcff;
+  --c6: #ffb8da;
+  --c7: #dff7bd;
+
+  --on-c0: var(--black);
+  --on-c1: var(--black);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 }
 
-.child-dashboard.theme-lavender-blossom .child-timeline,
-.child-dashboard.theme-lavender-blossom .child-stars-panel {
-  color: #ffffff;
-  background:
-    radial-gradient(circle at 20% 12%, color-mix(in oklch, var(--lavender-blossom-tetradic-25) 50%, transparent), transparent 30%),
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--lavender-blossom-tetradic-0) 82%, #2f2538),
-      color-mix(in oklch, var(--lavender-blossom-tetradic-0) 52%, #2f2538)
-    );
-  border-color: color-mix(in oklch, var(--lavender-blossom-tetradic-75) 42%, white);
+/* Space */
+.app-shell.theme-space,
+.child-dashboard.theme-space {
+  --c0: #25215c;
+  --c1: #7357b7;
+  --c2: #c4b5e8;
+  --c3: #ffdd57;
+  --c4: #100c2f;
+  --c5: #5145cd;
+  --c6: #ff6bcb;
+  --c7: #9ef0ff;
+
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--white);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 }
 
-.child-dashboard.theme-lavender-blossom .child-hero-month,
-.child-dashboard.theme-lavender-blossom .child-tasks-head > span {
-  color: color-mix(in oklch, var(--lavender-blossom-tetradic-25) 78%, #6a2f52);
-}
-
-.child-dashboard.theme-lavender-blossom .child-hero p:not(.child-hero-month) {
-  color: color-mix(in oklch, #2f2538 70%, var(--lavender-blossom-tetradic-0));
-}
-
-.child-dashboard.theme-lavender-blossom .child-hero-avatar,
-.child-dashboard.theme-lavender-blossom .child-theme-button,
-.theme-option.theme-lavender-blossom {
-  color: #ffffff;
-  background:
-    linear-gradient(
-      145deg,
-      var(--lavender-blossom-tetradic-25),
-      var(--lavender-blossom-tetradic-0) 54%,
-      var(--lavender-blossom-tetradic-75)
-    );
-}
-
-.child-dashboard.theme-lavender-blossom .child-theme-button {
-  border-color: color-mix(in oklch, var(--lavender-blossom-tetradic-75) 55%, white);
-}
-
-.child-dashboard.theme-lavender-blossom .child-theme-button:hover {
-  background:
-    linear-gradient(
-      145deg,
-      var(--lavender-blossom-tetradic-75),
-      var(--lavender-blossom-tetradic-0)
-    );
-}
-
-.child-dashboard.theme-lavender-blossom .child-day-pill--selected {
-  color: #ffffff;
-  background:
-    linear-gradient(
-      145deg,
-      var(--lavender-blossom-tetradic-0),
-      var(--lavender-blossom-tetradic-25)
-    ) !important;
-}
-
-.child-dashboard.theme-lavender-blossom .child-day-pill--selected::after {
-  background: var(--lavender-blossom-tetradic-25);
-}
-
-.child-dashboard.theme-lavender-blossom .child-task-star-badge,
-.child-dashboard.theme-lavender-blossom .child-stars-stat svg,
-.child-dashboard.theme-lavender-blossom .child-stars-stat--total svg {
-  color: color-mix(in oklch, var(--lavender-blossom-tetradic-50) 82%, #ffffff);
-}
-
+/* Rainbow */
+.app-shell.theme-rainbow,
 .child-dashboard.theme-rainbow {
-  background: linear-gradient(180deg, #ffe1ec 0%, #fff4b8 45%, #e1f5ff 100%);
+  --c0: #ff3b8d;
+  --c1: #ffd84d;
+  --c2: #3b82f6;
+  --c3: #ff7a3d;
+  --c4: #30144f;
+  --c5: #7c3aed;
+  --c6: #2dd4bf;
+  --c7: #ffb3d9;
+
+  --on-c0: var(--white);
+  --on-c1: var(--black);
+  --on-c2: var(--white);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--white);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 }
 
+/* Ocean */
+.app-shell.theme-ocean,
 .child-dashboard.theme-ocean {
-  background: linear-gradient(180deg, #d8f3ff 0%, #ffffff 72%);
+  --c0: #0077b6;
+  --c1: #00b4d8;
+  --c2: #90e0ef;
+  --c3: #caf0f8;
+  --c4: #023047;
+  --c5: #48cae4;
+  --c6: #ffd166;
+  --c7: #06d6a0;
+
+  --on-c0: var(--white);
+  --on-c1: var(--black);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 }
 
+/* Forest */
+.app-shell.theme-forest,
 .child-dashboard.theme-forest {
-  background: linear-gradient(180deg, #dff5d8 0%, #ffffff 72%);
+  --c0: #2d6a4f;
+  --c1: #52b788;
+  --c2: #b7e4c7;
+  --c3: #f4a261;
+  --c4: #081c15;
+  --c5: #95d5b2;
+  --c6: #ffd166;
+  --c7: #40916c;
+
+  --on-c0: var(--white);
+  --on-c1: var(--black);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--white);
 }
 
+/* Superhero */
+.app-shell.theme-superhero,
 .child-dashboard.theme-superhero {
-  background: linear-gradient(180deg, #ffe1a6 0%, #ffffff 72%);
+  --c0: #d90429;
+  --c1: #ffd60a;
+  --c2: #003566;
+  --c3: #ff7b00;
+  --c4: #000814;
+  --c5: #3a86ff;
+  --c6: #ef233c;
+  --c7: #fefae0;
+
+  --on-c0: var(--white);
+  --on-c1: var(--black);
+  --on-c2: var(--white);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--white);
+  --on-c6: var(--white);
+  --on-c7: var(--black);
 }
 
+/* Animal Park */
+.app-shell.theme-animal-park,
 .child-dashboard.theme-animal-park {
-  background: linear-gradient(180deg, #f7e4c6 0%, #ffffff 72%);
+  --c0: #9c6644;
+  --c1: #f4a261;
+  --c2: #a7c957;
+  --c3: #fefae0;
+  --c4: #432818;
+  --c5: #dda15e;
+  --c6: #606c38;
+  --c7: #ffcad4;
+
+  --on-c0: var(--white);
+  --on-c1: var(--black);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--black);
+  --on-c6: var(--white);
+  --on-c7: var(--black);
 }
+
+/* Plunge Pool */
+.app-shell.theme-plunge-pool,
+.child-dashboard.theme-plunge-pool {
+  --c0: #ff0017;
+  --c1: #ffe800;
+  --c2: #0017ff;
+  --c3: #ff7a00;
+  --c4: #000000;
+  --c5: #ff4fd8;
+  --c6: #00d084;
+  --c7: #7c3aed;
+
+  --on-c0: var(--white);
+  --on-c1: var(--black);
+  --on-c2: var(--white);
+  --on-c3: var(--black);
+  --on-c4: var(--white);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--white);
+}
+
+/* =========================================================
+   SHARED CHILD THEME LOGIC
+   ========================================================= */
+
+.app-shell.theme-space,
+.app-shell.theme-cosmic-cobalt,
+.app-shell.theme-lavender-blossom,
+.app-shell.theme-rainbow,
+.app-shell.theme-ocean,
+.app-shell.theme-forest,
+.app-shell.theme-superhero,
+.app-shell.theme-animal-park,
+.app-shell.theme-plunge-pool {
+  --theme-nav-bg: var(--c4);
+  --theme-nav-border: var(--c4);
+  --theme-nav-fg: var(--on-c4);
+  --theme-nav-muted: color-mix(in srgb, var(--on-c4) 72%, var(--c4));
+  --theme-nav-hover-bg: var(--c1);
+  --theme-nav-active-bg: var(--c0);
+  --theme-nav-active-fg: var(--on-c0);
+}
+
+.child-dashboard[class*="theme-"] {
+  color: var(--on-c4);
+  background:
+    radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--c1) 42%, transparent), transparent 24%),
+    radial-gradient(circle at 16% 82%, color-mix(in srgb, var(--c2) 34%, transparent), transparent 30%),
+    linear-gradient(135deg, var(--c4), var(--c0) 48%, var(--c5)) !important;
+
+  --primary: var(--c0);
+  --primary-fg: var(--on-c0);
+
+  --cat-hälsa-accent: var(--c0);
+  --cat-hälsa-bg: color-mix(in srgb, var(--c0) 16%, var(--white));
+
+  --cat-trivsel-accent: var(--c1);
+  --cat-trivsel-bg: color-mix(in srgb, var(--c1) 22%, var(--white));
+
+  --cat-skills-accent: var(--c2);
+  --cat-skills-bg: color-mix(in srgb, var(--c2) 16%, var(--white));
+
+  --cat-pengar-accent: var(--c6);
+  --cat-pengar-bg: color-mix(in srgb, var(--c6) 22%, var(--white));
+
+  --day-0-bg: var(--c0);
+  --day-0-fg: var(--on-c0);
+  --day-1-bg: var(--c1);
+  --day-1-fg: var(--on-c1);
+  --day-2-bg: var(--c2);
+  --day-2-fg: var(--on-c2);
+  --day-3-bg: var(--c3);
+  --day-3-fg: var(--on-c3);
+  --day-4-bg: var(--c5);
+  --day-4-fg: var(--on-c5);
+  --day-5-bg: var(--c6);
+  --day-5-fg: var(--on-c6);
+  --day-6-bg: var(--c7);
+  --day-6-fg: var(--on-c7);
+}
+
+/* Dates */
+.child-dashboard[class*="theme-"] .child-day-pill {
+  background: var(--day-bg);
+  color: var(--day-fg);
+}
+
+.child-dashboard[class*="theme-"] .child-day-pill--today {
+  background: var(--c1) !important;
+  color: var(--on-c1);
+}
+
+.child-dashboard[class*="theme-"] .child-day-pill--today::after {
+  background: var(--c1);
+}
+
+.child-dashboard[class*="theme-"] .child-day-pill--selected {
+  background: var(--c0) !important;
+  color: var(--on-c0);
+}
+
+/* Hero */
+.child-dashboard[class*="theme-"] .child-hero-month,
+.child-dashboard[class*="theme-"] .child-tasks-head > span {
+  color: var(--c1);
+}
+
+.child-dashboard[class*="theme-"] .child-hero p:not(.child-hero-month) {
+  color: color-mix(in srgb, var(--white) 76%, var(--c2));
+}
+
+.child-dashboard[class*="theme-"] .child-hero-avatar,
+.child-dashboard[class*="theme-"] .child-theme-button {
+  background: linear-gradient(145deg, var(--c1), var(--c0), var(--c2));
+  color: var(--white);
+}
+
+/* Timeline + stars */
+.child-dashboard[class*="theme-"] .child-timeline,
+.child-dashboard[class*="theme-"] .child-stars-panel {
+  color: var(--on-c4);
+  background:
+    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--c1) 38%, transparent), transparent 34%),
+    radial-gradient(circle at 12% 88%, color-mix(in srgb, var(--c2) 28%, transparent), transparent 38%),
+    linear-gradient(160deg, var(--c4), color-mix(in srgb, var(--c0) 56%, var(--black)));
+  border-color: color-mix(in srgb, var(--c1) 42%, transparent);
+}
+
+.child-dashboard[class*="theme-"] .child-tl-week-label {
+  background: var(--c1);
+  color: var(--on-c1);
+}
+
+.child-dashboard[class*="theme-"] .child-tl-now,
+.child-dashboard[class*="theme-"] .child-tl-now::before,
+.child-dashboard[class*="theme-"] .child-tl-task-marker--window::after {
+  background: var(--c1);
+}
+
+.child-dashboard[class*="theme-"] .child-tl-task-marker-star {
+  background: var(--c2);
+  color: var(--on-c2);
+}
+
+/* Task cards */
+.child-dashboard[class*="theme-"] .child-task-card {
+  background: var(--task-bg);
+  color: var(--black);
+  border-color: color-mix(in srgb, var(--task-accent) 38%, transparent);
+}
+
+.child-dashboard[class*="theme-"] .child-task-card::after {
+  background: var(--task-accent);
+}
+
+.child-dashboard[class*="theme-"] .child-task-star-badge {
+  color: var(--c1);
+}
+
+/* Panels */
+.child-dashboard[class*="theme-"] .child-panel {
+  background: var(--white);
+  color: var(--black);
+  border-color: color-mix(in srgb, var(--c1) 38%, transparent);
+}
+
+.child-dashboard[class*="theme-"] .child-panel-head {
+  color: var(--black);
+}
+
+/* Shop */
+.child-dashboard[class*="theme-"] .child-shop-card {
+  color: var(--on-c4);
+  background:
+    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--c1) 38%, transparent), transparent 42%),
+    linear-gradient(145deg, var(--c4), color-mix(in srgb, var(--c0) 58%, var(--black)));
+}
+
+.child-dashboard[class*="theme-"] .child-shop-card svg {
+  color: var(--c1);
+}
+
+/* Money */
+.child-dashboard[class*="theme-"] .child-money-card {
+  background: var(--c6);
+  color: var(--on-c6);
+}
+
+.child-dashboard[class*="theme-"] .child-money-card svg,
+.child-dashboard[class*="theme-"] .child-money-card small {
+  color: var(--on-c6);
+}
+
+/* Complete cue */
+.child-dashboard[class*="theme-"] .child-complete-cue {
+  background: var(--c7);
+  color: var(--on-c7);
+  border-color: color-mix(in srgb, var(--c7) 48%, transparent);
+}
+
+.child-dashboard[class*="theme-"] .child-complete-cue-icon {
+  background: var(--c0);
+  color: var(--on-c0);
+}
+
+.child-dashboard[class*="theme-"] .child-complete-cue-stars {
+  color: var(--c1);
+}
+
+/* =========================================================
+   THEME PICKER
+   ========================================================= */
 
 .theme-picker {
   position: fixed;
@@ -424,34 +547,46 @@
 }
 
 .theme-option.theme-space {
-  background: #7357b7;
+  background: #25215c;
   color: #ffffff;
 }
 
 .theme-option.theme-cosmic-cobalt {
+  background: linear-gradient(145deg, #832746, #362783, #278364);
   color: #ffffff;
 }
 
 .theme-option.theme-lavender-blossom {
+  background: linear-gradient(145deg, #d87eaa, #ac7ed8, #aad87e);
   color: #ffffff;
 }
 
 .theme-option.theme-rainbow {
-  background: #ffd5e5;
+  background: linear-gradient(145deg, #ff3b8d, #ffd84d, #3b82f6);
+  color: #30144f;
 }
 
 .theme-option.theme-ocean {
-  background: #ccefff;
+  background: linear-gradient(145deg, #0077b6, #00b4d8, #90e0ef);
+  color: #023047;
 }
 
 .theme-option.theme-forest {
-  background: #dff5d8;
+  background: linear-gradient(145deg, #2d6a4f, #52b788, #b7e4c7);
+  color: #081c15;
 }
 
 .theme-option.theme-superhero {
-  background: #ffd36e;
+  background: linear-gradient(145deg, #d90429, #ffd60a, #003566);
+  color: #000814;
 }
 
 .theme-option.theme-animal-park {
-  background: #f4d8ad;
+  background: linear-gradient(145deg, #9c6644, #f4a261, #a7c957);
+  color: #432818;
+}
+
+.theme-option.theme-plunge-pool {
+  background: linear-gradient(145deg, #ff0017, #ffe800, #0017ff);
+  color: #000000;
 }

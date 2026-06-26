@@ -39,7 +39,8 @@ export const DashboardThemeIdSchema = z.enum([
   "focus",
   "warm",
   "dark",
-  "nature"
+  "nature",
+  "plunge-pool"
 ]);
 
 export const MemberSchema = z.object({

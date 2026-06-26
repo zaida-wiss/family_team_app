@@ -1,276 +1,64 @@
 .heroBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 4px 10px;
-  border: 1px solid color-mix(in oklch, var(--primary) 16%, transparent);
-  border-radius: var(--radius-md);
-  background: var(--card);
-  box-shadow: 0 4px 16px color-mix(in oklch, var(--foreground) 7%, transparent);
-  margin-bottom: 24px;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--theme-nav-bg, var(--sidebar));
+  color: var(--theme-nav-fg, var(--foreground));
+  box-shadow: none;
 }
 
 .brand {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--foreground);
+  color: inherit;
   letter-spacing: 0;
   white-space: nowrap;
 }
 
 .nav {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  flex-wrap: nowrap;
 }
 
 .navBtn {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: none;
-  color: var(--muted-fg);
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-nav-muted, var(--muted-fg));
   cursor: pointer;
   transition: background 0.13s, color 0.13s;
 }
 
-.navBtn:hover {
-  background: color-mix(in oklch, var(--primary) 8%, transparent);
-  color: var(--foreground);
+.navBtn:hover,
+.navBtn:hover:not(.active) {
+  background: var(--theme-nav-hover-bg, transparent);
+  color: var(--theme-nav-fg, var(--foreground));
 }
 
 .navBtn.active {
-  background: var(--primary);
-  color: var(--primary-fg);
-  border-color: var(--primary);
-}
-
-@media (min-width: 1024px) {
-  .heroBar {
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-    height: 100vh;
-    position: sticky;
-    top: 0;
-    padding: 28px 16px;
-    margin-bottom: 0;
-    border-radius: 0;
-    border: none;
-    border-right: 1px solid var(--sidebar-border);
-    background: var(--sidebar);
-    gap: 0;
-    box-shadow: none;
-  }
-
-  .top {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 0 8px;
-    margin-bottom: 28px;
-  }
-
-  .brand {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--foreground);
-  }
-
-  .account {
-    font-size: 0.78rem;
-    color: var(--muted-fg);
-    font-weight: 400;
-  }
-
-  .nav {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1px;
-    flex: 1;
-  }
-
-  .navBtn {
-    width: 100%;
-    height: 48px;
-    display: flex;
-    justify-content: flex-start;
-    gap: 14px;
-    padding: 0 14px;
-    border-radius: var(--radius-sm);
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--muted-fg);
-    transition: background 0.12s, color 0.12s;
-  }
-
-  .navBtn:hover:not(.active) {
-    background: color-mix(in oklch, var(--foreground) 5%, transparent);
-    color: var(--foreground);
-  }
-
-  .navBtn.active {
-    color: var(--foreground);
-  }
-
-  .navLabel {
-    display: inline;
-  }
-
-  .bottom {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    border-top: 1px solid var(--sidebar-border);
-    padding-top: 12px;
-    margin-top: 12px;
-  }
-
-  .bottomRow {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .memberBtn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: none;
-    border: none;
-    padding: 6px 8px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.12s;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .memberBtn:hover {
-    background: color-mix(in oklch, var(--foreground) 5%, transparent);
-  }
-
-  .memberInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .memberName {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .switchText {
-    font-size: 0.72rem;
-    color: var(--muted-fg);
-  }
-
-  .themeBtn {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-sm);
-    background: none;
-    border: none;
-    color: var(--muted-fg);
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-  }
-
-  .themeBtn:hover {
-    background: color-mix(in oklch, var(--foreground) 5%, transparent);
-    color: var(--foreground);
-  }
-
-  .tip {
-    font-size: 0.69rem;
-    color: var(--muted-fg);
-    line-height: 1.45;
-    padding: 0 8px;
-    margin: 0;
-    opacity: 0.7;
-  }
-}
-
-@media (max-width: 1023px) {
-  .heroBar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 64px;
-    padding: 8px 12px;
-    margin: 0;
-    border-radius: 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    background: var(--sidebar);
-    box-shadow: 0 -2px 8px color-mix(in oklch, var(--foreground) 6%, transparent);
-  }
-
-  .top,
-  .account,
-  .bottom {
-    display: none;
-  }
-
-  .nav {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-around;
-    width: 100%;
-    max-width: 520px;
-    gap: 4px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .navBtn {
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
-    display: inline-grid;
-    place-items: center;
-    padding: 0;
-    border-radius: 12px;
-  }
-
-  .navLabel {
-    display: none;
-  }
+  background: var(--theme-nav-active-bg, var(--primary));
+  color: var(--theme-nav-active-fg, var(--primary-fg));
 }
 
 :global(.app-shell[class*="theme-"]) .heroBar {
   background: var(--theme-nav-bg, var(--sidebar));
-  border-color: var(--theme-nav-border, var(--sidebar-border));
   color: var(--theme-nav-fg, var(--foreground));
 }
 
@@ -291,22 +79,75 @@
 :global(.app-shell[class*="theme-"]) .navBtn:hover:not(.active),
 :global(.app-shell[class*="theme-"]) .memberBtn:hover,
 :global(.app-shell[class*="theme-"]) .themeBtn:hover {
-  background: var(--theme-nav-hover-bg, color-mix(in oklch, var(--foreground) 5%, transparent));
+  background: var(--theme-nav-hover-bg, transparent);
   color: var(--theme-nav-fg, var(--foreground));
 }
 
 :global(.app-shell[class*="theme-"]) .navBtn.active {
   background: var(--theme-nav-active-bg, var(--primary));
-  border-color: transparent;
   color: var(--theme-nav-active-fg, var(--primary-fg));
 }
 
-:global(.app-shell[class*="theme-"]) .bottom {
-  border-top-color: var(--theme-nav-border, var(--sidebar-border));
+@media (min-width: 1024px) {
+  .heroBar {
+    position: sticky;
+    top: 0;
+    width: 64px;
+    height: 100vh;
+    flex-direction: column;
+  }
+
+  .top,
+  .account,
+  .bottom,
+  .tip {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: column;
+  }
+
+  .navBtn {
+    width: 64px;
+    height: 64px;
+  }
+
+  .navLabel {
+    display: none;
+  }
 }
 
 @media (max-width: 1023px) {
-  :global(.app-shell[class*="theme-"]) .heroBar {
-    border-top-color: var(--theme-nav-border, var(--border));
+  .heroBar {
+    flex-shrink: 0;
+    height: 64px;
+  }
+
+  .top,
+  .account,
+  .bottom,
+  .tip {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navBtn {
+    flex: 1 1 0;
+    min-width: 56px;
+    height: 64px;
+  }
+
+  .navLabel {
+    display: none;
   }
 }

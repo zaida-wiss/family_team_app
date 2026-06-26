@@ -4,7 +4,7 @@ import "./FontPicker.css";
 
 export type FontId = "baloo" | "nunito" | "fredoka" | "comfortaa" | "poppins";
 
-const FONTS: { id: FontId; name: string; display: string; body: string }[] = [
+export const FONTS: { id: FontId; name: string; display: string; body: string }[] = [
   { id: "baloo",     name: "Baloo",     display: "Baloo 2",          body: "Plus Jakarta Sans" },
   { id: "nunito",    name: "Nunito",    display: "Nunito",           body: "Nunito" },
   { id: "fredoka",   name: "Fredoka",   display: "Fredoka",          body: "DM Sans" },

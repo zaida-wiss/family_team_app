@@ -3,15 +3,36 @@
   min-height: 100vh;
 }
 
+/* Child view (app-shell-full) — desktop: fixed height; mobile: flex child handles height */
+.app-shell-content.app-shell-full {
+  padding: 0px;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 @media (max-width: 1023px) {
+  /* Flex column: content grows, HeroBar (DOM first) pushed to bottom via column-reverse */
   .app-shell {
-    display: block;
+    display: flex;
+    flex-direction: column-reverse;
+    height: 100dvh;
+    min-height: unset; /* base-regelns min-height: 100vh slår annars igenom på iOS */
   }
 
   .app-shell-content {
-    padding: 10px 10px 80px;
+    flex: 1;
+    min-height: 0;
+    padding: 0px;
+    overflow-y: auto;
     background: var(--background);
-    min-height: 100vh;
+  }
+
+  /* Child view on mobile: let flex determine height, keep overflow locked */
+  .app-shell-content.app-shell-full {
+    height: auto;
+    flex: 1;
+    min-height: 0;
   }
 
   .api-error-banner {
@@ -22,14 +43,14 @@
 @media (min-width: 1024px) {
   .app-shell {
     display: grid;
-    grid-template-columns: 248px 1fr;
+    grid-template-columns: 68px 1fr;
     max-width: 100%;
     margin: 0;
     padding: 0;
   }
 
   .app-shell-content {
-    padding: 28px 28px 48px;
+    padding: 0px 0px 0px;
     min-height: 100vh;
     background: var(--background);
   }

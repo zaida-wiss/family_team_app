@@ -3,7 +3,7 @@ import { HeroBar } from "./HeroBar";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
-import { FontPicker, useAppFont } from "../../components/FontPicker";
+import { useAppFont } from "../../components/FontPicker";
 import { LogOut } from "lucide-react";
 import { useShellState } from "../../hooks/useShellState";
 import type { Membership } from "@shared/types";
@@ -243,10 +243,11 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             member={themePickerMember}
             onClose={closeThemePicker}
             onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
+            fontId={fontId}
+            onSelectFont={setFontId}
           />
         )}
       </div>
-      <FontPicker fontId={fontId} onSelect={setFontId} />
     </main>
   );
 }

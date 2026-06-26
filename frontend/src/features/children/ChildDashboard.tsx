@@ -6,7 +6,13 @@ import "./ChildRewardRail.css";
 import "./ChildTaskCard.css";
 import "./ChildStarsPanel.css";
 import "./ChildWishModal.css";
+
 import "./ChildDashboard.css";
+import "./ChildHero.css";
+import "./ChildWeekStrip.css";
+import "./ChildTasks.css";
+import "./ChildTimeline.css";
+import "./ChildResponsive.css";
 
 type Props = {
   child: Member;
@@ -37,45 +43,30 @@ type DayPillStyle = CSSProperties & {
   "--day-fg"?: string;
 };
 
-type TaskColor = {
-  accent: string;
-  bg: string;
-};
-
-const CHILD_TASK_COLORS = [
-  { accent: "#7aa986", bg: "#edf5e9" },
-  { accent: "#d98c82", bg: "#fae4df" },
-  { accent: "#7fa4d2", bg: "#e8f1fb" },
-  { accent: "#b985d0", bg: "#f0e2f7" },
-  { accent: "#d8b765", bg: "#f8edce" },
-];
-
-const CATEGORY_TASK_COLORS: Record<string, TaskColor> = {
-  fritid: { accent: "#b985d0", bg: "#f0e2f7" },
-  familj: { accent: "#d98c82", bg: "#fae4df" },
-  hem: { accent: "#d3a46f", bg: "#f5e8d8" },
-  hushåll: { accent: "#d3a46f", bg: "#f5e8d8" },
-  hälsa: { accent: "#7aa986", bg: "#edf5e9" },
-  hygien: { accent: "#7fa4d2", bg: "#e8f1fb" },
-  mat: { accent: "#d8b765", bg: "#f8edce" },
-  måltid: { accent: "#d8b765", bg: "#f8edce" },
-  rörelse: { accent: "#cf8980", bg: "#f8e2dd" },
-  skola: { accent: "#7d9fca", bg: "#e9f0fa" },
-  sömn: { accent: "#82a98d", bg: "#e8f3e8" },
-};
-
 const WEEKDAY_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
 const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-const NPF_DAY_COLORS = [
-  { bg: "#f9dcd8", fg: "#7b1f1f" },
-  { bg: "#dff1e4", fg: "#345f42" },
-  { bg: "#dcecff", fg: "#173c72" },
-  { bg: "#e8edf4", fg: "#1f3d68" },
-  { bg: "#f1dfcf", fg: "#4d3329" },
-  { bg: "#f1dfd1", fg: "#4f342b" },
-  { bg: "#f8d8ef", fg: "#7a2d5c" },
-];
 
+/* Kända kategorier — matchar CSS-variablerna --cat-<nyckel>-accent/bg i ChildDashboard.css och themes.css */
+const KNOWN_CATEGORIES = ["hälsa", "trivsel", "skills", "pengar"] as const;
+
+function getTaskStyleVars(category: string): TaskCardStyle {
+  const norm = category.trim().toLocaleLowerCase("sv-SE");
+  const key = KNOWN_CATEGORIES.find((k) => norm.includes(k))
+    ?? KNOWN_CATEGORIES[[...norm].reduce((s, c) => s + c.charCodeAt(0), 0) % KNOWN_CATEGORIES.length];
+  return {
+    "--task-accent": `var(--cat-${key}-accent)`,
+    "--task-bg":     `var(--cat-${key}-bg)`,
+  };
+}
+
+function getDayStyleVars(dayIndex: number): DayPillStyle {
+  return {
+    "--day-bg": `var(--day-${dayIndex}-bg)`,
+    "--day-fg": `var(--day-${dayIndex}-fg)`,
+  };
+}
+
+/* getWeekStripDays ───────────────────────────────────── */
 function getWeekStripDays(now = new Date()) {
   const monday = new Date(now);
   const dow = (now.getDay() + 6) % 7;
@@ -93,20 +84,6 @@ function getTodayHeading(date: Date) {
   return new Intl.DateTimeFormat("sv-SE", { weekday: "long" }).format(date);
 }
 
-function getTaskColorForCategory(category: string): TaskColor {
-  const normalized = category.trim().toLocaleLowerCase("sv-SE");
-  if (!normalized) {
-    return CHILD_TASK_COLORS[0];
-  }
-
-  const matchedKey = Object.keys(CATEGORY_TASK_COLORS).find((key) => normalized.includes(key));
-  if (matchedKey) {
-    return CATEGORY_TASK_COLORS[matchedKey];
-  }
-
-  const hash = [...normalized].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return CHILD_TASK_COLORS[hash % CHILD_TASK_COLORS.length];
-}
 
 function getTodoTimeLeftPercent(todo: Todo, now: number) {
   if (!todo.visibleFrom || !todo.expiresAt) {
@@ -337,11 +314,7 @@ export function ChildDashboard({
             <div className="child-day-strip" aria-label="Veckodagar">
               {weekStripDays.map((day) => {
                 const isSelected = isSameLocalDay(day.toISOString(), selectedDay);
-                const dayColor = NPF_DAY_COLORS[day.getDay()];
-                const dayStyle: DayPillStyle = {
-                  "--day-bg": dayColor.bg,
-                  "--day-fg": dayColor.fg,
-                };
+                const dayStyle = getDayStyleVars(day.getDay());
 
                 return (
                   <button
@@ -375,15 +348,6 @@ export function ChildDashboard({
               <p>Tryck på dina uppgifter när du är klar. Håll fingret länge för att lämna in.</p>
             </div>
             <div className="child-hero-actions">
-              <button
-                className="child-theme-button"
-                type="button"
-                onClick={() => onThemePickerOpen(child.id)}
-                aria-label="Byt tema"
-                title="Byt tema"
-              >
-                <Palette size={18} />
-              </button>
               <div className="child-hero-avatar" aria-hidden="true">
                 {child.avatarUrl ? <img src={child.avatarUrl} alt="" /> : <span>🦊</span>}
               </div>
@@ -402,16 +366,10 @@ export function ChildDashboard({
                   todos.map((todo) => ({ category, todo }))
                 ).map(({ category, todo }, i) => {
                   const timeLeftPercent = getTodoTimeLeftPercent(todo, timerNow);
-                  const color = getTaskColorForCategory(category);
                   const taskStyle: TaskCardStyle = {
                     animationDelay: `${i * 80}ms`,
-                    "--task-accent": color.accent,
-                    "--task-bg": color.bg,
-                    ...(timeLeftPercent === null
-                      ? {}
-                      : {
-                        "--task-time-left": `${timeLeftPercent}%`,
-                      }),
+                    ...getTaskStyleVars(category),
+                    ...(timeLeftPercent === null ? {} : { "--task-time-left": `${timeLeftPercent}%` }),
                   };
 
                   return (
@@ -538,6 +496,17 @@ export function ChildDashboard({
         </div>
 
       </div>
+
+      <button
+        className="child-theme-button"
+        type="button"
+        onClick={() => onThemePickerOpen(child.id)}
+        aria-label="Byt tema"
+        title="Byt tema"
+      >
+        <Palette size={18} />
+      </button>
+
       {isWishModalOpen && (
         <div className="child-wish-modal-backdrop" onClick={() => setIsWishModalOpen(false)}>
           <section

@@ -53,7 +53,8 @@ export type DashboardThemeId =
   | "focus"
   | "warm"
   | "dark"
-  | "nature";
+  | "nature"
+  | "plunge-pool";
 
 export type User = {
   id: Id;
