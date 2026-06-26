@@ -1,3 +1,4 @@
+import "./CalendarEventDetail.css";
 import { MapPin, Pencil, X } from "lucide-react";
 import type { CalendarEvent, Member } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";

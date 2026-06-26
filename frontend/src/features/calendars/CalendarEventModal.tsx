@@ -1,3 +1,4 @@
+import "./CalendarEventModal.css";
 import { MapPin, RefreshCw, Trash2, X } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Calendar, Member } from "@shared/types";

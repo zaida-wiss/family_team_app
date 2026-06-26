@@ -1,3 +1,4 @@
+import "./CalendarWeekView.css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { fmtTime, getISOWeek, toLocalDateStr } from "./calendarHelpers";

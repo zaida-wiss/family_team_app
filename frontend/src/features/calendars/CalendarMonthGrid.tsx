@@ -1,3 +1,4 @@
+import "./CalendarMonthGrid.css";
 import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 import type { EnrichedEvent } from "./CalendarEventList";

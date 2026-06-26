@@ -1,0 +1,35 @@
+.cal-event-detail-modal {
+  max-width: 440px;
+}
+
+.cal-event-detail-body {
+  gap: 8px;
+}
+
+.cal-event-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cal-event-detail-title {
+  font-size: 1.1rem;
+  line-height: 1.25;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cal-event-detail-location,
+.cal-event-detail-calendar-meta {
+  margin: 4px 0 0;
+}
+
+.cal-event-detail-notes {
+  font-size: 0.875rem;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+

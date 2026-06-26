@@ -1,3 +1,4 @@
+import "./AccountSettings.css";
 import { Eraser, Filter, ImagePlus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";

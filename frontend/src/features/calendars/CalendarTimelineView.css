@@ -1,0 +1,190 @@
+.cal-vtl-allday-pill {
+  background: var(--event-color, var(--primary));
+}
+
+.cal-vtl-header {
+  display: grid;
+  grid-template-columns: 44px repeat(7, 1fr);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.cal-vtl-axis-spacer {
+  border-right: 1px solid var(--border);
+}
+
+.cal-vtl-col-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-left: 1px solid var(--border);
+}
+
+.cal-vtl-col-head--today {
+  background: color-mix(in oklch, var(--primary) 6%, transparent);
+}
+
+.cal-vtl-col-dow {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-fg);
+}
+
+.cal-vtl-col-date {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cal-vtl-col-date--today {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 0.9rem;
+}
+
+.cal-vtl-allday-row {
+  display: grid;
+  grid-template-columns: 44px repeat(7, 1fr);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-bottom: none;
+  background: var(--card);
+}
+
+.cal-vtl-allday-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 2px;
+  border-left: 1px solid var(--border);
+  min-height: 24px;
+}
+
+.cal-vtl-allday-pill {
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: white;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.cal-vtl-scroll {
+  overflow-y: auto;
+  max-height: 560px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.cal-vtl-grid {
+  display: grid;
+  grid-template-columns: 44px repeat(7, 1fr);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--border) 0px,
+    var(--border) 1px,
+    transparent 1px,
+    transparent 56px
+  );
+}
+
+.cal-vtl-axis {
+  position: relative;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+}
+
+.cal-vtl-hour-label {
+  position: absolute;
+  right: 6px;
+  font-size: 0.62rem;
+  color: var(--muted-fg);
+  transform: translateY(-50%);
+  white-space: nowrap;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.cal-vtl-col {
+  position: relative;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+}
+
+.cal-vtl-col--today {
+  background: color-mix(in oklch, var(--primary) 3%, var(--card));
+}
+
+.cal-vtl-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.cal-vtl-now-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e84545;
+  flex-shrink: 0;
+  margin-left: -4px;
+}
+
+.cal-vtl-now-line {
+  flex: 1;
+  height: 1.5px;
+  background: #e84545;
+}
+
+.cal-vtl-event {
+  position: absolute;
+  border-radius: 4px;
+  overflow: hidden;
+  padding: 3px 5px;
+  cursor: pointer;
+}
+
+.cal-vtl-event:hover {
+  filter: brightness(0.95);
+}
+
+.cal-vtl-event-name {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.cal-vtl-event-time {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--muted-fg);
+  line-height: 1.2;
+  margin-top: 1px;
+}
+

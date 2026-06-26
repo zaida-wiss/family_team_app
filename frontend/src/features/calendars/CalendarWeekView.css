@@ -1,0 +1,93 @@
+.cal-week-col-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.cal-week-col-event {
+  background: var(--event-color, var(--primary));
+}
+
+.cal-week-cols {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  align-items: start;
+}
+
+.cal-week-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 8px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.cal-week-col--today {
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.cal-week-col-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cal-week-col-dow {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-fg);
+}
+
+.cal-week-col-date {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cal-week-col-date--today {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 0.9rem;
+}
+
+.cal-week-col-events {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 60px;
+}
+
+.cal-week-col-event {
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: white;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.cal-week-col-event-time {
+  opacity: 0.8;
+  margin-right: 2px;
+}
+
