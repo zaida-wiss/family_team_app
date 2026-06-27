@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Banknote, ChevronLeft, ChevronRight, Palette, ShoppingBag, Star, Trophy, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Palette, Star } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
+
 import { ChildTimeline } from "./ChildTimeline";
-import "./ChildRewardRail.css";
-import "./ChildTaskCard.css";
-import "./ChildStarsPanel.css";
-import "./ChildWishModal.css";
+import { ChildHero } from "./ChildHero";
+import { ChildWeekStrip } from "./ChildWeekStrip";
+import { ChildTasksSection } from "./ChildTasksSection";
+import { ChildRejectedTodos } from "./ChildRejectedTodos";
+import { ChildStarsPanel } from "./ChildStarsPanel";
+import { ChildWishModal } from "./ChildWishModal";
+import { useChildCompleteHold } from "./useChildCompleteHold";
 
 import "./ChildDashboard.css";
-import "./ChildHero.css";
-import "./ChildWeekStrip.css";
-import "./ChildTasks.css";
-import "./ChildTimeline.css";
 import "./ChildResponsive.css";
+import "./ChildStarsPanel.css";
 
 type Props = {
   child: Member;
@@ -32,80 +33,6 @@ type Props = {
   onThemePickerOpen: (memberId: Id) => void;
 };
 
-type TaskCardStyle = CSSProperties & {
-  "--task-accent"?: string;
-  "--task-bg"?: string;
-  "--task-time-left"?: string;
-};
-
-type DayPillStyle = CSSProperties & {
-  "--day-bg"?: string;
-  "--day-fg"?: string;
-};
-
-const WEEKDAY_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
-const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-
-/* Kända kategorier — matchar CSS-variablerna --cat-<nyckel>-accent/bg i ChildDashboard.css och themes.css */
-const KNOWN_CATEGORIES = ["hälsa", "trivsel", "skills", "pengar"] as const;
-
-function getTaskStyleVars(category: string): TaskCardStyle {
-  const norm = category.trim().toLocaleLowerCase("sv-SE");
-  const key = KNOWN_CATEGORIES.find((k) => norm.includes(k))
-    ?? KNOWN_CATEGORIES[[...norm].reduce((s, c) => s + c.charCodeAt(0), 0) % KNOWN_CATEGORIES.length];
-  return {
-    "--task-accent": `var(--cat-${key}-accent)`,
-    "--task-bg":     `var(--cat-${key}-bg)`,
-  };
-}
-
-function getDayStyleVars(dayIndex: number): DayPillStyle {
-  return {
-    "--day-bg": `var(--day-${dayIndex}-bg)`,
-    "--day-fg": `var(--day-${dayIndex}-fg)`,
-  };
-}
-
-/* getWeekStripDays ───────────────────────────────────── */
-function getWeekStripDays(now = new Date()) {
-  const monday = new Date(now);
-  const dow = (now.getDay() + 6) % 7;
-  monday.setDate(now.getDate() - dow);
-  monday.setHours(0, 0, 0, 0);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return date;
-  });
-}
-
-function getTodayHeading(date: Date) {
-  return new Intl.DateTimeFormat("sv-SE", { weekday: "long" }).format(date);
-}
-
-
-function getTodoTimeLeftPercent(todo: Todo, now: number) {
-  if (!todo.visibleFrom || !todo.expiresAt) {
-    return null;
-  }
-
-  const startsAt = new Date(todo.visibleFrom).getTime();
-  const endsAt = new Date(todo.expiresAt).getTime();
-
-  if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= startsAt) {
-    return null;
-  }
-
-  return Math.max(0, Math.min(100, ((endsAt - now) / (endsAt - startsAt)) * 100));
-}
-
-function isWithinLastDay(isoStr: string | null, now: number) {
-  if (!isoStr) return false;
-  const time = new Date(isoStr).getTime();
-  return Number.isFinite(time) && now - time <= 86_400_000;
-}
-
 function isSameLocalDay(isoStr: string | null, date: Date) {
   if (!isoStr) return false;
   const candidate = new Date(isoStr);
@@ -116,12 +43,16 @@ function isSameLocalDay(isoStr: string | null, date: Date) {
   );
 }
 
-function getRewardStatusLabel(status: Reward["status"]) {
-  if (status === "active") return "Godkänd";
-  if (status === "suggested") return "Väntar";
-  if (status === "unlocked") return "Upplåst";
-  if (status === "redeemed") return "Inlöst";
-  return "Nekad";
+function getWeekStripDays(anchor: Date) {
+  const monday = new Date(anchor);
+  const dow = (anchor.getDay() + 6) % 7;
+  monday.setDate(anchor.getDate() - dow);
+  monday.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
 }
 
 export function ChildDashboard({
@@ -141,23 +72,23 @@ export function ChildDashboard({
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
-  const [wishStars, setWishStars] = useState(10);
-  const [isWishModalOpen, setIsWishModalOpen] = useState(false);
-  const [heldTodoId, setHeldTodoId] = useState<Id | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState(() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
   });
-  const [completedCue, setCompletedCue] = useState<{
-    id: Id;
-    title: string;
-    visual: string;
-    starValue: number;
-  } | null>(null);
-  const completeHoldRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const completeCueRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const [isWishModalOpen, setIsWishModalOpen] = useState(false);
+
+  const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
+    activeChildTodos,
+    onCompleteTodo
+  );
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTimerNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const taskGroups = useMemo(() => {
     const map = new Map<string, Todo[]>();
@@ -168,128 +99,48 @@ export function ChildDashboard({
       map.set(cat, bucket);
     }
     return [...map.entries()]
-      .sort(([a], [b]) => {
-        if (!a && b) return 1;
-        if (a && !b) return -1;
-        return a.localeCompare(b, "sv");
-      })
+      .sort(([a], [b]) => (!a && b ? 1 : a && !b ? -1 : a.localeCompare(b, "sv")))
       .map(([category, todos]) => ({ category, todos }));
   }, [activeChildTodos]);
 
-  const nowMs = timerNow;
-  const rejected = rejectedTodos;
-  const approvedStarsTotal = timelineTodos
-    .filter((todo) => todo.assignedTo === child.id && todo.status === "approved" && todo.deletedAt === null)
-    .reduce((sum, todo) => sum + todo.starValue, 0);
+  const today = new Date(timerNow);
+  const weekStripDays = getWeekStripDays(selectedDay);
+
   const approvedStarsToday = timelineTodos
     .filter(
-      (todo) =>
-        todo.assignedTo === child.id &&
-        todo.status === "approved" &&
-        todo.deletedAt === null &&
-        isSameLocalDay(todo.approvedAt ?? todo.completedAt, new Date(nowMs))
+      (t) =>
+        t.assignedTo === child.id &&
+        t.status === "approved" &&
+        t.deletedAt === null &&
+        isSameLocalDay(t.approvedAt ?? t.completedAt, today)
     )
-    .reduce((sum, todo) => sum + todo.starValue, 0);
+    .reduce((sum, t) => sum + t.starValue, 0);
+
+  const totalApprovedStars = timelineTodos
+    .filter((t) => t.assignedTo === child.id && t.status === "approved" && t.deletedAt === null)
+    .reduce((sum, t) => sum + t.starValue, 0);
+
   const pendingApprovalTodos = timelineTodos
-    .filter(
-      (todo) =>
-        todo.assignedTo === child.id &&
-        todo.status === "done" &&
-        todo.deletedAt === null
-    )
+    .filter((t) => t.assignedTo === child.id && t.status === "done" && t.deletedAt === null)
     .sort((a, b) => {
-      const timeA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-      const timeB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
-      return timeB - timeA;
+      const tA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const tB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return tB - tA;
     })
     .slice(0, 8);
-  const modalRewards = childRewards
-    .filter((reward) => {
-      if (reward.status === "rejected") {
-        return isWithinLastDay(reward.deletedAt, nowMs);
-      }
-      return reward.deletedAt === null;
-    })
-    .sort((a, b) => {
-      const order: Record<Reward["status"], number> = {
-        active: 0,
-        unlocked: 1,
-        redeemed: 2,
-        suggested: 3,
-        rejected: 4,
-      };
-      return order[a.status] - order[b.status] || a.title.localeCompare(b.title, "sv");
-    });
-  const today = new Date(nowMs);
-  const weekStripDays = getWeekStripDays(selectedDay);
-  const totalApprovedStars = approvedStarsTotal;
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setTimerNow(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  function clearCompleteHold() {
-    if (completeHoldRef.current !== null) {
-      window.clearTimeout(completeHoldRef.current);
-      completeHoldRef.current = null;
-    }
-    setHeldTodoId(null);
-  }
-
-  function startCompleteHold(todoId: Id) {
-    const todo = activeChildTodos.find((item) => item.id === todoId);
-    if (!todo) {
-      return;
-    }
-
-    clearCompleteHold();
-    setHeldTodoId(todoId);
-    completeHoldRef.current = window.setTimeout(() => {
-      setCompletedCue({
-        id: todo.id,
-        title: todo.title,
-        visual: todo.visual.value,
-        starValue: todo.starValue
-      });
-      onCompleteTodo(todoId);
-      completeHoldRef.current = null;
-      setHeldTodoId(null);
-      if (completeCueRef.current !== null) {
-        window.clearTimeout(completeCueRef.current);
-      }
-      completeCueRef.current = window.setTimeout(() => {
-        setCompletedCue(null);
-        completeCueRef.current = null;
-      }, 1800);
-    }, 2000);
-  }
-
-  function moveSelectedWeek(direction: -1 | 1) {
-    setSelectedDay((current) => {
-      const next = new Date(current);
-      next.setDate(current.getDate() + direction * 7);
+  function moveWeek(direction: -1 | 1) {
+    setSelectedDay((cur) => {
+      const next = new Date(cur);
+      next.setDate(cur.getDate() + direction * 7);
       next.setHours(0, 0, 0, 0);
       return next;
     });
   }
 
-  useEffect(
-    () => () => {
-      if (completeHoldRef.current !== null) {
-        window.clearTimeout(completeHoldRef.current);
-      }
-      if (completeCueRef.current !== null) {
-        window.clearTimeout(completeCueRef.current);
-      }
-    },
-    []
-  );
-
   return (
     <article className={`child-dashboard theme-${child.dashboardTheme ?? "space"}`}>
       <div className="child-dashboard-body">
-        {/* LEFT — weekly timeline */}
         <div className="child-dashboard-left">
           <ChildTimeline
             calendars={calendars}
@@ -300,185 +151,40 @@ export function ChildDashboard({
           />
         </div>
 
-        {/* CENTER — tasks, routines and status panels */}
         <div className="child-dashboard-main">
-          <div className="child-week-nav">
-            <button
-              className="child-week-arrow"
-              type="button"
-              onClick={() => moveSelectedWeek(-1)}
-              aria-label="Föregående vecka"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="child-day-strip" aria-label="Veckodagar">
-              {weekStripDays.map((day) => {
-                const isSelected = isSameLocalDay(day.toISOString(), selectedDay);
-                const dayStyle = getDayStyleVars(day.getDay());
+          <ChildWeekStrip
+            days={weekStripDays}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            onPrevWeek={() => moveWeek(-1)}
+            onNextWeek={() => moveWeek(1)}
+          />
 
-                return (
-                  <button
-                    className={`child-day-pill${isSelected ? " child-day-pill--selected" : ""}`}
-                    key={day.toISOString()}
-                    type="button"
-                    style={dayStyle}
-                    onClick={() => setSelectedDay(day)}
-                    aria-pressed={isSelected}
-                  >
-                    <span>{WEEKDAY_SHORT[day.getDay()]}</span>
-                    <strong>{day.getDate()}</strong>
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              className="child-week-arrow"
-              type="button"
-              onClick={() => moveSelectedWeek(1)}
-              aria-label="Nästa vecka"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
+          <ChildHero childName={child.name} avatarUrl={child.avatarUrl} today={today} />
 
-          <header className="child-hero">
-            <div>
-              <p className="child-hero-month">{MONTHS_SHORT[today.getMonth()]}</p>
-              <h2 className="section-title">Hej {child.name}! <span aria-hidden="true">👋</span></h2>
-              <p>Tryck på dina uppgifter när du är klar. Håll fingret länge för att lämna in.</p>
-            </div>
-            <div className="child-hero-actions">
-              <div className="child-hero-avatar" aria-hidden="true">
-                {child.avatarUrl ? <img src={child.avatarUrl} alt="" /> : <span>🦊</span>}
-              </div>
-            </div>
-          </header>
+          <ChildTasksSection
+            taskGroups={taskGroups}
+            today={today}
+            timerNow={timerNow}
+            heldTodoId={heldTodoId}
+            onStartHold={startHold}
+            onClearHold={clearHold}
+          />
 
-          {/* Tasks today */}
-          {taskGroups.length > 0 && (
-            <section className="child-tasks-section" aria-label="Uppgifter idag">
-              <div className="child-tasks-head">
-                <h3 className="child-tasks-heading">Dina uppgifter idag</h3>
-                <span>{getTodayHeading(today)}</span>
-              </div>
-              <div className="child-tasks-grid">
-                {taskGroups.flatMap(({ category, todos }) =>
-                  todos.map((todo) => ({ category, todo }))
-                ).map(({ category, todo }, i) => {
-                  const timeLeftPercent = getTodoTimeLeftPercent(todo, timerNow);
-                  const taskStyle: TaskCardStyle = {
-                    animationDelay: `${i * 80}ms`,
-                    ...getTaskStyleVars(category),
-                    ...(timeLeftPercent === null ? {} : { "--task-time-left": `${timeLeftPercent}%` }),
-                  };
+          <ChildRejectedTodos
+            rejectedTodos={rejectedTodos}
+            onDismiss={onDismissRejectedTodo}
+          />
 
-                  return (
-                    <button
-                      key={todo.id}
-                      className={[
-                        "child-task-card",
-                        heldTodoId === todo.id ? "child-task-card--holding" : "",
-                        timeLeftPercent !== null ? "child-task-card--timed" : "",
-                      ].filter(Boolean).join(" ")}
-                      style={taskStyle}
-                      onPointerDown={() => startCompleteHold(todo.id)}
-                      onPointerLeave={clearCompleteHold}
-                      onPointerCancel={clearCompleteHold}
-                      onPointerUp={clearCompleteHold}
-                      type="button"
-                    >
-                      <div className="child-task-icon-circle">
-                        <span className="child-task-icon">{todo.visual.value}</span>
-                      </div>
-                      <span className="child-task-copy">
-                        <span className="child-task-name">{todo.title}</span>
-                      </span>
-                      <span className="child-task-star-badge">
-                        <Star size={14} fill="currentColor" />
-                        <span>{todo.starValue}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          <ChildStarsPanel
+            approvedStarsToday={approvedStarsToday}
+            totalApprovedStars={totalApprovedStars}
+            pendingApprovalTodos={pendingApprovalTodos}
+            activeReward={activeReward}
+            rewardProgress={rewardProgress}
+            onOpenShop={() => setIsWishModalOpen(true)}
+          />
 
-          {activeChildTodos.length === 0 && (
-            <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>
-          )}
-
-          {/* Rejected */}
-          {rejected.length > 0 && (
-            <section className="rejected-notice" aria-label="Nekade uppgifter">
-              {rejected.map((todo) => (
-                <div className="rejected-todo-card" key={todo.id}>
-                  <span>{todo.visual.value}</span>
-                  <div>
-                    <strong>{todo.title}</strong>
-                    <small>Den här gick inte igenom – prova igen!</small>
-                  </div>
-                  <button
-                    className="rejected-dismiss"
-                    type="button"
-                    onClick={() => onDismissRejectedTodo(todo.id)}
-                    aria-label="Stäng"
-                  >
-                    Okej
-                  </button>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {/* Bottom panels */}
-          <div className="child-bottom-panels">
-            <div className="child-stars-panel">
-              {pendingApprovalTodos.length > 0 && (
-                <div className="child-pending-symbols" aria-label="Väntar på godkännande">
-                  {pendingApprovalTodos.map((todo) => (
-                    <span className="child-pending-symbol" key={todo.id} title={todo.title}>
-                      {todo.visual.value}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="child-stars-stat">
-                <span>Stjärnor idag</span>
-                <strong><Star size={34} fill="currentColor" /> {approvedStarsToday}</strong>
-              </div>
-              <div className="child-stars-stat child-stars-stat--total">
-                <span>Totalt</span>
-                <strong><Star size={34} fill="currentColor" /> {totalApprovedStars}</strong>
-              </div>
-              <button
-                className="child-shop-card"
-                type="button"
-                onClick={() => setIsWishModalOpen(true)}
-              >
-                <ShoppingBag size={28} />
-                <span>
-                  <strong>Shop</strong>
-                  <small>Använd dina stjärnor</small>
-                </span>
-              </button>
-              <div className="child-money-card" aria-label={`${approvedStarsTotal} stjärnor är ${approvedStarsTotal} kronor`}>
-                <Banknote size={28} />
-                <span>
-                  <strong>{approvedStarsTotal} stjärnor</strong>
-                  <small>= {approvedStarsTotal} kr</small>
-                </span>
-              </div>
-              {activeReward && rewardProgress && (
-                <div className="child-active-reward-mini">
-                  <Trophy size={16} />
-                  <span>{activeReward.title}</span>
-                  <small>{rewardProgress.starsLeft} stjärnor kvar</small>
-                </div>
-              )}
-              <small className="child-stars-footnote">1 stjärna = 1 kr</small>
-            </div>
-          </div>
           {completedCue && (
             <div className="child-complete-cue" role="status" aria-live="polite">
               <div className="child-complete-cue-icon">
@@ -494,7 +200,6 @@ export function ChildDashboard({
             </div>
           )}
         </div>
-
       </div>
 
       <button
@@ -508,77 +213,16 @@ export function ChildDashboard({
       </button>
 
       {isWishModalOpen && (
-        <div className="child-wish-modal-backdrop" onClick={() => setIsWishModalOpen(false)}>
-          <section
-            className="child-wish-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Barnets önskningar"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="child-wish-modal-head">
-              <div>
-                <h3>Önskningar</h3>
-                <p>
-                  <Star size={13} fill="currentColor" />
-                  {approvedStarsTotal} stjärnor totalt
-                </p>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                aria-label="Stäng önskningar"
-                onClick={() => setIsWishModalOpen(false)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="child-wish-modal-list">
-              <form
-                className="wish-form child-wish-form child-wish-modal-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  onCreateWish(child.id, wishStars);
-                }}
-              >
-                <input
-                  type="text"
-                  className="wish-form-input"
-                  value={wishTitle}
-                  onChange={(e) => onSetWishTitle(e.target.value)}
-                  placeholder="Jag önskar mig..."
-                  aria-label="Ny önskning"
-                />
-                <input
-                  type="number"
-                  className="wish-form-stars"
-                  value={wishStars}
-                  min={1}
-                  max={999}
-                  onChange={(e) => setWishStars(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  aria-label="Antal stjärnor"
-                />
-                <button className="wish-form-btn" type="submit">Önska</button>
-              </form>
-              {modalRewards.length === 0 ? (
-                <p className="child-panel-empty">Inga önskningar ännu.</p>
-              ) : (
-                modalRewards.map((reward) => (
-                  <div
-                    key={reward.id}
-                    className={`child-wish-row child-wish-row--${reward.status}`}
-                  >
-                    <Trophy size={18} className="child-wish-trophy" />
-                    <div className="child-wish-info">
-                      <span className="child-wish-title">{reward.title}</span>
-                      <small>{reward.starsNeeded} stjärnor · {getRewardStatusLabel(reward.status)}</small>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
+        <ChildWishModal
+          childId={child.id}
+          approvedStarsTotal={totalApprovedStars}
+          childRewards={childRewards}
+          nowMs={timerNow}
+          wishTitle={wishTitle}
+          onSetWishTitle={onSetWishTitle}
+          onCreateWish={onCreateWish}
+          onClose={() => setIsWishModalOpen(false)}
+        />
       )}
     </article>
   );
