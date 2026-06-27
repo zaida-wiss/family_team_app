@@ -450,8 +450,8 @@
 }
 
 .child-dashboard[class*="theme-"] .child-tl-task-marker-star {
-  background: var(--c2);
-  color: var(--on-c2);
+  background: none;
+  color: var(--c1);
 }
 
 /* Task cards */

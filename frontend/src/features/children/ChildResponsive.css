@@ -18,10 +18,6 @@
     width: calc(100% - 40px) !important;
   }
 
-  .child-tl-task-marker {
-    left: 26px;
-  }
-
   .child-week-nav {
     grid-template-columns: 18px minmax(0, 1fr) 18px;
   }
@@ -76,15 +72,6 @@
     border-radius: 14px;
   }
 
-  .child-tl-task-marker {
-    left: 21px;
-  }
-
-  .child-tl-task-marker-star {
-    width: 16px;
-    height: 16px;
-  }
-
   .child-tl-now {
     left: 25px;
   }
@@ -115,7 +102,7 @@
 
   .child-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) 72px;
     align-items: center;
   }
 
@@ -133,8 +120,8 @@
   }
 
   .child-hero-avatar {
-    width: 44px;
-    height: 44px;
+    width: 72px;
+    height: 72px;
     justify-self: end;
   }
 
@@ -215,24 +202,6 @@
     padding: 6px;
   }
 
-  .child-tl-task-marker {
-    left: 17px;
-  }
-
-  .child-tl-task-marker--window::after {
-    width: 2px;
-  }
-
-  .child-tl-task-marker-star {
-    width: 14px;
-    height: 14px;
-  }
-
-  .child-tl-task-marker-star svg {
-    width: 9px;
-    height: 9px;
-  }
-
   .child-tl-now {
     left: 21px;
   }
@@ -265,8 +234,12 @@
     font-size: 0.82rem;
   }
 
+  .child-hero {
+    grid-template-columns: minmax(0, 1fr) 66px;
+  }
+
   .child-hero-avatar {
-    width: 38px;
-    height: 38px;
+    width: 66px;
+    height: 66px;
   }
 }

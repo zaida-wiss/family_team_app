@@ -113,39 +113,24 @@ function taskWindowPct(startsAt: string, expiresAt: string | null, range: Timeli
   return Math.max(0, endPct - startPct);
 }
 
+function markerLeft(todoId: string): string {
+  const h = [...todoId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0x7fff, 0);
+  return `${4 + (h % 74)}%`;
+}
+
 type TodoMarker = {
   todo: Todo;
   startsAt: string;
   windowPct: number;
-  lane: number;
 };
 
-function assignTodoMarkerLanes(todos: Todo[], selectedDay: Date, range: TimelineRange): TodoMarker[] {
-  const sorted = [...todos].sort((a, b) => (a.visibleFrom ?? "").localeCompare(b.visibleFrom ?? ""));
-  const laneEnds: number[] = [];
-
-  return sorted.map((todo) => {
-    const startsAt = todo.visibleFrom ?? selectedDay.toISOString();
-    const startTime = new Date(startsAt).getTime();
-    const expiresTime = todo.expiresAt ? new Date(todo.expiresAt).getTime() : startTime;
-    const endTime =
-      Number.isFinite(expiresTime) && expiresTime > startTime ? expiresTime : startTime + 1;
-    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= startTime);
-
-    if (lane === -1) {
-      lane = laneEnds.length;
-      laneEnds.push(endTime);
-    } else {
-      laneEnds[lane] = endTime;
-    }
-
-    return {
-      todo,
-      startsAt,
-      windowPct: taskWindowPct(startsAt, todo.expiresAt, range),
-      lane
-    };
-  });
+function buildTodoMarkers(todos: Todo[], selectedDay: Date, range: TimelineRange): TodoMarker[] {
+  return [...todos]
+    .sort((a, b) => (a.visibleFrom ?? "").localeCompare(b.visibleFrom ?? ""))
+    .map((todo) => {
+      const startsAt = todo.visibleFrom ?? selectedDay.toISOString();
+      return { todo, startsAt, windowPct: taskWindowPct(startsAt, todo.expiresAt, range) };
+    });
 }
 
 type LanedEvent = EnrichedEvent & { lane: number; lanes: number };
@@ -253,7 +238,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
       top: ((minute - timelineRange.startMinute) / (timelineRange.endMinute - timelineRange.startMinute)) * 100,
     });
   }
-  const upcomingTodoMarkers = assignTodoMarkerLanes(
+  const upcomingTodoMarkers = buildTodoMarkers(
     todos.filter((todo) => {
       if (
         todo.assignedTo !== child.id ||
@@ -303,20 +288,25 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
                 )}
 
                 {upcomingTodoMarkers.map((marker) => {
+                  const starCount = Math.min(3, Math.max(1, marker.todo.starValue));
                   return (
                     <div
                       key={marker.todo.id}
                       className={`child-tl-task-marker${marker.windowPct > 0 ? " child-tl-task-marker--window" : ""}`}
                       style={{
                         top: `${markerPct(marker.startsAt, timelineRange)}%`,
-                        right: `${3 + marker.lane * 8}px`,
                         height: marker.windowPct > 0 ? `${marker.windowPct}%` : undefined,
-                      }}
+                        left: markerLeft(marker.todo.id),
+                      } as React.CSSProperties}
                       title={`${marker.todo.title} · ${fmtTime(marker.startsAt)}${marker.todo.expiresAt ? `-${fmtTime(marker.todo.expiresAt)}` : ""}`}
                       aria-label={`${marker.todo.title} kommer ${fmtTime(marker.startsAt)}${marker.todo.expiresAt ? ` och kan göras till ${fmtTime(marker.todo.expiresAt)}` : ""}`}
                     >
-                      <span className="child-tl-task-marker-star">
-                        <Star size={8} fill="currentColor" />
+                      <span className="child-tl-task-marker-stars">
+                        {Array.from({ length: starCount }).map((_, i) => (
+                          <span key={i} className="child-tl-task-marker-star">
+                            <Star size={8} fill="currentColor" />
+                          </span>
+                        ))}
                       </span>
                     </div>
                   );
