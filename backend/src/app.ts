@@ -13,6 +13,7 @@ import { calendarsRouter } from "./routes/calendars.js";
 import { invitationsRouter } from "./routes/invitations.js";
 import { membersRouter } from "./routes/members.js";
 import { rewardsRouter } from "./routes/rewards.js";
+import { rewardShopRouter } from "./routes/rewardShop.js";
 import { rolesRouter } from "./routes/roles.js";
 import { shoppingRouter } from "./routes/shopping.js";
 import { todosRouter } from "./routes/todos.js";
@@ -59,6 +60,7 @@ app.use("/api/todos", todosRouter);
 app.use("/api/calendars", calendarsRouter);
 app.use("/api/shopping", shoppingRouter);
 app.use("/api/rewards", rewardsRouter);
+app.use("/api/reward-shop", rewardShopRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);

@@ -80,7 +80,6 @@ export function blankForm(defaults: Partial<FormState> = {}): FormState {
     recurrenceInterval: 1,
     recurrenceUntil: "",
     attendeeIds: [],
-    symbol: "",
     ...defaults,
     symbol: defaults.symbol ?? "",
   };

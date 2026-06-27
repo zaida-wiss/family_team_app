@@ -11,6 +11,9 @@ import { ChildStarsPanel } from "./ChildStarsPanel";
 import { ChildPendingBadges } from "./ChildPendingBadges";
 import { ChildWishModal } from "./ChildWishModal";
 import { useChildCompleteHold } from "./useChildCompleteHold";
+import { useRewardShopState } from "../rewards/useRewardShopState";
+import { RewardShopModal } from "../rewards/RewardShopModal";
+import { ActiveReward } from "../rewards/ActiveReward";
 
 import "./ChildDashboard.css";
 import "./ChildResponsive.css";
@@ -80,6 +83,10 @@ export function ChildDashboard({
     return d;
   });
   const [isWishModalOpen, setIsWishModalOpen] = useState(false);
+  const [isShopOpen, setIsShopOpen] = useState(false);
+
+  const { items: shopItems, activeRewards, purchase, startTimer, dismissReward } =
+    useRewardShopState();
 
   const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
@@ -120,6 +127,8 @@ export function ChildDashboard({
   const totalApprovedStars = timelineTodos
     .filter((t) => t.assignedTo === child.id && t.status === "approved" && t.deletedAt === null)
     .reduce((sum, t) => sum + t.starValue, 0);
+
+  const availableStars = totalApprovedStars - (child.spentStars ?? 0);
 
   const pendingApprovalTodos = timelineTodos
     .filter((t) => t.assignedTo === child.id && t.status === "done" && t.deletedAt === null)
@@ -184,7 +193,7 @@ export function ChildDashboard({
               totalApprovedStars={totalApprovedStars}
               activeReward={activeReward}
               rewardProgress={rewardProgress}
-              onOpenShop={() => setIsWishModalOpen(true)}
+              onOpenShop={() => setIsShopOpen(true)}
               onThemePickerOpen={() => onThemePickerOpen(child.id)}
             />
           </div>
@@ -205,6 +214,30 @@ export function ChildDashboard({
           )}
         </div>
       </div>
+
+      {activeRewards.length > 0 && (
+        <div className="child-active-rewards">
+          {activeRewards.map((ar) => (
+            <ActiveReward
+              key={ar.item.id}
+              reward={ar}
+              onStartTimer={startTimer}
+              onDismiss={dismissReward}
+            />
+          ))}
+        </div>
+      )}
+
+      {isShopOpen && (
+        <RewardShopModal
+          items={shopItems}
+          availableStars={availableStars}
+          onPurchase={(item) => {
+            void purchase(item, () => {});
+          }}
+          onClose={() => setIsShopOpen(false)}
+        />
+      )}
 
       {isWishModalOpen && (
         <ChildWishModal

@@ -1,0 +1,114 @@
+.reward-shop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.reward-shop-modal {
+  background: var(--bg-card, #fff);
+  border-radius: 20px;
+  padding: 24px;
+  width: min(480px, 92vw);
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.reward-shop-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reward-shop-modal__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex: 1;
+  color: var(--text-primary, #111);
+}
+
+.reward-shop-modal__stars {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c0, #f59e0b);
+}
+
+.reward-shop-modal__close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--text-secondary, #666);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.reward-shop-modal__close:hover {
+  background: var(--bg-hover, #f0f0f0);
+}
+
+.reward-shop-modal__empty {
+  text-align: center;
+  color: var(--text-secondary, #666);
+  padding: 32px 0;
+}
+
+.reward-shop-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.reward-shop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 8px;
+  background: var(--bg-secondary, #f8f8f8);
+  border: 2px solid var(--c1, #6366f1);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.reward-shop-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.reward-shop-card--locked {
+  opacity: 0.45;
+  border-color: var(--text-secondary, #ccc);
+  cursor: not-allowed;
+}
+
+.reward-shop-card__symbol {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.reward-shop-card__title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-primary, #111);
+}
+
+.reward-shop-card__cost {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--c0, #f59e0b);
+}
+
+.reward-shop-card__timer {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #888);
+}

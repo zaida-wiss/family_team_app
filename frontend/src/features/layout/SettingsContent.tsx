@@ -4,6 +4,8 @@ import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
 import { useAppFont } from "../../components/FontPicker";
+import { useRewardShopState } from "../rewards/useRewardShopState";
+import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
 const AccountSettings = lazy(() =>
@@ -56,6 +58,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
   } = settingsProps;
 
   const { fontId, setFontId } = useAppFont();
+  const { items: shopItems, addItem: addShopItem, removeItem: removeShopItem } = useRewardShopState();
 
   return (
     <div className="settings-accordion">
@@ -97,6 +100,12 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
       </SettingsSection>
 
       <SettingsSection title="Barn">
+        <RewardShopSettings
+          items={shopItems}
+          currentMemberId={currentMember.id}
+          onAdd={(item) => { void addShopItem(item); }}
+          onRemove={(id) => { void removeShopItem(id); }}
+        />
         <ChildSettings
           currentMember={currentMember}
           members={members}

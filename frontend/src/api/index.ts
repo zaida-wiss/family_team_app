@@ -18,3 +18,4 @@ export { calendarsApi } from "./calendars";
 export { shoppingApi } from "./shopping";
 export { rewardsApi } from "./rewards";
 export { rolesApi } from "./roles";
+export { rewardShopApi } from "./rewardShop";

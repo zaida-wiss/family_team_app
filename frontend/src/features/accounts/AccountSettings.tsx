@@ -69,6 +69,7 @@ export function AccountSettings({
       avatarUrl: null,
       color: null,
       dashboardTheme: isChild ? "space" : "focus",
+      spentStars: 0,
       deletedAt: null,
       deletedBy: null
     });

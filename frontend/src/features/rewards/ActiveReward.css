@@ -1,0 +1,84 @@
+.active-reward {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card, #fff);
+  border: 2px solid var(--c1, #6366f1);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.active-reward--done {
+  border-color: var(--c2, #ef4444);
+  animation: pulse-done 0.6s ease-in-out 3;
+}
+
+@keyframes pulse-done {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.active-reward__symbol {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.active-reward__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.active-reward__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary, #111);
+}
+
+.active-reward__countdown {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--c1, #6366f1);
+  font-variant-numeric: tabular-nums;
+}
+
+.active-reward__done-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--c2, #ef4444);
+}
+
+.active-reward__start-btn {
+  background: var(--c1, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.active-reward__start-btn:hover {
+  opacity: 0.85;
+}
+
+.active-reward__close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.active-reward__close:hover {
+  background: var(--bg-hover, #f0f0f0);
+}

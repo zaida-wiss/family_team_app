@@ -98,8 +98,19 @@ export type Member = {
   lastActivePanel?: AppPanel;
   lastSelectedDashboardMemberId?: Id | null;
   calendarView?: CalendarViewMode;
+  spentStars: number;
   deletedAt: string | null;
   deletedBy: Id | null;
+};
+
+export type RewardShopItem = {
+  id: Id;
+  title: string;
+  symbol: string | null;
+  starCost: number;
+  timerMinutes: number | null;
+  createdBy: Id;
+  deletedAt: string | null;
 };
 
 export type PermissionKey =
