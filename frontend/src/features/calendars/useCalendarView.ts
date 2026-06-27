@@ -203,6 +203,7 @@ export function useCalendarView(
       recurrenceInterval: rec.interval ?? 1,
       recurrenceUntil: rec.until ? toLocalDateStr(new Date(rec.until)) : "",
       attendeeIds: (ev.attendees ?? []).map((a) => a.memberId),
+      symbol: ev.symbol ?? "",
     });
     setModal({ kind: "edit", event: ev });
   }
@@ -238,6 +239,7 @@ export function useCalendarView(
         notes: form.notes.trim() || null,
         recurrence,
         attendees,
+        symbol: form.symbol || null,
       });
     } else if (modal?.kind === "edit") {
       const baseId = modal.event.id.split("~")[0];
@@ -250,6 +252,7 @@ export function useCalendarView(
         notes: form.notes.trim() || null,
         recurrence,
         attendees,
+        symbol: form.symbol || null,
       });
     }
 

@@ -12,6 +12,7 @@ export type AddEventInput = {
   notes?: string | null;
   recurrence?: EventRecurrence;
   attendees?: EventAttendee[];
+  symbol?: string | null;
 };
 
 type ImportEventInput = {
@@ -84,6 +85,7 @@ export function useCalendarsState() {
       notes: event.notes ?? null,
       recurrence: event.recurrence ?? { type: "none", interval: 1, until: null },
       attendees: event.attendees ?? [],
+      symbol: event.symbol ?? null,
       createdBy: memberId,
       deletedAt: null,
       deletedBy: null
@@ -190,6 +192,7 @@ export function useCalendarsState() {
       notes: event.notes,
       recurrence: { type: "none" as const, interval: 1, until: null },
       attendees: [],
+      symbol: null,
       createdBy: memberId,
       deletedAt: null,
       deletedBy: null

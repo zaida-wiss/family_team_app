@@ -194,6 +194,7 @@ export type CalendarEvent = {
   notes: string | null;
   recurrence: EventRecurrence;
   attendees: EventAttendee[];
+  symbol: string | null;
   createdBy: Id;
   deletedAt: string | null;
   deletedBy: Id | null;

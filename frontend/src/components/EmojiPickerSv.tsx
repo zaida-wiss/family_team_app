@@ -1,0 +1,48 @@
+import "./EmojiPickerSv.css";
+import { useState } from "react";
+import { EMOJIS } from "./emojiData";
+
+type Props = {
+  onSelect: (emoji: string) => void;
+};
+
+export function EmojiPickerSv({ onSelect }: Props) {
+  const [query, setQuery] = useState("");
+
+  const filtered = query.trim()
+    ? EMOJIS.filter((e) => {
+        const q = query.toLowerCase();
+        return e.label.toLowerCase().includes(q) || e.keywords.some((k) => k.includes(q));
+      })
+    : EMOJIS;
+
+  return (
+    <div className="emoji-picker-sv">
+      <div className="emoji-picker-sv__search">
+        <input
+          autoFocus
+          placeholder="Sök på svenska..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      <div className="emoji-picker-sv__grid">
+        {filtered.length === 0 ? (
+          <p className="emoji-picker-sv__empty">Inga resultat</p>
+        ) : (
+          filtered.map((e) => (
+            <button
+              key={e.emoji}
+              className="emoji-picker-sv__btn"
+              title={e.label}
+              type="button"
+              onClick={() => onSelect(e.emoji)}
+            >
+              {e.emoji}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

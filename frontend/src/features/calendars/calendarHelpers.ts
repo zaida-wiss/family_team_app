@@ -36,6 +36,7 @@ export type FormState = {
   recurrenceInterval: number;
   recurrenceUntil: string;
   attendeeIds: string[];
+  symbol: string;
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -80,6 +81,7 @@ export function blankForm(defaults: Partial<FormState> = {}): FormState {
     recurrenceUntil: "",
     attendeeIds: [],
     ...defaults,
+    symbol: defaults.symbol ?? "",
   };
 }
 
