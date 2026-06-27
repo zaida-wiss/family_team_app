@@ -198,7 +198,22 @@
   white-space: nowrap;
   color: inherit;
   font-size: clamp(0.58rem, 1vw, 0.84rem);
-  font-weight: 900;
+  font-weight: 400;
+}
+
+.child-tl-event-title:only-child {
+  font-size: clamp(0.72rem, 52cqb, 1.4rem);
+}
+
+.child-tl-event--long .child-tl-event-title {
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: unset;
+  font-size: clamp(0.5rem, 8cqb, 0.84rem);
+}
+
+.child-tl-event--long .child-tl-event-title:only-child {
+  font-size: clamp(0.5rem, 9cqb, 1rem);
 }
 
 .child-tl-event-symbol {

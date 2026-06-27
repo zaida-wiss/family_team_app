@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
+import { EmojiPickerSv } from "../../components/EmojiPickerSv";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
@@ -606,14 +606,11 @@ export function ChildRoutineCreator({
           className="rcr-emoji-picker-portal"
           style={{ top: pickerPos.top, left: pickerPos.left }}
         >
-          <EmojiPicker
-            height={340}
-            width={280}
-            onEmojiClick={(data) => {
-              setEmoji(data.emoji);
+          <EmojiPickerSv
+            onSelect={(emoji) => {
+              setEmoji(emoji);
               setEmojiOpen(false);
             }}
-            previewConfig={{ showPreview: false }}
           />
         </div>,
         document.body

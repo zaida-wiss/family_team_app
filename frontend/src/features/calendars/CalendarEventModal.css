@@ -68,6 +68,42 @@
   color: var(--muted-fg);
 }
 
+.cal-title-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cal-title-row .text-input {
+  flex: 1;
+}
+
+.cal-symbol-btn {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.cal-symbol-btn:hover {
+  border-color: var(--primary);
+}
+
+.cal-emoji-picker-portal {
+  position: absolute;
+  z-index: 9999;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .cal-attendees {
   display: flex;
   flex-direction: column;

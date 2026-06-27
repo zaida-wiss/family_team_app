@@ -44,6 +44,7 @@ const calendarSchema = new Schema<Calendar>(
           until: { type: String, default: null }
         },
         attendees: [{ memberId: String, status: String }],
+        symbol: { type: String, default: null },
         createdBy: { type: String, required: true },
         deletedAt: { type: String, default: null },
         deletedBy: { type: String, default: null }

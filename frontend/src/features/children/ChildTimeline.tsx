@@ -118,6 +118,13 @@ function markerLeft(todoId: string): string {
   return `${4 + (h % 74)}%`;
 }
 
+const THEME_EVENT_COLORS = ["var(--c1)", "var(--c0)", "var(--c2)", "var(--c3)"];
+
+function calendarThemeColor(calendarId: string): string {
+  const h = [...calendarId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0x7fff, 0);
+  return THEME_EVENT_COLORS[h % THEME_EVENT_COLORS.length];
+}
+
 type TodoMarker = {
   todo: Todo;
   startsAt: string;
@@ -166,28 +173,41 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
   const selectedDayStr = toLocalDateStr(selectedDay);
   const timelineRange = getTimelineRange(child);
 
-  const visible = calendars.filter((cal) => {
-    if (cal.deletedAt !== null) return false;
-    if (hasPermission(child, roles, "canSeeAllCalendar")) return true;
-    return hasPermission(child, roles, "canSeeOwnCalendar") && canViewResource(child, cal);
-  });
+  const visibleCalIds = new Set(
+    calendars
+      .filter((cal) => {
+        if (cal.deletedAt !== null) return false;
+        if (hasPermission(child, roles, "canSeeAllCalendar")) return true;
+        return hasPermission(child, roles, "canSeeOwnCalendar") && canViewResource(child, cal);
+      })
+      .map((cal) => cal.id)
+  );
 
   const subSymbols = new Map<string, string>();
-  for (const cal of visible) {
+  for (const cal of calendars) {
+    if (cal.deletedAt !== null) continue;
     for (const sub of cal.subscriptions ?? []) {
       if (sub.displaySymbol) subSymbols.set(sub.id, sub.displaySymbol);
     }
   }
 
-  const enriched: EnrichedEvent[] = visible.flatMap((cal) =>
-    cal.events.filter((ev) => ev.deletedAt === null).map((ev) => ({
-      ...ev,
-      calendarColor: cal.color,
-      calendarName: cal.name,
-      calendarOwnerId: cal.ownerId,
-      displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : null,
-    }))
-  );
+  const enriched: EnrichedEvent[] = calendars
+    .filter((cal) => cal.deletedAt === null)
+    .flatMap((cal) =>
+      cal.events
+        .filter((ev) => {
+          if (ev.deletedAt !== null) return false;
+          if (visibleCalIds.has(cal.id)) return true;
+          return ev.attendees.some((a) => a.memberId === child.id);
+        })
+        .map((ev) => ({
+          ...ev,
+          calendarColor: cal.color,
+          calendarName: cal.name,
+          calendarOwnerId: cal.ownerId,
+          displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : (ev.symbol ?? null),
+        }))
+    );
 
   const dayEvents = expandForRange(enriched, selectedDay, selectedDayEnd);
 
@@ -317,7 +337,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
                   <button
                     key={ev.id}
                     className={`child-tl-allday${ev.displaySymbol ? " child-tl-allday--symbol" : ""}`}
-                    style={{ background: ev.color ?? ev.calendarColor }}
+                    style={{ "--ev-color": calendarThemeColor(ev.calendarId) } as React.CSSProperties}
                     title={ev.title}
                     type="button"
                     onClick={() => setSelectedEvent(ev)}
@@ -335,16 +355,18 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
                   const height = durPct(ev.startsAt, ev.endsAt, timelineRange);
                   const left = ev.lanes > 1 ? `${(ev.lane / ev.lanes) * 100}%` : 0;
                   const width = ev.lanes > 1 ? `${100 / ev.lanes}%` : "100%";
+                  const durationMin = (new Date(ev.endsAt).getTime() - new Date(ev.startsAt).getTime()) / 60000;
+                  const isLong = durationMin >= 120;
                   return (
                     <button
                       key={ev.id}
-                      className={`child-tl-event${ev.displaySymbol ? " child-tl-event--symbol" : ""}`}
+                      className={`child-tl-event${ev.displaySymbol ? " child-tl-event--symbol" : ""}${isLong ? " child-tl-event--long" : ""}`}
                       style={{
                         top: `${top}%`,
                         height: `${height}%`,
                         left,
                         width,
-                        "--ev-color": ev.color ?? ev.calendarColor,
+                        "--ev-color": calendarThemeColor(ev.calendarId),
                       } as React.CSSProperties}
                       title={`${ev.title} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`}
                       type="button"

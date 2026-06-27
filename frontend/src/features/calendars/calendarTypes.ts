@@ -20,6 +20,7 @@ export type FormState = {
   recurrenceInterval: number;
   recurrenceUntil: string;
   attendeeIds: string[];
+  symbol: string;
 };
 
 export type ModalMode =

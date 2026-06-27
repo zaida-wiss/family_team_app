@@ -1,7 +1,7 @@
 import { CalendarDays, Check, Copy, Download, Globe, Pencil, Plus, RefreshCw, Share2, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import EmojiPicker from "emoji-picker-react";
+import { EmojiPickerSv } from "../../components/EmojiPickerSv";
 import { calendarsApi } from "../../api";
 import {
   canEditSharedResource,
@@ -652,14 +652,11 @@ export function CalendarPanel({
                               ref={symbolPickerRef}
                               style={{ top: pickerPos.top, left: pickerPos.left }}
                             >
-                              <EmojiPicker
-                                height={380}
-                                onEmojiClick={(data) => {
-                                  void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: data.emoji });
+                              <EmojiPickerSv
+                                onSelect={(emoji) => {
+                                  void onUpdateSubscription(selectedCalendar!.id, sub.id, { displaySymbol: emoji });
                                   setSymbolPickerSubId(null);
                                 }}
-                                previewConfig={{ showPreview: false }}
-                                width={300}
                               />
                             </div>,
                             document.body
