@@ -1,12 +1,11 @@
 import { Banknote, ShoppingBag, Star, Trophy } from "lucide-react";
-import type { Reward, RewardPathProgress, Todo } from "@shared/types";
+import type { Reward, RewardPathProgress } from "@shared/types";
 import "./ChildStarsPanel.css";
 import "./ChildRewardRail.css";
 
 type Props = {
   approvedStarsToday: number;
   totalApprovedStars: number;
-  pendingApprovalTodos: Todo[];
   activeReward: Reward | null;
   rewardProgress: RewardPathProgress | null;
   onOpenShop: () => void;
@@ -15,7 +14,6 @@ type Props = {
 export function ChildStarsPanel({
   approvedStarsToday,
   totalApprovedStars,
-  pendingApprovalTodos,
   activeReward,
   rewardProgress,
   onOpenShop,
@@ -23,16 +21,6 @@ export function ChildStarsPanel({
   return (
     <div className="child-bottom-panels">
       <div className="child-stars-panel">
-        {pendingApprovalTodos.length > 0 && (
-          <div className="child-pending-symbols" aria-label="Väntar på godkännande">
-            {pendingApprovalTodos.map((todo) => (
-              <span className="child-pending-symbol" key={todo.id} title={todo.title}>
-                {todo.visual.value}
-              </span>
-            ))}
-          </div>
-        )}
-
         <div className="child-stars-stat">
           <span>Stjärnor idag</span>
           <strong><Star size={34} fill="currentColor" /> {approvedStarsToday}</strong>

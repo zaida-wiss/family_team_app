@@ -8,6 +8,7 @@ import { ChildWeekStrip } from "./ChildWeekStrip";
 import { ChildTasksSection } from "./ChildTasksSection";
 import { ChildRejectedTodos } from "./ChildRejectedTodos";
 import { ChildStarsPanel } from "./ChildStarsPanel";
+import { ChildPendingBadges } from "./ChildPendingBadges";
 import { ChildWishModal } from "./ChildWishModal";
 import { useChildCompleteHold } from "./useChildCompleteHold";
 
@@ -176,14 +177,16 @@ export function ChildDashboard({
             onDismiss={onDismissRejectedTodo}
           />
 
-          <ChildStarsPanel
-            approvedStarsToday={approvedStarsToday}
-            totalApprovedStars={totalApprovedStars}
-            pendingApprovalTodos={pendingApprovalTodos}
-            activeReward={activeReward}
-            rewardProgress={rewardProgress}
-            onOpenShop={() => setIsWishModalOpen(true)}
-          />
+          <div className="child-stars-anchor">
+            <ChildPendingBadges todos={pendingApprovalTodos} />
+            <ChildStarsPanel
+              approvedStarsToday={approvedStarsToday}
+              totalApprovedStars={totalApprovedStars}
+              activeReward={activeReward}
+              rewardProgress={rewardProgress}
+              onOpenShop={() => setIsWishModalOpen(true)}
+            />
+          </div>
 
           {completedCue && (
             <div className="child-complete-cue" role="status" aria-live="polite">

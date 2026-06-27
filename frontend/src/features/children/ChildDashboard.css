@@ -60,6 +60,11 @@
   display: none;
 }
 
+.child-stars-anchor {
+  position: relative;
+  overflow: visible;
+}
+
 .rejected-notice {
   display: grid;
   gap: 8px;
