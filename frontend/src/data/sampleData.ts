@@ -114,6 +114,7 @@ export const calendars: Calendar[] = [
         notes: null,
         recurrence: { type: "none" as const, interval: 1, until: null },
         attendees: [],
+        symbol: null,
         createdBy: "member-parent-1",
         deletedAt: null,
         deletedBy: null

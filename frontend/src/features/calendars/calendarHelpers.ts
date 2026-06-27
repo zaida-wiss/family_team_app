@@ -82,6 +82,7 @@ export function blankForm(defaults: Partial<FormState> = {}): FormState {
     attendeeIds: [],
     symbol: "",
     ...defaults,
+    symbol: defaults.symbol ?? "",
   };
 }
 

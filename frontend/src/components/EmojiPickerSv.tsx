@@ -12,10 +12,7 @@ export function EmojiPickerSv({ onSelect }: Props) {
   const filtered = query.trim()
     ? EMOJIS.filter((e) => {
         const q = query.toLowerCase();
-        return (
-          e.label.toLowerCase().includes(q) ||
-          e.keywords.some((k) => k.includes(q))
-        );
+        return e.label.toLowerCase().includes(q) || e.keywords.some((k: string) => k.includes(q));
       })
     : EMOJIS;
 

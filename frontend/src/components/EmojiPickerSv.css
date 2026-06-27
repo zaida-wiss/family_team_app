@@ -59,6 +59,7 @@
 }
 
 .emoji-picker-sv__empty {
+  grid-column: 1 / -1;
   padding: 24px;
   text-align: center;
   color: var(--muted-fg, #888);
