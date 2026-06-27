@@ -104,17 +104,7 @@
   }
 
   .child-day-pill {
-    min-height: 48px;
-    padding: 6px 2px;
     border-radius: 11px;
-  }
-
-  .child-day-pill span {
-    font-size: 0.56rem;
-  }
-
-  .child-day-pill strong {
-    font-size: 0.95rem;
   }
 
   .child-day-pill--selected::after {
@@ -149,9 +139,9 @@
   }
 
   .child-stars-panel {
-    grid-template-columns: minmax(48px, 1fr) minmax(48px, 1fr) 42px 72px;
-    gap: 5px;
-    padding: 7px 8px;
+    grid-template-columns: 32px minmax(40px, 1fr) minmax(40px, 1fr) 36px 62px;
+    gap: 4px;
+    padding: 6px 6px;
     border-radius: 16px;
   }
 

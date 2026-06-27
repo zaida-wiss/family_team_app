@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Palette, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
@@ -185,6 +185,7 @@ export function ChildDashboard({
               activeReward={activeReward}
               rewardProgress={rewardProgress}
               onOpenShop={() => setIsWishModalOpen(true)}
+              onThemePickerOpen={() => onThemePickerOpen(child.id)}
             />
           </div>
 
@@ -204,16 +205,6 @@ export function ChildDashboard({
           )}
         </div>
       </div>
-
-      <button
-        className="child-theme-button"
-        type="button"
-        onClick={() => onThemePickerOpen(child.id)}
-        aria-label="Byt tema"
-        title="Byt tema"
-      >
-        <Palette size={18} />
-      </button>
 
       {isWishModalOpen && (
         <ChildWishModal

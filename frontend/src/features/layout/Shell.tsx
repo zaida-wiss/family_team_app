@@ -103,9 +103,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     ) ?? currentMember;
 
   const visibleThemeMember =
-    activePanel === "home" && selectedDashboardMember.isChild
-      ? selectedDashboardMember
-      : currentMember;
+    activePanel === "home" ? selectedDashboardMember : currentMember;
 
   const shellTheme =
     visibleThemeMember.dashboardTheme ?? (visibleThemeMember.isChild ? "space" : "clear");
@@ -122,10 +120,15 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
         activePanel={activePanel}
         accountName={activeAccount.name}
         currentMember={currentMember}
+        activeMembers={memberContentProps.activeMembers}
         canManageMembers={settingsProps.canManageMembers}
         onNavigate={setActivePanel}
         onSwitchAccount={onSwitchAccount}
         onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
+        onSelectMemberProfile={(id) => {
+          memberContentProps.onSelectMember(id);
+          setActivePanel("home");
+        }}
       />
 
       <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>

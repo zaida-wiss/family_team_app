@@ -164,6 +164,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDeleteOwnData: deleteOwnData,
     onUpdateMemberAvatar: updateMemberAvatar,
     onUpdateMemberColor: updateMemberColor,
+    onUpdateMemberTheme: updateMemberTheme,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
       updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
     onUpdateCalendarView: (view: CalendarViewMode) =>

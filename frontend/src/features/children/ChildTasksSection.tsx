@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import { Star } from "lucide-react";
 import type { Id, Todo } from "@shared/types";
-import "./ChildTaskCard.css";
 import "./ChildTasks.css";
 
 type TaskCardStyle = CSSProperties & {

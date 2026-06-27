@@ -44,6 +44,7 @@
 }
 
 .child-day-pill {
+  container-type: inline-size;
   position: relative;
   display: grid;
   place-items: center;
@@ -51,10 +52,10 @@
   gap: 2px;
   width: 100%;
   min-width: 0;
-  min-height: clamp(34px, 5vmin, 68px);
-  padding: clamp(4px, 0.8vmin, 10px) clamp(2px, 0.6vmin, 8px);
+  min-height: clamp(44px, 6dvh, 76px);
+  padding: clamp(4px, 1dvh, 12px) clamp(2px, 0.8dvh, 8px);
   border: 0;
-  border-radius: clamp(10px, 1.6vmin, 17px);
+  border-radius: clamp(10px, 2dvh, 18px);
   font-family: var(--font-display);
   color: var(--day-fg);
   background:
@@ -74,14 +75,14 @@
 
 .child-day-pill span {
   display: block;
-  font-size: clamp(0.52rem, 1vmin, 0.82rem);
+  font-size: clamp(0.55rem, 24cqi, 1.2rem);
   font-weight: 900;
   line-height: 1;
 }
 
 .child-day-pill strong {
   display: block;
-  font-size: clamp(0.78rem, 1.6vmin, 1.42rem);
+  font-size: clamp(0.85rem, 48cqi, 2.2rem);
   font-weight: 900;
   line-height: 0.95;
 }

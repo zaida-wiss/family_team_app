@@ -5,10 +5,12 @@ import type { DashboardThemeId, Member } from "@shared/types";
 
 type ThemePickerProps = {
   member: Member;
-  onClose: () => void;
+  onClose?: () => void;
   onSelectTheme: (themeId: DashboardThemeId) => void;
   fontId?: FontId;
   onSelectFont?: (fontId: FontId) => void;
+  /** Hides the floating header/close button — use when embedding inline */
+  compact?: boolean;
 };
 
 export function ThemePicker({
@@ -17,21 +19,24 @@ export function ThemePicker({
   onSelectTheme,
   fontId,
   onSelectFont,
+  compact = false,
 }: ThemePickerProps) {
   const audience = member.isChild ? "child" : "adult";
   const themes = getThemesForAudience(audience);
 
   return (
-    <div className="theme-picker" role="dialog" aria-label="Välj dashboardtema">
-      <div className="theme-picker-header">
-        <div>
-          <p className="eyebrow">Tema</p>
-          <h3>{member.name}</h3>
+    <div className={compact ? "theme-picker-inline" : "theme-picker"} role={compact ? undefined : "dialog"} aria-label="Välj dashboardtema">
+      {!compact && (
+        <div className="theme-picker-header">
+          <div>
+            <p className="eyebrow">Tema</p>
+            <h3>{member.name}</h3>
+          </div>
+          <button className="theme-picker-close" onClick={onClose} type="button" aria-label="Stäng">
+            <X size={18} />
+          </button>
         </div>
-        <button className="theme-picker-close" onClick={onClose} type="button" aria-label="Stäng">
-          <X size={18} />
-        </button>
-      </div>
+      )}
 
       <div className="theme-grid">
         {themes.map((theme) => (

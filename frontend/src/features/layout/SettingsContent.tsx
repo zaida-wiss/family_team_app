@@ -2,6 +2,8 @@ import { lazy } from "react";
 import { LogOut } from "lucide-react";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
+import { ThemePicker } from "../../components/ThemePicker";
+import { useAppFont } from "../../components/FontPicker";
 import type { useShellState } from "../../hooks/useShellState";
 
 const AccountSettings = lazy(() =>
@@ -53,9 +55,21 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     canViewTrash,
   } = settingsProps;
 
+  const { fontId, setFontId } = useAppFont();
+
   return (
     <div className="settings-accordion">
-      <SettingsSection title="Konto" defaultOpen>
+      <SettingsSection title="Utseende" defaultOpen>
+        <ThemePicker
+          compact
+          member={currentMember}
+          onSelectTheme={(themeId) => settingsProps.onUpdateMemberTheme(currentMember.id, themeId)}
+          fontId={fontId}
+          onSelectFont={setFontId}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Konto">
         <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
       </SettingsSection>
 

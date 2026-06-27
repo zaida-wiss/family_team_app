@@ -73,10 +73,10 @@
 
 .rejected-todo-card {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: clamp(44px, 6vw, 72px) minmax(0, 1fr) auto;
   gap: 0 12px;
   align-items: center;
-  min-height: 56px;
+  min-height: clamp(56px, 8vw, 88px);
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--c0, #ef4444) 30%, var(--white, #fff));
   border-radius: var(--radius-sm);
@@ -87,8 +87,8 @@
 .rejected-todo-card span {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: clamp(40px, 5.5vw, 66px);
+  height: clamp(40px, 5.5vw, 66px);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--c0, #ef4444) 18%, var(--white, #fff));
   font-weight: 900;

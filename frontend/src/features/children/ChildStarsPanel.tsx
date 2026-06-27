@@ -1,4 +1,4 @@
-import { Banknote, ShoppingBag, Star, Trophy } from "lucide-react";
+import { Banknote, Palette, ShoppingBag, Star, Trophy } from "lucide-react";
 import type { Reward, RewardPathProgress } from "@shared/types";
 import "./ChildStarsPanel.css";
 import "./ChildRewardRail.css";
@@ -9,6 +9,7 @@ type Props = {
   activeReward: Reward | null;
   rewardProgress: RewardPathProgress | null;
   onOpenShop: () => void;
+  onThemePickerOpen: () => void;
 };
 
 export function ChildStarsPanel({
@@ -17,10 +18,21 @@ export function ChildStarsPanel({
   activeReward,
   rewardProgress,
   onOpenShop,
+  onThemePickerOpen,
 }: Props) {
   return (
     <div className="child-bottom-panels">
       <div className="child-stars-panel">
+        <button
+          className="child-theme-button"
+          type="button"
+          onClick={onThemePickerOpen}
+          aria-label="Byt tema"
+          title="Byt tema"
+        >
+          <Palette size={18} />
+        </button>
+
         <div className="child-stars-stat">
           <span>Stjärnor idag</span>
           <strong><Star size={34} fill="currentColor" /> {approvedStarsToday}</strong>
