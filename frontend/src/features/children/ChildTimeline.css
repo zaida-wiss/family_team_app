@@ -164,20 +164,21 @@
 
 .child-tl-event,
 .child-tl-allday {
+  container-type: size;
   position: absolute;
-  left: 44px !important;
-  width: calc(100% - 44px) !important;
+  left: 0 !important;
+  width: 100% !important;
   z-index: 2;
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 7px;
-  min-height: clamp(64px, 8vw, 96px);
-  padding: 7px 9px;
-  border: 1px solid color-mix(in srgb, var(--white, #ffffff) 50%, transparent);
-  border-radius: 18px;
+  align-items: stretch;
+  gap: 5px;
+  min-height: clamp(28px, 4vw, 52px);
+  padding: 3px 6px 3px 3px;
+  border: none;
+  border-left: 3px solid var(--ev-color, var(--c1, #ffb000));
+  border-radius: 0 10px 10px 0;
+  background: color-mix(in srgb, var(--ev-color, var(--c1, #ffb000)) 22%, transparent);
   color: var(--white, #ffffff);
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--black, #000000) 20%, transparent);
   cursor: pointer;
   font: inherit;
   text-align: left;
@@ -190,39 +191,25 @@
   outline-offset: 2px;
 }
 
-.child-tl-event-title,
-.child-tl-event-time {
+.child-tl-event-title {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.child-tl-event-title {
   color: inherit;
-  font-size: clamp(0.62rem, 1.1vw, 0.9rem);
+  font-size: clamp(0.58rem, 1vw, 0.84rem);
   font-weight: 900;
-}
-
-.child-tl-event-time {
-  color: inherit;
-  font-size: clamp(0.52rem, 0.9vw, 0.76rem);
-  font-weight: 900;
-  opacity: 0.9;
-}
-
-.child-tl-event--symbol {
-  align-items: center;
 }
 
 .child-tl-event-symbol {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--white, #ffffff) 28%, transparent);
-  font-size: 1rem;
+  height: 100cqb;
+  aspect-ratio: 1;
+  width: auto;
+  max-width: 50%;
+  font-size: clamp(10px, 82cqb, 56px);
   line-height: 1;
 }
 
@@ -373,12 +360,6 @@
     min-height: calc(100dvh - 112px);
   }
 
-  .child-tl-event,
-  .child-tl-allday {
-    left: 40px !important;
-    width: calc(100% - 40px) !important;
-  }
-
   .child-tl-task-marker {
     width: 16px;
   }
@@ -407,15 +388,6 @@
 
   .child-tl-hour-labels span {
     font-size: 0.68rem;
-  }
-
-  .child-tl-event,
-  .child-tl-allday {
-    left: 34px !important;
-    width: calc(100% - 34px) !important;
-    min-height: 56px;
-    padding: 8px;
-    border-radius: 14px;
   }
 
   .child-tl-task-marker {
@@ -451,13 +423,6 @@
   }
 
   .child-tl-event,
-  .child-tl-allday {
-    left: 29px !important;
-    width: calc(100% - 29px) !important;
-    min-height: 48px;
-    padding: 6px;
-  }
-
   .child-tl-task-marker {
     width: 12px;
   }

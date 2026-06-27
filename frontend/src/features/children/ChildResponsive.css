@@ -12,12 +12,6 @@
     min-height: calc(100dvh - 112px);
   }
 
-  .child-tl-event,
-  .child-tl-allday {
-    left: 40px !important;
-    width: calc(100% - 40px) !important;
-  }
-
   .child-week-nav {
     grid-template-columns: 18px minmax(0, 1fr) 18px;
   }
@@ -61,15 +55,6 @@
         color-mix(in srgb, var(--c2, #fff) 42%, transparent) 25px 27px,
         transparent 28px
       );
-  }
-
-  .child-tl-event,
-  .child-tl-allday {
-    left: 34px !important;
-    width: calc(100% - 34px) !important;
-    min-height: 56px;
-    padding: 8px;
-    border-radius: 14px;
   }
 
   .child-tl-now {
@@ -192,14 +177,6 @@
         color-mix(in srgb, var(--c2, #fff) 42%, transparent) 21px 23px,
         transparent 24px
       );
-  }
-
-  .child-tl-event,
-  .child-tl-allday {
-    left: 29px !important;
-    width: calc(100% - 29px) !important;
-    min-height: 48px;
-    padding: 6px;
   }
 
   .child-tl-now {

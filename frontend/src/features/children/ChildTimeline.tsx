@@ -322,11 +322,10 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
                     type="button"
                     onClick={() => setSelectedEvent(ev)}
                   >
-                    {ev.displaySymbol && <span className="child-tl-event-symbol">{ev.displaySymbol}</span>}
-                    <span className="child-tl-event-copy">
-                      <span className="child-tl-event-time">Heldag</span>
-                      <span className="child-tl-event-title">{ev.title}</span>
-                    </span>
+                    {ev.displaySymbol
+                      ? <span className="child-tl-event-symbol">{ev.displaySymbol}</span>
+                      : <span className="child-tl-event-title">{ev.title}</span>
+                    }
                   </button>
                 ))}
 
@@ -345,19 +344,16 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
                         height: `${height}%`,
                         left,
                         width,
-                        background: ev.color ?? ev.calendarColor,
-                      }}
+                        "--ev-color": ev.color ?? ev.calendarColor,
+                      } as React.CSSProperties}
                       title={`${ev.title} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`}
                       type="button"
                       onClick={() => setSelectedEvent(ev)}
                     >
-                      {ev.displaySymbol && <span className="child-tl-event-symbol">{ev.displaySymbol}</span>}
-                      <span className="child-tl-event-copy">
-                          <span className="child-tl-event-time">
-                            {fmtTime(ev.startsAt)}-{fmtTime(ev.endsAt)}
-                          </span>
-                          <span className="child-tl-event-title">{ev.title}</span>
-                      </span>
+                      {ev.displaySymbol
+                        ? <span className="child-tl-event-symbol">{ev.displaySymbol}</span>
+                        : <span className="child-tl-event-title">{ev.title}</span>
+                      }
                     </button>
                   );
                 })}
