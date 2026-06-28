@@ -33,8 +33,21 @@ function getTodayHeading(date: Date) {
 
 type TaskGroup = { category: string; todos: Todo[] };
 
+function buildTaskGroups(todos: Todo[]): TaskGroup[] {
+  const map = new Map<string, Todo[]>();
+  for (const todo of todos) {
+    const cat = todo.routineCategory ?? "";
+    const bucket = map.get(cat) ?? [];
+    bucket.push(todo);
+    map.set(cat, bucket);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => (!a && b ? 1 : a && !b ? -1 : a.localeCompare(b, "sv")))
+    .map(([category, todos]) => ({ category, todos }));
+}
+
 type Props = {
-  taskGroups: TaskGroup[];
+  todos: Todo[];
   today: Date;
   timerNow: number;
   heldTodoId: Id | null;
@@ -42,7 +55,8 @@ type Props = {
   onClearHold: () => void;
 };
 
-export function ChildTasksSection({ taskGroups, today, timerNow, heldTodoId, onStartHold, onClearHold }: Props) {
+export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartHold, onClearHold }: Props) {
+  const taskGroups = buildTaskGroups(todos);
   if (taskGroups.length === 0) {
     return <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>;
   }

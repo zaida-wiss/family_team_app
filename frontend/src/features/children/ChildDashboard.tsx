@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
 
@@ -11,6 +11,7 @@ import { ChildStarsPanel } from "./ChildStarsPanel";
 import { ChildPendingBadges } from "./ChildPendingBadges";
 import { ChildWishModal } from "./ChildWishModal";
 import { useChildCompleteHold } from "./useChildCompleteHold";
+import { useChildStars } from "./useChildStars";
 import { useRewardShopState } from "../rewards/useRewardShopState";
 import { RewardShopModal } from "../rewards/RewardShopModal";
 
@@ -35,16 +36,6 @@ type Props = {
   onDismissRejectedTodo: (todoId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
 };
-
-function isSameLocalDay(isoStr: string | null, date: Date) {
-  if (!isoStr) return false;
-  const candidate = new Date(isoStr);
-  return (
-    candidate.getFullYear() === date.getFullYear() &&
-    candidate.getMonth() === date.getMonth() &&
-    candidate.getDate() === date.getDate()
-  );
-}
 
 function getWeekStripDays(anchor: Date) {
   const monday = new Date(anchor);
@@ -85,59 +76,21 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
-  const { items: shopItems, purchased, purchase } =
-    useRewardShopState();
-
+  const { items: shopItems, purchased, purchase } = useRewardShopState();
   const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
   );
+  const { approvedStarsToday, totalApprovedStars, availableStars, pendingApprovalTodos } =
+    useChildStars(child.id, timelineTodos, timerNow, localSpentStars);
 
   useEffect(() => {
     const id = window.setInterval(() => setTimerNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
-  const taskGroups = useMemo(() => {
-    const map = new Map<string, Todo[]>();
-    for (const todo of activeChildTodos) {
-      const cat = todo.routineCategory ?? "";
-      const bucket = map.get(cat) ?? [];
-      bucket.push(todo);
-      map.set(cat, bucket);
-    }
-    return [...map.entries()]
-      .sort(([a], [b]) => (!a && b ? 1 : a && !b ? -1 : a.localeCompare(b, "sv")))
-      .map(([category, todos]) => ({ category, todos }));
-  }, [activeChildTodos]);
-
   const today = new Date(timerNow);
   const weekStripDays = getWeekStripDays(selectedDay);
-
-  const approvedStarsToday = timelineTodos
-    .filter(
-      (t) =>
-        t.assignedTo === child.id &&
-        t.status === "approved" &&
-        t.deletedAt === null &&
-        isSameLocalDay(t.approvedAt ?? t.completedAt, today)
-    )
-    .reduce((sum, t) => sum + t.starValue, 0);
-
-  const totalApprovedStars = timelineTodos
-    .filter((t) => t.assignedTo === child.id && t.status === "approved" && t.deletedAt === null)
-    .reduce((sum, t) => sum + t.starValue, 0);
-
-  const availableStars = totalApprovedStars - localSpentStars;
-
-  const pendingApprovalTodos = timelineTodos
-    .filter((t) => t.assignedTo === child.id && t.status === "done" && t.deletedAt === null)
-    .sort((a, b) => {
-      const tA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-      const tB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
-      return tB - tA;
-    })
-    .slice(0, 8);
 
   function moveWeek(direction: -1 | 1) {
     setSelectedDay((cur) => {
@@ -174,7 +127,7 @@ export function ChildDashboard({
           <ChildHero childName={child.name} avatarUrl={child.avatarUrl} today={today} />
 
           <ChildTasksSection
-            taskGroups={taskGroups}
+            todos={activeChildTodos}
             today={today}
             timerNow={timerNow}
             heldTodoId={heldTodoId}
