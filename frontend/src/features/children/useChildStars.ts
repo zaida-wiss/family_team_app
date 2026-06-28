@@ -17,23 +17,18 @@ export function useChildStars(
   timerNow: number,
   localSpentStars: number
 ) {
-  const today = new Date(timerNow);
-
-  const approvedStarsToday = useMemo(
-    () =>
-      timelineTodos
-        .filter(
-          (t) =>
-            t.assignedTo === childId &&
-            t.status === "approved" &&
-            t.deletedAt === null &&
-            isSameLocalDay(t.approvedAt ?? t.completedAt, today)
-        )
-        .reduce((sum, t) => sum + t.starValue, 0),
-    // timerNow drives today — include it so the filter re-runs at midnight
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [timelineTodos, childId, timerNow]
-  );
+  const approvedStarsToday = useMemo(() => {
+    const today = new Date(timerNow);
+    return timelineTodos
+      .filter(
+        (t) =>
+          t.assignedTo === childId &&
+          t.status === "approved" &&
+          t.deletedAt === null &&
+          isSameLocalDay(t.approvedAt ?? t.completedAt, today)
+      )
+      .reduce((sum, t) => sum + t.starValue, 0);
+  }, [timelineTodos, childId, timerNow]);
 
   const totalApprovedStars = useMemo(
     () =>
