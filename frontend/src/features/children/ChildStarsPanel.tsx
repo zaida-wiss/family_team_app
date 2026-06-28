@@ -1,5 +1,7 @@
 import { Banknote, Palette, ShoppingBag, Star, Trophy } from "lucide-react";
+import { useState } from "react";
 import type { Reward, RewardPathProgress } from "@shared/types";
+import { ChildBanknotesModal } from "./ChildBanknotesModal";
 import "./ChildStarsPanel.css";
 import "./ChildRewardRail.css";
 
@@ -20,6 +22,8 @@ export function ChildStarsPanel({
   onOpenShop,
   onThemePickerOpen,
 }: Props) {
+  const [showBanknotes, setShowBanknotes] = useState(false);
+
   return (
     <div className="child-bottom-panels">
       <div className="child-stars-panel">
@@ -51,16 +55,25 @@ export function ChildStarsPanel({
           </span>
         </button>
 
-        <div
+        <button
           className="child-money-card"
-          aria-label={`${totalApprovedStars} stjärnor är ${totalApprovedStars} kronor`}
+          type="button"
+          aria-label={`${totalApprovedStars} kr — se i sedlar`}
+          onClick={() => setShowBanknotes(true)}
         >
           <Banknote size={28} />
           <span>
             <strong>{totalApprovedStars} stjärnor</strong>
             <small>= {totalApprovedStars} kr</small>
           </span>
-        </div>
+        </button>
+
+        {showBanknotes && (
+          <ChildBanknotesModal
+            totalKronor={totalApprovedStars}
+            onClose={() => setShowBanknotes(false)}
+          />
+        )}
 
         {activeReward && rewardProgress && (
           <div className="child-active-reward-mini">

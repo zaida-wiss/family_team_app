@@ -1,0 +1,305 @@
+.bm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: color-mix(in srgb, #000 48%, transparent);
+  display: flex;
+  align-items: flex-end;
+}
+
+.bm-sheet {
+  width: 100%;
+  max-height: 88dvh;
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bm-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+/* ── Header ── */
+
+.bm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 18px 0;
+  flex-shrink: 0;
+}
+
+.bm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bm-back {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  background: var(--muted);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--muted-fg);
+}
+
+.bm-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: var(--foreground);
+}
+
+.bm-amount {
+  font-size: 1.6rem;
+  font-weight: 900;
+  margin: 0;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.bm-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  background: var(--muted);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--muted-fg);
+}
+
+.bm-credit {
+  padding: 2px 18px 0;
+  font-size: 0.68rem;
+  color: var(--muted-fg);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ── Scrollable body ── */
+
+.bm-content {
+  overflow-y: auto;
+  padding: 12px 18px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bm-empty {
+  padding: 32px 18px;
+  text-align: center;
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+}
+
+/* ── Banken-knapp ── */
+
+.bm-bank-btn {
+  margin: 8px 18px 12px;
+  padding: 10px 0;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Uppdelningsvy: sedlar ── */
+
+.bm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bm-note-row,
+.bm-coin-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bm-note-wrap,
+.bm-coin-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Sedlar: alla 66 mm höga; bredd proportionell mot fysisk längd (referens: 80 px = 66 mm) */
+.bm-note-img {
+  height: 80px;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Fysiska mått: 20=120mm, 50=126mm, 100=133mm, 200=140mm, 500=148mm, 1000=155mm */
+.bm-note-img[data-note="20"]   { width: 145px; }
+.bm-note-img[data-note="50"]   { width: 153px; }
+.bm-note-img[data-note="100"]  { width: 161px; }
+.bm-note-img[data-note="200"]  { width: 170px; }
+.bm-note-img[data-note="500"]  { width: 179px; }
+.bm-note-img[data-note="1000"] { width: 188px; }
+
+.bm-note-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+/* ── Uppdelningsvy: mynt ── */
+
+.bm-coins-section {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+/* Mynt: diameter — 5 kr=23.75mm, 2 kr=22.5mm, 10 kr=20.5mm, 1 kr=19.5mm */
+.bm-coin-img {
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.bm-coin-img[data-coin="1"]  { width: 59px;  height: 59px; }
+.bm-coin-img[data-coin="2"]  { width: 68px;  height: 68px; }
+.bm-coin-img[data-coin="5"]  { width: 72px;  height: 72px; }
+.bm-coin-img[data-coin="10"] { width: 62px;  height: 62px; }
+
+/* ── Räknare badge ── */
+
+.bm-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── Bankvyn ── */
+
+.bm-bank-intro {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted-fg);
+}
+
+.bm-bank-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bm-bank-coins-section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.bm-bank-note,
+.bm-bank-coin {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bm-bank-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bm-bank-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Bankvy sedlar: dubbel storlek mot uppdelningsvy */
+.bm-bank-img.bm-bank-note-img {
+  height: 72px;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  display: block;
+}
+
+.bm-bank-img.bm-bank-note-img[data-note="20"]   { width: 131px; }
+.bm-bank-img.bm-bank-note-img[data-note="50"]   { width: 137px; }
+.bm-bank-img.bm-bank-note-img[data-note="100"]  { width: 145px; }
+.bm-bank-img.bm-bank-note-img[data-note="200"]  { width: 153px; }
+.bm-bank-img.bm-bank-note-img[data-note="500"]  { width: 161px; }
+.bm-bank-img.bm-bank-note-img[data-note="1000"] { width: 169px; }
+
+/* Bankvy mynt: något större */
+.bm-bank-img.bm-bank-coin-img {
+  object-fit: contain;
+  display: block;
+}
+
+.bm-bank-img.bm-bank-coin-img[data-coin="1"]  { width: 80px;  height: 80px; }
+.bm-bank-img.bm-bank-coin-img[data-coin="2"]  { width: 92px;  height: 92px; }
+.bm-bank-img.bm-bank-coin-img[data-coin="5"]  { width: 98px;  height: 98px; }
+.bm-bank-img.bm-bank-coin-img[data-coin="10"] { width: 84px;  height: 84px; }
+
+@media (min-width: 480px) {
+  .bm-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .bm-note-row,
+  .bm-coin-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bm-bank-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .bm-bank-sides {
+    flex-direction: row;
+  }
+}
