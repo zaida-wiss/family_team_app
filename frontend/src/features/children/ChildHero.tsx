@@ -1,5 +1,4 @@
 import "./ChildHero.css";
-import { LogOut } from "lucide-react";
 import { cloudinaryUrl } from "../../utils/uploadImage";
 
 const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
@@ -11,7 +10,7 @@ type Props = {
   onLogout: () => Promise<void>;
 };
 
-export function ChildHero({ childName, avatarUrl, today, onLogout }: Props) {
+export function ChildHero({ childName, avatarUrl, today }: Props) {
   return (
     <header className="child-hero">
       <div>
@@ -25,9 +24,6 @@ export function ChildHero({ childName, avatarUrl, today, onLogout }: Props) {
             ? <img src={cloudinaryUrl(avatarUrl, "hero")} alt="" loading="lazy" decoding="async" />
             : <span>🦊</span>}
         </div>
-        <button className="child-logout-btn" onClick={onLogout} title="Logga ut" type="button">
-          <LogOut size={16} />
-        </button>
       </div>
     </header>
   );
