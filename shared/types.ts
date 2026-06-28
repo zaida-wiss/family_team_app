@@ -113,6 +113,19 @@ export type RewardShopItem = {
   deletedAt: string | null;
 };
 
+export type PurchasedReward = {
+  id: Id;
+  accountId: Id;
+  memberId: Id;
+  itemTitle: string;
+  itemSymbol: string | null;
+  starCost: number;
+  purchasedAt: string;
+  startsAt: string;
+  durationMinutes: number | null;
+  deletedAt: string | null;
+};
+
 export type PermissionKey =
   | "canManageMembers"
   | "canManageRoles"

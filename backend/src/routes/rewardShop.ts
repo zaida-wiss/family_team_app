@@ -19,6 +19,22 @@ rewardShopRouter.delete("/items/:itemId", requireAuth, async (req, res) => {
 });
 
 rewardShopRouter.post("/purchase/:itemId", requireAuth, async (req, res) => {
-  const item = await shop.purchaseItem(req.params.itemId, req.memberId!);
-  res.json(item);
+  const forMemberId: string = req.body.forMemberId ?? req.memberId!;
+  const purchased = await shop.purchaseItem(req.params.itemId, forMemberId);
+  res.json(purchased);
+});
+
+rewardShopRouter.get("/purchased", requireAuth, async (req, res) => {
+  const accountId = await shop.accountIdOf(req.memberId!);
+  res.json(await shop.getPurchasedRewards(accountId));
+});
+
+rewardShopRouter.patch("/purchased/:id/move", requireAuth, async (req, res) => {
+  await shop.movePurchasedReward(req.params.id, req.body.startsAt);
+  res.json({ ok: true });
+});
+
+rewardShopRouter.delete("/purchased/:id", requireAuth, async (req, res) => {
+  await shop.deletePurchasedReward(req.params.id);
+  res.json({ ok: true });
 });

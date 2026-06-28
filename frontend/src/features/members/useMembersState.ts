@@ -95,6 +95,17 @@ export function useMembersState() {
     updateMemberAvatar(memberId, null);
   }
 
+  function refundPurchase(memberId: Id, amount: number) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) return member;
+        const spentStars = Math.max(0, (member.spentStars ?? 0) - amount);
+        membersApi.update(memberId, { spentStars }).catch(console.error);
+        return { ...member, spentStars };
+      })
+    );
+  }
+
   function updateMemberColor(memberId: Id, color: string | null) {
     setMembers((current) =>
       current.map((member) => {
@@ -162,6 +173,7 @@ export function useMembersState() {
     updateChildTimelineSettings,
     updateMemberNavigation,
     assignRole,
-    clearMemberAvatar
+    clearMemberAvatar,
+    refundPurchase
   };
 }

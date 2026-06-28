@@ -1,13 +1,18 @@
 import "./RewardShopSettings.css";
 import { useState } from "react";
-import type { RewardShopItem } from "@shared/types";
+import type { Member, PurchasedReward, RewardShopItem } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 
 type Props = {
   items: RewardShopItem[];
   currentMemberId: string;
+  children: Member[];
+  purchased: PurchasedReward[];
   onAdd: (item: RewardShopItem) => void;
   onRemove: (itemId: string) => void;
+  onRefund: (childId: string, amount: number) => void;
+  onMovePurchased: (id: string, startsAt: string) => void;
+  onDeletePurchased: (id: string) => void;
 };
 
 type FormState = {
@@ -19,7 +24,7 @@ type FormState = {
 
 const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null });
 
-export function RewardShopSettings({ items, currentMemberId, onAdd, onRemove }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
   const [form, setForm] = useState<FormState>(blank());
 
   function submit(e: React.FormEvent) {
@@ -111,6 +116,66 @@ export function RewardShopSettings({ items, currentMemberId, onAdd, onRemove }: 
             </li>
           ))}
         </ul>
+      )}
+
+      {children.some((c) => (c.spentStars ?? 0) > 0) && items.length > 0 && (
+        <div className="reward-shop-settings__refund">
+          <p className="reward-shop-settings__refund-heading">Ångra köp</p>
+          {children
+            .filter((c) => (c.spentStars ?? 0) > 0)
+            .map((child) => (
+              <div key={child.id} className="reward-shop-settings__refund-child">
+                <span className="reward-shop-settings__refund-name">
+                  {child.name} · ⭐ {child.spentStars} spenderade
+                </span>
+                <div className="reward-shop-settings__refund-items">
+                  {items.map((item) => (
+                    <button
+                      key={item.id}
+                      className="reward-shop-settings__refund-btn"
+                      onClick={() => onRefund(child.id, item.starCost)}
+                      disabled={(child.spentStars ?? 0) < item.starCost}
+                    >
+                      {item.symbol ?? "🎁"} {item.title} (−⭐ {item.starCost})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {purchased.length > 0 && (
+        <div className="reward-shop-settings__purchased">
+          <p className="reward-shop-settings__refund-heading">Uthämtade belöningar</p>
+          {purchased.map((pr) => {
+            const child = children.find((c) => c.id === pr.memberId);
+            const localStart = new Date(pr.startsAt).toISOString().slice(0, 16);
+            return (
+              <div key={pr.id} className="reward-shop-settings__purchased-row">
+                <span className="reward-shop-settings__purchased-symbol">{pr.itemSymbol ?? "🎁"}</span>
+                <div className="reward-shop-settings__purchased-info">
+                  <span className="reward-shop-settings__purchased-title">{pr.itemTitle}</span>
+                  {child && <span className="reward-shop-settings__purchased-child">{child.name}</span>}
+                </div>
+                <input
+                  type="datetime-local"
+                  className="reward-shop-settings__purchased-time"
+                  defaultValue={localStart}
+                  onBlur={(e) => {
+                    if (e.target.value) {
+                      onMovePurchased(pr.id, new Date(e.target.value).toISOString());
+                    }
+                  }}
+                />
+                <button
+                  className="reward-shop-settings__remove"
+                  onClick={() => onDeletePurchased(pr.id)}
+                >✕</button>
+              </div>
+            );
+          })}
+        </div>
       )}
     </section>
   );

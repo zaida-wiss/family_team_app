@@ -55,10 +55,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     canManageMembers,
     canManageRoles,
     canViewTrash,
+    onRefundPurchase,
   } = settingsProps;
 
   const { fontId, setFontId } = useAppFont();
-  const { items: shopItems, addItem: addShopItem, removeItem: removeShopItem } = useRewardShopState();
+  const { items: shopItems, purchased, addItem: addShopItem, removeItem: removeShopItem, movePurchased, deletePurchased } = useRewardShopState();
 
   return (
     <div className="settings-accordion">
@@ -76,8 +77,13 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         <RewardShopSettings
           items={shopItems}
           currentMemberId={currentMember.id}
+          children={members.filter((m) => m.deletedAt === null && m.isChild)}
+          purchased={purchased}
           onAdd={(item) => { void addShopItem(item); }}
           onRemove={(id) => { void removeShopItem(id); }}
+          onRefund={onRefundPurchase}
+          onMovePurchased={(id, startsAt) => { void movePurchased(id, startsAt); }}
+          onDeletePurchased={(id) => { void deletePurchased(id); }}
         />
       </SettingsSection>
 

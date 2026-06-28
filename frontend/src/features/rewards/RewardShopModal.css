@@ -54,6 +54,55 @@
   background: var(--bg-hover, #f0f0f0);
 }
 
+.reward-shop-modal__active {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border, #eee);
+  padding-bottom: 16px;
+}
+
+.reward-shop-modal__purchased {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 10px;
+}
+
+.reward-shop-modal__purchased-symbol {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.reward-shop-modal__purchased-title {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+}
+
+.reward-shop-modal__purchased-meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #888);
+}
+
+.reward-shop-modal__purchased-close {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.reward-shop-modal__purchased-close:hover {
+  background: var(--bg-hover, #eee);
+}
+
 .reward-shop-modal__empty {
   text-align: center;
   color: var(--text-secondary, #666);

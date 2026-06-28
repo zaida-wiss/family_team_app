@@ -1,14 +1,15 @@
 import "./RewardShopModal.css";
-import type { RewardShopItem } from "@shared/types";
+import type { PurchasedReward, RewardShopItem } from "@shared/types";
 
 type Props = {
   items: RewardShopItem[];
   availableStars: number;
+  purchased: PurchasedReward[];
   onPurchase: (item: RewardShopItem) => void;
   onClose: () => void;
 };
 
-export function RewardShopModal({ items, availableStars, onPurchase, onClose }: Props) {
+export function RewardShopModal({ items, availableStars, purchased, onPurchase, onClose }: Props) {
   return (
     <div className="reward-shop-overlay" onClick={onClose}>
       <div className="reward-shop-modal" onClick={(e) => e.stopPropagation()}>
@@ -17,6 +18,20 @@ export function RewardShopModal({ items, availableStars, onPurchase, onClose }: 
           <span className="reward-shop-modal__stars">⭐ {availableStars}</span>
           <button className="reward-shop-modal__close" onClick={onClose}>✕</button>
         </div>
+
+        {purchased.length > 0 && (
+          <div className="reward-shop-modal__active">
+            {purchased.map((pr) => (
+              <div key={pr.id} className="reward-shop-modal__purchased">
+                <span className="reward-shop-modal__purchased-symbol">{pr.itemSymbol ?? "🎁"}</span>
+                <span className="reward-shop-modal__purchased-title">{pr.itemTitle}</span>
+                {pr.durationMinutes !== null && (
+                  <span className="reward-shop-modal__purchased-meta">⏱ {pr.durationMinutes} min</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {items.length === 0 ? (
           <p className="reward-shop-modal__empty">Inga belöningar finns än.</p>

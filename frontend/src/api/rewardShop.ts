@@ -1,4 +1,4 @@
-import type { RewardShopItem } from "@shared/types";
+import type { PurchasedReward, RewardShopItem } from "@shared/types";
 import { api, request } from "./client";
 
 export const rewardShopApi = {
@@ -10,9 +10,17 @@ export const rewardShopApi = {
     }),
   removeItem: (itemId: string) =>
     request<{ ok: boolean }>(api(`reward-shop/items/${itemId}`), { method: "DELETE" }),
-  purchase: (itemId: string) =>
-    request<RewardShopItem>(api(`reward-shop/purchase/${itemId}`), {
+  purchase: (itemId: string, forMemberId: string) =>
+    request<PurchasedReward>(api(`reward-shop/purchase/${itemId}`), {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ forMemberId }),
     }),
+  getPurchased: () => request<PurchasedReward[]>(api("reward-shop/purchased")),
+  movePurchased: (id: string, startsAt: string) =>
+    request<{ ok: boolean }>(api(`reward-shop/purchased/${id}/move`), {
+      method: "PATCH",
+      body: JSON.stringify({ startsAt }),
+    }),
+  deletePurchased: (id: string) =>
+    request<{ ok: boolean }>(api(`reward-shop/purchased/${id}`), { method: "DELETE" }),
 };

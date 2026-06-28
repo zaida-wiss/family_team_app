@@ -28,7 +28,8 @@ export function useAppState(initialMembership: ActiveMembership) {
     updateChildTimelineSettings,
     updateMemberNavigation,
     assignRole,
-    clearMemberAvatar
+    clearMemberAvatar,
+    refundPurchase
   } = useMembersState();
   const todosState = useTodosState();
   const calendarsState = useCalendarsState();
@@ -98,6 +99,7 @@ export function useAppState(initialMembership: ActiveMembership) {
     updateMemberNavigation,
     assignRole,
     clearMemberAvatar,
+    refundPurchase,
     todosState,
     calendarsState,
     shoppingState,

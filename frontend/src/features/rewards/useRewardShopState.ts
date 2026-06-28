@@ -1,19 +1,16 @@
 import { useEffect, useState } from "react";
 import { rewardShopApi } from "../../api";
-import type { RewardShopItem } from "@shared/types";
+import type { PurchasedReward, RewardShopItem } from "@shared/types";
 
-export type ActiveReward = {
-  item: RewardShopItem;
-  purchasedAt: number;
-  timerEndsAt: number | null;
-};
+export type { PurchasedReward };
 
 export function useRewardShopState() {
   const [items, setItems] = useState<RewardShopItem[]>([]);
-  const [activeRewards, setActiveRewards] = useState<ActiveReward[]>([]);
+  const [purchased, setPurchased] = useState<PurchasedReward[]>([]);
 
   useEffect(() => {
     rewardShopApi.getItems().then(setItems).catch(console.error);
+    rewardShopApi.getPurchased().then(setPurchased).catch(console.error);
   }, []);
 
   async function addItem(item: RewardShopItem) {
@@ -26,29 +23,22 @@ export function useRewardShopState() {
     setItems((prev) => prev.filter((i) => i.id !== itemId));
   }
 
-  async function purchase(item: RewardShopItem, onStarDeducted: (cost: number) => void) {
-    await rewardShopApi.purchase(item.id);
-    onStarDeducted(item.starCost);
-    const active: ActiveReward = {
-      item,
-      purchasedAt: Date.now(),
-      timerEndsAt: null,
-    };
-    setActiveRewards((prev) => [...prev, active]);
+  async function purchase(item: RewardShopItem, forMemberId: string) {
+    const pr = await rewardShopApi.purchase(item.id, forMemberId);
+    setPurchased((prev) => [...prev, pr]);
   }
 
-  function startTimer(itemId: string) {
-    setActiveRewards((prev) =>
-      prev.map((ar) => {
-        if (ar.item.id !== itemId || ar.item.timerMinutes === null) return ar;
-        return { ...ar, timerEndsAt: Date.now() + ar.item.timerMinutes * 60 * 1000 };
-      })
+  async function movePurchased(id: string, startsAt: string) {
+    await rewardShopApi.movePurchased(id, startsAt);
+    setPurchased((prev) =>
+      prev.map((pr) => (pr.id === id ? { ...pr, startsAt } : pr))
     );
   }
 
-  function dismissReward(itemId: string) {
-    setActiveRewards((prev) => prev.filter((ar) => ar.item.id !== itemId));
+  async function deletePurchased(id: string) {
+    await rewardShopApi.deletePurchased(id);
+    setPurchased((prev) => prev.filter((pr) => pr.id !== id));
   }
 
-  return { items, activeRewards, addItem, removeItem, purchase, startTimer, dismissReward };
+  return { items, purchased, addItem, removeItem, purchase, movePurchased, deletePurchased };
 }

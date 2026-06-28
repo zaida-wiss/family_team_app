@@ -13,7 +13,6 @@ import { ChildWishModal } from "./ChildWishModal";
 import { useChildCompleteHold } from "./useChildCompleteHold";
 import { useRewardShopState } from "../rewards/useRewardShopState";
 import { RewardShopModal } from "../rewards/RewardShopModal";
-import { ActiveReward } from "../rewards/ActiveReward";
 
 import "./ChildDashboard.css";
 import "./ChildResponsive.css";
@@ -84,8 +83,9 @@ export function ChildDashboard({
   });
   const [isWishModalOpen, setIsWishModalOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
-  const { items: shopItems, activeRewards, purchase, startTimer, dismissReward } =
+  const { items: shopItems, purchased, purchase } =
     useRewardShopState();
 
   const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
@@ -128,7 +128,7 @@ export function ChildDashboard({
     .filter((t) => t.assignedTo === child.id && t.status === "approved" && t.deletedAt === null)
     .reduce((sum, t) => sum + t.starValue, 0);
 
-  const availableStars = totalApprovedStars - (child.spentStars ?? 0);
+  const availableStars = totalApprovedStars - localSpentStars;
 
   const pendingApprovalTodos = timelineTodos
     .filter((t) => t.assignedTo === child.id && t.status === "done" && t.deletedAt === null)
@@ -158,6 +158,7 @@ export function ChildDashboard({
             roles={roles}
             selectedDay={selectedDay}
             todos={timelineTodos}
+            purchased={purchased.filter((pr) => pr.memberId === child.id)}
           />
         </div>
 
@@ -190,7 +191,7 @@ export function ChildDashboard({
             <ChildPendingBadges todos={pendingApprovalTodos} />
             <ChildStarsPanel
               approvedStarsToday={approvedStarsToday}
-              totalApprovedStars={totalApprovedStars}
+              totalApprovedStars={availableStars}
               activeReward={activeReward}
               rewardProgress={rewardProgress}
               onOpenShop={() => setIsShopOpen(true)}
@@ -215,25 +216,14 @@ export function ChildDashboard({
         </div>
       </div>
 
-      {activeRewards.length > 0 && (
-        <div className="child-active-rewards">
-          {activeRewards.map((ar) => (
-            <ActiveReward
-              key={ar.item.id}
-              reward={ar}
-              onStartTimer={startTimer}
-              onDismiss={dismissReward}
-            />
-          ))}
-        </div>
-      )}
-
       {isShopOpen && (
         <RewardShopModal
           items={shopItems}
           availableStars={availableStars}
+          purchased={purchased}
           onPurchase={(item) => {
-            void purchase(item, () => {});
+            setLocalSpentStars((s) => s + item.starCost);
+            void purchase(item, child.id);
           }}
           onClose={() => setIsShopOpen(false)}
         />

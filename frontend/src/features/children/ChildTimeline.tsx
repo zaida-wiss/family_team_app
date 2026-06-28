@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MapPin, Star, X } from "lucide-react";
-import type { Calendar, Member, Role, Todo } from "@shared/types";
+import type { Calendar, Member, PurchasedReward, Role, Todo } from "@shared/types";
 import "./ChildTimeline.css";
 import { expandForRange, fmtTime, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
@@ -162,9 +162,10 @@ type Props = {
   roles: Role[];
   selectedDay: Date;
   todos: Todo[];
+  purchased: PurchasedReward[];
 };
 
-export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: Props) {
+export function ChildTimeline({ calendars, child, roles, selectedDay, todos, purchased }: Props) {
   const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
   const todayStr = toLocalDateStr(new Date());
 
@@ -290,6 +291,10 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
     timelineRange
   );
 
+  const dayPurchased = purchased.filter(
+    (pr) => toLocalDateStr(new Date(pr.startsAt)) === selectedDayStr
+  );
+
   return (
     <section className="child-timeline" aria-label="Min dag">
       <div className="child-tl-days">
@@ -328,6 +333,36 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos }: P
                           </span>
                         ))}
                       </span>
+                    </div>
+                  );
+                })}
+
+                {/* Purchased rewards */}
+                {dayPurchased.map((pr) => {
+                  const top = timePct(pr.startsAt, timelineRange);
+                  if (pr.durationMinutes === null) {
+                    return (
+                      <div
+                        key={pr.id}
+                        className="child-tl-reward-pin"
+                        style={{ top: `${top}%` }}
+                        title={pr.itemTitle}
+                      >
+                        {pr.itemSymbol ?? "🎁"}
+                      </div>
+                    );
+                  }
+                  const endsAt = new Date(new Date(pr.startsAt).getTime() + pr.durationMinutes * 60000).toISOString();
+                  const height = durPct(pr.startsAt, endsAt, timelineRange);
+                  return (
+                    <div
+                      key={pr.id}
+                      className="child-tl-reward-block"
+                      style={{ top: `${top}%`, height: `${height}%` }}
+                      title={`${pr.itemTitle} · ${fmtTime(pr.startsAt)}–${fmtTime(endsAt)}`}
+                    >
+                      <span className="child-tl-reward-block__symbol">{pr.itemSymbol ?? "🎁"}</span>
+                      <span className="child-tl-reward-block__title">{pr.itemTitle}</span>
                     </div>
                   );
                 })}

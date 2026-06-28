@@ -141,3 +141,59 @@
   background: var(--bg-hover, #eee);
   color: var(--c2, #ef4444);
 }
+
+.reward-shop-settings__refund {
+  margin-top: 16px;
+  border-top: 1px solid var(--border, #eee);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reward-shop-settings__refund-heading {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #888);
+  margin: 0;
+}
+
+.reward-shop-settings__refund-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reward-shop-settings__refund-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+}
+
+.reward-shop-settings__refund-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reward-shop-settings__refund-btn {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border: 1.5px solid var(--border, #ddd);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8f8f8);
+  color: var(--text-primary, #111);
+  cursor: pointer;
+}
+
+.reward-shop-settings__refund-btn:hover:not(:disabled) {
+  border-color: var(--c2, #ef4444);
+  color: var(--c2, #ef4444);
+}
+
+.reward-shop-settings__refund-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
