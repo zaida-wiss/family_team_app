@@ -1,4 +1,5 @@
 import "./ChildHero.css";
+import { cloudinaryUrl } from "../../utils/uploadImage";
 
 const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
@@ -18,7 +19,9 @@ export function ChildHero({ childName, avatarUrl, today }: Props) {
       </div>
       <div className="child-hero-actions">
         <div className="child-hero-avatar" aria-hidden="true">
-          {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>🦊</span>}
+          {avatarUrl
+            ? <img src={cloudinaryUrl(avatarUrl, "hero")} alt="" loading="lazy" decoding="async" />
+            : <span>🦊</span>}
         </div>
       </div>
     </header>

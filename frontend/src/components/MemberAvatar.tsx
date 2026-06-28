@@ -1,6 +1,7 @@
 import "./MemberAvatar.css";
 import { Baby, Users } from "lucide-react";
 import type { Member } from "@shared/types";
+import { cloudinaryUrl } from "../utils/uploadImage";
 
 type MemberAvatarProps = {
   member: Member;
@@ -19,7 +20,12 @@ export function MemberAvatar({
   return (
     <span className={`avatar-frame avatar-${size}`}>
       {member.avatarUrl ? (
-        <img alt="" src={member.avatarUrl} />
+        <img
+          alt=""
+          src={cloudinaryUrl(member.avatarUrl, size)}
+          loading="lazy"
+          decoding="async"
+        />
       ) : (
         <span className="avatar-icon">
           {member.isChild ? (

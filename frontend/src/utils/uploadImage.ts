@@ -1,3 +1,13 @@
+// px att begära från Cloudinary per displaystorlek (minst 2× retina-marginal)
+const CLOUDINARY_PX: Record<string, number> = { large: 200, xs: 80, small: 60, hero: 240 };
+
+export function cloudinaryUrl(url: string, size: string): string {
+  if (!url.includes("res.cloudinary.com")) return url;
+  const px = CLOUDINARY_PX[size] ?? 200;
+  const transform = `w_${px},h_${px},c_fill,q_auto,f_auto`;
+  return url.replace(/\/upload\/(?:[^/]+\/)?/, `/upload/${transform}/`);
+}
+
 export async function uploadImage(file: File, folder = "uploads"): Promise<string> {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
   const preset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string;
@@ -15,6 +25,6 @@ export async function uploadImage(file: File, folder = "uploads"): Promise<strin
   if (!resp.ok) throw new Error("Uppladdning misslyckades");
 
   const data = await resp.json() as { secure_url: string };
-  // Begär 400×400 crop + auto-format direkt från Cloudinary CDN
-  return data.secure_url.replace("/upload/", "/upload/w_400,h_400,c_fill,q_auto,f_auto/");
+  // Spara rå URL — transforms appliceras vid rendering beroende på displaystorlek
+  return data.secure_url;
 }
