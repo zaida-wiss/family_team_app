@@ -5,6 +5,19 @@ export type EmojiEntry = {
 };
 
 export const EMOJIS: EmojiEntry[] = [
+  // ── Familj & personer ───────────────────────────────────────────
+  { emoji: "👶", label: "Baby", keywords: ["baby", "spädbarn", "liten", "nyfödd"] },
+  { emoji: "🍼", label: "Nappflaska", keywords: ["nappflaska", "baby", "mjölk", "mata"] },
+  { emoji: "🧒", label: "Litet barn", keywords: ["barn", "liten", "ung"] },
+  { emoji: "👦", label: "Pojke", keywords: ["pojke", "son", "kille", "barn"] },
+  { emoji: "👧", label: "Flicka", keywords: ["flicka", "dotter", "tjej", "barn"] },
+  { emoji: "👨", label: "Man", keywords: ["man", "pappa", "far", "vuxen"] },
+  { emoji: "👩", label: "Kvinna", keywords: ["kvinna", "mamma", "mor", "vuxen"] },
+  { emoji: "👴", label: "Morfar/Farfar", keywords: ["morfar", "farfar", "farfar", "gammelfar", "äldre"] },
+  { emoji: "👵", label: "Mormor/Farmor", keywords: ["mormor", "farmor", "gammelmorsa", "äldre"] },
+  { emoji: "👨‍👩‍👦", label: "Familj", keywords: ["familj", "alla", "tillsammans", "hem"] },
+  { emoji: "👫", label: "Par", keywords: ["par", "ihop", "kärlek", "dejt"] },
+
   // ── Ansikten & känslor ──────────────────────────────────────────
   { emoji: "😀", label: "Glad", keywords: ["glad", "lycklig", "leende"] },
   { emoji: "😁", label: "Stort leende", keywords: ["glad", "lycklig", "glatt"] },
@@ -219,13 +232,16 @@ export const EMOJIS: EmojiEntry[] = [
   // ── Hygien & hemmarutiner ────────────────────────────────────────
   { emoji: "🚿", label: "Dusch", keywords: ["dusch", "duscha", "tvätta", "hygien", "bad", "dush"] },
   { emoji: "🛁", label: "Badkar", keywords: ["badkar", "bad", "bada", "hygien"] },
-  { emoji: "🪥", label: "Tandborste", keywords: ["tänderna", "tandborste", "borsta tänder", "hygien"] },
+  { emoji: "🦷", label: "Tand", keywords: ["tand", "tänder", "tandvård", "hygien"] },
+  { emoji: "🪥", label: "Tandborste", keywords: ["tand", "tänder", "tandborste", "borsta tänder", "hygien"] },
   { emoji: "🧼", label: "Tvål", keywords: ["tvål", "tvätta händer", "hygien", "rengöra"] },
   { emoji: "🧴", label: "Lotion", keywords: ["lotion", "schampo", "kräm", "hår", "hudvård"] },
   { emoji: "🧻", label: "Toalettpapper", keywords: ["toalettpapper", "papper", "toa"] },
   { emoji: "🪒", label: "Rakapparat", keywords: ["raka sig", "rakning", "rakapparat"] },
+  { emoji: "💈", label: "Frisör", keywords: ["frisör", "klippa", "hår", "salong", "barberare"] },
   { emoji: "💊", label: "Medicin", keywords: ["medicin", "piller", "tablett"] },
-  { emoji: "🩺", label: "Stetoskop", keywords: ["läkare", "stetoskop", "hälsa", "doktor"] },
+  { emoji: "💉", label: "Vaccin", keywords: ["vaccin", "spruta", "vaccination", "bvc", "läkare"] },
+  { emoji: "🩺", label: "Läkare", keywords: ["läkare", "doktor", "hälsa", "besök", "mottagning"] },
   { emoji: "🩹", label: "Plåster", keywords: ["plåster", "sår", "hälsa"] },
   { emoji: "🧹", label: "Städa", keywords: ["städa", "kvast", "rengöra", "sopa"] },
   { emoji: "🧺", label: "Tvättkorg", keywords: ["tvätta", "kläder", "tvättmaskin", "smutstvätt"] },
@@ -262,7 +278,10 @@ export const EMOJIS: EmojiEntry[] = [
   // ── Arbete & produktivitet ──────────────────────────────────────
   { emoji: "💻", label: "Dator", keywords: ["dator", "laptop", "jobba", "arbete"] },
   { emoji: "🖥️", label: "Skärm", keywords: ["dator", "skärm", "arbete"] },
-  { emoji: "📱", label: "Telefon", keywords: ["telefon", "mobil", "ring"] },
+  { emoji: "📱", label: "Mobil", keywords: ["mobil", "telefon", "ring"] },
+  { emoji: "📞", label: "Telefonsamtal", keywords: ["telefon", "ringa", "samtal", "prata"] },
+  { emoji: "📧", label: "E-post", keywords: ["e-post", "mail", "email", "skicka", "brev"] },
+  { emoji: "📬", label: "Brevlåda", keywords: ["post", "brev", "brevlåda", "leverans"] },
   { emoji: "⌨️", label: "Tangentbord", keywords: ["tangentbord", "skriva", "dator"] },
   { emoji: "🖨️", label: "Skrivare", keywords: ["skrivare", "printa", "papper"] },
   { emoji: "📷", label: "Kamera", keywords: ["kamera", "foto", "fotografera"] },
@@ -350,6 +369,7 @@ export const EMOJIS: EmojiEntry[] = [
   { emoji: "🧭", label: "Kompass", keywords: ["kompass", "orientering", "friluftsliv", "navigera"] },
 
   // ── Resor & transport ────────────────────────────────────────────
+  { emoji: "🧳", label: "Resväska", keywords: ["resväska", "packa", "resa", "semester", "bort", "utomlands"] },
   { emoji: "✈️", label: "Flygplan", keywords: ["flyg", "resa", "semester", "utomlands"] },
   { emoji: "🚗", label: "Bil", keywords: ["bil", "köra", "transport", "åka"] },
   { emoji: "🏎️", label: "Racerbil", keywords: ["racerbil", "fart", "racing"] },
@@ -381,6 +401,7 @@ export const EMOJIS: EmojiEntry[] = [
   { emoji: "🌩️", label: "Blixt", keywords: ["blixt", "åska", "väder"] },
   { emoji: "🌨️", label: "Snöoväder", keywords: ["snö", "storm", "vinter"] },
   { emoji: "❄️", label: "Snöflinga", keywords: ["snö", "vinter", "is", "kall"] },
+  { emoji: "☔", label: "Paraply", keywords: ["paraply", "regn", "regnig", "regnkläder", "väder"] },
   { emoji: "🌬️", label: "Vind", keywords: ["vind", "blåser", "väder"] },
   { emoji: "🌫️", label: "Dimma", keywords: ["dimma", "grå", "dimmigt"] },
   { emoji: "🌈", label: "Regnbåge", keywords: ["regnbåge", "färger", "regn"] },
@@ -396,6 +417,8 @@ export const EMOJIS: EmojiEntry[] = [
   { emoji: "🍀", label: "Klöver", keywords: ["klöver", "tur", "lycka", "fyrbladig"] },
   { emoji: "🍁", label: "Löv", keywords: ["löv", "höst", "orange"] },
   { emoji: "🍂", label: "Fallande löv", keywords: ["löv", "höst", "faller"] },
+  { emoji: "🌱", label: "Gräs/plantor", keywords: ["gräs", "plantera", "trädgård", "grönt", "klippa"] },
+  { emoji: "🪴", label: "Krukväxt", keywords: ["krukväxt", "blomma", "trädgård", "vattna", "växt"] },
   { emoji: "🌲", label: "Gran", keywords: ["träd", "skog", "gran"] },
   { emoji: "🌴", label: "Palm", keywords: ["palm", "tropisk", "semester"] },
   { emoji: "🌾", label: "Vete", keywords: ["vete", "åker", "höst", "natur"] },
