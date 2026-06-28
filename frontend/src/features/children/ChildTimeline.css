@@ -48,13 +48,6 @@
   position: relative;
   height: 100%;
   min-height: calc(100dvh - 64px);
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0 30px,
-      color-mix(in srgb, var(--c2, #ffffff) 42%, transparent) 31px 33px,
-      transparent 34px
-    );
 }
 
 .child-tl-day-track::before {
@@ -89,26 +82,26 @@
 
 .child-tl-now {
   position: absolute;
-  left: 31px;
+  left: 0;
   right: 0;
   z-index: 8;
   height: 2px;
   border-radius: 999px;
-  background: var(--c1, #ffb000);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c1, #ffb000) 14%, transparent);
+  background: var(--c3, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3, #fff) 14%, transparent);
   pointer-events: none;
 }
 
 .child-tl-now::before {
   content: "";
   position: absolute;
-  left: -5px;
+  left: 0;
   top: 50%;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--c1, #ffb000);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c1, #ffb000) 20%, transparent);
+  background: var(--c3, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3, #fff) 20%, transparent);
   transform: translateY(-50%);
 }
 
@@ -388,13 +381,6 @@
 
   .child-tl-day-track {
     min-height: calc(100dvh - 100px);
-    background:
-      linear-gradient(
-        90deg,
-        transparent 0 24px,
-        color-mix(in srgb, var(--c2, #ffffff) 42%, transparent) 25px 27px,
-        transparent 28px
-      );
   }
 
   .child-tl-hour-labels {
@@ -410,23 +396,13 @@
   }
 
   .child-tl-now {
-    left: 25px;
+    left: 0;
   }
 }
 
 @media (max-width: 430px) {
   .child-timeline {
     border-radius: 0 16px 16px 0;
-  }
-
-  .child-tl-day-track {
-    background:
-      linear-gradient(
-        90deg,
-        transparent 0 20px,
-        color-mix(in srgb, var(--c2, #ffffff) 42%, transparent) 21px 23px,
-        transparent 24px
-      );
   }
 
   .child-tl-hour-labels {
@@ -443,6 +419,6 @@
   }
 
   .child-tl-now {
-    left: 21px;
+    left: 0;
   }
 }

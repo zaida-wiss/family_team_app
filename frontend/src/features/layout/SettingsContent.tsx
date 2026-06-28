@@ -72,6 +72,15 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         />
       </SettingsSection>
 
+      <SettingsSection title="🏪 Belöningsbutiken" defaultOpen>
+        <RewardShopSettings
+          items={shopItems}
+          currentMemberId={currentMember.id}
+          onAdd={(item) => { void addShopItem(item); }}
+          onRemove={(id) => { void removeShopItem(id); }}
+        />
+      </SettingsSection>
+
       <SettingsSection title="Konto">
         <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
       </SettingsSection>
@@ -100,12 +109,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
       </SettingsSection>
 
       <SettingsSection title="Barn">
-        <RewardShopSettings
-          items={shopItems}
-          currentMemberId={currentMember.id}
-          onAdd={(item) => { void addShopItem(item); }}
-          onRemove={(id) => { void removeShopItem(id); }}
-        />
         <ChildSettings
           currentMember={currentMember}
           members={members}

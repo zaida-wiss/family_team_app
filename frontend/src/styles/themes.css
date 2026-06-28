@@ -444,7 +444,11 @@
 }
 
 .child-dashboard[class*="theme-"] .child-tl-now,
-.child-dashboard[class*="theme-"] .child-tl-now::before,
+.child-dashboard[class*="theme-"] .child-tl-now::before {
+  background: var(--c3);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3) 20%, transparent);
+}
+
 .child-dashboard[class*="theme-"] .child-tl-task-marker--window::after {
   background: var(--c1);
 }

@@ -1,8 +1,7 @@
 import "./RewardShopSettings.css";
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import type { RewardShopItem } from "@shared/types";
-import { EmojiPickerSv } from "../../components/EmojiPickerSv";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 
 type Props = {
   items: RewardShopItem[];
@@ -22,30 +21,6 @@ const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinu
 
 export function RewardShopSettings({ items, currentMemberId, onAdd, onRemove }: Props) {
   const [form, setForm] = useState<FormState>(blank());
-  const [emojiOpen, setEmojiOpen] = useState(false);
-  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
-  const emojiTriggerRef = useRef<HTMLButtonElement>(null);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!emojiOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (
-        emojiPickerRef.current?.contains(e.target as Node) ||
-        emojiTriggerRef.current?.contains(e.target as Node)
-      )
-        return;
-      setEmojiOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [emojiOpen]);
-
-  function openEmojiPicker() {
-    const rect = emojiTriggerRef.current?.getBoundingClientRect();
-    if (rect) setPickerPos({ top: rect.bottom + 6, left: rect.left });
-    setEmojiOpen((o) => !o);
-  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,14 +44,11 @@ export function RewardShopSettings({ items, currentMemberId, onAdd, onRemove }: 
 
       <form className="reward-shop-settings__form" onSubmit={submit}>
         <div className="reward-shop-settings__title-row">
-          <button
-            type="button"
-            ref={emojiTriggerRef}
-            className="reward-shop-settings__emoji-btn"
-            onClick={openEmojiPicker}
-          >
-            {form.symbol || "＋"}
-          </button>
+          <EmojiPickerPortal
+            symbol={form.symbol}
+            onSelect={(emoji) => setForm((f) => ({ ...f, symbol: emoji }))}
+            triggerClassName="reward-shop-settings__emoji-btn"
+          />
           <input
             className="reward-shop-settings__input"
             placeholder="Belöningens namn"
@@ -140,23 +112,6 @@ export function RewardShopSettings({ items, currentMemberId, onAdd, onRemove }: 
           ))}
         </ul>
       )}
-
-      {emojiOpen &&
-        createPortal(
-          <div
-            ref={emojiPickerRef}
-            className="cal-emoji-picker-portal"
-            style={{ top: pickerPos.top, left: pickerPos.left }}
-          >
-            <EmojiPickerSv
-              onSelect={(emoji) => {
-                setForm((f) => ({ ...f, symbol: emoji }));
-                setEmojiOpen(false);
-              }}
-            />
-          </div>,
-          document.body
-        )}
     </section>
   );
 }

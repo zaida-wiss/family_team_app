@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Check, ChevronDown, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
-import { EmojiPickerSv } from "../../components/EmojiPickerSv";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
@@ -117,27 +116,10 @@ export function ChildRoutineCreator({
   const [routinesOpen, setRoutinesOpen] = useState(false);
 
   // ── dropdown open states ─────────────────────────────────────
-  const [emojiOpen, setEmojiOpen] = useState(false);
   const [childMenuOpen, setChildMenuOpen] = useState(false);
 
   // ── refs for outside-click ───────────────────────────────────
-  const emojiTriggerRef = useRef<HTMLButtonElement>(null);
-  const emojiPickerRef  = useRef<HTMLDivElement>(null);
   const childMenuRef    = useRef<HTMLDivElement>(null);
-  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!emojiOpen) return;
-    function handler(e: MouseEvent) {
-      if (
-        emojiPickerRef.current?.contains(e.target as Node) ||
-        emojiTriggerRef.current?.contains(e.target as Node)
-      ) return;
-      setEmojiOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [emojiOpen]);
 
   useEffect(() => {
     if (!childMenuOpen) return;
@@ -204,13 +186,7 @@ export function ChildRoutineCreator({
     );
   }
 
-  function openEmojiPicker() {
-    if (emojiTriggerRef.current) {
-      const r = emojiTriggerRef.current.getBoundingClientRect();
-      setPickerPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX });
-    }
-    setEmojiOpen((v) => !v);
-  }
+
 
   const stars = Math.max(1, Math.min(99, parseInt(starsRaw, 10) || 1));
 
@@ -442,16 +418,11 @@ export function ChildRoutineCreator({
         {/* Row 1: emoji | title | stars | children | category */}
         <div className="rcr-row">
           {/* Emoji picker trigger */}
-          <button
-            ref={emojiTriggerRef}
-            className="rcr-emoji-btn"
-            type="button"
-            onClick={openEmojiPicker}
-            aria-label="Välj emoji"
-            title="Välj emoji"
-          >
-            {emoji}
-          </button>
+          <EmojiPickerPortal
+            symbol={emoji}
+            onSelect={setEmoji}
+            triggerClassName="rcr-emoji-btn"
+          />
 
           <input
             className="rcr-input rcr-input--title"
@@ -599,22 +570,6 @@ export function ChildRoutineCreator({
         </div>
       </div>
 
-      {/* Emoji picker portal */}
-      {emojiOpen && createPortal(
-        <div
-          ref={emojiPickerRef}
-          className="rcr-emoji-picker-portal"
-          style={{ top: pickerPos.top, left: pickerPos.left }}
-        >
-          <EmojiPickerSv
-            onSelect={(emoji) => {
-              setEmoji(emoji);
-              setEmojiOpen(false);
-            }}
-          />
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

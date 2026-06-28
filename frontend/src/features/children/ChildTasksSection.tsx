@@ -82,11 +82,14 @@ export function ChildTasksSection({ taskGroups, today, timerNow, heldTodoId, onS
                   <span className="child-task-icon">{todo.visual.value}</span>
                 </div>
                 <span className="child-task-copy">
-                  <span className="child-task-name">{todo.title}</span>
+                  <span className={`child-task-name${todo.title.length > 30 ? " child-task-name--long" : todo.title.length > 18 ? " child-task-name--medium" : ""}`}>
+                    {todo.title}
+                  </span>
                 </span>
                 <span className="child-task-star-badge">
-                  <Star size={14} fill="currentColor" />
-                  <span>{todo.starValue}</span>
+                  {Array.from({ length: Math.min(todo.starValue, 10) }, (_, i) => (
+                    <Star key={i} size={12} fill="currentColor" />
+                  ))}
                 </span>
               </button>
             );

@@ -1,7 +1,7 @@
 import { RewardShopModel } from "../db/models/RewardShop.js";
 import { MemberModel } from "../db/models/Member.js";
 import type { RewardShopItem } from "../../../shared/types.js";
-import { AppError } from "../utils/AppError.js";
+import { AppError } from "../utils/errors.js";
 
 export async function getShop(accountId: string) {
   const shop = await RewardShopModel.findOne({ accountId });

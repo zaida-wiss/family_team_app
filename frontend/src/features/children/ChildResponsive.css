@@ -48,17 +48,10 @@
 
   .child-tl-day-track {
     min-height: calc(100dvh - 100px);
-    background:
-      linear-gradient(
-        90deg,
-        transparent 0 24px,
-        color-mix(in srgb, var(--c2, #fff) 42%, transparent) 25px 27px,
-        transparent 28px
-      );
   }
 
   .child-tl-now {
-    left: 25px;
+    left: 0;
   }
 
   .child-week-nav {
@@ -169,18 +162,8 @@
     border-radius: 0 16px 16px 0;
   }
 
-  .child-tl-day-track {
-    background:
-      linear-gradient(
-        90deg,
-        transparent 0 20px,
-        color-mix(in srgb, var(--c2, #fff) 42%, transparent) 21px 23px,
-        transparent 24px
-      );
-  }
-
   .child-tl-now {
-    left: 21px;
+    left: 0;
   }
 
   .child-week-nav {

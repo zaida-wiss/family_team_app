@@ -1,7 +1,5 @@
 import "./CalendarEventModal.css";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { EmojiPickerSv } from "../../components/EmojiPickerSv";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { MapPin, RefreshCw, Trash2, X } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Calendar, Member } from "@shared/types";
@@ -29,32 +27,6 @@ export function CalendarEventModal({
   editableCalendars, otherMembers,
   onClose, onSubmit, onDelete, onSetField, onToggleAttendee,
 }: Props) {
-  const [emojiOpen, setEmojiOpen] = useState(false);
-  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
-  const emojiTriggerRef = useRef<HTMLButtonElement>(null);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!emojiOpen) return;
-    function handler(e: MouseEvent) {
-      if (
-        emojiPickerRef.current?.contains(e.target as Node) ||
-        emojiTriggerRef.current?.contains(e.target as Node)
-      ) return;
-      setEmojiOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [emojiOpen]);
-
-  function openEmojiPicker() {
-    if (emojiTriggerRef.current) {
-      const r = emojiTriggerRef.current.getBoundingClientRect();
-      setPickerPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX });
-    }
-    setEmojiOpen((v) => !v);
-  }
-
   return (
     <>
     <div className="cal-form-overlay" onClick={onClose}>
@@ -87,16 +59,11 @@ export function CalendarEventModal({
               </select>
             )}
             <div className="cal-title-row">
-              <button
-                ref={emojiTriggerRef}
-                className="cal-symbol-btn"
-                type="button"
-                onClick={openEmojiPicker}
-                aria-label="Välj symbol"
-                title="Välj symbol"
-              >
-                {form.symbol || "＋"}
-              </button>
+              <EmojiPickerPortal
+                symbol={form.symbol}
+                onSelect={(emoji) => onSetField("symbol", emoji)}
+                triggerClassName="cal-symbol-btn"
+              />
               <input
                 autoFocus
                 className="text-input"
@@ -188,21 +155,6 @@ export function CalendarEventModal({
       </div>
     </div>
 
-    {emojiOpen && createPortal(
-      <div
-        ref={emojiPickerRef}
-        className="cal-emoji-picker-portal"
-        style={{ top: pickerPos.top, left: pickerPos.left }}
-      >
-        <EmojiPickerSv
-          onSelect={(emoji) => {
-            onSetField("symbol", emoji);
-            setEmojiOpen(false);
-          }}
-        />
-      </div>,
-      document.body
-    )}
     </>
   );
 }

@@ -2,6 +2,7 @@ import styles from "./TodoCreator.module.css";
 import { PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { hasPermission } from "../../utils/permissions";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import type { Id, Member, RecurrenceRule, Role, Todo } from "@shared/types";
 
 type TodoCreatorProps = {
@@ -29,7 +30,7 @@ export function TodoCreator({
   const [title, setTitle] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<Id[]>([]);
   const [starValue, setStarValue] = useState(1);
-  const [visual, setVisual] = useState("Star");
+  const [visual, setVisual] = useState("⭐");
   const [recurrenceType, setRecurrenceType] =
     useState<RecurrenceRule["type"]>("none");
   const [visibleFrom, setVisibleFrom] = useState("");
@@ -70,7 +71,7 @@ export function TodoCreator({
       starValue,
       visual: {
         type: "lucide-icon",
-        value: visual.trim() || "Star"
+        value: visual || "⭐"
       },
       recurrence: createRecurrence(recurrenceType),
       recurringSourceId: null,
@@ -97,7 +98,7 @@ export function TodoCreator({
 
     setTitle("");
     setStarValue(1);
-    setVisual("Star");
+    setVisual("⭐");
     setRecurrenceType("none");
     setVisibleFrom("");
     setExpiresAt("");
@@ -154,16 +155,13 @@ export function TodoCreator({
           />
         </label>
 
-        <label className="field-label">
-          Bild/ikon
-          <input
-            className="text-input"
-            disabled={!canCreateTodo}
-            onChange={(event) => setVisual(event.target.value)}
-            placeholder="Star, BookOpen, Bed"
-            value={visual}
+        <div className="field-label">
+          Emoji
+          <EmojiPickerPortal
+            symbol={visual}
+            onSelect={setVisual}
           />
-        </label>
+        </div>
 
         <label className="field-label">
           Återkommer
