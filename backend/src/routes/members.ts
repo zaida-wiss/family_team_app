@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as members from "../services/membersService.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
 export const membersRouter = Router();
 
-membersRouter.get("/", async (_req, res) => {
-  res.json(await members.getAllMembers());
+membersRouter.get("/", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.json(await members.getAllMembers(accountId));
 });
 
 membersRouter.post("/", requireAuth, async (req, res) => {

@@ -1,6 +1,10 @@
 import { app } from "./app.js";
 import { connectDB } from "./db/connection.js";
 import { CalendarModel } from "./db/models/Calendar.js";
+import { MemberModel } from "./db/models/Member.js";
+import { TodoModel } from "./db/models/Todo.js";
+import { ShoppingListModel } from "./db/models/ShoppingList.js";
+import { RewardModel } from "./db/models/Reward.js";
 import { syncSubscription } from "./services/calendarsService.js";
 import { logger } from "./utils/logger.js";
 
@@ -15,12 +19,45 @@ async function syncAllSubscriptions() {
   }
 }
 
+async function backfillAccountIds() {
+  const members = await MemberModel.find({}, { id: 1, accountId: 1, roleId: 1 });
+  const byMemberId = new Map(members.map((m) => [m.id, m.accountId]));
+
+  const [todos, cals, lists, rewards] = await Promise.all([
+    TodoModel.find({ accountId: null }),
+    CalendarModel.find({ accountId: null }),
+    ShoppingListModel.find({ accountId: null }),
+    RewardModel.find({ accountId: null }),
+  ]);
+
+  let fixed = 0;
+
+  for (const todo of todos) {
+    const aid = byMemberId.get(todo.createdBy);
+    if (aid) { await TodoModel.updateOne({ id: todo.id }, { accountId: aid }); fixed++; }
+  }
+  for (const cal of cals) {
+    const aid = byMemberId.get(cal.ownerId);
+    if (aid) { await CalendarModel.updateOne({ id: cal.id }, { accountId: aid }); fixed++; }
+  }
+  for (const list of lists) {
+    const aid = byMemberId.get(list.ownerId);
+    if (aid) { await ShoppingListModel.updateOne({ id: list.id }, { accountId: aid }); fixed++; }
+  }
+  for (const reward of rewards) {
+    const aid = byMemberId.get(reward.wishedBy);
+    if (aid) { await RewardModel.updateOne({ id: reward.id }, { accountId: aid }); fixed++; }
+  }
+
+  if (fixed > 0) logger.info(`Migrering: accountId satt på ${fixed} dokument`);
+}
+
 async function start() {
   await connectDB();
+  await backfillAccountIds();
   app.listen(PORT, () => {
     logger.info(`Servern lyssnar på port ${PORT}`);
   });
-  // Sync all subscriptions every hour
   setInterval(() => { syncAllSubscriptions().catch((e) => logger.error(e)); }, 60 * 60 * 1000);
 }
 

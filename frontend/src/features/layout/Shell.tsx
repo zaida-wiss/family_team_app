@@ -46,7 +46,7 @@ function PanelRouter({
   onLogout,
 }: PanelRouterProps) {
   if (currentMember.isChild) {
-    return <ChildShellContent {...childContentProps} />;
+    return <ChildShellContent {...childContentProps} onLogout={onLogout} />;
   }
   if (activePanel === "members") {
     return (

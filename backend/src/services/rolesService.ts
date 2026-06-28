@@ -1,8 +1,12 @@
 import { RoleModel } from "../db/models/Role.js";
+import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
 
-export async function getAllRoles() {
-  return RoleModel.find({}, { _id: 0, __v: 0 });
+export async function getAllRoles(accountId: string) {
+  const members = await MemberModel.find({ accountId, deletedAt: null }, { roleId: 1, _id: 0 });
+  const roleIds = [...new Set(members.map((m) => m.roleId).filter(Boolean))];
+  if (roleIds.length === 0) return [];
+  return RoleModel.find({ id: { $in: roleIds } }, { _id: 0, __v: 0 });
 }
 
 export async function createRole(data: unknown) {

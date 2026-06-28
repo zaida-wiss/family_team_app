@@ -1,15 +1,18 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as calendars from "../services/calendarsService.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
 export const calendarsRouter = Router();
 
-calendarsRouter.get("/", async (_req, res) => {
-  res.json(await calendars.getAllCalendars());
+calendarsRouter.get("/", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.json(await calendars.getAllCalendars(accountId));
 });
 
 calendarsRouter.post("/", requireAuth, async (req, res) => {
-  res.status(201).json(await calendars.createCalendar(req.body));
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.status(201).json(await calendars.createCalendar({ ...req.body, accountId }));
 });
 
 calendarsRouter.post("/:id/events", requireAuth, async (req, res) => {

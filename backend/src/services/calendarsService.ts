@@ -147,8 +147,8 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
   await calendar.save();
 }
 
-export async function getAllCalendars() {
-  return CalendarModel.find({}, { _id: 0, __v: 0 });
+export async function getAllCalendars(accountId: string) {
+  return CalendarModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
 export async function createCalendar(data: unknown) {

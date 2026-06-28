@@ -3,8 +3,8 @@ import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { AppError } from "../utils/errors.js";
 import type { Todo } from "../../../shared/types.js";
 
-export async function getAllTodos() {
-  return TodoModel.find({}, { _id: 0, __v: 0 });
+export async function getAllTodos(accountId: string) {
+  return TodoModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
 export async function createTodo(data: unknown) {

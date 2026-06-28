@@ -3,6 +3,7 @@ import type { Todo } from "../../../../shared/types.js";
 
 const todoSchema = new Schema<Todo>({
   id: { type: String, required: true, unique: true },
+  accountId: { type: String, default: null },
   title: { type: String, required: true },
   createdBy: { type: String, required: true },
   assignedTo: { type: String, default: null },

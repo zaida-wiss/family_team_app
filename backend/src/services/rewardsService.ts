@@ -1,8 +1,8 @@
 import { RewardModel } from "../db/models/Reward.js";
 import { AppError } from "../utils/errors.js";
 
-export async function getAllRewards() {
-  return RewardModel.find({}, { _id: 0, __v: 0 });
+export async function getAllRewards(accountId: string) {
+  return RewardModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
 export async function createReward(data: unknown) {

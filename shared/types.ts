@@ -167,6 +167,7 @@ export type ResourceShare = {
 
 export type OwnedSharedResource = {
   ownerId: Id;
+  accountId?: Id;
   sharedWith: ResourceShare[];
   deletedAt: string | null;
   deletedBy: Id | null;
@@ -276,6 +277,7 @@ export type TodoVisual = {
 
 export type Todo = {
   id: Id;
+  accountId?: Id;
   title: string;
   createdBy: Id;
   assignedTo: Id | null;
@@ -300,6 +302,7 @@ export type Todo = {
 
 export type Reward = {
   id: Id;
+  accountId?: Id;
   title: string;
   wishedBy: Id;
   starsNeeded: number;

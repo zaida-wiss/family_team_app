@@ -14,6 +14,7 @@ type Props = {
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
+  onLogout: () => Promise<void>;
 };
 
 function isTodoVisibleNow(
@@ -36,7 +37,8 @@ export function ChildShellContent({
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
-  onThemePickerOpen
+  onThemePickerOpen,
+  onLogout
 }: Props) {
   const activeReward =
     rewards.find((r) => r.wishedBy === currentMember.id && r.status === "active") ?? null;
@@ -77,6 +79,7 @@ export function ChildShellContent({
       onCompleteTodo={(todoId) => onCompleteTodo(currentMember, todoId, roles)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}
       onThemePickerOpen={onThemePickerOpen}
+      onLogout={onLogout}
     />
   );
 }

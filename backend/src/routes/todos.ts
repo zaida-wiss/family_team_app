@@ -2,15 +2,18 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
 export const todosRouter = Router();
 
-todosRouter.get("/", async (_req, res) => {
-  res.json(await todos.getAllTodos());
+todosRouter.get("/", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.json(await todos.getAllTodos(accountId));
 });
 
 todosRouter.post("/", requireAuth, async (req, res) => {
-  res.status(201).json(await todos.createTodo(req.body));
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.status(201).json(await todos.createTodo({ ...req.body, accountId }));
 });
 
 todosRouter.get("/events", requireAuth, async (_req, res) => {

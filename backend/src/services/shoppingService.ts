@@ -1,8 +1,8 @@
 import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { AppError } from "../utils/errors.js";
 
-export async function getAllLists() {
-  return ShoppingListModel.find({}, { _id: 0, __v: 0 });
+export async function getAllLists(accountId: string) {
+  return ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
 export async function createList(data: unknown) {

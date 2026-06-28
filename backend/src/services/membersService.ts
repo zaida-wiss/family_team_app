@@ -1,8 +1,8 @@
 import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
 
-export async function getAllMembers() {
-  return MemberModel.find({}, { _id: 0, __v: 0 });
+export async function getAllMembers(accountId: string) {
+  return MemberModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
 export async function createMember(data: unknown) {

@@ -19,6 +19,7 @@ const subscriptionSchema = new Schema(
 const calendarSchema = new Schema<Calendar>(
   {
     id: { type: String, required: true, unique: true },
+    accountId: { type: String, default: null },
     name: { type: String, required: true },
     color: { type: String, required: true },
     ownerId: { type: String, required: true },

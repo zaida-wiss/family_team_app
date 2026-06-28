@@ -1,15 +1,18 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as shopping from "../services/shoppingService.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
 export const shoppingRouter = Router();
 
-shoppingRouter.get("/", async (_req, res) => {
-  res.json(await shopping.getAllLists());
+shoppingRouter.get("/", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.json(await shopping.getAllLists(accountId));
 });
 
 shoppingRouter.post("/", requireAuth, async (req, res) => {
-  res.status(201).json(await shopping.createList(req.body));
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.status(201).json(await shopping.createList({ ...req.body, accountId }));
 });
 
 shoppingRouter.post("/:id/items", requireAuth, async (req, res) => {

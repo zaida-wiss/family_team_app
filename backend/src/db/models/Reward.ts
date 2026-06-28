@@ -3,6 +3,7 @@ import type { Reward } from "../../../../shared/types.js";
 
 const rewardSchema = new Schema<Reward>({
   id: { type: String, required: true, unique: true },
+  accountId: { type: String, default: null },
   title: { type: String, required: true },
   wishedBy: { type: String, required: true },
   starsNeeded: { type: Number, required: true },

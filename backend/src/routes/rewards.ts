@@ -1,15 +1,18 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as rewards from "../services/rewardsService.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
 export const rewardsRouter = Router();
 
-rewardsRouter.get("/", async (_req, res) => {
-  res.json(await rewards.getAllRewards());
+rewardsRouter.get("/", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.json(await rewards.getAllRewards(accountId));
 });
 
 rewardsRouter.post("/", requireAuth, async (req, res) => {
-  res.status(201).json(await rewards.createReward(req.body));
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.status(201).json(await rewards.createReward({ ...req.body, accountId }));
 });
 
 rewardsRouter.patch("/:id/approve", requireAuth, async (req, res) => {

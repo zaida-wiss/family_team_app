@@ -3,6 +3,7 @@ import type { ShoppingList } from "../../../../shared/types.js";
 
 const shoppingListSchema = new Schema<ShoppingList>({
   id: { type: String, required: true, unique: true },
+  accountId: { type: String, default: null },
   name: { type: String, required: true },
   color: { type: String, required: true },
   icon: { type: String, default: null },
