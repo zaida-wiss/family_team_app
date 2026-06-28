@@ -54,7 +54,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     weekStart, weekEnd,
     modal, form, setForm, detailEvent, setDetailEvent, longPressRef,
     visible, editableCalendars, canEditEvent, pendingInvitations,
-    eventsForDay, listEvents, weekEvents, allListEvents, prevMonth, nextMonth, prevWeek, nextWeek,
+    eventsForDay, listEvents, weekEvents, weekListEvents, allListEvents, prevMonth, nextMonth, prevWeek, nextWeek,
     openNew, openEdit, closeModal, submitForm, deleteEvent,
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
@@ -205,7 +205,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             />
             <CalendarEventList
               key={`week-${weekStart.toISOString()}`}
-              allEvents={weekEvents}
+              allEvents={weekListEvents}
               selectedDay={null}
               scope="week"
               viewYear={weekStart.getFullYear()}
@@ -332,7 +332,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           />
           <CalendarEventList
             key={`week-${weekStart.toISOString()}`}
-            allEvents={weekEvents}
+            allEvents={weekListEvents}
             selectedDay={null}
             scope="week"
             viewYear={weekStart.getFullYear()}

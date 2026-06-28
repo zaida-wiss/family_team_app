@@ -141,6 +141,12 @@ export function useCalendarView(
   }
 
   // ── List events below grid ──
+  function isNotPast(ev: EnrichedEvent): boolean {
+    return ev.isAllDay
+      ? ev.endsAt.slice(0, 10) >= todayStr
+      : new Date(ev.endsAt).getTime() >= now.getTime();
+  }
+
   const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
   const monthFirstDay = `${monthPrefix}-01`;
   const monthLastDay = `${monthPrefix}-${String(new Date(viewYear, viewMonth + 1, 0).getDate()).padStart(2, "0")}`;
@@ -149,12 +155,7 @@ export function useCalendarView(
     ? eventsForDay(selectedDay)
     : expandedEvents
         .filter(matchesFilter)
-        .filter((ev) => {
-          const notPast = ev.isAllDay
-            ? ev.endsAt.slice(0, 10) >= todayStr
-            : new Date(ev.endsAt).getTime() >= now.getTime();
-          return notPast && getEventStartDay(ev) <= monthLastDay && getEventEndDay(ev) >= monthFirstDay;
-        })
+        .filter((ev) => isNotPast(ev) && getEventStartDay(ev) <= monthLastDay && getEventEndDay(ev) >= monthFirstDay)
         .sort(sortEvents);
 
   const weekStart = getWeekMonday(weekOffset);
@@ -167,11 +168,12 @@ export function useCalendarView(
     .filter(matchesFilter)
     .filter((ev) => getEventStartDay(ev) <= weekLastDay && getEventEndDay(ev) >= weekFirstDay)
     .sort(sortEvents);
+  const weekListEvents = weekEvents.filter(isNotPast);
 
-  const listRangeStart = new Date(now.getFullYear() - 1, 0, 1);
   const listRangeEnd = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59, 999);
-  const allListEvents = expandForRange(enrichedEvents, listRangeStart, listRangeEnd)
+  const allListEvents = expandForRange(enrichedEvents, now, listRangeEnd)
     .filter(matchesFilter)
+    .filter(isNotPast)
     .sort(sortEvents);
 
   // ── Navigation ──
@@ -318,6 +320,7 @@ export function useCalendarView(
     eventsForDay,
     listEvents,
     weekEvents,
+    weekListEvents,
     allListEvents,
     prevMonth,
     nextMonth,

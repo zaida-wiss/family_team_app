@@ -134,7 +134,7 @@ function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: Fi
   const [showFilter, setShowFilter] = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 180 });
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 180, maxHeight: 320 });
 
   useEffect(() => {
     if (!showFilter) return;
@@ -151,12 +151,17 @@ function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: Fi
   function openFilter() {
     const rect = filterButtonRef.current?.getBoundingClientRect();
     if (rect) {
-      const width = Math.min(Math.max(180, rect.width), window.innerWidth - 24);
-      setMenuPos({
-        top: rect.bottom + 4,
-        left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
-        width,
-      });
+      const GAP = 4;
+      const EDGE = 8;
+      const MAX_H = 320;
+      const width = Math.min(Math.max(180, rect.width), window.innerWidth - EDGE * 2);
+      const left = Math.max(EDGE, Math.min(rect.left, window.innerWidth - width - EDGE));
+      const spaceBelow = window.innerHeight - rect.bottom - EDGE;
+      const spaceAbove = rect.top - EDGE;
+      const placeAbove = spaceBelow < 120 && spaceAbove > spaceBelow;
+      const maxHeight = Math.min(MAX_H, placeAbove ? spaceAbove : spaceBelow);
+      const top = placeAbove ? rect.top - GAP - maxHeight : rect.bottom + GAP;
+      setMenuPos({ top, left, width, maxHeight });
     }
     setShowFilter((current) => !current);
   }
@@ -186,7 +191,7 @@ function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: Fi
             "--filter-top": `${menuPos.top}px`,
             "--filter-left": `${menuPos.left}px`,
             "--filter-min-width": `${menuPos.width}px`,
-            "--filter-max-height": `min(320px, calc(100dvh - ${menuPos.top + 16}px))`,
+            "--filter-max-height": `${menuPos.maxHeight}px`,
           } as CalendarCssVars}
         >
           {visible.map((cal) => (
