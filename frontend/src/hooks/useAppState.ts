@@ -36,9 +36,7 @@ export function useAppState(initialMembership: ActiveMembership) {
   const shoppingState = useShoppingState();
   const rewardsState = useRewardsState();
 
-  const [selectedDashboardMemberId, setSelectedDashboardMemberIdRaw] = useState<Id | null>(
-    initialMembership.member.lastSelectedDashboardMemberId ?? null
-  );
+  const [selectedDashboardMemberId, setSelectedDashboardMemberIdRaw] = useState<Id | null>(null);
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
   const [activePanel, setActivePanelRaw] = useState<ShellPanel>(
     initialMembership.member.lastActivePanel ?? "home"
