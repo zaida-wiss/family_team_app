@@ -1,0 +1,89 @@
+.settings-sub {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-sub:last-child {
+  border-bottom: none;
+}
+
+.settings-sub-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-fg);
+}
+
+.settings-sub-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted-fg);
+  line-height: 1.4;
+}
+
+.settings-accordion {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--destructive);
+  transition: background 0.15s;
+  padding: 0;
+}
+
+.settings-logout-btn:hover {
+  opacity: 0.75;
+}
+
+.settings-member-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: white;
+}
+
+.settings-member-info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-member-row small {
+  color: var(--muted-fg);
+}
+
+.toggle-label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+@media (max-width: 759px) {
+  .settings-sub {
+    padding: 14px 12px;
+  }
+}

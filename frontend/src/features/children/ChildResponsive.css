@@ -1,4 +1,8 @@
 /* Base: ≤430px (smallest screens) */
+.app-shell-content:has(.child-dashboard) {
+  padding: 0 0 64px;
+}
+
 .child-dashboard {
   padding: 2px 4px 2px 0;
 }

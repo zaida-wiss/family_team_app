@@ -1,3 +1,4 @@
+import "./Settings.css";
 import { lazy } from "react";
 import { LogOut } from "lucide-react";
 import { AccountSetup } from "../accounts/AccountSetup";
