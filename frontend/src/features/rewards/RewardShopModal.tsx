@@ -1,4 +1,5 @@
 import "./RewardShopModal.css";
+import { useEffect, useRef, useState } from "react";
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
 
 type Props = {
@@ -10,6 +11,26 @@ type Props = {
 };
 
 export function RewardShopModal({ items, availableStars, purchased, onPurchase, onClose }: Props) {
+  const [heldItemId, setHeldItemId] = useState<string | null>(null);
+  const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (holdRef.current !== null) clearTimeout(holdRef.current); }, []);
+
+  function startHold(item: RewardShopItem) {
+    if (availableStars < item.starCost) return;
+    setHeldItemId(item.id);
+    holdRef.current = setTimeout(() => {
+      onPurchase(item);
+      holdRef.current = null;
+      setHeldItemId(null);
+    }, 2000);
+  }
+
+  function cancelHold() {
+    if (holdRef.current !== null) { clearTimeout(holdRef.current); holdRef.current = null; }
+    setHeldItemId(null);
+  }
+
   return (
     <div className="reward-shop-overlay" onClick={onClose}>
       <div className="reward-shop-modal" onClick={(e) => e.stopPropagation()}>
@@ -39,12 +60,15 @@ export function RewardShopModal({ items, availableStars, purchased, onPurchase, 
           <div className="reward-shop-modal__grid">
             {items.map((item) => {
               const canAfford = availableStars >= item.starCost;
+              const isHolding = heldItemId === item.id;
               return (
                 <button
                   key={item.id}
-                  className={`reward-shop-card${canAfford ? "" : " reward-shop-card--locked"}`}
-                  onClick={() => canAfford && onPurchase(item)}
+                  className={`reward-shop-card${canAfford ? "" : " reward-shop-card--locked"}${isHolding ? " reward-shop-card--holding" : ""}`}
                   disabled={!canAfford}
+                  onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); startHold(item); }}
+                  onPointerUp={cancelHold}
+                  onPointerCancel={cancelHold}
                 >
                   <span className="reward-shop-card__symbol">{item.symbol ?? "🎁"}</span>
                   <span className="reward-shop-card__title">{item.title}</span>

@@ -118,6 +118,26 @@ function markerLeft(todoId: string): string {
   return `${4 + (h % 74)}%`;
 }
 
+function pinPositions(items: { id: string; isoTime: string }[], range: TimelineRange) {
+  const SLOT_SIZE = 14;
+  const groups = new Map<number, string[]>();
+  for (const { id, isoTime } of items) {
+    const slot = Math.round(minuteOfDay(isoTime) / SLOT_SIZE);
+    const g = groups.get(slot) ?? [];
+    g.push(id);
+    groups.set(slot, g);
+  }
+  const result = new Map<string, { top: number; left: string }>();
+  for (const [slot, ids] of groups) {
+    const top = Math.max(0, Math.min(100, ((slot * SLOT_SIZE) - range.startMinute) / (range.endMinute - range.startMinute) * 100));
+    ids.forEach((id, i) => {
+      const left = `${4 + i * 22}%`;
+      result.set(id, { top, left });
+    });
+  }
+  return result;
+}
+
 const THEME_EVENT_COLORS = ["var(--c1)", "var(--c0)", "var(--c2)", "var(--c3)"];
 
 function calendarThemeColor(calendarId: string): string {
@@ -295,6 +315,20 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
     (pr) => toLocalDateStr(new Date(pr.startsAt)) === selectedDayStr
   );
 
+  const completedTodos = todos.filter(
+    (t) =>
+      (t.status === "done" || t.status === "approved") &&
+      t.completedAt !== null &&
+      toLocalDateStr(new Date(t.completedAt)) === selectedDayStr &&
+      t.deletedAt === null
+  );
+
+  const dayPins = [
+    ...completedTodos.map((t) => ({ id: t.id, isoTime: t.completedAt! })),
+    ...dayPurchased.filter((pr) => pr.durationMinutes === null).map((pr) => ({ id: pr.id, isoTime: pr.startsAt })),
+  ];
+  const pinPos = pinPositions(dayPins, timelineRange);
+
   return (
     <section className="child-timeline" aria-label="Min dag">
       <div className="child-tl-days">
@@ -337,21 +371,39 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
                   );
                 })}
 
+                {/* Completed todo pins */}
+                {completedTodos.map((t) => {
+                  const pos = pinPos.get(t.id);
+                  if (!pos) return null;
+                  return (
+                    <div
+                      key={t.id}
+                      className="child-tl-reward-pin child-tl-reward-pin--done"
+                      style={{ top: `${pos.top}%`, left: pos.left }}
+                      title={t.title}
+                    >
+                      {t.visual.value}
+                    </div>
+                  );
+                })}
+
                 {/* Purchased rewards */}
                 {dayPurchased.map((pr) => {
-                  const top = timePct(pr.startsAt, timelineRange);
                   if (pr.durationMinutes === null) {
+                    const pos = pinPos.get(pr.id);
+                    if (!pos) return null;
                     return (
                       <div
                         key={pr.id}
                         className="child-tl-reward-pin"
-                        style={{ top: `${top}%` }}
+                        style={{ top: `${pos.top}%`, left: pos.left }}
                         title={pr.itemTitle}
                       >
                         {pr.itemSymbol ?? "🎁"}
                       </div>
                     );
                   }
+                  const top = timePct(pr.startsAt, timelineRange);
                   const endsAt = new Date(new Date(pr.startsAt).getTime() + pr.durationMinutes * 60000).toISOString();
                   const height = durPct(pr.startsAt, endsAt, timelineRange);
                   return (

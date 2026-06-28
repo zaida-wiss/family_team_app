@@ -116,6 +116,7 @@
 }
 
 .reward-shop-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -125,12 +126,40 @@
   border: 2px solid var(--c1, #6366f1);
   border-radius: 16px;
   cursor: pointer;
+  overflow: hidden;
   transition: transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .reward-shop-card:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.reward-shop-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--c1, #6366f1);
+  opacity: 0.18;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.reward-shop-card--holding {
+  transform: scale(0.97);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+}
+
+.reward-shop-card--holding::after {
+  animation: shop-card-hold-progress 2s linear forwards;
+}
+
+@keyframes shop-card-hold-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 .reward-shop-card--locked {

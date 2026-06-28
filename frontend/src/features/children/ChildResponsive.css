@@ -1,57 +1,147 @@
-@media (max-width: 980px) {
-  .child-dashboard-body {
-    grid-template-columns: clamp(118px, 22vw, 156px) minmax(0, 1fr);
-    column-gap: 8px;
-  }
-
-  .child-dashboard-left {
-    min-height: calc(100dvh - 92px);
-  }
-
-  .child-tl-day-track {
-    min-height: calc(100dvh - 112px);
-  }
-
-  .child-week-nav {
-    grid-template-columns: 18px minmax(0, 1fr) 18px;
-  }
-
-  .child-week-arrow {
-    width: 18px;
-    height: 26px;
-  }
+/* Base: ≤430px (smallest screens) */
+.child-dashboard {
+  padding: 2px 4px 2px 0;
 }
 
-@media (max-width: 720px) {
-  .child-dashboard {
-    padding: 2px 4px 2px 0;
-  }
+.child-dashboard-body {
+  grid-template-columns: clamp(64px, 21vw, 82px) minmax(0, 1fr);
+  min-height: calc(100dvh - 76px);
+  column-gap: 5px;
+}
 
+.child-dashboard-main {
+  gap: 5px;
+}
+
+.child-dashboard-left {
+  min-height: calc(100dvh - 76px);
+}
+
+.child-timeline {
+  border-radius: 0 16px 16px 0;
+  padding: 10px 7px;
+}
+
+.child-tl-day-track {
+  min-height: calc(100dvh - 100px);
+}
+
+.child-week-nav {
+  grid-template-columns: 18px minmax(0, 1fr) 18px;
+  gap: 3px;
+}
+
+.child-week-arrow {
+  width: 18px;
+  height: 30px;
+}
+
+.child-day-strip {
+  gap: 3px;
+}
+
+.child-day-pill {
+  min-height: 42px;
+  padding: 5px 1px;
+  border-radius: 10px;
+}
+
+.child-day-pill span {
+  font-size: 0.5rem;
+}
+
+.child-day-pill strong {
+  font-size: 0.82rem;
+}
+
+.child-day-pill--selected::after {
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+}
+
+.child-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 66px;
+  align-items: center;
+}
+
+.child-hero-month {
+  font-size: 0.92rem;
+}
+
+.child-hero .section-title {
+  font-size: clamp(1.28rem, 6vw, 1.7rem);
+}
+
+.child-hero p:not(.child-hero-month) {
+  font-size: clamp(0.72rem, 3.2vw, 0.86rem);
+  line-height: 1.18;
+}
+
+.child-hero-avatar {
+  width: 66px;
+  height: 66px;
+  justify-self: end;
+}
+
+.child-stars-panel {
+  grid-template-columns: 32px minmax(40px, 1fr) minmax(40px, 1fr) 36px 62px;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 16px;
+}
+
+.child-stars-stat span {
+  font-size: 0.56rem;
+}
+
+.child-stars-stat strong {
+  font-size: 1.1rem;
+}
+
+.child-stars-stat svg {
+  width: 19px;
+  height: 19px;
+}
+
+.child-shop-card,
+.child-money-card {
+  padding: 5px;
+  border-radius: 12px;
+}
+
+.child-shop-card svg,
+.child-money-card svg {
+  width: 18px;
+  height: 18px;
+}
+
+.child-shop-card strong,
+.child-money-card strong {
+  font-size: 0.58rem;
+}
+
+.child-money-card {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  gap: 1px;
+}
+
+.child-money-card small,
+.child-stars-footnote {
+  display: none;
+}
+
+/* ≥431px: larger phones */
+@media (min-width: 431px) {
   .child-dashboard-body {
     grid-template-columns: clamp(70px, 22vw, 96px) minmax(0, 1fr);
-    min-height: calc(100dvh - 76px);
-    column-gap: 5px;
-  }
-
-  .child-dashboard-main {
-    gap: 5px;
-  }
-
-  .child-dashboard-left {
-    min-height: calc(100dvh - 76px);
   }
 
   .child-timeline {
     border-radius: 0 18px 18px 0;
-    padding: 10px 7px;
-  }
-
-  .child-tl-day-track {
-    min-height: calc(100dvh - 100px);
-  }
-
-  .child-tl-now {
-    left: 0;
   }
 
   .child-week-nav {
@@ -64,142 +154,185 @@
     height: 24px;
   }
 
-  .child-day-strip {
-    gap: 3px;
-  }
-
   .child-day-pill {
+    min-height: clamp(44px, 6dvh, 76px);
+    padding: clamp(4px, 1dvh, 12px) clamp(2px, 0.8dvh, 8px);
     border-radius: 11px;
   }
 
-  .child-day-pill--selected::after {
-    bottom: 4px;
-    width: 4px;
-    height: 4px;
-  }
-
   .child-hero {
-    display: grid;
     grid-template-columns: minmax(0, 1fr) 72px;
-    align-items: center;
-  }
-
-  .child-hero-month {
-    font-size: 0.92rem;
-  }
-
-  .child-hero .section-title {
-    font-size: clamp(1.28rem, 6vw, 1.7rem);
-  }
-
-  .child-hero p:not(.child-hero-month) {
-    font-size: clamp(0.72rem, 3.2vw, 0.86rem);
-    line-height: 1.18;
   }
 
   .child-hero-avatar {
     width: 72px;
     height: 72px;
-    justify-self: end;
-  }
-
-  .child-stars-panel {
-    grid-template-columns: 32px minmax(40px, 1fr) minmax(40px, 1fr) 36px 62px;
-    gap: 4px;
-    padding: 6px 6px;
-    border-radius: 16px;
-  }
-
-  .child-stars-stat span {
-    font-size: 0.56rem;
-  }
-
-  .child-stars-stat strong {
-    font-size: 1.1rem;
-  }
-
-  .child-stars-stat svg {
-    width: 19px;
-    height: 19px;
-  }
-
-  .child-shop-card,
-  .child-money-card {
-    padding: 5px;
-    border-radius: 12px;
-  }
-
-  .child-shop-card svg,
-  .child-money-card svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .child-shop-card strong,
-  .child-money-card strong {
-    font-size: 0.58rem;
-  }
-
-  .child-money-card {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
-    gap: 1px;
-  }
-
-  .child-money-card small,
-  .child-stars-footnote {
-    display: none;
   }
 }
 
-@media (max-width: 430px) {
+/* ≥721px: tablets — restore to larger layout */
+@media (min-width: 721px) {
+  .child-dashboard {
+    padding: clamp(3px, 0.6vw, 8px) clamp(4px, 0.8vw, 10px) clamp(3px, 0.6vw, 8px) 0;
+  }
+
   .child-dashboard-body {
-    grid-template-columns: clamp(64px, 21vw, 82px) minmax(0, 1fr);
+    grid-template-columns: clamp(118px, 22vw, 156px) minmax(0, 1fr);
+    min-height: 0;
+    column-gap: 8px;
+  }
+
+  .child-dashboard-main {
+    gap: clamp(6px, 1vw, 12px);
+  }
+
+  .child-dashboard-left {
+    min-height: calc(100dvh - 92px);
   }
 
   .child-timeline {
-    border-radius: 0 16px 16px 0;
+    border-radius: 0 24px 24px 0;
+    padding: clamp(7px, 1vw, 12px) clamp(6px, 1vw, 10px);
   }
 
-  .child-tl-now {
-    left: 0;
+  .child-tl-day-track {
+    min-height: calc(100dvh - 112px);
   }
 
   .child-week-nav {
     grid-template-columns: 18px minmax(0, 1fr) 18px;
-    gap: 3px;
+    gap: clamp(3px, 0.8vw, 8px);
   }
 
   .child-week-arrow {
     width: 18px;
-    height: 30px;
+    height: 26px;
   }
 
   .child-day-strip {
-    gap: 3px;
+    gap: clamp(5px, 1vw, 12px);
   }
 
   .child-day-pill {
-    min-height: 42px;
-    padding: 5px 1px;
-    border-radius: 10px;
+    min-height: clamp(44px, 6dvh, 76px);
+    padding: clamp(4px, 1dvh, 12px) clamp(2px, 0.8dvh, 8px);
+    border-radius: clamp(10px, 2dvh, 18px);
   }
 
   .child-day-pill span {
-    font-size: 0.5rem;
+    font-size: clamp(0.55rem, 24cqi, 1.2rem);
   }
 
   .child-day-pill strong {
-    font-size: 0.82rem;
+    font-size: clamp(0.85rem, 48cqi, 2.2rem);
+  }
+
+  .child-day-pill--selected::after {
+    bottom: 5px;
+    width: 5px;
+    height: 5px;
   }
 
   .child-hero {
-    grid-template-columns: minmax(0, 1fr) 66px;
+    display: flex;
+    justify-content: space-between;
+    grid-template-columns: unset;
+  }
+
+  .child-hero-month {
+    font-size: clamp(0.78rem, 1.4vmin, 1.18rem);
+  }
+
+  .child-hero .section-title {
+    font-size: clamp(1.15rem, 2.6vmin, 2.45rem);
+  }
+
+  .child-hero p:not(.child-hero-month) {
+    font-size: clamp(0.72rem, 1.1vmin, 1.05rem);
+    line-height: 1.2;
   }
 
   .child-hero-avatar {
-    width: 66px;
-    height: 66px;
+    width: clamp(72px, 12vmin, 120px);
+    height: clamp(72px, 12vmin, 120px);
+    justify-self: unset;
+  }
+
+  .child-stars-panel {
+    grid-template-columns: clamp(34px, 5vmin, 46px) minmax(60px, 1fr) minmax(60px, 1fr) clamp(40px, 6vw, 84px) clamp(60px, 10vw, 128px);
+    gap: clamp(4px, 1.2vw, 18px);
+    padding: clamp(6px, 1vw, 18px) clamp(8px, 1.8vw, 28px);
+    border-radius: clamp(12px, 2vw, 28px);
+  }
+
+  .child-stars-stat span {
+    font-size: clamp(0.6rem, 1.2vmin, 1.05rem);
+  }
+
+  .child-stars-stat strong {
+    font-size: clamp(1.1rem, 2.6vmin, 2.5rem);
+  }
+
+  .child-stars-stat svg {
+    width: clamp(18px, 2.8vmin, 36px);
+    height: clamp(18px, 2.8vmin, 36px);
+  }
+
+  .child-shop-card,
+  .child-money-card {
+    padding: clamp(7px, 1vw, 12px);
+    border-radius: clamp(12px, 2vw, 18px);
+  }
+
+  .child-shop-card svg {
+    width: clamp(22px, 3vw, 31px);
+    height: clamp(22px, 3vw, 31px);
+  }
+
+  .child-money-card svg {
+    width: clamp(24px, 3.2vw, 34px);
+    height: clamp(24px, 3.2vw, 34px);
+  }
+
+  .child-shop-card strong,
+  .child-money-card strong {
+    font-size: clamp(0.72rem, 1.25vw, 0.98rem);
+  }
+
+  .child-money-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: unset;
+    text-align: unset;
+    gap: clamp(5px, 0.9vw, 9px);
+  }
+
+  .child-money-card small,
+  .child-stars-footnote {
+    display: block;
+  }
+}
+
+/* ≥981px: full desktop */
+@media (min-width: 981px) {
+  .child-dashboard-body {
+    grid-template-columns: clamp(148px, 19vw, 210px) minmax(0, 1fr);
+    column-gap: var(--dashboard-gap);
+  }
+
+  .child-dashboard-left {
+    min-height: 0;
+  }
+
+  .child-tl-day-track {
+    min-height: calc(100dvh - 64px);
+  }
+
+  .child-week-nav {
+    grid-template-columns: 20px minmax(0, 1fr) 20px;
+  }
+
+  .child-week-arrow {
+    width: 20px;
+    height: 28px;
   }
 }
