@@ -34,7 +34,7 @@ function BankCatalog() {
           <div key={value} className="bm-bank-coin">
             <span className="bm-bank-label">{value} kr</span>
             <img
-              src={`/pengar/mynt-${value}.png`}
+              src={`/pengar/mynt-${value}.webp`}
               alt={`${value}-krona fram och bak`}
               className="bm-bank-img bm-bank-coin-img"
               data-coin={value}
@@ -51,7 +51,7 @@ function BankCatalog() {
             <span className="bm-bank-label">{value} kr</span>
             <div className="bm-bank-sides">
               <img
-                src={`/pengar/sedel-${value}.png`}
+                src={`/pengar/sedel-${value}.webp`}
                 alt={`${value}-kronorssedel framsida`}
                 className="bm-bank-img bm-bank-note-img"
                 data-note={value}
@@ -59,7 +59,7 @@ function BankCatalog() {
                 decoding="async"
               />
               <img
-                src={`/pengar/sedel-${value}-bak.png`}
+                src={`/pengar/sedel-${value}-bak.webp`}
                 alt={`${value}-kronorssedel baksida`}
                 className="bm-bank-img bm-bank-note-img"
                 data-note={value}
@@ -99,7 +99,7 @@ function BankBreakdown({
                     {Array.from({ length: count }).map((_, i) => (
                       <div key={i} className="bm-note-wrap">
                         <img
-                          src={`/pengar/sedel-${value}.png`}
+                          src={`/pengar/sedel-${value}.webp`}
                           alt={`${value}-kronorssedel`}
                           className="bm-note-img"
                           data-note={value}
@@ -126,7 +126,7 @@ function BankBreakdown({
                       <div key={i} className="bm-coin-wrap">
                         <div className="bm-coin-clip" data-coin={value}>
                           <img
-                            src={`/pengar/mynt-${value}.png`}
+                            src={`/pengar/mynt-${value}.webp`}
                             alt={`${value}-krona`}
                             className="bm-coin-img"
                             loading="lazy"
