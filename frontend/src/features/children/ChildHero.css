@@ -1,6 +1,6 @@
 .child-hero {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: clamp(6px, 1vmin, 16px);
   min-width: 0;
@@ -8,6 +8,9 @@
 
 .child-hero > div {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .child-hero-month {
@@ -38,11 +41,15 @@
 
 .child-hero-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .child-hero-avatar {
-  width: clamp(72px, 12vmin, 120px);
-  height: clamp(72px, 12vmin, 120px);
+  height: 100%;
+  aspect-ratio: 1;
+  min-width: 72px;
+  max-height: 150px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
