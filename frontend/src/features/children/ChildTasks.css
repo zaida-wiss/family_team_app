@@ -108,6 +108,7 @@
   transform: scaleX(0);
   transform-origin: left;
   opacity: 0.9;
+  will-change: transform;
 }
 
 .child-task-card--holding::after {

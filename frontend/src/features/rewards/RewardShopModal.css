@@ -146,6 +146,7 @@
   opacity: 0.18;
   transform: scaleX(0);
   transform-origin: left center;
+  will-change: transform;
 }
 
 .reward-shop-card--holding {

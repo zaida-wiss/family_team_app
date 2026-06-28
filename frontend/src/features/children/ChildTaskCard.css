@@ -84,6 +84,7 @@
   transform-origin: left;
   opacity: 0.9;
   z-index: 3;
+  will-change: transform;
 }
 .child-task-card--timed {
   background-color: var(--task-timer-bg);
