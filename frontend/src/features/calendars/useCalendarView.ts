@@ -150,7 +150,10 @@ export function useCalendarView(
     : expandedEvents
         .filter(matchesFilter)
         .filter((ev) => {
-          return getEventStartDay(ev) <= monthLastDay && getEventEndDay(ev) >= monthFirstDay;
+          const notPast = ev.isAllDay
+            ? ev.endsAt.slice(0, 10) >= todayStr
+            : new Date(ev.endsAt).getTime() >= now.getTime();
+          return notPast && getEventStartDay(ev) <= monthLastDay && getEventEndDay(ev) >= monthFirstDay;
         })
         .sort(sortEvents);
 
