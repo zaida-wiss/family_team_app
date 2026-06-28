@@ -180,17 +180,26 @@
   padding-top: 12px;
 }
 
-/* Mynt: diameter — 5 kr=23.75mm, 2 kr=22.5mm, 10 kr=20.5mm, 1 kr=19.5mm */
-.bm-coin-img {
-  object-fit: contain;
-  display: block;
+/* Mynt: diameter — 5 kr=23.75mm, 2 kr=22.5mm, 10 kr=20.5mm, 1 kr=19.5mm.
+   Bilden är 1440×713 med framsida till vänster och baksida till höger.
+   .bm-coin-clip klipper bort högra halvan och rundar till cirkel. */
+.bm-coin-clip {
+  overflow: hidden;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
-.bm-coin-img[data-coin="1"]  { width: 59px;  height: 59px; }
-.bm-coin-img[data-coin="2"]  { width: 68px;  height: 68px; }
-.bm-coin-img[data-coin="5"]  { width: 72px;  height: 72px; }
-.bm-coin-img[data-coin="10"] { width: 62px;  height: 62px; }
+.bm-coin-clip[data-coin="1"]  { width: 59px;  height: 59px; }
+.bm-coin-clip[data-coin="2"]  { width: 68px;  height: 68px; }
+.bm-coin-clip[data-coin="5"]  { width: 72px;  height: 72px; }
+.bm-coin-clip[data-coin="10"] { width: 62px;  height: 62px; }
+
+.bm-coin-img {
+  /* height fyller containern, width:auto ≈ 2× containern → visar bara vänster halva = framsidan */
+  height: 100%;
+  width: auto;
+  display: block;
+}
 
 /* ── Räknare badge ── */
 

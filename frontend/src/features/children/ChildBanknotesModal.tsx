@@ -137,14 +137,15 @@ export function ChildBanknotesModal({ totalKronor, onClose }: Props) {
                     {mynt.map(({ value, count }) => (
                       <div key={value} className="bm-coin-row">
                         <div className="bm-coin-wrap">
-                          <img
-                            src={`/pengar/mynt-${value}.png`}
-                            alt={`${value}-krona`}
-                            className="bm-coin-img"
-                            data-coin={value}
-                            loading="lazy"
-                            decoding="async"
-                          />
+                          <div className="bm-coin-clip" data-coin={value}>
+                            <img
+                              src={`/pengar/mynt-${value}.png`}
+                              alt={`${value}-krona`}
+                              className="bm-coin-img"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </div>
                           {count > 1 && <span className="bm-count">×{count}</span>}
                         </div>
                         <span className="bm-note-label">{value} kr{count > 1 ? ` × ${count}` : ""}</span>
