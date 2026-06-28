@@ -1,7 +1,8 @@
 import "./AccountSettings.css";
-import { Eraser, Filter, ImagePlus, Trash2, X } from "lucide-react";
+import { Eraser, Filter, ImagePlus, Loader, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { uploadImage } from "../../utils/uploadImage";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role } from "@shared/types";
@@ -48,6 +49,7 @@ export function AccountSettings({
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [confirmOwnDataDelete, setConfirmOwnDataDelete] = useState(false);
+  const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(null);
   const [openCalFilterId, setOpenCalFilterId] = useState<string | null>(null);
   const [calFilterPos, setCalFilterPos] = useState({ top: 0, left: 0 });
 
@@ -77,9 +79,16 @@ export function AccountSettings({
   }
 
   async function updateAvatar(memberId: string, file: File | null) {
-    if (!file || !canManageMembers) return;
-    const avatarUrl = await readFileAsDataUrl(file);
-    onUpdateMemberAvatar(memberId, avatarUrl);
+    if (!file || !canManageMembers || uploadingMemberId) return;
+    setUploadingMemberId(memberId);
+    try {
+      const avatarUrl = await uploadImage(file, "avatars");
+      onUpdateMemberAvatar(memberId, avatarUrl);
+    } catch {
+      // uppladdning misslyckades — behåll befintlig bild
+    } finally {
+      setUploadingMemberId(null);
+    }
   }
 
   function deleteOwnData() {
@@ -153,12 +162,15 @@ export function AccountSettings({
                 </label>
                 <label
                   aria-label={`Välj bild för ${member.name}`}
-                  className="icon-button"
+                  className={`icon-button${uploadingMemberId === member.id ? " icon-button--loading" : ""}`}
                   title={`Välj bild för ${member.name}`}
                 >
-                  <ImagePlus size={16} />
+                  {uploadingMemberId === member.id
+                    ? <Loader size={16} className="spin" />
+                    : <ImagePlus size={16} />}
                   <input
                     accept="image/*"
+                    disabled={uploadingMemberId !== null}
                     hidden
                     onChange={(event) => {
                       void updateAvatar(member.id, event.target.files?.[0] ?? null);
@@ -331,14 +343,3 @@ export function AccountSettings({
   );
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      if (typeof reader.result === "string") { resolve(reader.result); return; }
-      reject(new Error("Kunde inte läsa bildfilen"));
-    });
-    reader.addEventListener("error", () => reject(reader.error));
-    reader.readAsDataURL(file);
-  });
-}
