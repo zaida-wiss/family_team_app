@@ -19,8 +19,9 @@ rewardShopRouter.delete("/items/:itemId", requireAuth, async (req, res) => {
 });
 
 rewardShopRouter.post("/purchase/:itemId", requireAuth, async (req, res) => {
-  const forMemberId: string = req.body.forMemberId ?? req.memberId!;
-  const purchased = await shop.purchaseItem(req.params.itemId, forMemberId);
+  const callerId = req.memberId!;
+  const forMemberId: string = req.body.forMemberId ?? callerId;
+  const purchased = await shop.purchaseItem(req.params.itemId, callerId, forMemberId);
   res.json(purchased);
 });
 

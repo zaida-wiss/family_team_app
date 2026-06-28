@@ -33,10 +33,22 @@ export async function removeItem(memberId: string, itemId: string) {
   );
 }
 
-export async function purchaseItem(itemId: string, memberId: string) {
-  const member = await MemberModel.findOne({ id: memberId });
-  if (!member) throw new AppError(404, "Medlem hittades inte");
+export async function purchaseItem(itemId: string, callerId: string, forMemberId: string) {
+  const [caller, forMember] = await Promise.all([
+    MemberModel.findOne({ id: callerId }),
+    MemberModel.findOne({ id: forMemberId }),
+  ]);
 
+  if (!caller) throw new AppError(401, "Ej autentiserad");
+  if (!forMember) throw new AppError(404, "Medlem hittades inte");
+
+  if (callerId !== forMemberId) {
+    if (caller.accountId !== forMember.accountId) throw new AppError(403, "Åtkomst nekad");
+    if (caller.isChild) throw new AppError(403, "Barn får inte köpa åt andra");
+    if (!forMember.isChild) throw new AppError(403, "Kan bara köpa åt barn");
+  }
+
+  const member = forMember;
   const shop = await RewardShopModel.findOne({ accountId: member.accountId });
   const item = shop?.items.find((i) => i.id === itemId && i.deletedAt === null);
   if (!item) throw new AppError(404, "Vara hittades inte");
