@@ -48,18 +48,17 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
     if (!forMember.isChild) throw new AppError(403, "Kan bara köpa åt barn");
   }
 
-  const member = forMember;
-  const shop = await RewardShopModel.findOne({ accountId: member.accountId });
+  const shop = await RewardShopModel.findOne({ accountId: forMember.accountId });
   const item = shop?.items.find((i) => i.id === itemId && i.deletedAt === null);
   if (!item) throw new AppError(404, "Vara hittades inte");
 
-  await MemberModel.updateOne({ id: memberId }, { $inc: { spentStars: item.starCost } });
+  await MemberModel.updateOne({ id: forMemberId }, { $inc: { spentStars: item.starCost } });
 
   const now = new Date().toISOString();
   const purchased = await PurchasedRewardModel.create({
     id: `pr-${crypto.randomUUID()}`,
-    accountId: member.accountId,
-    memberId,
+    accountId: forMember.accountId,
+    memberId: forMemberId,
     itemTitle: item.title,
     itemSymbol: item.symbol ?? null,
     starCost: item.starCost,
