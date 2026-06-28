@@ -20,36 +20,48 @@ async function syncAllSubscriptions() {
 }
 
 async function backfillAccountIds() {
-  const members = await MemberModel.find({}, { id: 1, accountId: 1, roleId: 1 });
-  const byMemberId = new Map(members.map((m) => [m.id, m.accountId]));
+  const members = await MemberModel.find({});
+  const byMemberId = new Map(members.map((m) => [m.get("id") as string, m.accountId]));
 
   const [todos, cals, lists, rewards] = await Promise.all([
-    TodoModel.find({ accountId: null }),
-    CalendarModel.find({ accountId: null }),
-    ShoppingListModel.find({ accountId: null }),
-    RewardModel.find({ accountId: null }),
+    TodoModel.find({}),
+    CalendarModel.find({}),
+    ShoppingListModel.find({}),
+    RewardModel.find({}),
   ]);
 
   let fixed = 0;
 
   for (const todo of todos) {
-    const aid = byMemberId.get(todo.createdBy);
-    if (aid) { await TodoModel.updateOne({ id: todo.id }, { accountId: aid }); fixed++; }
+    const aid = byMemberId.get(todo.createdBy) ?? byMemberId.get(todo.assignedTo ?? "");
+    if (aid && todo.accountId !== aid) {
+      await TodoModel.updateOne({ id: todo.id }, { accountId: aid });
+      fixed++;
+    }
   }
   for (const cal of cals) {
     const aid = byMemberId.get(cal.ownerId);
-    if (aid) { await CalendarModel.updateOne({ id: cal.id }, { accountId: aid }); fixed++; }
+    if (aid && cal.accountId !== aid) {
+      await CalendarModel.updateOne({ id: cal.id }, { accountId: aid });
+      fixed++;
+    }
   }
   for (const list of lists) {
     const aid = byMemberId.get(list.ownerId);
-    if (aid) { await ShoppingListModel.updateOne({ id: list.id }, { accountId: aid }); fixed++; }
+    if (aid && list.accountId !== aid) {
+      await ShoppingListModel.updateOne({ id: list.id }, { accountId: aid });
+      fixed++;
+    }
   }
   for (const reward of rewards) {
     const aid = byMemberId.get(reward.wishedBy);
-    if (aid) { await RewardModel.updateOne({ id: reward.id }, { accountId: aid }); fixed++; }
+    if (aid && reward.accountId !== aid) {
+      await RewardModel.updateOne({ id: reward.id }, { accountId: aid });
+      fixed++;
+    }
   }
 
-  if (fixed > 0) logger.info(`Migrering: accountId satt på ${fixed} dokument`);
+  if (fixed > 0) logger.info(`Migrering: accountId korrigerat på ${fixed} dokument`);
 }
 
 async function start() {
