@@ -273,11 +273,29 @@ function BankBreakdown({
               ref={upRef}
               className={`bm-drop-zone bm-drop-up${upActive ? " bm-zone-hot" : ""}${hasZoneItems ? " bm-zone-has-items" : ""}`}
             >
-              {hasZoneItems && (
-                <span className="bm-zone-total">{zoneTotal} kr</span>
+              {hasZoneItems ? (
+                <>
+                  <div className="bm-zone-items">
+                    {ALL_DENOMS.filter((v) => (zoneCounts[v] ?? 0) > 0)
+                      .flatMap((v) =>
+                        Array.from({ length: zoneCounts[v] }).map((_, i) =>
+                          MYNT.includes(v) ? (
+                            <div key={`${v}-${i}`} className="bm-coin-clip bm-zone-coin" data-coin={v}>
+                              <img src={`/pengar/mynt-${v}.webp`} alt="" className="bm-coin-img" />
+                            </div>
+                          ) : (
+                            <img key={`${v}-${i}`} src={`/pengar/sedel-${v}.webp`} alt="" className="bm-note-img bm-zone-note" data-note={v} />
+                          )
+                        )
+                      )}
+                  </div>
+                  <span className="bm-zone-total">{zoneTotal} kr</span>
+                  <ArrowUp size={16} />
+                  {timerActive && <div key={timerKey} className="bm-zone-timer" />}
+                </>
+              ) : (
+                <ArrowUp size={28} />
               )}
-              <ArrowUp size={hasZoneItems ? 20 : 28} />
-              {timerActive && <div key={timerKey} className="bm-zone-timer" />}
             </div>
 
             <div

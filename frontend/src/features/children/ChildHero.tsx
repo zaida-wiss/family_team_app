@@ -7,7 +7,6 @@ type Props = {
   childName: string;
   avatarUrl?: string | null;
   today: Date;
-  onLogout: () => Promise<void>;
 };
 
 export function ChildHero({ childName, avatarUrl, today }: Props) {

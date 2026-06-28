@@ -35,7 +35,6 @@ type Props = {
   onCompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
-  onLogout: () => Promise<void>;
 };
 
 function getWeekStripDays(anchor: Date) {
@@ -66,7 +65,6 @@ export function ChildDashboard({
   onCompleteTodo,
   onDismissRejectedTodo,
   onThemePickerOpen,
-  onLogout,
 }: Props) {
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -126,7 +124,7 @@ export function ChildDashboard({
             onNextWeek={() => moveWeek(1)}
           />
 
-          <ChildHero childName={child.name} avatarUrl={child.avatarUrl} today={today} onLogout={onLogout} />
+          <ChildHero childName={child.name} avatarUrl={child.avatarUrl} today={today} />
 
           <ChildTasksSection
             todos={activeChildTodos}

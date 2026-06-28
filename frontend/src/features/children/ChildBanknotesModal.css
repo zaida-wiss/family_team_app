@@ -276,14 +276,46 @@
 .bm-drop-up.bm-zone-has-items {
   background: color-mix(in srgb, #22c55e 8%, transparent);
   border-color: color-mix(in srgb, #22c55e 40%, var(--border));
+  justify-content: flex-start;
+  padding: 6px 4px 4px;
 }
 
+.bm-zone-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+}
+
+/* Mynt i zonen — kompakta */
+.bm-zone-coin.bm-coin-clip[data-coin="1"]  { width: 22px; height: 22px; }
+.bm-zone-coin.bm-coin-clip[data-coin="2"]  { width: 25px; height: 25px; }
+.bm-zone-coin.bm-coin-clip[data-coin="5"]  { width: 27px; height: 27px; }
+.bm-zone-coin.bm-coin-clip[data-coin="10"] { width: 23px; height: 23px; }
+
+/* Sedlar i zonen — smala */
+.bm-zone-note.bm-note-img {
+  height: 22px;
+  width: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
+.bm-zone-note.bm-note-img[data-note="20"]   { width: 38px; }
+.bm-zone-note.bm-note-img[data-note="50"]   { width: 40px; }
+.bm-zone-note.bm-note-img[data-note="100"]  { width: 42px; }
+.bm-zone-note.bm-note-img[data-note="200"]  { width: 44px; }
+.bm-zone-note.bm-note-img[data-note="500"]  { width: 46px; }
+.bm-zone-note.bm-note-img[data-note="1000"] { width: 48px; }
+
 .bm-zone-total {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 900;
   color: #16a34a;
   text-align: center;
   line-height: 1;
+  margin-top: 2px;
 }
 
 @keyframes bm-countdown {
