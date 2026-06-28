@@ -11,8 +11,11 @@ export function EmojiPickerSv({ onSelect }: Props) {
 
   const filtered = query.trim()
     ? EMOJIS.filter((e) => {
-        const q = query.toLowerCase();
-        return e.label.toLowerCase().includes(q) || e.keywords.some((k: string) => k.includes(q));
+        const q = query.toLowerCase().trim();
+        return (
+          e.label.toLowerCase().includes(q) ||
+          e.keywords.some((k: string) => k.includes(q) || q.startsWith(k))
+        );
       })
     : EMOJIS;
 
@@ -30,9 +33,9 @@ export function EmojiPickerSv({ onSelect }: Props) {
         {filtered.length === 0 ? (
           <p className="emoji-picker-sv__empty">Inga resultat</p>
         ) : (
-          filtered.map((e) => (
+          filtered.map((e, idx) => (
             <button
-              key={e.emoji}
+              key={`${e.emoji}-${idx}`}
               className="emoji-picker-sv__btn"
               title={e.label}
               type="button"
