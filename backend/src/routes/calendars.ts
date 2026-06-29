@@ -7,7 +7,8 @@ export const calendarsRouter = Router();
 
 calendarsRouter.get("/", requireAuth, async (req, res) => {
   const accountId = await accountIdOf(req.memberId, req.userId);
-  res.json(await calendars.getAllCalendars(accountId));
+  const { from, until } = req.query as { from?: string; until?: string };
+  res.json(await calendars.getAllCalendars(accountId, from, until));
 });
 
 calendarsRouter.post("/", requireAuth, async (req, res) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { calendarsApi } from "../../api";
 
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
@@ -24,12 +24,45 @@ type ImportEventInput = {
   notes: string | null;
 };
 
+function monthWindow(year: number, month: number) {
+  const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const until = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { from, until };
+}
+
 export function useCalendarsState() {
   const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const loadedFrom = useRef<string>("");
+  const loadedUntil = useRef<string>("");
 
   useEffect(() => {
-    calendarsApi.getAll().then(setCalendars).catch(console.error);
+    const now = new Date();
+    const { from } = monthWindow(now.getFullYear(), now.getMonth() - 1);
+    const { until } = monthWindow(now.getFullYear(), now.getMonth() + 2);
+    loadedFrom.current = from;
+    loadedUntil.current = until;
+    calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
   }, []);
+
+  async function loadEventsForMonth(year: number, month: number) {
+    const { from, until } = monthWindow(year, month);
+    if (from >= loadedFrom.current && until <= loadedUntil.current) return;
+    const expandFrom = from < loadedFrom.current ? from : loadedFrom.current;
+    const expandUntil = until > loadedUntil.current ? until : loadedUntil.current;
+    loadedFrom.current = expandFrom;
+    loadedUntil.current = expandUntil;
+    try {
+      const updated = await calendarsApi.getAll(expandFrom, expandUntil);
+      setCalendars(prev => prev.map(cal => {
+        const fresh = updated.find(c => c.id === cal.id);
+        if (!fresh) return cal;
+        const existing = new Set(cal.events.map(e => e.id));
+        const toAdd = fresh.events.filter(e => !existing.has(e.id));
+        return toAdd.length ? { ...cal, events: [...cal.events, ...toAdd] } : cal;
+      }));
+    } catch { /* keep existing state */ }
+  }
 
   function createCalendar(name: string, memberId: Id, color: string) {
     const newCalendar: Calendar = {
@@ -370,6 +403,7 @@ export function useCalendarsState() {
 
   return {
     calendars,
+    loadEventsForMonth,
     createCalendar,
     updateCalendarColor,
     renameCalendar,

@@ -32,11 +32,12 @@ type Props = {
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
+  onMonthChange?: (year: number, month: number) => void;
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent, onMonthChange }: Props) {
   const [internalSearch, setInternalSearch] = useState("");
   const [internalHidden, setInternalHidden] = useState<Set<string>>(new Set());
   const [internalCalView, setInternalCalView] = useState<CalendarViewMode>("month");
@@ -59,7 +60,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
     calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
-  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent);
+  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent, onMonthChange);
 
   const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds };
   const filteredVisible = visible.filter((calendar) => !hiddenCalendarIds.has(calendar.id));

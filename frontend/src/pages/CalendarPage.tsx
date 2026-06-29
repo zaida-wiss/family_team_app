@@ -15,9 +15,10 @@ type Props = {
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
+  onMonthChange?: (year: number, month: number) => void;
 };
 
-export function CalendarPage({ calendars, currentMember, activeMembers, roles, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent }: Props) {
+export function CalendarPage({ calendars, currentMember, activeMembers, roles, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent, onMonthChange }: Props) {
   return (
     <CalendarView
       calendars={calendars}
@@ -32,6 +33,7 @@ export function CalendarPage({ calendars, currentMember, activeMembers, roles, c
       onUpdateEvent={onUpdateEvent}
       onDeleteEvent={onDeleteEvent}
       onRsvpEvent={onRsvpEvent}
+      onMonthChange={onMonthChange}
     />
   );
 }

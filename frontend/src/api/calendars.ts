@@ -2,7 +2,13 @@ import type { Calendar, IcsSubscription } from "@shared/types";
 import { api, request } from "./client";
 
 export const calendarsApi = {
-  getAll: () => request<Calendar[]>(api("calendars")),
+  getAll: (from?: string, until?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (until) params.set("until", until);
+    const qs = params.size ? `?${params}` : "";
+    return request<Calendar[]>(api(`calendars${qs}`));
+  },
   create: (calendar: Calendar) =>
     request<{ id: string }>(api("calendars"), { method: "POST", body: JSON.stringify(calendar) }),
   addEvent: (calendarId: string, event: Calendar["events"][number]) =>

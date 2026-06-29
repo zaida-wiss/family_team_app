@@ -147,13 +147,13 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
   await calendar.save();
 }
 
-export async function getAllCalendars(accountId: string) {
+export async function getAllCalendars(accountId: string, from?: string, until?: string) {
   const cals = await CalendarModel.find({ accountId }, { _id: 0, __v: 0 }).lean();
   const now = new Date();
-  const past = new Date(now); past.setMonth(past.getMonth() - 3);
-  const future = new Date(now); future.setMonth(future.getMonth() + 18);
-  const fromStr = past.toISOString().slice(0, 10);
-  const untilStr = future.toISOString().slice(0, 10);
+  const defaultFrom = new Date(now); defaultFrom.setMonth(defaultFrom.getMonth() - 2);
+  const defaultUntil = new Date(now); defaultUntil.setMonth(defaultUntil.getMonth() + 3);
+  const fromStr = from ?? defaultFrom.toISOString().slice(0, 10);
+  const untilStr = until ?? defaultUntil.toISOString().slice(0, 10);
   return cals.map(cal => ({
     ...cal,
     events: (cal.events as { startsAt: string }[]).filter(ev => {

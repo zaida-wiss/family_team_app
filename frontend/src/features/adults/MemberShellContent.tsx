@@ -69,6 +69,7 @@ type Props = {
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded?: number, title?: string) => void;
+  onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
 };
 
 function isTodoVisibleNow(
@@ -93,7 +94,7 @@ export function MemberShellContent({
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
-  onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings
+  onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings, onLoadEventsForMonth
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
@@ -178,6 +179,7 @@ export function MemberShellContent({
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
         onRsvpEvent={onRsvpCalendarEvent}
+        onMonthChange={onLoadEventsForMonth}
       />
     );
   }

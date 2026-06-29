@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
 import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
@@ -51,6 +51,7 @@ export function useCalendarView(
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void,
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void,
   onDeleteEvent?: (calendarId: string, eventId: string) => void,
+  onMonthChange?: (year: number, month: number) => void,
 ) {
   const now = new Date();
   const todayStr = toLocalDateStr(now);
@@ -175,6 +176,8 @@ export function useCalendarView(
     .filter(matchesFilter)
     .filter(isNotPast)
     .sort(sortEvents);
+
+  useEffect(() => { onMonthChange?.(viewYear, viewMonth); }, [viewYear, viewMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigation ──
   function prevMonth() { setSelectedDay(null); setViewMonth((m) => { if (m === 0) { setViewYear((y) => y - 1); return 11; } return m - 1; }); }
