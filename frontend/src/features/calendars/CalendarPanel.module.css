@@ -392,3 +392,36 @@
     border-right: none;
   }
 }
+
+.keepHistoryRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px 0 4px;
+}
+
+.keepHistoryRow input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.keepHistoryText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.keepHistoryText strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.keepHistoryText small {
+  font-size: 0.78rem;
+  color: var(--muted-fg);
+  line-height: 1.4;
+}

@@ -58,6 +58,7 @@ type Props = {
   onUpdateSubscription: ComponentProps<typeof CalendarPanel>["onUpdateSubscription"];
   onRemoveSubscription: ComponentProps<typeof CalendarPanel>["onRemoveSubscription"];
   onSyncSubscription: ComponentProps<typeof CalendarPanel>["onSyncSubscription"];
+  onUpdateCalendarKeepAllHistory: ComponentProps<typeof CalendarPanel>["onUpdateCalendarKeepAllHistory"];
   onAddShoppingItem: (listId: Id, title: string) => void;
   onCreateShoppingList: (name: string) => void;
   onDeleteShoppingList: (listId: Id) => void;
@@ -118,6 +119,7 @@ export function Dashboard({
   onUpdateSubscription,
   onRemoveSubscription,
   onSyncSubscription,
+  onUpdateCalendarKeepAllHistory,
   onAddShoppingItem,
   onCreateShoppingList,
   onDeleteShoppingList,
@@ -206,6 +208,7 @@ export function Dashboard({
           onUpdateSubscription={onUpdateSubscription}
           onRemoveSubscription={onRemoveSubscription}
           onSyncSubscription={onSyncSubscription}
+          onUpdateCalendarKeepAllHistory={onUpdateCalendarKeepAllHistory}
         />
       ) : null}
 

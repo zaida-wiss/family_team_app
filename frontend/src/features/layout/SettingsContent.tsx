@@ -157,6 +157,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onUpdateSubscription={memberContentProps.onUpdateSubscription}
           onRemoveSubscription={memberContentProps.onRemoveSubscription}
           onSyncSubscription={memberContentProps.onSyncSubscription}
+          onUpdateCalendarKeepAllHistory={memberContentProps.onUpdateCalendarKeepAllHistory}
         />
       </SettingsSection>
 

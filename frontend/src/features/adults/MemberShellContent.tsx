@@ -70,6 +70,7 @@ type Props = {
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded?: number, title?: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
+  onUpdateCalendarKeepAllHistory?: DashboardProps["onUpdateCalendarKeepAllHistory"];
 };
 
 function isTodoVisibleNow(

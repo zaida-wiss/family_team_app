@@ -102,6 +102,13 @@ export function useCalendarsState() {
     );
   }
 
+  function updateCalendarKeepAllHistory(calendarId: Id, keepAllHistory: boolean) {
+    calendarsApi.update(calendarId, { keepAllHistory }).catch(console.error);
+    setCalendars((current) =>
+      current.map((cal) => (cal.id !== calendarId ? cal : { ...cal, keepAllHistory }))
+    );
+  }
+
   function addCalendarEvent(calendarId: Id, event: AddEventInput, memberId: Id) {
     const newEvent: Calendar["events"][number] = {
       id: `event-${crypto.randomUUID()}`,
@@ -407,6 +414,7 @@ export function useCalendarsState() {
     updateCalendarColor,
     renameCalendar,
     transferCalendar,
+    updateCalendarKeepAllHistory,
     addCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,

@@ -49,7 +49,7 @@ export const calendarsApi = {
       method: "PATCH",
       body: JSON.stringify({ memberId, status })
     }),
-  update: (id: string, patch: { color?: string; name?: string; ownerId?: string }) =>
+  update: (id: string, patch: { color?: string; name?: string; ownerId?: string; keepAllHistory?: boolean }) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), {
       method: "PATCH",
       body: JSON.stringify(patch)

@@ -61,6 +61,7 @@ type CalendarPanelProps = {
   onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "displaySymbol">>) => Promise<void>;
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
+  onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
 };
 
 export function CalendarPanel({
@@ -81,7 +82,8 @@ export function CalendarPanel({
   onAddSubscription,
   onUpdateSubscription,
   onRemoveSubscription,
-  onSyncSubscription
+  onSyncSubscription,
+  onUpdateCalendarKeepAllHistory,
 }: CalendarPanelProps) {
   const visibleCalendars = calendars.filter((calendar) => {
     if (calendar.deletedAt !== null) {
@@ -488,6 +490,24 @@ export function CalendarPanel({
                   : "Dela med familjen"}
               </button>
             </div>
+          )}
+
+          {canEditSelectedCalendar && onUpdateCalendarKeepAllHistory && (
+            <label className={styles.keepHistoryRow}>
+              <input
+                type="checkbox"
+                checked={selectedCalendar.keepAllHistory ?? false}
+                onChange={(e) => onUpdateCalendarKeepAllHistory(selectedCalendar.id, e.target.checked)}
+              />
+              <span className={styles.keepHistoryText}>
+                <strong>Bevara all historik</strong>
+                <small>
+                  {selectedCalendar.keepAllHistory
+                    ? "Händelser sparas för alltid — inget raderas automatiskt."
+                    : "Händelser äldre än 1 månad raderas automatiskt. Bra för prenumerationer med många händelser."}
+                </small>
+              </span>
+            </label>
           )}
 
           <div className="calendar-actions">

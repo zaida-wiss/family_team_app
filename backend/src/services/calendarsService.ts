@@ -380,10 +380,11 @@ export async function updateCalendar(calendarId: string, patch: unknown) {
   if (!calendar) {
     throw new AppError(404, "Kalender hittades inte");
   }
-  const { color, name, ownerId } = patch as { color?: string; name?: string; ownerId?: string };
+  const { color, name, ownerId, keepAllHistory } = patch as { color?: string; name?: string; ownerId?: string; keepAllHistory?: boolean };
   if (color) calendar.color = color;
   if (name) calendar.name = name;
   if (ownerId) calendar.ownerId = ownerId;
+  if (keepAllHistory !== undefined) (calendar as any).keepAllHistory = keepAllHistory;
   await calendar.save();
 }
 
