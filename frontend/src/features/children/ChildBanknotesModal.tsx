@@ -3,29 +3,116 @@ import { ArrowDown, ArrowLeft, ArrowUp, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { ALL_DENOMS, MYNT, SEDLAR, applyZoneConvert, applySplit, denomCounts } from "./bankDenoms";
+import type { BankDragZone } from "./useBankDragZone";
 import { useBankDragZone } from "./useBankDragZone";
 
-// ── BankBreakdown — plånbok + växelzon ────────────────────────────────────
+// ── BankWallet — visar barnets sedlar och mynt ────────────────────────────
 
-function BankBreakdown({
-  counts,
-  onSplit,
-  onZoneConvert,
-  isEmpty,
-  onOpenBank,
-}: {
+function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fadeIn, startDrag }: Pick<BankDragZone,
+  "bills" | "coins" | "walletCounts" | "dragging" | "fadeOut" | "fadeIn" | "startDrag"
+>) {
+  const itemClass = (v: number) =>
+    `bm-exch-item${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`;
+
+  return (
+    <div className="bm-bills-panel">
+      {bills.map((v) => (
+        <div key={v} className={itemClass(v)} onPointerDown={(e) => startDrag(v, e)}>
+          <div className="bm-exch-item-img">
+            {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
+              <img key={i} src={`/pengar/sedel-${v}.webp`}
+                alt={i === 0 ? `${v}-kronorssedel` : ""}
+                className={`bm-note-img${i > 0 ? " bm-stacked" : ""}`}
+                data-note={v} loading="lazy" decoding="async"
+              />
+            ))}
+          </div>
+          <span className="bm-item-label">{v} kr</span>
+        </div>
+      ))}
+
+      {coins.length > 0 && (
+        <div className="bm-coins-row">
+          {coins.map((v) => (
+            <div key={v} className={`${itemClass(v)} bm-exch-coin`} onPointerDown={(e) => startDrag(v, e)}>
+              <div className="bm-exch-item-img">
+                {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
+                  <div key={i} className={`bm-coin-clip${i > 0 ? " bm-stacked" : ""}`} data-coin={v}>
+                    <img src={`/pengar/mynt-${v}.webp`} alt={i === 0 ? `${v}-krona` : ""}
+                      className="bm-coin-img" loading="lazy" decoding="async"
+                    />
+                  </div>
+                ))}
+              </div>
+              <span className="bm-item-label">{v} kr</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── BankDropZones — växelzoner (dra upp = växla upp, dra ned = dela) ──────
+
+function BankDropZones({ upRef, downRef, upActive, downActive, downOff, hasZoneItems,
+  zoneCounts, zoneTotal, timerActive, timerKey, splitRule, dragging }: Pick<BankDragZone,
+  "upRef" | "downRef" | "upActive" | "downActive" | "downOff" | "hasZoneItems" |
+  "zoneCounts" | "zoneTotal" | "timerActive" | "timerKey" | "splitRule" | "dragging"
+>) {
+  return (
+    <div className="bm-drop-panel">
+      <div ref={upRef}
+        className={`bm-drop-zone bm-drop-up${upActive ? " bm-zone-hot" : ""}${hasZoneItems ? " bm-zone-has-items" : ""}`}
+      >
+        {hasZoneItems ? (
+          <>
+            <div className="bm-zone-items">
+              {ALL_DENOMS.filter((v) => (zoneCounts[v] ?? 0) > 0).flatMap((v) =>
+                Array.from({ length: zoneCounts[v] }).map((_, i) =>
+                  MYNT.includes(v) ? (
+                    <div key={`${v}-${i}`} className="bm-coin-clip bm-zone-coin" data-coin={v}>
+                      <img src={`/pengar/mynt-${v}.webp`} alt="" className="bm-coin-img" />
+                    </div>
+                  ) : (
+                    <img key={`${v}-${i}`} src={`/pengar/sedel-${v}.webp`} alt="" className="bm-note-img bm-zone-note" data-note={v} />
+                  )
+                )
+              )}
+            </div>
+            <span className="bm-zone-total">{zoneTotal} kr</span>
+            <ArrowUp size={16} />
+            {timerActive && <div key={timerKey} className="bm-zone-timer" />}
+          </>
+        ) : (
+          <ArrowUp size={28} />
+        )}
+      </div>
+
+      <div ref={downRef}
+        className={`bm-drop-zone bm-drop-down${downActive ? " bm-zone-hot" : ""}${downOff ? " bm-zone-off" : ""}`}
+      >
+        <ArrowDown size={28} />
+        {splitRule?.s && dragging !== null && (
+          <span className="bm-drop-hint">
+            {dragging}→{splitRule.s.map(([t, n]) => `${n}×${t}`).join("+")}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── BankBreakdown — koordinator ────────────────────────────────────────────
+
+function BankBreakdown({ counts, onSplit, onZoneConvert, isEmpty, onOpenBank }: {
   counts: Record<number, number>;
   onSplit: (v: number) => void;
   onZoneConvert: (remove: Record<number, number>, total: number) => void;
   isEmpty: boolean;
   onOpenBank: () => void;
 }) {
-  const {
-    dragging, fadeOut, fadeIn, zoneCounts, timerActive, timerKey,
-    walletCounts, bills, coins, zoneTotal, hasZoneItems,
-    upActive, downActive, downOff, splitRule,
-    startDrag, upRef, downRef, ghostRef,
-  } = useBankDragZone(counts, onSplit, onZoneConvert);
+  const zone = useBankDragZone(counts, onSplit, onZoneConvert);
 
   return (
     <>
@@ -33,115 +120,21 @@ function BankBreakdown({
         <p className="bm-empty">Tjäna fler stjärnor — varje stjärna är 1 kr! ⭐</p>
       ) : (
         <div className="bm-exchange-layout">
-          <div className="bm-bills-panel">
-            {bills.map((v) => (
-              <div
-                key={v}
-                className={`bm-exch-item${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`}
-                onPointerDown={(e) => startDrag(v, e)}
-              >
-                <div className="bm-exch-item-img">
-                  {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
-                    <img
-                      key={i}
-                      src={`/pengar/sedel-${v}.webp`}
-                      alt={i === 0 ? `${v}-kronorssedel` : ""}
-                      className={`bm-note-img${i > 0 ? " bm-stacked" : ""}`}
-                      data-note={v}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ))}
-                </div>
-                <span className="bm-item-label">{v} kr</span>
-              </div>
-            ))}
-
-            {coins.length > 0 && (
-              <div className="bm-coins-row">
-                {coins.map((v) => (
-                  <div
-                    key={v}
-                    className={`bm-exch-item bm-exch-coin${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`}
-                    onPointerDown={(e) => startDrag(v, e)}
-                  >
-                    <div className="bm-exch-item-img">
-                      {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
-                        <div key={i} className={`bm-coin-clip${i > 0 ? " bm-stacked" : ""}`} data-coin={v}>
-                          <img
-                            src={`/pengar/mynt-${v}.webp`}
-                            alt={i === 0 ? `${v}-krona` : ""}
-                            className="bm-coin-img"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <span className="bm-item-label">{v} kr</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bm-drop-panel">
-            <div
-              ref={upRef}
-              className={`bm-drop-zone bm-drop-up${upActive ? " bm-zone-hot" : ""}${hasZoneItems ? " bm-zone-has-items" : ""}`}
-            >
-              {hasZoneItems ? (
-                <>
-                  <div className="bm-zone-items">
-                    {ALL_DENOMS.filter((v) => (zoneCounts[v] ?? 0) > 0)
-                      .flatMap((v) =>
-                        Array.from({ length: zoneCounts[v] }).map((_, i) =>
-                          MYNT.includes(v) ? (
-                            <div key={`${v}-${i}`} className="bm-coin-clip bm-zone-coin" data-coin={v}>
-                              <img src={`/pengar/mynt-${v}.webp`} alt="" className="bm-coin-img" />
-                            </div>
-                          ) : (
-                            <img key={`${v}-${i}`} src={`/pengar/sedel-${v}.webp`} alt="" className="bm-note-img bm-zone-note" data-note={v} />
-                          )
-                        )
-                      )}
-                  </div>
-                  <span className="bm-zone-total">{zoneTotal} kr</span>
-                  <ArrowUp size={16} />
-                  {timerActive && <div key={timerKey} className="bm-zone-timer" />}
-                </>
-              ) : (
-                <ArrowUp size={28} />
-              )}
-            </div>
-
-            <div
-              ref={downRef}
-              className={`bm-drop-zone bm-drop-down${downActive ? " bm-zone-hot" : ""}${downOff ? " bm-zone-off" : ""}`}
-            >
-              <ArrowDown size={28} />
-              {splitRule?.s && dragging !== null && (
-                <span className="bm-drop-hint">
-                  {dragging}→{splitRule.s.map(([t, n]) => `${n}×${t}`).join("+")}
-                </span>
-              )}
-            </div>
-          </div>
+          <BankWallet {...zone} />
+          <BankDropZones {...zone} />
         </div>
       )}
 
-      <button className="bm-bank-btn" type="button" onClick={onOpenBank}>
-        🏦 Banken
-      </button>
+      <button className="bm-bank-btn" type="button" onClick={onOpenBank}>🏦 Banken</button>
 
-      {dragging !== null && createPortal(
-        <div ref={ghostRef} className="bm-ghost">
-          {MYNT.includes(dragging) ? (
-            <div className="bm-coin-clip" data-coin={dragging}>
-              <img src={`/pengar/mynt-${dragging}.webp`} alt="" className="bm-coin-img" />
+      {zone.dragging !== null && createPortal(
+        <div ref={zone.ghostRef} className="bm-ghost">
+          {MYNT.includes(zone.dragging) ? (
+            <div className="bm-coin-clip" data-coin={zone.dragging}>
+              <img src={`/pengar/mynt-${zone.dragging}.webp`} alt="" className="bm-coin-img" />
             </div>
           ) : (
-            <img src={`/pengar/sedel-${dragging}.webp`} alt="" className="bm-note-img" data-note={dragging} />
+            <img src={`/pengar/sedel-${zone.dragging}.webp`} alt="" className="bm-note-img" data-note={zone.dragging} />
           )}
         </div>,
         document.body
@@ -161,13 +154,9 @@ function BankCatalog() {
         {[...MYNT].reverse().map((value) => (
           <div key={value} className="bm-bank-coin">
             <span className="bm-bank-label">{value} kr</span>
-            <img
-              src={`/pengar/mynt-${value}.webp`}
-              alt={`${value}-krona fram och bak`}
-              className="bm-bank-img bm-bank-coin-img"
-              data-coin={value}
-              loading="lazy"
-              decoding="async"
+            <img src={`/pengar/mynt-${value}.webp`} alt={`${value}-krona fram och bak`}
+              className="bm-bank-img bm-bank-coin-img" data-coin={value}
+              loading="lazy" decoding="async"
             />
           </div>
         ))}
@@ -178,21 +167,13 @@ function BankCatalog() {
           <div key={value} className="bm-bank-note">
             <span className="bm-bank-label">{value} kr</span>
             <div className="bm-bank-sides">
-              <img
-                src={`/pengar/sedel-${value}.webp`}
-                alt={`${value}-kronorssedel framsida`}
-                className="bm-bank-img bm-bank-note-img"
-                data-note={value}
-                loading="lazy"
-                decoding="async"
+              <img src={`/pengar/sedel-${value}.webp`} alt={`${value}-kronorssedel framsida`}
+                className="bm-bank-img bm-bank-note-img" data-note={value}
+                loading="lazy" decoding="async"
               />
-              <img
-                src={`/pengar/sedel-${value}-bak.webp`}
-                alt={`${value}-kronorssedel baksida`}
-                className="bm-bank-img bm-bank-note-img"
-                data-note={value}
-                loading="lazy"
-                decoding="async"
+              <img src={`/pengar/sedel-${value}-bak.webp`} alt={`${value}-kronorssedel baksida`}
+                className="bm-bank-img bm-bank-note-img" data-note={value}
+                loading="lazy" decoding="async"
               />
             </div>
           </div>
@@ -244,12 +225,8 @@ export function ChildBanknotesModal({ totalKronor, onClose }: Props) {
 
         {showBank
           ? <BankCatalog />
-          : <BankBreakdown
-              counts={counts}
-              onSplit={onSplit}
-              onZoneConvert={onZoneConvert}
-              isEmpty={isEmpty}
-              onOpenBank={() => setShowBank(true)}
+          : <BankBreakdown counts={counts} onSplit={onSplit} onZoneConvert={onZoneConvert}
+              isEmpty={isEmpty} onOpenBank={() => setShowBank(true)}
             />
         }
       </div>
