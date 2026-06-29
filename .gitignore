@@ -4,4 +4,5 @@ dist
 .DS_Store
 .env
 .claude/
-CLAUDE.md 
+CLAUDE.md
+_bmad/core/agents/
