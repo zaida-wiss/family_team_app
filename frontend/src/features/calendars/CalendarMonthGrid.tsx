@@ -2,7 +2,7 @@ import "./CalendarMonthGrid.css";
 import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 import type { EnrichedEvent } from "./CalendarEventList";
-import { DAYS, MONTHS, fmtTime, getISOWeek, isHolidayEvent, toLocalDateStr } from "./calendarHelpers";
+import { DAYS, MONTHS, getISOWeek, isHolidayEvent, toLocalDateStr } from "./calendarHelpers";
 
 type CalDay = { date: Date; isCurrentMonth: boolean };
 
@@ -44,12 +44,12 @@ export function CalendarMonthGrid({
   return (
     <div className="cal-grid-card">
       <div className="cal-grid-nav">
-        <button className="icon-button" onClick={onPrevMonth} type="button"><ChevronLeft size={18} /></button>
+        <button className="icon-button" onClick={onPrevMonth} type="button" aria-label="Föregående månad"><ChevronLeft size={18} /></button>
         <div className="cal-grid-nav-center">
           <span className="cal-grid-month">{MONTHS[viewMonth]} {viewYear}</span>
           {navExtra}
         </div>
-        <button className="icon-button" onClick={onNextMonth} type="button"><ChevronRight size={18} /></button>
+        <button className="icon-button" onClick={onNextMonth} type="button" aria-label="Nästa månad"><ChevronRight size={18} /></button>
       </div>
 
       <div className={`cal-day-names${showWeekNumbers ? " cal-day-names--wk" : ""}`}>
