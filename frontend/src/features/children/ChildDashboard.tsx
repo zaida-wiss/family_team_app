@@ -111,7 +111,7 @@ export function ChildDashboard({
             roles={roles}
             selectedDay={selectedDay}
             todos={timelineTodos}
-            purchased={purchased.filter((pr) => pr.memberId === child.id)}
+            purchased={(purchased ?? []).filter((pr) => pr.memberId === child.id)}
           />
         </div>
 
@@ -173,7 +173,7 @@ export function ChildDashboard({
         <RewardShopModal
           items={shopItems}
           availableStars={availableStars}
-          purchased={purchased}
+          purchased={purchased ?? []}
           onPurchase={(item) => {
             setLocalSpentStars((s) => s + item.starCost);
             void purchase(item, child.id);

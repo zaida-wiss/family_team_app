@@ -25,19 +25,19 @@ export function useRewardShopState() {
 
   async function purchase(item: RewardShopItem, forMemberId: string) {
     const pr = await rewardShopApi.purchase(item.id, forMemberId);
-    setPurchased((prev) => [...prev, pr]);
+    setPurchased((prev) => [...(prev ?? []), pr]);
   }
 
   async function movePurchased(id: string, startsAt: string) {
     await rewardShopApi.movePurchased(id, startsAt);
     setPurchased((prev) =>
-      prev.map((pr) => (pr.id === id ? { ...pr, startsAt } : pr))
+      (prev ?? []).map((pr) => (pr.id === id ? { ...pr, startsAt } : pr))
     );
   }
 
   async function deletePurchased(id: string) {
     await rewardShopApi.deletePurchased(id);
-    setPurchased((prev) => prev.filter((pr) => pr.id !== id));
+    setPurchased((prev) => (prev ?? []).filter((pr) => pr.id !== id));
   }
 
   return { items, purchased, addItem, removeItem, purchase, movePurchased, deletePurchased };
