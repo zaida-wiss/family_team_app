@@ -51,6 +51,8 @@ app.use("/api", globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 
+app.get("/health", (_req, res) => { res.json({ ok: true }); });
+
 app.use("/api/auth", authRouter);
 app.use("/api", invitationsRouter);
 app.use("/api/accounts", accountsRouter);
