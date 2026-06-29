@@ -148,7 +148,19 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
 }
 
 export async function getAllCalendars(accountId: string) {
-  return CalendarModel.find({ accountId }, { _id: 0, __v: 0 });
+  const cals = await CalendarModel.find({ accountId }, { _id: 0, __v: 0 }).lean();
+  const now = new Date();
+  const past = new Date(now); past.setMonth(past.getMonth() - 3);
+  const future = new Date(now); future.setMonth(future.getMonth() + 18);
+  const fromStr = past.toISOString().slice(0, 10);
+  const untilStr = future.toISOString().slice(0, 10);
+  return cals.map(cal => ({
+    ...cal,
+    events: (cal.events as { startsAt: string }[]).filter(ev => {
+      const d = (ev.startsAt ?? "").slice(0, 10);
+      return d >= fromStr && d <= untilStr;
+    }),
+  }));
 }
 
 export async function createCalendar(data: unknown) {
