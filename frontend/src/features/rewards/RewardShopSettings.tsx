@@ -7,7 +7,7 @@ type Props = {
   items: RewardShopItem[];
   currentMemberId: string;
   children: Member[];
-  purchased: PurchasedReward[];
+  purchased: PurchasedReward[] | null;
   onAdd: (item: RewardShopItem) => void;
   onRemove: (itemId: string) => void;
   onRefund: (childId: string, amount: number) => void;
@@ -23,6 +23,55 @@ type FormState = {
 };
 
 const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null });
+
+type PurchasedListProps = {
+  purchased: PurchasedReward[] | null;
+  children: Member[];
+  onMovePurchased: (id: string, startsAt: string) => void;
+  onDeletePurchased: (id: string) => void;
+};
+
+function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased }: PurchasedListProps) {
+  if (purchased === null) {
+    return <div className="reward-shop-settings__purchased-placeholder" aria-hidden="true" />;
+  }
+  if (purchased.length === 0) return null;
+  return (
+    <div className="reward-shop-settings__purchased">
+      <p className="reward-shop-settings__refund-heading">Uthämtade belöningar</p>
+      {purchased.map((pr) => {
+        const child = children.find((c) => c.id === pr.memberId);
+        const localStart = new Date(pr.startsAt).toISOString().slice(0, 16);
+        return (
+          <div key={pr.id} className="reward-shop-settings__purchased-row">
+            <span className="reward-shop-settings__purchased-symbol">{pr.itemSymbol ?? "🎁"}</span>
+            <div className="reward-shop-settings__purchased-info">
+              <span className="reward-shop-settings__purchased-title">{pr.itemTitle}</span>
+              {child && <span className="reward-shop-settings__purchased-child">{child.name}</span>}
+            </div>
+            <input
+              aria-label="Starttid för belöning"
+              type="datetime-local"
+              className="reward-shop-settings__purchased-time"
+              defaultValue={localStart}
+              onBlur={(e) => {
+                if (e.target.value) {
+                  onMovePurchased(pr.id, new Date(e.target.value).toISOString());
+                }
+              }}
+            />
+            <button
+              aria-label={`Ta bort ${pr.itemTitle}`}
+              className="reward-shop-settings__remove"
+              onClick={() => onDeletePurchased(pr.id)}
+              type="button"
+            >✕</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
   const [form, setForm] = useState<FormState>(blank());
@@ -108,8 +157,10 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
                 {item.timerMinutes !== null && ` · ⏱ ${item.timerMinutes} min`}
               </span>
               <button
+                aria-label={`Ta bort ${item.title}`}
                 className="reward-shop-settings__remove"
                 onClick={() => onRemove(item.id)}
+                type="button"
               >
                 ✕
               </button>
@@ -145,38 +196,12 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
         </div>
       )}
 
-      {purchased.length > 0 && (
-        <div className="reward-shop-settings__purchased">
-          <p className="reward-shop-settings__refund-heading">Uthämtade belöningar</p>
-          {purchased.map((pr) => {
-            const child = children.find((c) => c.id === pr.memberId);
-            const localStart = new Date(pr.startsAt).toISOString().slice(0, 16);
-            return (
-              <div key={pr.id} className="reward-shop-settings__purchased-row">
-                <span className="reward-shop-settings__purchased-symbol">{pr.itemSymbol ?? "🎁"}</span>
-                <div className="reward-shop-settings__purchased-info">
-                  <span className="reward-shop-settings__purchased-title">{pr.itemTitle}</span>
-                  {child && <span className="reward-shop-settings__purchased-child">{child.name}</span>}
-                </div>
-                <input
-                  type="datetime-local"
-                  className="reward-shop-settings__purchased-time"
-                  defaultValue={localStart}
-                  onBlur={(e) => {
-                    if (e.target.value) {
-                      onMovePurchased(pr.id, new Date(e.target.value).toISOString());
-                    }
-                  }}
-                />
-                <button
-                  className="reward-shop-settings__remove"
-                  onClick={() => onDeletePurchased(pr.id)}
-                >✕</button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <PurchasedList
+        purchased={purchased}
+        children={children}
+        onMovePurchased={onMovePurchased}
+        onDeletePurchased={onDeletePurchased}
+      />
     </section>
   );
 }

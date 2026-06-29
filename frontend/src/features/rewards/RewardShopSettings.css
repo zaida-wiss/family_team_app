@@ -79,7 +79,7 @@
 }
 
 .reward-shop-settings__add-btn {
-  background: var(--c1, #6366f1);
+  background: var(--c1, #4338ca);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -124,17 +124,23 @@
 
 .reward-shop-settings__item-meta {
   font-size: 0.78rem;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary, #555);
 }
 
 .reward-shop-settings__remove {
   background: none;
   border: none;
   font-size: 0.9rem;
-  color: var(--text-secondary, #999);
+  color: var(--text-secondary, #555);
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 0;
   border-radius: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .reward-shop-settings__remove:hover {
@@ -156,7 +162,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary, #555);
   margin: 0;
 }
 
@@ -196,4 +202,60 @@
 .reward-shop-settings__refund-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.reward-shop-settings__purchased {
+  margin-top: 16px;
+  border-top: 1px solid var(--border, #eee);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reward-shop-settings__purchased-placeholder {
+  min-height: 60px;
+}
+
+.reward-shop-settings__purchased-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reward-shop-settings__purchased-symbol {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.reward-shop-settings__purchased-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reward-shop-settings__purchased-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reward-shop-settings__purchased-child {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #555);
+}
+
+.reward-shop-settings__purchased-time {
+  font-size: 0.78rem;
+  padding: 6px 8px;
+  min-height: 36px;
+  border: 1.5px solid var(--border, #ddd);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8f8f8);
+  color: var(--text-primary, #111);
+  flex-shrink: 0;
 }

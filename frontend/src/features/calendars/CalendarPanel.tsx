@@ -349,6 +349,7 @@ export function CalendarPanel({
             value={calendarName}
           />
           <button
+            aria-label="Skapa kalender"
             className="icon-button"
             disabled={!canCreateCalendar}
             onClick={createCalendar}
@@ -638,6 +639,7 @@ export function CalendarPanel({
                               Spara &amp; synka
                             </button>
                             <button
+                              aria-label="Avbryt redigering"
                               className="icon-button"
                               onClick={() => setEditingSubId(null)}
                               type="button"
@@ -777,6 +779,7 @@ export function CalendarPanel({
 
           <div className="calendar-event-form">
             <select
+              aria-label="Välj medlem att dela med"
               className="text-input"
               disabled={!canEditSelectedCalendar}
               onChange={(event) => setShareMemberId(event.target.value)}
@@ -792,6 +795,7 @@ export function CalendarPanel({
                 ))}
             </select>
             <select
+              aria-label="Behörighetsnivå"
               className="text-input"
               disabled={!canEditSelectedCalendar}
               onChange={(event) => setShareAccess(event.target.value as AccessLevel)}
@@ -863,6 +867,7 @@ export function CalendarPanel({
               value={endsAt}
             />
             <button
+              aria-label="Lägg till händelse"
               className="icon-button"
               disabled={!canEditSelectedCalendar}
               onClick={addEvent}

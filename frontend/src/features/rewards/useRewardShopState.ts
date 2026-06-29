@@ -6,7 +6,7 @@ export type { PurchasedReward };
 
 export function useRewardShopState() {
   const [items, setItems] = useState<RewardShopItem[]>([]);
-  const [purchased, setPurchased] = useState<PurchasedReward[]>([]);
+  const [purchased, setPurchased] = useState<PurchasedReward[] | null>(null);
 
   useEffect(() => {
     rewardShopApi.getItems().then(setItems).catch(console.error);

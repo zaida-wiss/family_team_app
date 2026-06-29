@@ -629,8 +629,9 @@
 
 .theme-font-label {
   font-size: 0.7rem;
-  color: var(--muted-fg);
+  color: var(--foreground);
   text-align: center;
+  opacity: 0.75;
 }
 
 .theme-option {
