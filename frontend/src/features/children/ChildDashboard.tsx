@@ -173,9 +173,9 @@ export function ChildDashboard({
 
       {isShopOpen && (
         <RewardShopModal
+          childId={child.id}
           items={shopItems}
           availableStars={availableStars}
-          purchased={purchased ?? []}
           onPurchase={(item) => {
             setLocalSpentStars((s) => s + item.starCost);
             void purchase(item, child.id);

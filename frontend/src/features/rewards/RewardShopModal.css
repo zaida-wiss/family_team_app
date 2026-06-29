@@ -191,3 +191,251 @@
   font-size: 0.72rem;
   color: var(--text-secondary, #888);
 }
+
+.reward-shop-card--drag-target {
+  border-color: #a855f7;
+  background: color-mix(in srgb, #a855f7 10%, var(--bg-secondary, #f8f8f8));
+  transform: scale(1.04);
+  box-shadow: 0 0 0 3px color-mix(in srgb, #a855f7 30%, transparent);
+}
+
+@keyframes shop-card-blink {
+  0%   { background: var(--bg-secondary, #f8f8f8); box-shadow: none; }
+  25%  { background: #dcfce7; box-shadow: 0 0 0 4px #22c55e; }
+  60%  { background: #dcfce7; box-shadow: 0 0 0 4px #22c55e; }
+  100% { background: var(--bg-secondary, #f8f8f8); box-shadow: none; }
+}
+
+.reward-shop-card--flash {
+  animation: shop-card-blink 0.65s ease forwards;
+}
+
+/* Prislapp — absolut placerad i övre högra hörnet */
+.shop-price-tag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 20px;
+  border: 1px solid #fcd34d;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* Pengalager — täcker hela kortet, genomskinlig bakgrund så symbolen syns */
+.shop-card-money-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px;
+  pointer-events: none;
+}
+
+/* × behöver vara klickbar */
+.shop-card-money-clear {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: rgba(255,255,255,0.85);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.85rem;
+  color: #666;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  pointer-events: all;
+  line-height: 1;
+}
+
+.shop-card-money-clear:hover {
+  background: rgba(255,255,255,1);
+  color: #111;
+}
+
+.shop-card-note-img {
+  height: 24px;
+  object-fit: contain;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  display: block;
+  flex-shrink: 0;
+}
+
+.shop-card-note-img[data-note="20"]   { width: 44px; }
+.shop-card-note-img[data-note="50"]   { width: 46px; }
+.shop-card-note-img[data-note="100"]  { width: 49px; }
+.shop-card-note-img[data-note="200"]  { width: 52px; }
+.shop-card-note-img[data-note="500"]  { width: 55px; }
+.shop-card-note-img[data-note="1000"] { width: 58px; }
+
+.shop-card-coin-clip {
+  overflow: hidden;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.shop-card-coin-clip[data-coin="1"]  { width: 22px; height: 22px; }
+.shop-card-coin-clip[data-coin="2"]  { width: 24px; height: 24px; }
+.shop-card-coin-clip[data-coin="5"]  { width: 26px; height: 26px; }
+.shop-card-coin-clip[data-coin="10"] { width: 23px; height: 23px; }
+
+.shop-card-coin-img {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+
+/* ── Plånboksstrip längst ner ── */
+
+.shop-wallet {
+  border-top: 1px solid var(--border, #eee);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.shop-wallet__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shop-wallet__strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shop-wallet__empty {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--border, #eee);
+}
+
+.shop-wallet-denom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.shop-wallet-denom--dragging {
+  opacity: 0.3;
+}
+
+.shop-wallet-denom-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary, #666);
+  white-space: nowrap;
+}
+
+/* Sedel-stack: bilderna läggs ovanpå varandra med en skjutning */
+.shop-note-stack {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.shop-note-img {
+  height: 44px;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+  display: block;
+  flex-shrink: 0;
+}
+
+.shop-note-img[data-note="20"]   { width: 80px; }
+.shop-note-img[data-note="50"]   { width: 84px; }
+.shop-note-img[data-note="100"]  { width: 89px; }
+.shop-note-img[data-note="200"]  { width: 94px; }
+.shop-note-img[data-note="500"]  { width: 99px; }
+.shop-note-img[data-note="1000"] { width: 104px; }
+
+/* Staplad sedel: skjuts delvis bakom föregående */
+.shop-note-stacked {
+  margin-left: -52px;
+  box-shadow: -3px 1px 7px rgba(0, 0, 0, 0.2);
+}
+
+/* Mynt-stack */
+.shop-coin-stack {
+  display: flex;
+  align-items: center;
+}
+
+.shop-coin-clip {
+  overflow: hidden;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.shop-coin-clip[data-coin="1"]  { width: 36px; height: 36px; }
+.shop-coin-clip[data-coin="2"]  { width: 40px; height: 40px; }
+.shop-coin-clip[data-coin="5"]  { width: 44px; height: 44px; }
+.shop-coin-clip[data-coin="10"] { width: 38px; height: 38px; }
+
+/* Staplade mynt: skjuts delvis bakom föregående */
+.shop-coin-stacked[data-coin="1"]  { margin-left: -14px; }
+.shop-coin-stacked[data-coin="2"]  { margin-left: -15px; }
+.shop-coin-stacked[data-coin="5"]  { margin-left: -16px; }
+.shop-coin-stacked[data-coin="10"] { margin-left: -14px; }
+
+.shop-coin-img {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+
+/* ── Drag ghost ── */
+
+.shop-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%) rotate(3deg) scale(0.9);
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
+}
+
+.shop-ghost-note {
+  height: 56px;
+}
+
+.shop-ghost-note[data-note="20"]   { width: 102px; }
+.shop-ghost-note[data-note="50"]   { width: 107px; }
+.shop-ghost-note[data-note="100"]  { width: 113px; }
+.shop-ghost-note[data-note="200"]  { width: 119px; }
+.shop-ghost-note[data-note="500"]  { width: 125px; }
+.shop-ghost-note[data-note="1000"] { width: 132px; }
+
+.shop-ghost .shop-coin-clip[data-coin="1"]  { width: 46px; height: 46px; }
+.shop-ghost .shop-coin-clip[data-coin="2"]  { width: 52px; height: 52px; }
+.shop-ghost .shop-coin-clip[data-coin="5"]  { width: 56px; height: 56px; }
+.shop-ghost .shop-coin-clip[data-coin="10"] { width: 48px; height: 48px; }
