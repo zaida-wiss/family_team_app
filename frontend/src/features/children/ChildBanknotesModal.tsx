@@ -1,4 +1,4 @@
-import "./ChildBanknotesModal.css";
+simport "./ChildBanknotesModal.css";
 import { ArrowDown, ArrowLeft, ArrowUp, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";

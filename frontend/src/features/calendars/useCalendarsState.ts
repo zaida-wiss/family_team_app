@@ -38,8 +38,7 @@ export function useCalendarsState() {
 
   useEffect(() => {
     const now = new Date();
-    const { from } = monthWindow(now.getFullYear(), now.getMonth() - 1);
-    const { until } = monthWindow(now.getFullYear(), now.getMonth() + 2);
+    const { from, until } = monthWindow(now.getFullYear(), now.getMonth());
     loadedFrom.current = from;
     loadedUntil.current = until;
     calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);

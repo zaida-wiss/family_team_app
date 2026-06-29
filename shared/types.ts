@@ -189,6 +189,7 @@ export type Calendar = OwnedSharedResource & {
   id: Id;
   name: string;
   color: string;
+  keepAllHistory?: boolean;
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
   subscriptions: IcsSubscription[];

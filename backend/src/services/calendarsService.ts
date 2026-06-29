@@ -92,16 +92,25 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
     return;
   }
 
-  const incoming = applyFilters(parseIcsEvents(icsText), sub);
+  const nowDate = new Date();
+  const nowStr = nowDate.toISOString();
+  const sub3mAgo = new Date(nowDate); sub3mAgo.setMonth(sub3mAgo.getMonth() - 3);
+  const cutoffSub = sub3mAgo.toISOString().slice(0, 10);
+  const sub1mAgo = new Date(nowDate); sub1mAgo.setMonth(sub1mAgo.getMonth() - 1);
+  const cutoffAll = sub1mAgo.toISOString().slice(0, 10);
+
+  // Only process ICS events from the last 3 months onwards
+  const incoming = applyFilters(parseIcsEvents(icsText), sub)
+    .filter(ev => ev.startsAt.slice(0, 10) >= cutoffSub);
   const incomingByUid = new Map(incoming.filter((e) => e.uid).map((e) => [e.uid!, e]));
 
-  const now = new Date().toISOString();
   const SCHOOL_CLOSED = /stängningsdag|kompetensdag/i;
   const subId = sub.id;
 
-  // Update or soft-delete existing subscription events
+  // Update or soft-delete existing subscription events within the 3-month window
   for (const ev of calendar.events) {
     if (ev.subscriptionId !== subId || ev.deletedAt) continue;
+    if ((ev.startsAt ?? "").slice(0, 10) < cutoffSub) continue; // will be cleaned up below
     if (ev.uid && incomingByUid.has(ev.uid)) {
       const src = incomingByUid.get(ev.uid)!;
       ev.title = src.title;
@@ -109,9 +118,9 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
       ev.endsAt = src.endsAt;
       ev.isAllDay = src.isAllDay;
       ev.notes = src.notes ?? null;
-      incomingByUid.delete(ev.uid); // already handled
+      incomingByUid.delete(ev.uid);
     } else {
-      ev.deletedAt = now;
+      ev.deletedAt = nowStr;
       ev.deletedBy = null;
     }
   }
@@ -141,8 +150,18 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
     } as any);
   }
 
-  sub.lastSyncedAt = now;
-  calendar.markModified("events");
+  // Hard-delete old events: subscription events > 3 months, all events > 1 month (unless keepAllHistory)
+  const keepAllHistory = (calendar as any).keepAllHistory ?? false;
+  const beforeCount = calendar.events.length;
+  calendar.events = (calendar.events as any[]).filter((ev) => {
+    const d = (ev.startsAt ?? "").slice(0, 10);
+    if (ev.subscriptionId) return d >= cutoffSub;
+    return keepAllHistory || d >= cutoffAll;
+  }) as any;
+  const changed = calendar.events.length !== beforeCount;
+
+  sub.lastSyncedAt = nowStr;
+  if (changed) calendar.markModified("events");
   calendar.markModified("subscriptions");
   await calendar.save();
 }
@@ -150,17 +169,25 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
 export async function getAllCalendars(accountId: string, from?: string, until?: string) {
   const cals = await CalendarModel.find({ accountId }, { _id: 0, __v: 0 }).lean();
   const now = new Date();
-  const defaultFrom = new Date(now); defaultFrom.setMonth(defaultFrom.getMonth() - 2);
-  const defaultUntil = new Date(now); defaultUntil.setMonth(defaultUntil.getMonth() + 3);
+  const defaultFrom = new Date(now); defaultFrom.setDate(1);
+  const defaultUntil = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const fromStr = from ?? defaultFrom.toISOString().slice(0, 10);
   const untilStr = until ?? defaultUntil.toISOString().slice(0, 10);
-  return cals.map(cal => ({
-    ...cal,
-    events: (cal.events as { startsAt: string }[]).filter(ev => {
-      const d = (ev.startsAt ?? "").slice(0, 10);
-      return d >= fromStr && d <= untilStr;
-    }),
-  }));
+  const sub1mAgo = new Date(now); sub1mAgo.setMonth(sub1mAgo.getMonth() - 1);
+  const retentionCutoff = sub1mAgo.toISOString().slice(0, 10);
+
+  return cals.map(cal => {
+    const keepAllHistory = (cal as any).keepAllHistory ?? false;
+    return {
+      ...cal,
+      events: (cal.events as { startsAt: string; deletedAt?: string | null }[]).filter(ev => {
+        if (ev.deletedAt) return false;
+        const d = (ev.startsAt ?? "").slice(0, 10);
+        if (!keepAllHistory && d < retentionCutoff) return false;
+        return d >= fromStr && d <= untilStr;
+      }),
+    };
+  });
 }
 
 export async function createCalendar(data: unknown) {

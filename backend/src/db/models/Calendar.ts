@@ -26,6 +26,7 @@ const calendarSchema = new Schema<Calendar>(
     sharedWith: [{ memberId: String, access: String }],
     deletedAt: { type: String, default: null },
     deletedBy: { type: String, default: null },
+    keepAllHistory: { type: Boolean, default: false },
     events: [
       {
         id: { type: String, required: true },
