@@ -501,3 +501,170 @@
     flex-direction: row;
   }
 }
+
+/* ── Önskan-sektion ── */
+
+.bm-wish-section {
+  flex-shrink: 0;
+  padding: 0 18px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bm-wish-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bm-wish-divider::before,
+.bm-wish-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.bm-wish-zone {
+  min-height: 72px;
+  border: 2.5px dashed var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.bm-wish-zone--hot {
+  background: color-mix(in srgb, #a855f7 15%, transparent);
+  border-color: #a855f7;
+  border-style: solid;
+  transform: scale(1.02);
+}
+
+.bm-wish-zone--filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, #a855f7 50%, var(--border));
+  background: color-mix(in srgb, #a855f7 6%, transparent);
+  justify-content: flex-start;
+}
+
+.bm-wish-hint {
+  font-size: 0.8rem;
+  color: var(--muted-fg);
+  text-align: center;
+}
+
+.bm-wish-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.bm-wish-zone-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 2px 4px 0;
+}
+
+.bm-wish-total {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #a855f7;
+}
+
+.bm-wish-clear {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted-fg);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.bm-wish-clear:hover {
+  background: var(--border);
+  color: var(--foreground);
+}
+
+.bm-wish-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bm-wish-add-btn {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.bm-wish-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bm-wish-add-btn:not(:disabled):hover {
+  border-color: #a855f7;
+  background: color-mix(in srgb, #a855f7 6%, transparent);
+}
+
+.bm-wish-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1.5px solid #a855f7;
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.bm-wish-submit-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #a855f7;
+  background: color-mix(in srgb, #a855f7 12%, transparent);
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.bm-wish-submit-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.bm-wish-submit-btn:not(:disabled):hover {
+  background: color-mix(in srgb, #a855f7 22%, transparent);
+  transform: scale(1.08);
+}

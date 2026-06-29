@@ -31,7 +31,7 @@ type Props = {
   rejectedTodos: Todo[];
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
-  onCreateWish: (childId: Id, starsNeeded: number) => void;
+  onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
@@ -143,12 +143,14 @@ export function ChildDashboard({
           <div className="child-stars-anchor">
             <ChildPendingBadges todos={pendingApprovalTodos} />
             <ChildStarsPanel
+              childId={child.id}
               approvedStarsToday={approvedStarsToday}
               totalApprovedStars={availableStars}
               activeReward={activeReward}
               rewardProgress={rewardProgress}
               onOpenShop={() => setIsShopOpen(true)}
               onThemePickerOpen={() => onThemePickerOpen(child.id)}
+              onCreateWish={onCreateWish}
             />
           </div>
 

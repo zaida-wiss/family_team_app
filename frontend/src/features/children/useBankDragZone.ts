@@ -18,10 +18,15 @@ export type BankDragZone = {
   upActive: boolean;
   downActive: boolean;
   downOff: boolean;
+  wishActive: boolean;
+  wishCounts: Record<number, number>;
+  wishTotal: number;
+  clearWish: () => void;
   splitRule: { s?: Array<[number, number]> } | null;
   startDrag: (value: number, e: ReactPointerEvent) => void;
   upRef: RefObject<HTMLDivElement>;
   downRef: RefObject<HTMLDivElement>;
+  wishRef: RefObject<HTMLDivElement>;
   ghostRef: RefObject<HTMLDivElement>;
 };
 
@@ -31,15 +36,17 @@ export function useBankDragZone(
   onZoneConvert: (remove: Record<number, number>, total: number) => void,
 ): BankDragZone {
   const [dragging, setDragging] = useState<number | null>(null);
-  const [activeZone, setActiveZone] = useState<"up" | "down" | null>(null);
+  const [activeZone, setActiveZone] = useState<"up" | "down" | "wish" | null>(null);
   const [fadeOut, setFadeOut] = useState<number | null>(null);
   const [fadeIn, setFadeIn] = useState<number[]>([]);
   const [zoneCounts, setZoneCounts] = useState<Record<number, number>>({});
   const [timerActive, setTimerActive] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
+  const [wishCounts, setWishCounts] = useState<Record<number, number>>({});
 
   const upRef = useRef<HTMLDivElement>(null);
   const downRef = useRef<HTMLDivElement>(null);
+  const wishRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const zoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoneCountsRef = useRef<Record<number, number>>({});
@@ -50,9 +57,13 @@ export function useBankDragZone(
 
   const walletCounts: Record<number, number> = {};
   for (const [k, v] of Object.entries(counts)) {
-    const rem = v - (zoneCounts[+k] ?? 0);
+    const rem = v - (zoneCounts[+k] ?? 0) - (wishCounts[+k] ?? 0);
     if (rem > 0) walletCounts[+k] = rem;
   }
+
+  const wishTotal = Object.entries(wishCounts).reduce((s, [k, n]) => s + +k * n, 0);
+
+  const clearWish = () => setWishCounts({});
 
   const bills = SEDLAR.filter((v) => (walletCounts[v] ?? 0) > 0);
   const coins = MYNT.filter((v) => (walletCounts[v] ?? 0) > 0);
@@ -129,6 +140,7 @@ export function useBankDragZone(
       }
       if (hitZone(upRef, ev.clientX, ev.clientY)) setActiveZone("up");
       else if (hitZone(downRef, ev.clientX, ev.clientY)) setActiveZone("down");
+      else if (hitZone(wishRef, ev.clientX, ev.clientY)) setActiveZone("wish");
       else setActiveZone(null);
     };
 
@@ -141,6 +153,10 @@ export function useBankDragZone(
         addToZone(value);
       } else if (hitZone(downRef, ev.clientX, ev.clientY) && canSplit(value)) {
         performSplit(value);
+      } else if (hitZone(wishRef, ev.clientX, ev.clientY)) {
+        setDragging(null);
+        setActiveZone(null);
+        setWishCounts((prev) => ({ ...prev, [value]: (prev[value] ?? 0) + 1 }));
       } else {
         setDragging(null);
         setActiveZone(null);
@@ -167,10 +183,15 @@ export function useBankDragZone(
     upActive: dragging !== null && activeZone === "up",
     downActive: dragging !== null && canSplit(dragging) && activeZone === "down",
     downOff: dragging !== null && !canSplit(dragging),
+    wishActive: dragging !== null && activeZone === "wish",
+    wishCounts,
+    wishTotal,
+    clearWish,
     splitRule: dragging !== null ? (DENOM_RULES[dragging] ?? null) : null,
     startDrag,
     upRef,
     downRef,
+    wishRef,
     ghostRef,
   };
 }

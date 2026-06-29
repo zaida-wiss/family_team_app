@@ -1,7 +1,9 @@
 import "./ChildBanknotesModal.css";
 import { ArrowDown, ArrowLeft, ArrowUp, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { RefObject } from "react";
 import { createPortal } from "react-dom";
+import type { Id } from "@shared/types";
 import { ALL_DENOMS, MYNT, SEDLAR, applyZoneConvert, applySplit, denomCounts } from "./bankDenoms";
 import type { BankDragZone } from "./useBankDragZone";
 import { useBankDragZone } from "./useBankDragZone";
@@ -103,14 +105,109 @@ function BankDropZones({ upRef, downRef, upActive, downActive, downOff, hasZoneI
   );
 }
 
+// ── BankWishZone — dragzon längst ner för önskans betalning ──────────────
+
+function BankWishZone({ wishRef, wishCounts, wishTotal, wishActive, clearWish, childId, onCreateWish }: {
+  wishRef: RefObject<HTMLDivElement>;
+  wishCounts: Record<number, number>;
+  wishTotal: number;
+  wishActive: boolean;
+  clearWish: () => void;
+  childId: Id;
+  onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const canSubmit = wishTotal > 0 && title.trim().length > 0;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    onCreateWish(childId, wishTotal, title.trim());
+    setTitle("");
+    setShowInput(false);
+    clearWish();
+  };
+
+  return (
+    <div className="bm-wish-section">
+      <div className="bm-wish-divider"><span>Önska något</span></div>
+
+      <div
+        ref={wishRef}
+        className={`bm-wish-zone${wishActive ? " bm-wish-zone--hot" : ""}${wishTotal > 0 ? " bm-wish-zone--filled" : ""}`}
+      >
+        {wishTotal > 0 ? (
+          <>
+            <div className="bm-wish-items">
+              {ALL_DENOMS.filter((v) => (wishCounts[v] ?? 0) > 0).flatMap((v) =>
+                Array.from({ length: wishCounts[v] }).map((_, i) =>
+                  MYNT.includes(v) ? (
+                    <div key={`${v}-${i}`} className="bm-coin-clip bm-zone-coin" data-coin={v}>
+                      <img src={`/pengar/mynt-${v}.webp`} alt="" className="bm-coin-img" />
+                    </div>
+                  ) : (
+                    <img key={`${v}-${i}`} src={`/pengar/sedel-${v}.webp`} alt="" className="bm-note-img bm-zone-note" data-note={v} />
+                  )
+                )
+              )}
+            </div>
+            <div className="bm-wish-zone-footer">
+              <span className="bm-wish-total">{wishTotal} kr</span>
+              <button className="bm-wish-clear" type="button" onClick={clearWish} aria-label="Ta bort pengar från önskan">×</button>
+            </div>
+          </>
+        ) : (
+          <span className="bm-wish-hint">Dra hit pengar du vill erbjuda</span>
+        )}
+      </div>
+
+      <div className="bm-wish-actions">
+        {showInput ? (
+          <input
+            className="bm-wish-input"
+            type="text"
+            placeholder="Vad önskar du?"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            autoFocus
+          />
+        ) : (
+          <button
+            className="bm-wish-add-btn"
+            type="button"
+            onClick={() => setShowInput(true)}
+            disabled={wishTotal === 0}
+            aria-label="Skriv vad du önskar"
+          >
+            + Skriv din önskan
+          </button>
+        )}
+        <button
+          className="bm-wish-submit-btn"
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          aria-label="Fråga föräldern snälla"
+          title="Fråga snälla!"
+        >
+          🙏
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── BankBreakdown — koordinator ────────────────────────────────────────────
 
-function BankBreakdown({ counts, onSplit, onZoneConvert, isEmpty, onOpenBank }: {
+function BankBreakdown({ counts, onSplit, onZoneConvert, isEmpty, onOpenBank, childId, onCreateWish }: {
   counts: Record<number, number>;
   onSplit: (v: number) => void;
   onZoneConvert: (remove: Record<number, number>, total: number) => void;
   isEmpty: boolean;
   onOpenBank: () => void;
+  childId: Id;
+  onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
 }) {
   const zone = useBankDragZone(counts, onSplit, onZoneConvert);
 
@@ -124,6 +221,16 @@ function BankBreakdown({ counts, onSplit, onZoneConvert, isEmpty, onOpenBank }: 
           <BankDropZones {...zone} />
         </div>
       )}
+
+      <BankWishZone
+        wishRef={zone.wishRef}
+        wishCounts={zone.wishCounts}
+        wishTotal={zone.wishTotal}
+        wishActive={zone.wishActive}
+        clearWish={zone.clearWish}
+        childId={childId}
+        onCreateWish={onCreateWish}
+      />
 
       <button className="bm-bank-btn" type="button" onClick={onOpenBank}>🏦 Banken</button>
 
@@ -186,13 +293,43 @@ function BankCatalog() {
 // ── ChildBanknotesModal ────────────────────────────────────────────────────
 
 type Props = {
+  childId: Id;
   totalKronor: number;
   onClose: () => void;
+  onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
 };
 
-export function ChildBanknotesModal({ totalKronor, onClose }: Props) {
+function loadCounts(childId: Id, totalKronor: number): Record<number, number> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(`bank-counts-${childId}`) ?? "null") as
+      | { counts: Record<number, number>; savedTotal: number }
+      | null;
+    if (!stored) return denomCounts(totalKronor);
+    if (stored.savedTotal === totalKronor) return stored.counts;
+    if (totalKronor > stored.savedTotal) {
+      const delta = denomCounts(totalKronor - stored.savedTotal);
+      const merged = { ...stored.counts };
+      for (const [d, n] of Object.entries(delta)) {
+        merged[Number(d)] = (merged[Number(d)] ?? 0) + n;
+      }
+      return merged;
+    }
+    return denomCounts(totalKronor);
+  } catch {
+    return denomCounts(totalKronor);
+  }
+}
+
+export function ChildBanknotesModal({ childId, totalKronor, onClose, onCreateWish }: Props) {
   const [showBank, setShowBank] = useState(false);
-  const [counts, setCounts] = useState(() => denomCounts(totalKronor));
+  const [counts, setCounts] = useState(() => loadCounts(childId, totalKronor));
+
+  useEffect(() => {
+    localStorage.setItem(
+      `bank-counts-${childId}`,
+      JSON.stringify({ counts, savedTotal: totalKronor })
+    );
+  }, [counts, childId, totalKronor]);
 
   const isEmpty = Object.keys(counts).length === 0;
   const onSplit = (value: number) => setCounts((prev) => applySplit(value, prev));
@@ -227,6 +364,7 @@ export function ChildBanknotesModal({ totalKronor, onClose }: Props) {
           ? <BankCatalog />
           : <BankBreakdown counts={counts} onSplit={onSplit} onZoneConvert={onZoneConvert}
               isEmpty={isEmpty} onOpenBank={() => setShowBank(true)}
+              childId={childId} onCreateWish={onCreateWish}
             />
         }
       </div>

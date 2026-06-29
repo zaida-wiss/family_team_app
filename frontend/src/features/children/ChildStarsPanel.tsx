@@ -1,26 +1,30 @@
 import { Banknote, Palette, ShoppingBag, Star, Trophy } from "lucide-react";
 import { useState } from "react";
-import type { Reward, RewardPathProgress } from "@shared/types";
+import type { Id, Reward, RewardPathProgress } from "@shared/types";
 import { ChildBanknotesModal } from "./ChildBanknotesModal";
 import "./ChildStarsPanel.css";
 import "./ChildRewardRail.css";
 
 type Props = {
+  childId: Id;
   approvedStarsToday: number;
   totalApprovedStars: number;
   activeReward: Reward | null;
   rewardProgress: RewardPathProgress | null;
   onOpenShop: () => void;
   onThemePickerOpen: () => void;
+  onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
 };
 
 export function ChildStarsPanel({
+  childId,
   approvedStarsToday,
   totalApprovedStars,
   activeReward,
   rewardProgress,
   onOpenShop,
   onThemePickerOpen,
+  onCreateWish,
 }: Props) {
   const [showBanknotes, setShowBanknotes] = useState(false);
 
@@ -58,20 +62,22 @@ export function ChildStarsPanel({
         <button
           className="child-money-card"
           type="button"
-          aria-label={`${totalApprovedStars} kr — se i sedlar`}
+          aria-label={`Plånbok — ${totalApprovedStars} kr`}
           onClick={() => setShowBanknotes(true)}
         >
           <Banknote size={28} />
           <span>
-            <strong>{totalApprovedStars} stjärnor</strong>
-            <small>= {totalApprovedStars} kr</small>
+            <strong>Plånbok</strong>
+            <small>{totalApprovedStars} kr</small>
           </span>
         </button>
 
         {showBanknotes && (
           <ChildBanknotesModal
+            childId={childId}
             totalKronor={totalApprovedStars}
             onClose={() => setShowBanknotes(false)}
+            onCreateWish={onCreateWish}
           />
         )}
 

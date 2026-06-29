@@ -10,7 +10,7 @@ type Props = {
   roles: Role[];
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
-  onCreateWish: (childId: string, starsNeeded: number) => void;
+  onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
