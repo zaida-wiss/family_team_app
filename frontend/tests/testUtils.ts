@@ -78,7 +78,6 @@ export function createReward(overrides: Partial<Reward> = {}): Reward {
   return {
     id: "reward-1",
     title: "Belöning",
-    symbol: null,
     wishedBy: "member-child",
     starsNeeded: 10,
     status: "active",
