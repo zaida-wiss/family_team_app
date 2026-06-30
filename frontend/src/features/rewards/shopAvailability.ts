@@ -10,6 +10,11 @@ function toTimeStr(d: Date): string {
   return `${h}:${m}`; // "HH:MM"
 }
 
+function toMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
 function daysUntil(dateStr: string, now: Date): number {
   const target = new Date(dateStr + "T00:00:00");
   const today = new Date(toDateStr(now) + "T00:00:00");
@@ -20,13 +25,22 @@ function inTimeInterval(interval: ShopTimeInterval, timeStr: string): boolean {
   return timeStr >= interval.start && timeStr <= interval.end;
 }
 
-function nextIntervalStart(intervals: ShopTimeInterval[], timeStr: string): string | null {
-  // Hitta nästa interval som börjar efter nu (samma dag)
+// Hur många minuter är kvar av ett tidsintervall från och med nu
+function minutesLeftInInterval(interval: ShopTimeInterval, now: Date): number {
+  return toMinutes(interval.end) - toMinutes(toTimeStr(now));
+}
+
+// Nästa intervall (samma dag) som börjar efter nu OCH har tillräckligt med tid för timern
+function nextUsableIntervalStart(
+  intervals: ShopTimeInterval[],
+  nowTime: string,
+  timerMinutes: number | null
+): string | null {
   const upcoming = intervals
-    .map((iv) => iv.start)
-    .filter((s) => s > timeStr)
-    .sort();
-  return upcoming[0] ?? null;
+    .filter((iv) => iv.start > nowTime)
+    .filter((iv) => timerMinutes === null || toMinutes(iv.end) - toMinutes(iv.start) >= timerMinutes)
+    .sort((a, b) => a.start.localeCompare(b.start));
+  return upcoming[0]?.start ?? null;
 }
 
 /** Varans slutdatum har passerat → dölj den helt. */
@@ -36,32 +50,49 @@ export function isExpired(item: RewardShopItem, now = new Date()): boolean {
   return toDateStr(now) > availability.endDate;
 }
 
-/** Varan är tillgänglig just nu (datum + klocktid stämmer). */
+/**
+ * Varan är tillgänglig just nu — kontrollerar:
+ * 1. Datum (startDate / endDate)
+ * 2. Att vi befinner oss i ett tidsintervall
+ * 3. Att det finns tillräckligt med tid kvar i intervallet för varans timer
+ *
+ * Regel: om timer = 60 min och intervallet stänger om 31 min → INTE tillgänglig,
+ * för barnet hinner inte använda hela belöningen inom utsatt tid.
+ */
 export function isAvailableNow(item: RewardShopItem, now = new Date()): boolean {
-  const { availability } = item;
+  const { availability, timerMinutes } = item;
   if (!availability) return true;
 
   const today = toDateStr(now);
 
-  // Datumfönster
   if (availability.startDate && today < availability.startDate) return false;
   if (availability.endDate && today > availability.endDate) return false;
 
-  // Inga tidsintervall → tillgänglig hela dagen inom datumfönstret
   if (availability.timeIntervals.length === 0) return true;
 
   const nowTime = toTimeStr(now);
-  return availability.timeIntervals.some((iv) => inTimeInterval(iv, nowTime));
+  const activeInterval = availability.timeIntervals.find((iv) => inTimeInterval(iv, nowTime));
+  if (!activeInterval) return false;
+
+  // Timer-kontroll: finns det tillräckligt med tid kvar i intervallet?
+  if (timerMinutes !== null) {
+    const minutesLeft = minutesLeftInInterval(activeInterval, now);
+    if (minutesLeft < timerMinutes) return false;
+  }
+
+  return true;
 }
 
 /**
- * Returnerar en förklarande text när varan INTE är tillgänglig:
- * - "5 dagar kvar" om startdatum är i framtiden
- * - "Tillgänglig kl 18:00" om vi är utanför ett tidsintervall idag
- * - null om inga tillgänglighetsbegränsningar finns
+ * Förklarande text när varan INTE är tillgänglig just nu.
+ * Täcker fyra fall:
+ * - Startdatum i framtiden → "5 dagar kvar"
+ * - Utanför alla tidsintervall → "Tillgänglig kl 18:00"
+ * - I ett intervall men för lite tid kvar för timern → "31 min kvar - behöver 60 min"
+ * - Alla intervall passerade för idag → "Tillgänglig kl 07:00 imorgon"
  */
 export function unavailableLabel(item: RewardShopItem, now = new Date()): string | null {
-  const { availability } = item;
+  const { availability, timerMinutes } = item;
   if (!availability) return null;
   if (isAvailableNow(item, now)) return null;
 
@@ -73,17 +104,25 @@ export function unavailableLabel(item: RewardShopItem, now = new Date()): string
     return days === 1 ? "1 dag kvar" : `${days} dagar kvar`;
   }
 
-  // Vi är inom datumfönstret men utanför tidsintervall
   if (availability.timeIntervals.length > 0) {
     const nowTime = toTimeStr(now);
-    const next = nextIntervalStart(availability.timeIntervals, nowTime);
+    const activeInterval = availability.timeIntervals.find((iv) => inTimeInterval(iv, nowTime));
+
+    // Vi är inne i ett intervall men timern ryms inte
+    if (activeInterval && timerMinutes !== null) {
+      const minutesLeft = minutesLeftInInterval(activeInterval, now);
+      return `${minutesLeft} min kvar - behöver ${timerMinutes} min`;
+    }
+
+    // Vi är utanför alla intervall - hitta nästa med tillräcklig tid
+    const next = nextUsableIntervalStart(availability.timeIntervals, nowTime, timerMinutes);
     if (next) return `Tillgänglig kl ${next}`;
 
-    // Alla interval för idag är passerade → nästa dag (om inget slutdatum)
-    const firstStart = [...availability.timeIntervals].sort((a, b) =>
-      a.start.localeCompare(b.start)
-    )[0]?.start;
-    if (firstStart) return `Tillgänglig kl ${firstStart} imorgon`;
+    // Alla intervall passerade för idag
+    const firstUsable = [...availability.timeIntervals]
+      .filter((iv) => timerMinutes === null || toMinutes(iv.end) - toMinutes(iv.start) >= timerMinutes)
+      .sort((a, b) => a.start.localeCompare(b.start))[0]?.start;
+    if (firstUsable) return `Tillgänglig kl ${firstUsable} imorgon`;
   }
 
   return "Ej tillgänglig just nu";
