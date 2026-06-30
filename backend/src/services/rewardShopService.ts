@@ -13,7 +13,17 @@ export async function accountIdOf(memberId: string): Promise<string> {
 export async function getShop(memberId: string) {
   const accountId = await accountIdOf(memberId);
   const shop = await RewardShopModel.findOne({ accountId });
-  return shop?.items.filter((i) => i.deletedAt === null) ?? [];
+  return (shop?.items.filter((i) => i.deletedAt === null) ?? []).map((i) => ({
+    id: i.id,
+    title: i.title,
+    symbol: i.symbol,
+    starCost: i.starCost,
+    timerMinutes: i.timerMinutes,
+    availability: i.availability,
+    requiredCategories: i.requiredCategories ?? [],
+    createdBy: i.createdBy,
+    deletedAt: i.deletedAt,
+  }));
 }
 
 export async function addItem(memberId: string, item: RewardShopItem) {

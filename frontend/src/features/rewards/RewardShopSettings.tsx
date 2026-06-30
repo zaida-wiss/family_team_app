@@ -101,7 +101,7 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
 
   function startEdit(item: RewardShopItem) {
     setEditingId(item.id);
-    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes, availability: item.availability, requiredCategories: item.requiredCategories });
+    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes, availability: item.availability, requiredCategories: item.requiredCategories ?? [] });
   }
 
   function saveEdit(itemId: string) {

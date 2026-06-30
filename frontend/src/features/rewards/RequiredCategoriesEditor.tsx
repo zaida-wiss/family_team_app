@@ -7,9 +7,11 @@ type Props = {
 };
 
 export function RequiredCategoriesEditor({ value, onChange }: Props) {
+  const safeValue = value ?? [];
+
   function toggleCategory(category: string) {
     onChange(
-      value.includes(category)
+      safeValue.includes(category)
         ? value.filter((c) => c !== category)
         : [...value, category]
     );
@@ -25,7 +27,7 @@ export function RequiredCategoriesEditor({ value, onChange }: Props) {
           <label key={category} className="required-categories-editor__option">
             <input
               type="checkbox"
-              checked={value.includes(category)}
+              checked={safeValue.includes(category)}
               onChange={() => toggleCategory(category)}
             />
             {category}
