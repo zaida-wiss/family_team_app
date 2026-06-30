@@ -1,9 +1,10 @@
 import "./RewardShopSettings.css";
 import { useState } from "react";
-import type { Member, PurchasedReward, RewardShopItem } from "@shared/types";
+import type { Member, PurchasedReward, RewardShopItem, ShopAvailability } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
+import { AvailabilityEditor } from "./AvailabilityEditor";
 
-type ItemPatch = Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>;
+type ItemPatch = Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability">>;
 
 type Props = {
   items: RewardShopItem[];
@@ -23,9 +24,10 @@ type FormState = {
   symbol: string;
   starCost: number;
   timerMinutes: number | null;
+  availability: ShopAvailability | null;
 };
 
-const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null });
+const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null, availability: null });
 
 // Konverterar ISO-sträng till lokalt datetime-input-format (respekterar enhetens tidszon)
 function toLocalDateTimeInput(iso: string): string {
@@ -97,12 +99,12 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
 
   function startEdit(item: RewardShopItem) {
     setEditingId(item.id);
-    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes });
+    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes, availability: item.availability });
   }
 
   function saveEdit(itemId: string) {
     if (!editForm.title.trim()) return;
-    onUpdate(itemId, { title: editForm.title.trim(), symbol: editForm.symbol || null, starCost: editForm.starCost, timerMinutes: editForm.timerMinutes });
+    onUpdate(itemId, { title: editForm.title.trim(), symbol: editForm.symbol || null, starCost: editForm.starCost, timerMinutes: editForm.timerMinutes, availability: editForm.availability });
     setEditingId(null);
   }
 
@@ -115,6 +117,7 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
       symbol: form.symbol || null,
       starCost: form.starCost,
       timerMinutes: form.timerMinutes,
+      availability: form.availability,
       createdBy: currentMemberId,
       deletedAt: null,
     };
@@ -171,6 +174,11 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
           </label>
         </div>
 
+        <AvailabilityEditor
+          value={form.availability}
+          onChange={(v) => setForm((f) => ({ ...f, availability: v }))}
+        />
+
         <button type="submit" className="reward-shop-settings__add-btn">
           Lägg till
         </button>
@@ -211,6 +219,10 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
                   value={editForm.timerMinutes ?? ""}
                   onChange={(e) => setEditForm((f) => ({ ...f, timerMinutes: e.target.value === "" ? null : Number(e.target.value) }))}
                   aria-label="Timer (min)"
+                />
+                <AvailabilityEditor
+                  value={editForm.availability}
+                  onChange={(v) => setEditForm((f) => ({ ...f, availability: v }))}
                 />
                 <button className="reward-shop-settings__save" type="button" onClick={() => saveEdit(item.id)} aria-label="Spara">✓</button>
                 <button className="reward-shop-settings__remove" type="button" onClick={() => setEditingId(null)} aria-label="Avbryt">✕</button>

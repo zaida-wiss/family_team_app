@@ -1,0 +1,110 @@
+.availability-editor {
+  margin-top: 8px;
+}
+
+.availability-editor__toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #888);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.availability-editor__body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-secondary, #f8f8f8);
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e5e5);
+}
+
+.availability-editor__dates {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.availability-editor__label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #888);
+  font-weight: 500;
+}
+
+.availability-editor__input {
+  padding: 5px 8px;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--bg-card, #fff);
+}
+
+.availability-editor__hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #aaa);
+  margin: 0;
+}
+
+.availability-editor__intervals-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  margin: 0;
+}
+
+.availability-editor__interval-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.availability-editor__time {
+  padding: 5px 8px;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--bg-card, #fff);
+  width: 100px;
+}
+
+.availability-editor__dash {
+  color: var(--text-secondary, #888);
+}
+
+.availability-editor__remove-interval {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #aaa);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.availability-editor__remove-interval:hover {
+  color: #ef4444;
+}
+
+.availability-editor__add-interval {
+  background: none;
+  border: 1px dashed var(--border, #d1d5db);
+  border-radius: 8px;
+  color: var(--text-secondary, #888);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  width: fit-content;
+}
+
+.availability-editor__add-interval:hover {
+  border-color: var(--accent, #a855f7);
+  color: var(--accent, #a855f7);
+}

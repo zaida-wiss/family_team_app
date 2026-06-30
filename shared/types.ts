@@ -103,12 +103,24 @@ export type Member = {
   deletedBy: Id | null;
 };
 
+export type ShopTimeInterval = {
+  start: string; // "HH:MM"
+  end: string;   // "HH:MM"
+};
+
+export type ShopAvailability = {
+  startDate: string | null;      // "YYYY-MM-DD" — null = inga datumgränser
+  endDate: string | null;        // "YYYY-MM-DD" — null = inget slutdatum
+  timeIntervals: ShopTimeInterval[]; // tom = tillgänglig hela dagen
+};
+
 export type RewardShopItem = {
   id: Id;
   title: string;
   symbol: string | null;
   starCost: number;
   timerMinutes: number | null;
+  availability: ShopAvailability | null; // null = alltid tillgänglig
   createdBy: Id;
   deletedAt: string | null;
 };

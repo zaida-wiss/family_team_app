@@ -192,6 +192,20 @@
   color: var(--text-secondary, #888);
 }
 
+.reward-shop-card--unavailable {
+  opacity: 0.4;
+  pointer-events: none;
+  filter: grayscale(40%);
+}
+
+.reward-shop-card__unavailable-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #888);
+  font-weight: 600;
+  margin-top: 2px;
+  text-align: center;
+}
+
 .reward-shop-card--drag-target {
   border-color: #a855f7;
   background: color-mix(in srgb, #a855f7 10%, var(--bg-secondary, #f8f8f8));

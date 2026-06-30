@@ -5,6 +5,7 @@ import type { RewardShopItem } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
+import { isExpired, isAvailableNow, unavailableLabel } from "./shopAvailability";
 
 type Props = {
   childId: Id;
@@ -18,6 +19,9 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
   const drag = useShopWalletDrag(childId);
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
+
+  // Dölj varor vars slutdatum passerat — de finns kvar i databasen men ska inte visas
+  const visibleItems = items.filter((item) => !isExpired(item));
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -54,11 +58,13 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
           <button className="reward-shop-modal__close" onClick={onClose} aria-label="Stäng">✕</button>
         </div>
 
-        {items.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <p className="reward-shop-modal__empty">Inga belöningar finns än.</p>
         ) : (
           <div className="reward-shop-modal__grid">
-            {items.map((item) => {
+            {visibleItems.map((item) => {
+              const available = isAvailableNow(item);
+              const label = unavailableLabel(item);
               const cardCounts = drag.pendingPayments[item.id] ?? {};
               const paid = drag.getCardTotal(item.id);
               const isTarget = drag.activeCardId === item.id;
@@ -68,9 +74,10 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
               return (
                 <div
                   key={item.id}
-                  data-item-id={item.id}
+                  data-item-id={available ? item.id : undefined}
                   className={[
                     "reward-shop-card",
+                    !available ? "reward-shop-card--unavailable" : "",
                     isTarget ? "reward-shop-card--drag-target" : "",
                     isFlashing ? "reward-shop-card--flash" : "",
                   ].filter(Boolean).join(" ")}
@@ -83,6 +90,9 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
                   <span className="reward-shop-card__title">{item.title}</span>
                   {item.timerMinutes !== null && (
                     <span className="reward-shop-card__timer">⏱ {item.timerMinutes} min</span>
+                  )}
+                  {label && (
+                    <span className="reward-shop-card__unavailable-label">{label}</span>
                   )}
 
                   {/* Pengar lagda ovanpå kortet */}
