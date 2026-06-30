@@ -78,6 +78,7 @@ export function createReward(overrides: Partial<Reward> = {}): Reward {
   return {
     id: "reward-1",
     title: "Belöning",
+    symbol: null,
     wishedBy: "member-child",
     starsNeeded: 10,
     status: "active",
@@ -86,7 +87,8 @@ export function createReward(overrides: Partial<Reward> = {}): Reward {
     redeemedAt: null,
     deletedAt: null,
     deletedBy: null,
-    ...overrides
+    ...overrides,
+    symbol: overrides.symbol ?? null,
   };
 }
 

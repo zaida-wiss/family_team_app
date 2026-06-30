@@ -290,6 +290,7 @@ export const rewards: Reward[] = [
     wishedBy: "member-child-1",
     starsNeeded: 20,
     status: "active",
+    symbol: null,
     approvedBy: "member-parent-1",
     approvedAt: "2026-06-08T18:00:00",
     redeemedAt: null,
