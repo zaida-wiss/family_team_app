@@ -7,6 +7,7 @@ import {
   setUnauthorizedHandler
 } from "../../api";
 import type { Membership, User } from "@shared/types";
+import { trackEvent } from "../../utils/analytics";
 
 type AuthState =
   | { status: "loading" }
@@ -47,6 +48,7 @@ export function useAuth() {
   async function login(email: string, password: string) {
     const { accessToken, user, memberships } = await authApi.login(email, password);
     applySession(user, memberships ?? [], accessToken);
+    trackEvent("login");
   }
 
   async function register(email: string, password: string, name: string) {

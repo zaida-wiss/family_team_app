@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { rewardsApi } from "../../api";
 import type { Id, Reward } from "@shared/types";
+import { trackEvent } from "../../utils/analytics";
 
 export function useRewardsState() {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -30,6 +31,7 @@ export function useRewardsState() {
     };
 
     rewardsApi.create(newReward).catch(console.error);
+    trackEvent("wish-created");
     setRewards((current) => [...current, newReward]);
     if (titleOverride === undefined) {
       setWishTitle("");
@@ -40,6 +42,7 @@ export function useRewardsState() {
     const starsNeeded = wishStars[rewardId] ?? 10;
 
     rewardsApi.approve(rewardId, starsNeeded).catch(console.error);
+    trackEvent("wish-approved");
     setRewards((current) =>
       current.map((r) => {
         if (r.id !== rewardId || r.status !== "suggested") return r;

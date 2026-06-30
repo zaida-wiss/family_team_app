@@ -17,6 +17,7 @@ import { rewardShopRouter } from "./routes/rewardShop.js";
 import { rolesRouter } from "./routes/roles.js";
 import { shoppingRouter } from "./routes/shopping.js";
 import { todosRouter } from "./routes/todos.js";
+import { analyticsRouter } from "./routes/analytics.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
@@ -66,6 +67,7 @@ app.use("/api/calendars", calendarsRouter);
 app.use("/api/shopping", shoppingRouter);
 app.use("/api/rewards", rewardsRouter);
 app.use("/api/reward-shop", rewardShopRouter);
+app.use("/api/analytics", analyticsRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);

@@ -3,6 +3,7 @@ import { todosApi } from "../../api";
 import { canCompleteTodo, canDeleteTodo, canEditTodo } from "../../utils/permissions";
 import { getDateKey, getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
+import { trackEvent } from "../../utils/analytics";
 
 export function useTodosState() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -85,6 +86,7 @@ export function useTodosState() {
     persistTodoIfGeneratedOccurrence(todoToComplete)
       .then(() => todosApi.complete(todoId))
       .catch(console.error);
+    trackEvent("todo-completed");
 
     setTodos((current) =>
       current.map((todo) =>
@@ -175,6 +177,7 @@ export function useTodosState() {
         }
 
         todosApi.approve(todoId).catch(console.error);
+        trackEvent("todo-approved");
         return {
           ...todo,
           status: "approved" as const,
