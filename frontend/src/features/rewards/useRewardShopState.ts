@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { rewardShopApi } from "../../api";
+import { trackEvent } from "../../utils/analytics";
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
 
 export type { PurchasedReward };
@@ -30,6 +31,7 @@ export function useRewardShopState() {
 
   async function purchase(item: RewardShopItem, forMemberId: string) {
     const pr = await rewardShopApi.purchase(item.id, forMemberId);
+    trackEvent("reward-redeemed");
     setPurchased((prev) => [...(prev ?? []), pr]);
   }
 

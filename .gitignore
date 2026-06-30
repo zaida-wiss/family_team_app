@@ -5,6 +5,7 @@ frontend/vite.config.d.ts
 .test-dist
 .DS_Store
 .env
+.env.local
 .claude/
 CLAUDE.md
 _bmad/core/agents/

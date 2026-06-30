@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { shoppingApi } from "../../api";
+import { trackEvent } from "../../utils/analytics";
 import type { AccessLevel, Id, ShoppingList } from "@shared/types";
 
 export function useShoppingState() {
@@ -118,6 +119,7 @@ export function useShoppingState() {
 
   function toggleShoppingItem(listId: Id, itemId: Id) {
     shoppingApi.toggleItem(listId, itemId).catch(console.error);
+    trackEvent("shopping-item-checked");
     setShoppingLists((current) =>
       current.map((list) => {
         if (list.id !== listId) {

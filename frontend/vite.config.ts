@@ -12,8 +12,9 @@ export default defineConfig({
     }
   },
   server: {
+    host: true,
     proxy: {
-      "/api": "http://localhost:3000"
+      "/api": process.env.BACKEND_URL ?? "http://localhost:3000"
     }
   },
   build: {

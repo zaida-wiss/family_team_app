@@ -1,0 +1,53 @@
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      # Namngiven volym — data lever kvar mellan docker compose down/up
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://mongo:27017/bmad-dev
+      FRONTEND_URL: http://localhost:5173
+      # Ersätt dessa med riktiga hemligheter i .env.local (gitignoreras)
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-byt-i-produktion}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-byt-i-produktion}
+    volumes:
+      # Bind mount — lokala filändringar syns direkt i containern (tsx watch)
+      - ./backend/src:/app/src
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      # Containrar kommunicerar via service-namn i Docker-nätverket,
+      # inte via localhost (som fungerar utanför Docker)
+      BACKEND_URL: http://backend:3000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./shared:/app/../shared
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:

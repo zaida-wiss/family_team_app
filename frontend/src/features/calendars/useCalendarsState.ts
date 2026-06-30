@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { calendarsApi } from "../../api";
-
+import { trackEvent } from "../../utils/analytics";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
 
 export type AddEventInput = {
@@ -131,6 +131,7 @@ export function useCalendarsState() {
     };
 
     calendarsApi.addEvent(calendarId, newEvent).catch(console.error);
+    trackEvent("calendar-event-added");
     setCalendars((current) =>
       current.map((calendar) =>
         calendar.id !== calendarId
