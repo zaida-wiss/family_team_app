@@ -5,13 +5,8 @@ import type {
   Role,
   ShoppingList,
   Todo
-} from "../../shared/types.js";
+} from "../../shared/types";
 import { createPermissionMap } from "../src/features/roles/permissionsConfig.js";
-
-export type TestCase = {
-  name: string;
-  run: () => void;
-};
 
 export function createMember(
   id: string,
@@ -20,10 +15,13 @@ export function createMember(
   return {
     id,
     accountId: "account-family",
+    userId: null,
     name: id,
     roleId: "role-member",
     isChild: false,
     avatarUrl: null,
+    color: null,
+    spentStars: 0,
     dashboardTheme: null,
     deletedAt: null,
     deletedBy: null,
@@ -38,6 +36,7 @@ export function createRole(
   return {
     id,
     name: id,
+    isChildRole: false,
     permissions: createPermissionMap(permissions)
   };
 }
@@ -50,6 +49,7 @@ export function createCalendar(overrides: Partial<Calendar> = {}): Calendar {
     color: "#2f7d6d",
     sharedWith: [],
     importedSources: [],
+    subscriptions: [],
     deletedAt: null,
     deletedBy: null,
     events: [],
@@ -114,10 +114,4 @@ export function createTodo(overrides: Partial<Todo> = {}): Todo {
     deletedBy: null,
     ...overrides
   };
-}
-
-export function expectEqual<T>(actual: T, expected: T) {
-  if (actual !== expected) {
-    throw new Error(`Expected ${String(expected)}, got ${String(actual)}`);
-  }
 }

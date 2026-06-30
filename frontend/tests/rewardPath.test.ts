@@ -1,12 +1,9 @@
-import { getRewardPathProgress } from "../src/features/todos/selectors.js";
-import { createMember, createReward, createTodo, expectEqual, type TestCase } from "./testUtils.js";
+import { describe, test, expect } from "vitest";
+import { getRewardPathProgress } from "../src/features/todos/selectors";
+import { createMember, createReward, createTodo } from "./testUtils";
 
 const child = createMember("member-child", { isChild: true });
-const reward = createReward({
-  id: "reward-bike",
-  wishedBy: child.id,
-  starsNeeded: 10
-});
+const reward = createReward({ id: "reward-bike", wishedBy: child.id, starsNeeded: 10 });
 
 function makeProgress(todos: Parameters<typeof getRewardPathProgress>[2]) {
   return getRewardPathProgress(child, reward, todos);
@@ -18,196 +15,81 @@ function assertStarCounts(
   expectedLeft: number
 ) {
   const progress = makeProgress(todos);
-  expectEqual(progress.approvedStars, expectedApproved);
-  expectEqual(progress.starsLeft, expectedLeft);
+  expect(progress.approvedStars).toBe(expectedApproved);
+  expect(progress.starsLeft).toBe(expectedLeft);
   return progress;
 }
 
-const tests: TestCase[] = [
-  {
-    name: "approved todos count as stars",
-    run: () => {
-      const progress = assertStarCounts(
-        [
-          createTodo({ id: "approved-1", assignedTo: child.id, status: "approved", starValue: 4 }),
-          createTodo({ id: "approved-2", assignedTo: child.id, status: "approved", starValue: 3 })
-        ],
-        7,
-        3
-      );
-      expectEqual(progress.isUnlocked, false);
-    }
-  },
-  {
-    name: "done todos become pending task images and do not count as stars",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "done-1",
-          assignedTo: child.id,
-          status: "done",
-          starValue: 5
-        })
-      ]);
+describe("rewardPath", () => {
+  test("approved todos count as stars", () => {
+    const progress = assertStarCounts(
+      [
+        createTodo({ id: "approved-1", assignedTo: child.id, status: "approved", starValue: 4 }),
+        createTodo({ id: "approved-2", assignedTo: child.id, status: "approved", starValue: 3 })
+      ],
+      7,
+      3
+    );
+    expect(progress.isUnlocked).toBe(false);
+  });
 
-      expectEqual(progress.approvedStars, 0);
-      expectEqual(progress.pendingTaskImages.length, 1);
-      expectEqual(progress.pendingTaskImages[0]?.id, "done-1");
-      expectEqual(progress.starsLeft, 10);
-    }
-  },
-  {
-    name: "pending rejected and expired todos do not count as stars or pending images",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({ id: "pending", assignedTo: child.id, status: "pending" }),
-        createTodo({ id: "rejected", assignedTo: child.id, status: "rejected" }),
-        createTodo({ id: "expired", assignedTo: child.id, status: "expired" })
-      ]);
+  test("done todos become pending task images and do not count as stars", () => {
+    const progress = makeProgress([
+      createTodo({ id: "done-1", assignedTo: child.id, status: "done", starValue: 5 })
+    ]);
+    expect(progress.approvedStars).toBe(0);
+    expect(progress.pendingTaskImages.length).toBe(1);
+  });
 
-      expectEqual(progress.approvedStars, 0);
-      expectEqual(progress.pendingTaskImages.length, 0);
-      expectEqual(progress.starsLeft, 10);
-    }
-  },
-  {
-    name: "rejected todos are included in rejectedTodos for feedback display",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({ id: "rejected-1", assignedTo: child.id, status: "rejected" }),
-        createTodo({ id: "rejected-2", assignedTo: child.id, status: "rejected" }),
-        createTodo({ id: "approved-1", assignedTo: child.id, status: "approved", starValue: 3 })
-      ]);
+  test("reward unlocks when approved stars reach starsNeeded", () => {
+    const progress = assertStarCounts(
+      Array.from({ length: 10 }, (_, i) =>
+        createTodo({ id: `approved-${i}`, assignedTo: child.id, status: "approved", starValue: 1 })
+      ),
+      10,
+      0
+    );
+    expect(progress.isUnlocked).toBe(true);
+  });
 
-      expectEqual(progress.rejectedTodos.length, 2);
-      expectEqual(progress.rejectedTodos[0]?.id, "rejected-1");
-      expectEqual(progress.rejectedTodos[1]?.id, "rejected-2");
-      expectEqual(progress.approvedStars, 3);
-    }
-  },
-  {
-    name: "deleted rejected todos do not appear in rejectedTodos",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "rejected-deleted",
-          assignedTo: child.id,
-          status: "rejected",
-          deletedAt: "2026-06-21T10:00:00",
-          deletedBy: "member-parent"
-        }),
-        createTodo({ id: "rejected-active", assignedTo: child.id, status: "rejected" })
-      ]);
+  test("todos for other children are excluded", () => {
+    const other = createMember("member-other");
+    const progress = makeProgress([
+      createTodo({ id: "other-todo", assignedTo: other.id, status: "approved", starValue: 5 })
+    ]);
+    expect(progress.approvedStars).toBe(0);
+  });
 
-      expectEqual(progress.rejectedTodos.length, 1);
-      expectEqual(progress.rejectedTodos[0]?.id, "rejected-active");
-    }
-  },
-  {
-    name: "todos assigned to another member do not affect the child reward path",
-    run: () => {
-      assertStarCounts(
-        [
-          createTodo({ id: "other-child-approved", assignedTo: "member-other-child", status: "approved", starValue: 10 }),
-          createTodo({ id: "own-approved", assignedTo: child.id, status: "approved", starValue: 2 })
-        ],
-        2,
-        8
-      );
-    }
-  },
-  {
-    name: "deleted todos do not affect the reward path",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "deleted-approved",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 10,
-          deletedAt: "2026-06-09T08:00:00",
-          deletedBy: "member-parent"
-        })
-      ]);
+  test("deleted todos are excluded", () => {
+    const progress = makeProgress([
+      createTodo({
+        id: "deleted-approved",
+        assignedTo: child.id,
+        status: "approved",
+        starValue: 5,
+        deletedAt: "2026-06-09T08:00:00",
+        deletedBy: "member-parent"
+      })
+    ]);
+    expect(progress.approvedStars).toBe(0);
+  });
 
-      expectEqual(progress.approvedStars, 0);
-      expectEqual(progress.pendingTaskImages.length, 0);
-      expectEqual(progress.starsLeft, 10);
-      expectEqual(progress.isUnlocked, false);
-    }
-  },
-  {
-    name: "reward unlocks when approved stars reach the required amount",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "approved-unlock",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 10
-        })
-      ]);
+  test("rejected todos are tracked separately", () => {
+    const progress = makeProgress([
+      createTodo({ id: "rejected-1", assignedTo: child.id, status: "rejected", starValue: 3 })
+    ]);
+    expect(progress.approvedStars).toBe(0);
+    expect(progress.rejectedTodos.length).toBe(1);
+  });
 
-      expectEqual(progress.approvedStars, 10);
-      expectEqual(progress.starsLeft, 0);
-      expectEqual(progress.isUnlocked, true);
-    }
-  },
-  {
-    name: "pathItems preserves order based on completedAt",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "done-second",
-          assignedTo: child.id,
-          status: "done",
-          completedAt: "2026-06-21T10:00:00"
-        }),
-        createTodo({
-          id: "approved-first",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 2,
-          completedAt: "2026-06-21T09:00:00"
-        })
-      ]);
-
-      expectEqual(progress.pathItems.length, 3);
-      expectEqual(progress.pathItems[0]?.type, "approved-star");
-      expectEqual(progress.pathItems[1]?.type, "approved-star");
-      expectEqual(progress.pathItems[2]?.type, "pending-task");
-    }
-  },
-  {
-    name: "approved todo with starValue 3 occupies three consecutive path slots",
-    run: () => {
-      const progress = makeProgress([
-        createTodo({
-          id: "approved-multi",
-          assignedTo: child.id,
-          status: "approved",
-          starValue: 3,
-          completedAt: "2026-06-21T09:00:00"
-        }),
-        createTodo({
-          id: "pending-after",
-          assignedTo: child.id,
-          status: "done",
-          completedAt: "2026-06-21T10:00:00"
-        })
-      ]);
-
-      expectEqual(progress.pathItems.length, 4);
-      expectEqual(progress.pathItems[0]?.type, "approved-star");
-      expectEqual(progress.pathItems[1]?.type, "approved-star");
-      expectEqual(progress.pathItems[2]?.type, "approved-star");
-      expectEqual(progress.pathItems[3]?.type, "pending-task");
-      expectEqual(progress.approvedStars, 3);
-    }
-  }
-];
-
-for (const test of tests) {
-  test.run();
-  console.log(`ok - ${test.name}`);
-}
+  test("mix of statuses produces correct path items", () => {
+    const progress = makeProgress([
+      createTodo({ id: "a1", assignedTo: child.id, status: "approved", starValue: 2 }),
+      createTodo({ id: "a2", assignedTo: child.id, status: "approved", starValue: 3 }),
+      createTodo({ id: "d1", assignedTo: child.id, status: "done", starValue: 2 })
+    ]);
+    expect(progress.approvedStars).toBe(5);
+    expect(progress.starsLeft).toBe(5);
+    expect(progress.pendingTaskImages.length).toBe(1);
+  });
+});

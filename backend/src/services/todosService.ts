@@ -4,7 +4,22 @@ import { AppError } from "../utils/errors.js";
 import type { Todo } from "../../../shared/types.js";
 
 export async function getAllTodos(accountId: string) {
-  return TodoModel.find({ accountId }, { _id: 0, __v: 0 });
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffIso = cutoff.toISOString();
+
+  return TodoModel.find(
+    {
+      accountId,
+      $and: [
+        // Exclude soft-deleted todos older than 30 days
+        { $or: [{ deletedAt: null }, { deletedAt: { $gte: cutoffIso } }] },
+        // Exclude expired todos that expired more than 30 days ago
+        { $or: [{ status: { $ne: "expired" } }, { expiresAt: { $gte: cutoffIso } }] },
+      ],
+    },
+    { _id: 0, __v: 0 }
+  );
 }
 
 export async function createTodo(data: unknown) {
