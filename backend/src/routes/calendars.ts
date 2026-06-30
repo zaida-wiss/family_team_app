@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as calendars from "../services/calendarsService.js";
+import * as subscriptions from "../services/calendarSubscriptionsService.js";
 import { accountIdOf } from "../utils/memberUtils.js";
 
 export const calendarsRouter = Router();
@@ -35,29 +36,29 @@ calendarsRouter.delete("/:id/share/:memberId", requireAuth, async (req, res) => 
 // ── subscriptions ─────────────────────────────────────────────────────────────
 
 calendarsRouter.post("/:id/subscriptions", requireAuth, async (req, res) => {
-  const sub = await calendars.createSubscription(req.params.id, req.body);
+  const sub = await subscriptions.createSubscription(req.params.id, req.body);
   res.status(201).json(sub);
 });
 
 calendarsRouter.patch("/:id/subscriptions/:subId", requireAuth, async (req, res) => {
-  await calendars.updateSubscription(req.params.id, req.params.subId, req.body);
+  await subscriptions.updateSubscription(req.params.id, req.params.subId, req.body);
   res.json({ ok: true });
 });
 
 calendarsRouter.delete("/:id/subscriptions/:subId", requireAuth, async (req, res) => {
-  await calendars.deleteSubscription(req.params.id, req.params.subId);
+  await subscriptions.deleteSubscription(req.params.id, req.params.subId);
   res.json({ ok: true });
 });
 
 calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, async (req, res) => {
-  await calendars.syncSubscriptionById(req.params.id, req.params.subId);
+  await subscriptions.syncSubscriptionById(req.params.id, req.params.subId);
   res.json({ ok: true });
 });
 
 // ── ics fetch (for preview) ───────────────────────────────────────────────────
 
 calendarsRouter.post("/:id/fetch-ics", requireAuth, async (req, res) => {
-  const icsText = await calendars.fetchIcs((req.body as { url?: unknown }).url);
+  const icsText = await subscriptions.fetchIcs((req.body as { url?: unknown }).url);
   res.json({ icsText });
 });
 

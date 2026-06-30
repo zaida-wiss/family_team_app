@@ -5,7 +5,7 @@ import { MemberModel } from "./db/models/Member.js";
 import { TodoModel } from "./db/models/Todo.js";
 import { ShoppingListModel } from "./db/models/ShoppingList.js";
 import { RewardModel } from "./db/models/Reward.js";
-import { syncSubscription } from "./services/calendarsService.js";
+import { syncSubscription } from "./services/calendarSubscriptionsService.js";
 import { logger } from "./utils/logger.js";
 
 const PORT = process.env.PORT ?? 3000;
