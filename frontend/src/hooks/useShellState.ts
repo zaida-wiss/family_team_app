@@ -34,7 +34,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     toggleShoppingItem, softDeleteShoppingForMember } = shoppingState;
 
   const { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars,
-    approveWish, rejectWish } = rewardsState;
+    approveWish, rejectWish, updateWish } = rewardsState;
 
   const {
     items: shopItems,
@@ -208,6 +208,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRejectTodo: (todoId: string) => rejectTodo(todoId, currentMember.id),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
     onRejectWish: (rewardId: string) => rejectWish(rewardId, currentMember.id),
+    onUpdateWish: (rewardId: string, patch: { title?: string; starsNeeded?: number }) => updateWish(rewardId, patch),
     onSetWishStars: (rewardId: string, stars: number) =>
       setWishStars((prev) => ({ ...prev, [rewardId]: stars })),
     shopItems,

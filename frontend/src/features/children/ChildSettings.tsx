@@ -1,7 +1,7 @@
 import "./ChildSettings.css";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { CheckCircle2, Star, Trophy, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Save, Star, Trophy, X, XCircle } from "lucide-react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
 import { hasPermission } from "../../utils/permissions";
 import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo } from "@shared/types";
@@ -19,6 +19,7 @@ type Props = {
   onRejectTodo: (todoId: Id) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
+  onUpdateWish: (rewardId: Id, patch: { title?: string; starsNeeded?: number }) => void;
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onUpdateChildTimelineSettings: (memberId: Id, settings: ChildTimelineSettings) => void;
@@ -52,6 +53,7 @@ export function ChildSettings({
   onRejectTodo,
   onApproveWish,
   onRejectWish,
+  onUpdateWish,
   onCreateTodo,
   onUpdateTodo,
   onUpdateChildTimelineSettings,
@@ -62,6 +64,9 @@ export function ChildSettings({
   const [timelineChildId, setTimelineChildId] = useState("");
   const [wishTitle, setWishTitle] = useState("");
   const [wishStarsNeeded, setWishStarsNeeded] = useState(10);
+  const [editingWishId, setEditingWishId] = useState<Id | null>(null);
+  const [editWishTitle, setEditWishTitle] = useState("");
+  const [editWishStars, setEditWishStars] = useState(10);
   const childMembers = members.filter((member) => {
     const role = roles.find((candidate) => candidate.id === member.roleId);
     return (
@@ -122,6 +127,18 @@ export function ChildSettings({
     setWishStarsNeeded(10);
   }
 
+  function startEditWish(reward: Reward) {
+    setEditingWishId(reward.id);
+    setEditWishTitle(reward.title);
+    setEditWishStars(reward.starsNeeded);
+  }
+
+  function saveEditWish(rewardId: Id) {
+    if (!editWishTitle.trim()) return;
+    onUpdateWish(rewardId, { title: editWishTitle.trim(), starsNeeded: editWishStars });
+    setEditingWishId(null);
+  }
+
   if (childMembers.length === 0) {
     return (
       <div className="settings-sub">
@@ -171,17 +188,49 @@ export function ChildSettings({
           <p className="settings-sub-desc">Inga önskningar ännu.</p>
         ) : (
           <section className="approval-panel child-settings-panel" aria-label="Barnens önskningar">
-            {childWishes.map((reward) => (
-              <div className="approval-row child-settings-row" key={reward.id}>
-                <div>
-                  <strong>{reward.title}</strong>
-                  <small>
-                    <Trophy size={14} />
-                    {getChildName(reward.wishedBy)} · {reward.starsNeeded} stjärnor · {WISH_STATUS_LABEL[reward.status]}
-                  </small>
+            {childWishes.map((reward) =>
+              editingWishId === reward.id ? (
+                <div className="approval-row child-settings-row child-settings-row--editing" key={reward.id}>
+                  <input
+                    aria-label="Önskningsnamn"
+                    className="wish-edit-input"
+                    onChange={(e) => setEditWishTitle(e.target.value)}
+                    type="text"
+                    value={editWishTitle}
+                  />
+                  <input
+                    aria-label="Antal stjärnor"
+                    className="wish-edit-stars"
+                    max={999}
+                    min={1}
+                    onChange={(e) => setEditWishStars(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    type="number"
+                    value={editWishStars}
+                  />
+                  <div className="approval-actions">
+                    <button aria-label="Spara" className="icon-button" onClick={() => saveEditWish(reward.id)} type="button">
+                      <Save size={16} />
+                    </button>
+                    <button aria-label="Avbryt" className="icon-button" onClick={() => setEditingWishId(null)} type="button">
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div className="approval-row child-settings-row" key={reward.id}>
+                  <div>
+                    <strong>{reward.title}</strong>
+                    <small>
+                      <Trophy size={14} />
+                      {getChildName(reward.wishedBy)} · {reward.starsNeeded} stjärnor · {WISH_STATUS_LABEL[reward.status]}
+                    </small>
+                  </div>
+                  <button aria-label="Redigera önskning" className="icon-button" onClick={() => startEditWish(reward)} type="button">
+                    <Pencil size={16} />
+                  </button>
+                </div>
+              )
+            )}
           </section>
         )}
       </div>

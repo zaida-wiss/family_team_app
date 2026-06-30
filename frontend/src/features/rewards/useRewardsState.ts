@@ -58,6 +58,13 @@ export function useRewardsState() {
     });
   }
 
+  function updateWish(rewardId: Id, patch: { title?: string; starsNeeded?: number }) {
+    rewardsApi.update(rewardId, patch).catch(console.error);
+    setRewards((current) =>
+      current.map((r) => (r.id === rewardId ? { ...r, ...patch } : r))
+    );
+  }
+
   function rejectWish(rewardId: Id, rejecterId: Id) {
     rewardsApi.reject(rewardId).catch(console.error);
     setRewards((current) =>
@@ -73,5 +80,5 @@ export function useRewardsState() {
     );
   }
 
-  return { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish };
+  return { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish, updateWish };
 }

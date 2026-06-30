@@ -63,6 +63,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onRemoveShopItem,
     onMovePurchased,
     onDeletePurchased,
+    onUpdateWish,
   } = settingsProps;
 
   const { fontId, setFontId } = useAppFont();
@@ -135,6 +136,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onRejectTodo={settingsProps.onRejectTodo}
           onApproveWish={settingsProps.onApproveWish}
           onRejectWish={settingsProps.onRejectWish}
+          onUpdateWish={onUpdateWish}
           onCreateTodo={settingsProps.onCreateTodo}
           onUpdateTodo={settingsProps.onUpdateTodo}
           onUpdateChildTimelineSettings={settingsProps.onUpdateChildTimelineSettings}

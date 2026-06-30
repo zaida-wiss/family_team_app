@@ -15,6 +15,12 @@ rewardsRouter.post("/", requireAuth, async (req, res) => {
   res.status(201).json(await rewards.createReward({ ...req.body, accountId }));
 });
 
+rewardsRouter.patch("/:id", requireAuth, async (req, res) => {
+  const { title, starsNeeded } = req.body as { title?: string; starsNeeded?: number };
+  await rewards.updateReward(req.params.id, { title, starsNeeded });
+  res.json({ ok: true });
+});
+
 rewardsRouter.patch("/:id/approve", requireAuth, async (req, res) => {
   await rewards.approveReward(req.params.id, req.body.starsNeeded, req.memberId ?? null);
   res.json({ ok: true });
