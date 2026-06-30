@@ -74,9 +74,18 @@
 }
 
 .cal-cell--other {
-  opacity: 0.28;
   cursor: default;
   pointer-events: none;
+}
+
+.cal-cell--other .cal-cell-num {
+  color: var(--muted-fg);
+}
+
+.cal-cell--other .cal-event-pill,
+.cal-cell--other .cal-event-more,
+.cal-cell--other .cal-cell-dots {
+  opacity: 0;
 }
 
 .cal-cell--selected {

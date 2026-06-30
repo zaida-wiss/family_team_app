@@ -213,14 +213,38 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, #a855f7 30%, transparent);
 }
 
+/* Grön flash vid köp — ::before hanterar bakgrundstone (composited opacity),
+   outline-color hanterar glöd-ringen (paint, ej layout) */
 @keyframes shop-card-blink {
-  0%   { background: var(--bg-secondary, #f8f8f8); box-shadow: none; }
-  25%  { background: #dcfce7; box-shadow: 0 0 0 4px #22c55e; }
-  60%  { background: #dcfce7; box-shadow: 0 0 0 4px #22c55e; }
-  100% { background: var(--bg-secondary, #f8f8f8); box-shadow: none; }
+  0%   { opacity: 0; }
+  25%  { opacity: 0.28; }
+  60%  { opacity: 0.28; }
+  100% { opacity: 0; }
+}
+
+@keyframes shop-card-blink-ring {
+  0%   { outline-color: transparent; }
+  25%  { outline-color: #22c55e; }
+  60%  { outline-color: #22c55e; }
+  100% { outline-color: transparent; }
+}
+
+.reward-shop-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #22c55e;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .reward-shop-card--flash {
+  outline: 4px solid transparent;
+  animation: shop-card-blink-ring 0.65s ease forwards;
+}
+
+.reward-shop-card--flash::before {
   animation: shop-card-blink 0.65s ease forwards;
 }
 
