@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import type { Calendar, Id, Member, Reward, RewardPathProgress, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, PurchasedReward, Reward, RewardPathProgress, RewardShopItem, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -12,7 +12,6 @@ import { ChildPendingBadges } from "./ChildPendingBadges";
 import { ChildWishModal } from "./ChildWishModal";
 import { useChildCompleteHold } from "./useChildCompleteHold";
 import { useChildStars } from "./useChildStars";
-import { useRewardShopState } from "../rewards/useRewardShopState";
 import { RewardShopModal } from "../rewards/RewardShopModal";
 
 import "./ChildDashboard.css";
@@ -29,6 +28,9 @@ type Props = {
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
+  shopItems: RewardShopItem[];
+  purchased: PurchasedReward[] | null;
+  onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
@@ -59,6 +61,9 @@ export function ChildDashboard({
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
+  shopItems,
+  purchased,
+  onPurchaseReward,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
@@ -76,7 +81,6 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
-  const { items: shopItems, purchased, purchase } = useRewardShopState();
   const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
@@ -178,7 +182,7 @@ export function ChildDashboard({
           availableStars={availableStars}
           onPurchase={(item) => {
             setLocalSpentStars((s) => s + item.starCost);
-            void purchase(item, child.id);
+            void onPurchaseReward(item, child.id);
           }}
           onClose={() => setIsShopOpen(false)}
         />

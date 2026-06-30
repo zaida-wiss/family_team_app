@@ -10,7 +10,7 @@ import { TodosView } from "../todos/TodosView";
 import { getRewardPathProgress } from "../todos/selectors";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Member, PurchasedReward, Reward, RewardShopItem, Role, ShoppingList, Todo } from "@shared/types";
 
 type DashboardProps = ComponentProps<typeof Dashboard>;
 
@@ -64,6 +64,9 @@ type Props = {
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
   onToggleShoppingItem: (listId: string, itemId: string) => void;
   calendarSettings?: CalendarSettings;
+  shopItems: RewardShopItem[];
+  purchased: PurchasedReward[] | null;
+  onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
@@ -95,7 +98,8 @@ export function MemberShellContent({
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
-  onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings, onLoadEventsForMonth
+  onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings, onLoadEventsForMonth,
+  shopItems, purchased, onPurchaseReward,
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
@@ -266,6 +270,9 @@ export function MemberShellContent({
         timelineTodos={todos}
         activeChildTodos={activeChildTodos}
         rejectedTodos={rejectedTodos}
+        shopItems={shopItems}
+        purchased={purchased}
+        onPurchaseReward={onPurchaseReward}
         wishTitle={wishTitle}
         onSetWishTitle={onSetWishTitle}
         onCreateWish={onCreateWish}

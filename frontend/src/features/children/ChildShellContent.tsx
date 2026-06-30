@@ -1,6 +1,6 @@
 import { ChildDashboard } from "./ChildDashboard";
 import { getRewardPathProgress } from "../todos/selectors";
-import type { Calendar, Member, Reward, Role, Todo } from "@shared/types";
+import type { Calendar, Member, PurchasedReward, Reward, RewardShopItem, Role, Todo } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -8,6 +8,9 @@ type Props = {
   todos: Todo[];
   rewards: Reward[];
   roles: Role[];
+  shopItems: RewardShopItem[];
+  purchased: PurchasedReward[] | null;
+  onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
@@ -31,6 +34,9 @@ export function ChildShellContent({
   todos,
   rewards,
   roles,
+  shopItems,
+  purchased,
+  onPurchaseReward,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
@@ -71,6 +77,9 @@ export function ChildShellContent({
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}
+      shopItems={shopItems}
+      purchased={purchased}
+      onPurchaseReward={onPurchaseReward}
       wishTitle={wishTitle}
       onSetWishTitle={onSetWishTitle}
       onCreateWish={onCreateWish}

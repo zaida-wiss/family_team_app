@@ -1,6 +1,7 @@
 import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
 import { useShellPermissions } from "./useShellPermissions";
+import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership } from "@shared/types";
 
 export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
@@ -34,6 +35,16 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
 
   const { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars,
     approveWish, rejectWish } = rewardsState;
+
+  const {
+    items: shopItems,
+    purchased,
+    purchase: purchaseReward,
+    movePurchased,
+    deletePurchased,
+    addItem: addShopItem,
+    removeItem: removeShopItem,
+  } = useRewardShopState();
 
   const permissions = useShellPermissions(currentMember, roles);
 
@@ -70,6 +81,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     todos,
     rewards,
     roles,
+    shopItems,
+    purchased,
+    onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
 
@@ -137,6 +151,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onShareShoppingList: shareShoppingList,
     onRemoveShoppingListShare: removeShoppingListShare,
     onToggleShoppingItem: toggleShoppingItem,
+    shopItems,
+    purchased,
+    onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
 
@@ -191,7 +208,13 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
     onRejectWish: (rewardId: string) => rejectWish(rewardId, currentMember.id),
     onSetWishStars: (rewardId: string, stars: number) =>
-      setWishStars((prev) => ({ ...prev, [rewardId]: stars }))
+      setWishStars((prev) => ({ ...prev, [rewardId]: stars })),
+    shopItems,
+    purchased,
+    onAddShopItem: (item: Parameters<typeof addShopItem>[0]) => void addShopItem(item),
+    onRemoveShopItem: (id: string) => void removeShopItem(id),
+    onMovePurchased: (id: string, startsAt: string) => void movePurchased(id, startsAt),
+    onDeletePurchased: (id: string) => void deletePurchased(id),
   };
 
   return {

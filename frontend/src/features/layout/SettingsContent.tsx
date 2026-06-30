@@ -5,7 +5,6 @@ import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
 import { useAppFont } from "../../components/FontPicker";
-import { useRewardShopState } from "../rewards/useRewardShopState";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
@@ -57,10 +56,15 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     canManageRoles,
     canViewTrash,
     onRefundPurchase,
+    shopItems,
+    purchased,
+    onAddShopItem,
+    onRemoveShopItem,
+    onMovePurchased,
+    onDeletePurchased,
   } = settingsProps;
 
   const { fontId, setFontId } = useAppFont();
-  const { items: shopItems, purchased, addItem: addShopItem, removeItem: removeShopItem, movePurchased, deletePurchased } = useRewardShopState();
 
   return (
     <div className="settings-accordion">
@@ -80,11 +84,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           currentMemberId={currentMember.id}
           children={members.filter((m) => m.deletedAt === null && m.isChild)}
           purchased={purchased}
-          onAdd={(item) => { void addShopItem(item); }}
-          onRemove={(id) => { void removeShopItem(id); }}
+          onAdd={onAddShopItem}
+          onRemove={onRemoveShopItem}
           onRefund={onRefundPurchase}
-          onMovePurchased={(id, startsAt) => { void movePurchased(id, startsAt); }}
-          onDeletePurchased={(id) => { void deletePurchased(id); }}
+          onMovePurchased={onMovePurchased}
+          onDeletePurchased={onDeletePurchased}
         />
       </SettingsSection>
 
