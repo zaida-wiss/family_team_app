@@ -99,6 +99,7 @@ export type Member = {
   lastSelectedDashboardMemberId?: Id | null;
   calendarView?: CalendarViewMode;
   spentStars: number;
+  approvedStars: number;
   deletedAt: string | null;
   deletedBy: Id | null;
 };

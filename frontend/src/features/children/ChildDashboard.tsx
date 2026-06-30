@@ -82,7 +82,7 @@ export function ChildDashboard({
     onCompleteTodo
   );
   const { approvedStarsToday, totalApprovedStars, availableStars, pendingApprovalTodos } =
-    useChildStars(child.id, timelineTodos, timerNow, localSpentStars);
+    useChildStars(child, timelineTodos, timerNow, localSpentStars);
 
   useEffect(() => {
     const id = window.setInterval(() => setTimerNow(Date.now()), 1000);

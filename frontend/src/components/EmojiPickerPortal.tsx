@@ -1,7 +1,10 @@
-import { useRef, useEffect, useState } from "react";
+import { lazy, Suspense, useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { EmojiPickerSv } from "./EmojiPickerSv";
 import "./EmojiPickerPortal.css";
+
+const EmojiPickerSv = lazy(() =>
+  import("./EmojiPickerSv").then((m) => ({ default: m.EmojiPickerSv }))
+);
 
 type Props = {
   symbol: string;
@@ -53,12 +56,14 @@ export function EmojiPickerPortal({ symbol, onSelect, triggerClassName }: Props)
             className="emoji-portal-popup"
             style={{ position: "fixed", top: pos.top, left: pos.left }}
           >
-            <EmojiPickerSv
-              onSelect={(emoji) => {
-                onSelect(emoji);
-                setOpen(false);
-              }}
-            />
+            <Suspense fallback={<div className="emoji-portal-loading">Laddar…</div>}>
+              <EmojiPickerSv
+                onSelect={(emoji) => {
+                  onSelect(emoji);
+                  setOpen(false);
+                }}
+              />
+            </Suspense>
           </div>,
           document.body
         )}

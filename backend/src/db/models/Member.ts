@@ -17,6 +17,7 @@ const memberSchema = new Schema<Member>({
   lastSelectedDashboardMemberId: { type: String, default: null },
   calendarView: { type: String, default: undefined },
   spentStars: { type: Number, default: 0 },
+  approvedStars: { type: Number, default: 0 },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });
