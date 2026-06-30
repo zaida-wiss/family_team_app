@@ -316,17 +316,3 @@ export type Reward = {
   deletedBy: Id | null;
 };
 
-export type RewardPathItem =
-  | { type: "approved-star" }
-  | { type: "pending-task"; todo: Todo };
-
-export type RewardPathProgress = {
-  childId: Id;
-  rewardId: Id;
-  approvedStars: number;
-  pendingTaskImages: Todo[];
-  rejectedTodos: Todo[];
-  pathItems: RewardPathItem[];
-  starsLeft: number;
-  isUnlocked: boolean;
-};

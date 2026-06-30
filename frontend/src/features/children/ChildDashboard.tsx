@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import type { Calendar, Id, Member, PurchasedReward, Reward, RewardPathProgress, RewardShopItem, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, PurchasedReward, Reward, RewardShopItem, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -21,8 +21,6 @@ type Props = {
   child: Member;
   calendars: Calendar[];
   roles: Role[];
-  activeReward: Reward | null;
-  rewardProgress: RewardPathProgress | null;
   childRewards: Reward[];
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
@@ -54,8 +52,6 @@ export function ChildDashboard({
   child,
   calendars,
   roles,
-  activeReward,
-  rewardProgress,
   childRewards,
   timelineTodos,
   activeChildTodos,
@@ -148,8 +144,6 @@ export function ChildDashboard({
               childId={child.id}
               approvedStarsToday={approvedStarsToday}
               totalApprovedStars={availableStars}
-              activeReward={activeReward}
-              rewardProgress={rewardProgress}
               onOpenShop={() => setIsShopOpen(true)}
               onThemePickerOpen={() => onThemePickerOpen(child.id)}
               onCreateWish={onCreateWish}

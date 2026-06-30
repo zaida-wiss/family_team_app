@@ -253,14 +253,6 @@ export const RewardSchema = z.object({
   deletedBy: IdSchema.nullable()
 });
 
-export const RewardPathProgressSchema = z.object({
-  childId: IdSchema,
-  rewardId: IdSchema,
-  approvedStars: z.number().int().min(0),
-  pendingTaskImages: z.array(TodoSchema),
-  starsLeft: z.number().int().min(0),
-  isUnlocked: z.boolean()
-});
 
 export const CreateMemberInputSchema = MemberSchema.omit({ id: true, deletedAt: true, deletedBy: true });
 export const CreateTodoInputSchema = TodoSchema.omit({

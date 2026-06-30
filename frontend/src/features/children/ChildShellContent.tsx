@@ -1,5 +1,4 @@
 import { ChildDashboard } from "./ChildDashboard";
-import { getRewardPathProgress } from "../todos/selectors";
 import type { Calendar, Member, PurchasedReward, Reward, RewardShopItem, Role, Todo } from "@shared/types";
 
 type Props = {
@@ -44,11 +43,6 @@ export function ChildShellContent({
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
-  const activeReward =
-    rewards.find((r) => r.wishedBy === currentMember.id && r.status === "active") ?? null;
-  const rewardProgress = activeReward
-    ? getRewardPathProgress(currentMember, activeReward, todos)
-    : null;
   const childRewards = rewards.filter((r) => r.wishedBy === currentMember.id);
   const now = Date.now();
   const activeChildTodos = todos.filter(
@@ -71,8 +65,6 @@ export function ChildShellContent({
       child={currentMember}
       calendars={calendars}
       roles={roles}
-      activeReward={activeReward}
-      rewardProgress={rewardProgress}
       childRewards={childRewards}
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}

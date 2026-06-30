@@ -1,16 +1,13 @@
-import { Banknote, Palette, ShoppingBag, Star, Trophy } from "lucide-react";
+import { Banknote, Palette, ShoppingBag, Star } from "lucide-react";
 import { useState } from "react";
-import type { Id, Reward, RewardPathProgress } from "@shared/types";
+import type { Id } from "@shared/types";
 import { ChildBanknotesModal } from "./ChildBanknotesModal";
 import "./ChildStarsPanel.css";
-import "./ChildRewardRail.css";
 
 type Props = {
   childId: Id;
   approvedStarsToday: number;
   totalApprovedStars: number;
-  activeReward: Reward | null;
-  rewardProgress: RewardPathProgress | null;
   onOpenShop: () => void;
   onThemePickerOpen: () => void;
   onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
@@ -20,8 +17,6 @@ export function ChildStarsPanel({
   childId,
   approvedStarsToday,
   totalApprovedStars,
-  activeReward,
-  rewardProgress,
   onOpenShop,
   onThemePickerOpen,
   onCreateWish,
@@ -79,14 +74,6 @@ export function ChildStarsPanel({
             onClose={() => setShowBanknotes(false)}
             onCreateWish={onCreateWish}
           />
-        )}
-
-        {activeReward && rewardProgress && (
-          <div className="child-active-reward-mini">
-            <Trophy size={16} />
-            <span>{activeReward.title}</span>
-            <small>{rewardProgress.starsLeft} stjärnor kvar</small>
-          </div>
         )}
 
         <small className="child-stars-footnote">1 stjärna = 1 kr</small>

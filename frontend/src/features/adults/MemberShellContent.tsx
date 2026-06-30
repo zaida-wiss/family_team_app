@@ -7,7 +7,6 @@ import { CalendarPage } from "../../pages/CalendarPage";
 import { HomePage } from "../../pages/HomePage";
 import { ShoppingView } from "../shopping/ShoppingView";
 import { TodosView } from "../todos/TodosView";
-import { getRewardPathProgress } from "../todos/selectors";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Member, PurchasedReward, Reward, RewardShopItem, Role, ShoppingList, Todo } from "@shared/types";
@@ -238,11 +237,6 @@ export function MemberShellContent({
   // Valt barn → barnens dashboard (enda vyn som är annorlunda)
   if (selectedMemberIsChild && selectedDashboardMember) {
     const now = Date.now();
-    const activeReward =
-      rewards.find((r) => r.wishedBy === selectedDashboardMember.id && r.status === "active") ?? null;
-    const rewardProgress = activeReward
-      ? getRewardPathProgress(selectedDashboardMember, activeReward, todos)
-      : null;
     const childRewards = rewards.filter((r) => r.wishedBy === selectedDashboardMember.id);
     const activeChildTodos = todos
       .filter(
@@ -270,8 +264,6 @@ export function MemberShellContent({
         child={selectedDashboardMember}
         calendars={calendars}
         roles={roles}
-        activeReward={activeReward}
-        rewardProgress={rewardProgress}
         childRewards={childRewards}
         timelineTodos={todos}
         activeChildTodos={activeChildTodos}
