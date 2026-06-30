@@ -24,24 +24,35 @@ type FormState = {
 
 const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null });
 
+// Konverterar ISO-sträng till lokalt datetime-input-format (respekterar enhetens tidszon)
+function toLocalDateTimeInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 type PurchasedListProps = {
   purchased: PurchasedReward[] | null;
   children: Member[];
   onMovePurchased: (id: string, startsAt: string) => void;
   onDeletePurchased: (id: string) => void;
+  onRefund: (childId: string, amount: number) => void;
 };
 
-function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased }: PurchasedListProps) {
+function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased, onRefund }: PurchasedListProps) {
   if (purchased === null) {
     return <div className="reward-shop-settings__purchased-placeholder" aria-hidden="true" />;
   }
   if (purchased.length === 0) return null;
+
+  const sorted = [...purchased].sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt));
+
   return (
     <div className="reward-shop-settings__purchased">
       <p className="reward-shop-settings__refund-heading">Uthämtade belöningar</p>
-      {purchased.map((pr) => {
+      {sorted.map((pr) => {
         const child = children.find((c) => c.id === pr.memberId);
-        const localStart = new Date(pr.startsAt).toISOString().slice(0, 16);
+        const localStart = toLocalDateTimeInput(pr.startsAt);
         return (
           <div key={pr.id} className="reward-shop-settings__purchased-row">
             <span className="reward-shop-settings__purchased-symbol">{pr.itemSymbol ?? "🎁"}</span>
@@ -61,9 +72,12 @@ function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased
               }}
             />
             <button
-              aria-label={`Ta bort ${pr.itemTitle}`}
+              aria-label={`Ta bort ${pr.itemTitle} och återbetala ${pr.starCost} stjärnor`}
               className="reward-shop-settings__remove"
-              onClick={() => onDeletePurchased(pr.id)}
+              onClick={() => {
+                onRefund(pr.memberId, pr.starCost);
+                onDeletePurchased(pr.id);
+              }}
               type="button"
             >✕</button>
           </div>
@@ -201,6 +215,7 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
         children={children}
         onMovePurchased={onMovePurchased}
         onDeletePurchased={onDeletePurchased}
+        onRefund={onRefund}
       />
     </section>
   );
