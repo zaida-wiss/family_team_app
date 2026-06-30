@@ -5,7 +5,7 @@
 .availability-editor__toggle {
   background: none;
   border: none;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
   font-size: 0.82rem;
   cursor: pointer;
   padding: 0;
@@ -35,7 +35,7 @@
   flex-direction: column;
   gap: 4px;
   font-size: 0.78rem;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
   font-weight: 500;
 }
 
@@ -49,7 +49,7 @@
 
 .availability-editor__hint {
   font-size: 0.75rem;
-  color: var(--text-secondary, #aaa);
+  color: var(--muted-fg);
   margin: 0;
 }
 
@@ -76,13 +76,13 @@
 }
 
 .availability-editor__dash {
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
 }
 
 .availability-editor__remove-interval {
   background: none;
   border: none;
-  color: var(--text-secondary, #aaa);
+  color: var(--muted-fg);
   cursor: pointer;
   font-size: 0.85rem;
   padding: 2px 4px;
@@ -97,7 +97,7 @@
   background: none;
   border: 1px dashed var(--border, #d1d5db);
   border-radius: 8px;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
   font-size: 0.78rem;
   cursor: pointer;
   padding: 5px 10px;

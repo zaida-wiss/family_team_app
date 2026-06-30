@@ -23,6 +23,6 @@
   align-items: center;
   gap: 4px;
   font-size: 0.82rem;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
   cursor: pointer;
 }
