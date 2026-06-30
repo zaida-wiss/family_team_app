@@ -126,6 +126,75 @@ export function useShopWalletDrag(childId: Id) {
     document.addEventListener("pointerup", onUp);
   }
 
+  // Drag ett mynt/sedel TILLBAKA från ett kort — släpp var som helst utanför kortet = tillbaka till plånboken
+  function startCardDrag(value: number, fromItemId: string, e: ReactPointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(value);
+
+    requestAnimationFrame(() => {
+      if (ghostRef.current) {
+        ghostRef.current.style.left = `${e.clientX}px`;
+        ghostRef.current.style.top = `${e.clientY}px`;
+      }
+    });
+
+    const onMove = (ev: PointerEvent) => {
+      if (ghostRef.current) {
+        ghostRef.current.style.left = `${ev.clientX}px`;
+        ghostRef.current.style.top = `${ev.clientY}px`;
+      }
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const card = el?.closest("[data-item-id]");
+      setActiveCardId(card?.getAttribute("data-item-id") ?? null);
+    };
+
+    const onUp = (ev: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const card = el?.closest("[data-item-id]");
+      const toItemId = card?.getAttribute("data-item-id");
+
+      // Ta bort från ursprungskortet
+      setPendingPayments((prev) => {
+        const next = { ...prev };
+        const fromCounts = { ...(next[fromItemId] ?? {}) };
+        fromCounts[value] = Math.max(0, (fromCounts[value] ?? 0) - 1);
+        if (fromCounts[value] === 0) delete fromCounts[value];
+        if (Object.keys(fromCounts).length === 0) {
+          delete next[fromItemId];
+        } else {
+          next[fromItemId] = fromCounts;
+        }
+
+        // Lägg till på ett annat kort, eller tillbaka till plånboken
+        if (toItemId && toItemId !== fromItemId) {
+          next[toItemId] = {
+            ...(next[toItemId] ?? {}),
+            [value]: (next[toItemId]?.[value] ?? 0) + 1,
+          };
+        }
+        return next;
+      });
+
+      // Tillbaka till plånboken om det inte landade på ett annat kort
+      if (!toItemId || toItemId === fromItemId) {
+        setWalletCounts((prev) => ({
+          ...prev,
+          [value]: (prev[value] ?? 0) + 1,
+        }));
+      }
+
+      setDragging(null);
+      setActiveCardId(null);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
   return {
     walletCounts,
     bills,
@@ -138,5 +207,6 @@ export function useShopWalletDrag(childId: Id) {
     clearCardPayment,
     commitPurchase,
     startDrag,
+    startCardDrag,
   };
 }

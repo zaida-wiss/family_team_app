@@ -264,6 +264,19 @@
   color: #111;
 }
 
+/* Varje pengar-item i kortet är dragbart tillbaka */
+.shop-card-money-item {
+  pointer-events: all;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.shop-card-money-item:active {
+  cursor: grabbing;
+}
+
 .shop-card-note-img {
   height: 24px;
   object-fit: contain;

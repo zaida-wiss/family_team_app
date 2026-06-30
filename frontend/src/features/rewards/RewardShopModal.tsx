@@ -94,8 +94,9 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
                           MYNT.includes(Number(denom)) ? (
                             <div
                               key={`${denom}-${i}`}
-                              className="shop-card-coin-clip"
+                              className="shop-card-coin-clip shop-card-money-item"
                               data-coin={denom}
+                              onPointerDown={(e) => drag.startCardDrag(Number(denom), item.id, e)}
                             >
                               <img src={`/pengar/mynt-${denom}.webp`} alt="" className="shop-card-coin-img" />
                             </div>
@@ -104,8 +105,9 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
                               key={`${denom}-${i}`}
                               src={`/pengar/sedel-${denom}.webp`}
                               alt=""
-                              className="shop-card-note-img"
+                              className="shop-card-note-img shop-card-money-item"
                               data-note={denom}
+                              onPointerDown={(e) => drag.startCardDrag(Number(denom), item.id, e)}
                             />
                           )
                         )
@@ -114,7 +116,7 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
                         className="shop-card-money-clear"
                         type="button"
                         onClick={() => drag.clearCardPayment(item.id)}
-                        aria-label="Returnera pengar till plånboken"
+                        aria-label="Returnera alla pengar till plånboken"
                       >
                         ×
                       </button>
