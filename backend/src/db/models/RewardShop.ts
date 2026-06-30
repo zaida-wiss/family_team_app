@@ -4,6 +4,7 @@ import type { RewardShopItem } from "../../../../shared/types.js";
 type RewardShopDoc = {
   accountId: string;
   items: RewardShopItem[];
+  requireApprovalForCategories: boolean;
 };
 
 const timeIntervalSchema = new Schema(
@@ -39,6 +40,7 @@ const rewardShopSchema = new Schema<RewardShopDoc>(
   {
     accountId: { type: String, required: true, unique: true },
     items: [itemSchema],
+    requireApprovalForCategories: { type: Boolean, default: false },
   },
   { id: false }
 );

@@ -12,11 +12,12 @@ type Props = {
   items: RewardShopItem[];
   todos: Todo[];
   availableStars: number;
+  requireApprovalForCategories: boolean;
   onPurchase: (item: RewardShopItem) => void;
   onClose: () => void;
 };
 
-export function RewardShopModal({ childId, items, todos, availableStars, onPurchase, onClose }: Props) {
+export function RewardShopModal({ childId, items, todos, availableStars, requireApprovalForCategories, onPurchase, onClose }: Props) {
   const drag = useShopWalletDrag(childId);
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
@@ -64,7 +65,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
         ) : (
           <div className="reward-shop-modal__grid">
             {visibleItems.map((item) => {
-              const blocking = blockingCategories(item, todos, childId);
+              const blocking = blockingCategories(item, todos, childId, requireApprovalForCategories);
               const available = isAvailableNow(item) && blocking.length === 0;
               const label = blocking.length > 0
                 ? `Kräver: ${blocking.join(", ")}`

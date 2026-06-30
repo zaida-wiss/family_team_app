@@ -13,7 +13,7 @@ export async function accountIdOf(memberId: string): Promise<string> {
 export async function getShop(memberId: string) {
   const accountId = await accountIdOf(memberId);
   const shop = await RewardShopModel.findOne({ accountId });
-  return (shop?.items.filter((i) => i.deletedAt === null) ?? []).map((i) => ({
+  const items = (shop?.items.filter((i) => i.deletedAt === null) ?? []).map((i) => ({
     id: i.id,
     title: i.title,
     symbol: i.symbol,
@@ -24,6 +24,15 @@ export async function getShop(memberId: string) {
     createdBy: i.createdBy,
     deletedAt: i.deletedAt,
   }));
+  return { items, requireApprovalForCategories: shop?.requireApprovalForCategories ?? false };
+}
+
+export async function updateSettings(memberId: string, patch: { requireApprovalForCategories?: boolean }) {
+  const accountId = await accountIdOf(memberId);
+  const update: Record<string, unknown> = {};
+  if (patch.requireApprovalForCategories !== undefined) update.requireApprovalForCategories = patch.requireApprovalForCategories;
+  if (Object.keys(update).length === 0) return;
+  await RewardShopModel.updateOne({ accountId }, { $set: update }, { upsert: true });
 }
 
 export async function addItem(memberId: string, item: RewardShopItem) {

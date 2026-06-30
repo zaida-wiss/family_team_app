@@ -1,8 +1,15 @@
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
 import { api, request } from "./client";
 
+export type ShopResponse = { items: RewardShopItem[]; requireApprovalForCategories: boolean };
+
 export const rewardShopApi = {
-  getItems: () => request<RewardShopItem[]>(api("reward-shop")),
+  getShop: () => request<ShopResponse>(api("reward-shop")),
+  updateSettings: (patch: { requireApprovalForCategories?: boolean }) =>
+    request<{ ok: boolean }>(api("reward-shop/settings"), {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
   addItem: (item: RewardShopItem) =>
     request<{ ok: boolean }>(api("reward-shop/items"), {
       method: "POST",

@@ -129,12 +129,17 @@ export function unavailableLabel(item: RewardShopItem, now = new Date()): string
 }
 
 /**
- * Vilka av varans obligatoriska kategorier som fortfarande blockerar köpet —
- * dvs. barnet har minst en ogodkänd (ej approved, ej borttagen) todo i den
- * kategorin. Tom array = inga kvarvarande spärrar.
+ * Vilka av varans obligatoriska kategorier som fortfarande blockerar köpet.
+ * requireApproval=true  → barnet måste ha fått uppgifterna godkända av förälder (status=approved)
+ * requireApproval=false → det räcker att barnet markerat dem som avklarade (status=done|approved)
  */
-export function blockingCategories(item: RewardShopItem, todos: Todo[], childId: Id): string[] {
-  if (item.requiredCategories.length === 0) return [];
+export function blockingCategories(
+  item: RewardShopItem,
+  todos: Todo[],
+  childId: Id,
+  requireApproval = false
+): string[] {
+  if ((item.requiredCategories ?? []).length === 0) return [];
 
   const unresolved = new Set(
     todos
@@ -142,7 +147,7 @@ export function blockingCategories(item: RewardShopItem, todos: Todo[], childId:
         (t) =>
           t.assignedTo === childId &&
           t.deletedAt === null &&
-          t.status !== "approved" &&
+          (requireApproval ? t.status !== "approved" : t.status === "pending") &&
           t.routineCategory &&
           item.requiredCategories.includes(t.routineCategory)
       )

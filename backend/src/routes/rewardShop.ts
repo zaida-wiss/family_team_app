@@ -8,6 +8,11 @@ rewardShopRouter.get("/", requireAuth, async (req, res) => {
   res.json(await shop.getShop(req.memberId!));
 });
 
+rewardShopRouter.patch("/settings", requireAuth, async (req, res) => {
+  await shop.updateSettings(req.memberId!, req.body);
+  res.json({ ok: true });
+});
+
 rewardShopRouter.post("/items", requireAuth, async (req, res) => {
   await shop.addItem(req.memberId!, req.body);
   res.status(201).json({ ok: true });

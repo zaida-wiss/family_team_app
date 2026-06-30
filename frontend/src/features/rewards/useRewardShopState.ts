@@ -8,15 +8,24 @@ export type { PurchasedReward };
 export function useRewardShopState() {
   const [items, setItems] = useState<RewardShopItem[]>([]);
   const [purchased, setPurchased] = useState<PurchasedReward[] | null>(null);
+  const [requireApprovalForCategories, setRequireApprovalForCategories] = useState(false);
 
   useEffect(() => {
-    rewardShopApi.getItems().then(setItems).catch(console.error);
+    rewardShopApi.getShop().then(({ items: shopItems, requireApprovalForCategories: raf }) => {
+      setItems(shopItems);
+      setRequireApprovalForCategories(raf);
+    }).catch(console.error);
     rewardShopApi.getPurchased().then(setPurchased).catch(console.error);
   }, []);
 
   async function addItem(item: RewardShopItem) {
     await rewardShopApi.addItem(item);
     setItems((prev) => [...prev, item]);
+  }
+
+  async function updateSettings(patch: { requireApprovalForCategories?: boolean }) {
+    await rewardShopApi.updateSettings(patch);
+    if (patch.requireApprovalForCategories !== undefined) setRequireApprovalForCategories(patch.requireApprovalForCategories);
   }
 
   async function updateItem(itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>) {
@@ -47,5 +56,5 @@ export function useRewardShopState() {
     setPurchased((prev) => (prev ?? []).filter((pr) => pr.id !== id));
   }
 
-  return { items, purchased, addItem, updateItem, removeItem, purchase, movePurchased, deletePurchased };
+  return { items, purchased, requireApprovalForCategories, addItem, updateItem, updateSettings, removeItem, purchase, movePurchased, deletePurchased };
 }

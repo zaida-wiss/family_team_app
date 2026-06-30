@@ -27,6 +27,7 @@ type Props = {
   rejectedTodos: Todo[];
   shopItems: RewardShopItem[];
   purchased: PurchasedReward[] | null;
+  requireApprovalForCategories: boolean;
   onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
@@ -58,6 +59,7 @@ export function ChildDashboard({
   rejectedTodos,
   shopItems,
   purchased,
+  requireApprovalForCategories,
   onPurchaseReward,
   wishTitle,
   onSetWishTitle,
@@ -173,6 +175,7 @@ export function ChildDashboard({
           items={shopItems}
           todos={timelineTodos}
           availableStars={availableStars}
+          requireApprovalForCategories={requireApprovalForCategories}
           onPurchase={(item) => {
             setLocalSpentStars((s) => s + item.starCost);
             void onPurchaseReward(item, child.id);

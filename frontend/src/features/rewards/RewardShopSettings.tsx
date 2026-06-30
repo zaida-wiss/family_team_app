@@ -12,8 +12,10 @@ type Props = {
   currentMemberId: string;
   children: Member[];
   purchased: PurchasedReward[] | null;
+  requireApprovalForCategories: boolean;
   onAdd: (item: RewardShopItem) => void;
   onUpdate: (itemId: string, patch: ItemPatch) => void;
+  onUpdateSettings: (patch: { requireApprovalForCategories?: boolean }) => void;
   onRemove: (itemId: string) => void;
   onRefund: (childId: string, amount: number) => void;
   onMovePurchased: (id: string, startsAt: string) => void;
@@ -94,7 +96,7 @@ function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased
   );
 }
 
-export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onUpdate, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, purchased, requireApprovalForCategories, onAdd, onUpdate, onUpdateSettings, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
   const [form, setForm] = useState<FormState>(blank());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(blank());
@@ -131,6 +133,22 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
   return (
     <section className="reward-shop-settings">
       <h3 className="reward-shop-settings__heading">Belöningsbutiken</h3>
+
+      <label className="reward-shop-settings__approval-toggle">
+        <input
+          type="checkbox"
+          checked={requireApprovalForCategories}
+          onChange={(e) => onUpdateSettings({ requireApprovalForCategories: e.target.checked })}
+        />
+        <span>
+          Kräv föräldragodkännande för kategori-spärr
+          <small>
+            {requireApprovalForCategories
+              ? "Barnet måste ha fått uppgifterna godkända av en förälder."
+              : "Det räcker att barnet markerat uppgifterna som avklarade."}
+          </small>
+        </span>
+      </label>
 
       <form className="reward-shop-settings__form" onSubmit={submit}>
         <div className="reward-shop-settings__title-row">
