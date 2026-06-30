@@ -57,8 +57,7 @@ calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, async (req, 
 // ── ics fetch (for preview) ───────────────────────────────────────────────────
 
 calendarsRouter.post("/:id/fetch-ics", requireAuth, async (req, res) => {
-  const rawUrl = (req.body as { url?: string }).url ?? "";
-  const icsText = await calendars.fetchIcs(rawUrl);
+  const icsText = await calendars.fetchIcs((req.body as { url?: unknown }).url);
   res.json({ icsText });
 });
 

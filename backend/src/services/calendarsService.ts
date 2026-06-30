@@ -2,6 +2,7 @@ import { CalendarModel } from "../db/models/Calendar.js";
 import type { IcsSubscription } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
+import { validateAndNormalizeIcsUrl } from "../utils/icsUrl.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -232,11 +233,11 @@ export async function createSubscription(calendarId: string, body: unknown) {
   if (!calendar) {
     throw new AppError(404, "Kalender hittades inte");
   }
-  const b = body as { url: string; includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null; displaySymbol?: string | null };
+  const b = body as { url: unknown; includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null; displaySymbol?: string | null };
   const sub: IcsSubscription = {
     id: `sub-${crypto.randomUUID()}`,
     calendarId,
-    url: b.url,
+    url: validateAndNormalizeIcsUrl(b.url),
     includeWords: b.includeWords ?? [],
     excludeWords: b.excludeWords ?? [],
     dateFrom: b.dateFrom ?? null,
@@ -300,11 +301,8 @@ export async function syncSubscriptionById(calendarId: string, subId: string) {
   await syncSubscription(calendarId, sub as unknown as IcsSubscription);
 }
 
-export async function fetchIcs(url: string): Promise<string> {
-  const normalizedUrl = url.replace(/^webcal:\/\//i, "https://");
-  if (!normalizedUrl || !/^https?:\/\/.+/.test(normalizedUrl)) {
-    throw new AppError(400, "Ogiltig URL – måste börja med http://, https:// eller webcal://");
-  }
+export async function fetchIcs(url: unknown): Promise<string> {
+  const normalizedUrl = validateAndNormalizeIcsUrl(url);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
