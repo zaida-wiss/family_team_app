@@ -45,14 +45,20 @@ export function ChildShellContent({
 }: Props) {
   const childRewards = rewards.filter((r) => r.wishedBy === currentMember.id);
   const now = Date.now();
-  const activeChildTodos = todos.filter(
-    (t) =>
-      t.assignedTo === currentMember.id &&
-      t.status === "pending" &&
-      t.recurrence.type === "none" &&
-      t.deletedAt === null &&
-      isTodoVisibleNow(t, now)
-  );
+  const activeChildTodos = todos
+    .filter(
+      (t) =>
+        t.assignedTo === currentMember.id &&
+        t.status === "pending" &&
+        t.recurrence.type === "none" &&
+        t.deletedAt === null &&
+        isTodoVisibleNow(t, now)
+    )
+    .sort((a, b) => {
+      const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
+      const bTime = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
+      return aTime - bTime;
+    });
   const rejectedTodos = todos.filter(
     (t) =>
       t.assignedTo === currentMember.id &&
