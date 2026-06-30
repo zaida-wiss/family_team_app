@@ -65,6 +65,7 @@ type Props = {
   calendarSettings?: CalendarSettings;
   shopItems: RewardShopItem[];
   purchased: PurchasedReward[] | null;
+  requireApprovalForCategories: boolean;
   onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
@@ -98,7 +99,7 @@ export function MemberShellContent({
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings, onLoadEventsForMonth,
-  shopItems, purchased, onPurchaseReward,
+  shopItems, purchased, requireApprovalForCategories, onPurchaseReward,
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
@@ -270,6 +271,7 @@ export function MemberShellContent({
         rejectedTodos={rejectedTodos}
         shopItems={shopItems}
         purchased={purchased}
+        requireApprovalForCategories={requireApprovalForCategories}
         onPurchaseReward={onPurchaseReward}
         wishTitle={wishTitle}
         onSetWishTitle={onSetWishTitle}

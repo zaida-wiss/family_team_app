@@ -157,6 +157,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onToggleShoppingItem: toggleShoppingItem,
     shopItems,
     purchased,
+    requireApprovalForCategories,
     onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
