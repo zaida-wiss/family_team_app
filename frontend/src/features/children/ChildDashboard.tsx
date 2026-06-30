@@ -9,7 +9,6 @@ import { ChildTasksSection } from "./ChildTasksSection";
 import { ChildRejectedTodos } from "./ChildRejectedTodos";
 import { ChildStarsPanel } from "./ChildStarsPanel";
 import { ChildPendingBadges } from "./ChildPendingBadges";
-import { ChildWishModal } from "./ChildWishModal";
 import { useChildCompleteHold } from "./useChildCompleteHold";
 import { useChildStars } from "./useChildStars";
 import { RewardShopModal } from "../rewards/RewardShopModal";
@@ -77,7 +76,6 @@ export function ChildDashboard({
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const [isWishModalOpen, setIsWishModalOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
@@ -185,19 +183,6 @@ export function ChildDashboard({
             void onPurchaseReward(item, child.id);
           }}
           onClose={() => setIsShopOpen(false)}
-        />
-      )}
-
-      {isWishModalOpen && (
-        <ChildWishModal
-          childId={child.id}
-          approvedStarsTotal={totalApprovedStars}
-          childRewards={childRewards}
-          nowMs={timerNow}
-          wishTitle={wishTitle}
-          onSetWishTitle={onSetWishTitle}
-          onCreateWish={onCreateWish}
-          onClose={() => setIsWishModalOpen(false)}
         />
       )}
     </article>

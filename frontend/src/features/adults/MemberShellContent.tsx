@@ -244,14 +244,20 @@ export function MemberShellContent({
       ? getRewardPathProgress(selectedDashboardMember, activeReward, todos)
       : null;
     const childRewards = rewards.filter((r) => r.wishedBy === selectedDashboardMember.id);
-    const activeChildTodos = todos.filter(
-      (t) =>
-        t.assignedTo === selectedDashboardMember.id &&
-        t.status === "pending" &&
-        t.recurrence.type === "none" &&
-        t.deletedAt === null &&
-        isTodoVisibleNow(t, now)
-    );
+    const activeChildTodos = todos
+      .filter(
+        (t) =>
+          t.assignedTo === selectedDashboardMember.id &&
+          t.status === "pending" &&
+          t.recurrence.type === "none" &&
+          t.deletedAt === null &&
+          isTodoVisibleNow(t, now)
+      )
+      .sort((a, b) => {
+        const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
+        const bTime = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
+        return aTime - bTime;
+      });
     const rejectedTodos = todos.filter(
       (t) =>
         t.assignedTo === selectedDashboardMember.id &&
