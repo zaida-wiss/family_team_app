@@ -302,6 +302,7 @@ export function MemberShellContent({
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
+        onLoadEventsForMonth={onLoadEventsForMonth}
       />
     );
   }
@@ -324,6 +325,7 @@ export function MemberShellContent({
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
+        onLoadEventsForMonth={onLoadEventsForMonth}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

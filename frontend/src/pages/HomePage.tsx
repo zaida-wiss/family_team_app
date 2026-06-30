@@ -17,9 +17,10 @@ type Props = {
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
+  onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
 };
 
-export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent }: Props) {
+export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent, onLoadEventsForMonth }: Props) {
   return (
     <MemberOverview
       currentMember={currentMember}
@@ -36,6 +37,7 @@ export function HomePage({ currentMember, accountName, roles, activeMembers, sel
       onAddEvent={onAddEvent}
       onUpdateEvent={onUpdateEvent}
       onDeleteEvent={onDeleteEvent}
+      onLoadEventsForMonth={onLoadEventsForMonth}
     />
   );
 }
