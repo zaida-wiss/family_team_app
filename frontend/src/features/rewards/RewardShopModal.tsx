@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import type { RewardShopItem } from "@shared/types";
 import type { Id } from "@shared/types";
-import { MYNT } from "../children/bankDenoms";
+import { MYNT, denomCounts } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 
 type Props = {
@@ -16,7 +16,6 @@ type Props = {
 
 export function RewardShopModal({ childId, items, availableStars, onPurchase, onClose }: Props) {
   const drag = useShopWalletDrag(childId);
-  const hasWallet = drag.bills.length > 0 || drag.coins.length > 0;
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
 
@@ -128,76 +127,78 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
           </div>
         )}
 
-        {hasWallet && (() => {
+        {(() => {
           const walletTotal = Object.entries(drag.walletCounts).reduce(
             (s, [k, n]) => s + Number(k) * n, 0
           );
+          const hasCoins = drag.coins.length > 0;
+          const hasBills = drag.bills.length > 0;
           return (
             <div className="shop-wallet">
               <span className="shop-wallet__label">
-                💳 Plånbok — <strong>{walletTotal} kr</strong> — dra till en belöning
+                💳 Plånbok{walletTotal > 0 ? <> — <strong>{walletTotal} kr</strong> — dra till en belöning</> : ""}
               </span>
-              <div className="shop-wallet__strip">
-                {drag.bills.map((v) => {
-                  const count = drag.walletCounts[v] ?? 0;
-                  return (
-                    <div
-                      key={v}
-                      className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}`}
-                      onPointerDown={(e) => drag.startDrag(v, e)}
-                    >
-                      <div className="shop-note-stack">
-                        {Array.from({ length: count }).map((_, i) => (
-                          <img
-                            key={i}
-                            src={`/pengar/sedel-${v}.webp`}
-                            alt={i === 0 ? `${v}-kronorssedel` : ""}
-                            className={`shop-note-img${i > 0 ? " shop-note-stacked" : ""}`}
-                            data-note={v}
-                            draggable={false}
-                          />
-                        ))}
-                      </div>
-                      <span className="shop-wallet-denom-label">{v} kr</span>
-                    </div>
-                  );
-                })}
-                {drag.coins.map((v) => {
-                  const count = drag.walletCounts[v] ?? 0;
-                  return (
-                    <div
-                      key={v}
-                      className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}`}
-                      onPointerDown={(e) => drag.startDrag(v, e)}
-                    >
-                      <div className="shop-coin-stack">
-                        {Array.from({ length: count }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`shop-coin-clip${i > 0 ? " shop-coin-stacked" : ""}`}
-                            data-coin={v}
-                          >
+              {hasBills || hasCoins ? (
+                <div className="shop-wallet__strip">
+                  {drag.bills.map((v) => {
+                    const count = drag.walletCounts[v] ?? 0;
+                    return (
+                      <div
+                        key={v}
+                        className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}`}
+                        onPointerDown={(e) => drag.startDrag(v, e)}
+                      >
+                        <div className="shop-note-stack">
+                          {Array.from({ length: count }).map((_, i) => (
                             <img
-                              src={`/pengar/mynt-${v}.webp`}
-                              alt={i === 0 ? `${v}-krona` : ""}
-                              className="shop-coin-img"
+                              key={i}
+                              src={`/pengar/sedel-${v}.webp`}
+                              alt={i === 0 ? `${v}-kronorssedel` : ""}
+                              className={`shop-note-img${i > 0 ? " shop-note-stacked" : ""}`}
+                              data-note={v}
                               draggable={false}
                             />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        <span className="shop-wallet-denom-label">{v} kr</span>
                       </div>
-                      <span className="shop-wallet-denom-label">{v} kr</span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                  {drag.coins.map((v) => {
+                    const count = drag.walletCounts[v] ?? 0;
+                    return (
+                      <div
+                        key={v}
+                        className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}`}
+                        onPointerDown={(e) => drag.startDrag(v, e)}
+                      >
+                        <div className="shop-coin-stack">
+                          {Array.from({ length: count }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`shop-coin-clip${i > 0 ? " shop-coin-stacked" : ""}`}
+                              data-coin={v}
+                            >
+                              <img
+                                src={`/pengar/mynt-${v}.webp`}
+                                alt={i === 0 ? `${v}-krona` : ""}
+                                className="shop-coin-img"
+                                draggable={false}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <span className="shop-wallet-denom-label">{v} kr</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="shop-wallet__empty">Inga pengar än — tjäna stjärnor så syns de här!</p>
+              )}
             </div>
           );
         })()}
-
-        {!hasWallet && (
-          <p className="shop-wallet__empty">Öppna plånboken och växla till rätt belopp.</p>
-        )}
       </div>
 
       {drag.dragging !== null && createPortal(
