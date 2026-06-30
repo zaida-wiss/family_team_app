@@ -2,7 +2,6 @@ import { CalendarModel } from "../db/models/Calendar.js";
 import { AppError } from "../utils/errors.js";
 
 export async function getAllCalendars(accountId: string, from?: string, until?: string) {
-  const cals = await CalendarModel.find({ accountId }, { _id: 0, __v: 0 }).lean();
   const now = new Date();
   const defaultFrom = new Date(now); defaultFrom.setDate(1);
   const defaultUntil = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -11,18 +10,35 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
   const sub1mAgo = new Date(now); sub1mAgo.setMonth(sub1mAgo.getMonth() - 1);
   const retentionCutoff = sub1mAgo.toISOString().slice(0, 10);
 
-  return cals.map((cal) => {
-    const keepAllHistory = (cal as any).keepAllHistory ?? false;
-    return {
-      ...cal,
-      events: (cal.events as { startsAt: string; deletedAt?: string | null }[]).filter((ev) => {
-        if (ev.deletedAt) return false;
-        const d = (ev.startsAt ?? "").slice(0, 10);
-        if (!keepAllHistory && d < retentionCutoff) return false;
-        return d >= fromStr && d <= untilStr;
-      }),
-    };
-  });
+  // Filtrera händelser i MongoDB i stället för i JavaScript — minskar payload
+  // dramatiskt när ICS-prenumerationer importerat tusentals händelser.
+  return CalendarModel.aggregate([
+    { $match: { accountId } },
+    {
+      $addFields: {
+        events: {
+          $filter: {
+            input: "$events",
+            as: "ev",
+            cond: {
+              $and: [
+                { $eq: ["$$ev.deletedAt", null] },
+                { $gte: [{ $substrCP: ["$$ev.startsAt", 0, 10] }, fromStr] },
+                { $lte: [{ $substrCP: ["$$ev.startsAt", 0, 10] }, untilStr] },
+                {
+                  $or: [
+                    { $eq: ["$keepAllHistory", true] },
+                    { $gte: [{ $substrCP: ["$$ev.startsAt", 0, 10] }, retentionCutoff] },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+    { $project: { _id: 0, __v: 0 } },
+  ]);
 }
 
 export async function createCalendar(data: unknown) {
