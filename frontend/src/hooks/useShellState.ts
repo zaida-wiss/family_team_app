@@ -43,6 +43,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     movePurchased,
     deletePurchased,
     addItem: addShopItem,
+    updateItem: updateShopItem,
     removeItem: removeShopItem,
   } = useRewardShopState();
 
@@ -212,6 +213,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     shopItems,
     purchased,
     onAddShopItem: (item: Parameters<typeof addShopItem>[0]) => void addShopItem(item),
+    onUpdateShopItem: (id: string, patch: Parameters<typeof updateShopItem>[1]) => void updateShopItem(id, patch),
     onRemoveShopItem: (id: string) => void removeShopItem(id),
     onMovePurchased: (id: string, startsAt: string) => void movePurchased(id, startsAt),
     onDeletePurchased: (id: string) => void deletePurchased(id),

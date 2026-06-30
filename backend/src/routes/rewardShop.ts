@@ -13,6 +13,11 @@ rewardShopRouter.post("/items", requireAuth, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+rewardShopRouter.patch("/items/:itemId", requireAuth, async (req, res) => {
+  await shop.updateItem(req.memberId!, req.params.itemId, req.body);
+  res.json({ ok: true });
+});
+
 rewardShopRouter.delete("/items/:itemId", requireAuth, async (req, res) => {
   await shop.removeItem(req.memberId!, req.params.itemId);
   res.json({ ok: true });

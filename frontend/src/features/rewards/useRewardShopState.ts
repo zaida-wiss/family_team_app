@@ -18,6 +18,11 @@ export function useRewardShopState() {
     setItems((prev) => [...prev, item]);
   }
 
+  async function updateItem(itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>) {
+    await rewardShopApi.updateItem(itemId, patch);
+    setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, ...patch } : i));
+  }
+
   async function removeItem(itemId: string) {
     await rewardShopApi.removeItem(itemId);
     setItems((prev) => prev.filter((i) => i.id !== itemId));
@@ -40,5 +45,5 @@ export function useRewardShopState() {
     setPurchased((prev) => (prev ?? []).filter((pr) => pr.id !== id));
   }
 
-  return { items, purchased, addItem, removeItem, purchase, movePurchased, deletePurchased };
+  return { items, purchased, addItem, updateItem, removeItem, purchase, movePurchased, deletePurchased };
 }

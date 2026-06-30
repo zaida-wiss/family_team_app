@@ -8,6 +8,11 @@ export const rewardShopApi = {
       method: "POST",
       body: JSON.stringify(item),
     }),
+  updateItem: (itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>) =>
+    request<{ ok: boolean }>(api(`reward-shop/items/${itemId}`), {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
   removeItem: (itemId: string) =>
     request<{ ok: boolean }>(api(`reward-shop/items/${itemId}`), { method: "DELETE" }),
   purchase: (itemId: string, forMemberId: string) =>

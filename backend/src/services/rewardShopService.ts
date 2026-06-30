@@ -25,6 +25,16 @@ export async function addItem(memberId: string, item: RewardShopItem) {
   );
 }
 
+export async function updateItem(memberId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>) {
+  const accountId = await accountIdOf(memberId);
+  const update: Record<string, unknown> = {};
+  if (patch.title !== undefined) update["items.$.title"] = patch.title;
+  if (patch.symbol !== undefined) update["items.$.symbol"] = patch.symbol;
+  if (patch.starCost !== undefined) update["items.$.starCost"] = patch.starCost;
+  if ("timerMinutes" in patch) update["items.$.timerMinutes"] = patch.timerMinutes ?? null;
+  await RewardShopModel.updateOne({ accountId, "items.id": itemId }, { $set: update });
+}
+
 export async function removeItem(memberId: string, itemId: string) {
   const accountId = await accountIdOf(memberId);
   await RewardShopModel.updateOne(

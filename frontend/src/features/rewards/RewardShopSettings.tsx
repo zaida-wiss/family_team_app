@@ -3,12 +3,15 @@ import { useState } from "react";
 import type { Member, PurchasedReward, RewardShopItem } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 
+type ItemPatch = Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>;
+
 type Props = {
   items: RewardShopItem[];
   currentMemberId: string;
   children: Member[];
   purchased: PurchasedReward[] | null;
   onAdd: (item: RewardShopItem) => void;
+  onUpdate: (itemId: string, patch: ItemPatch) => void;
   onRemove: (itemId: string) => void;
   onRefund: (childId: string, amount: number) => void;
   onMovePurchased: (id: string, startsAt: string) => void;
@@ -87,8 +90,21 @@ function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased
   );
 }
 
-export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onUpdate, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
   const [form, setForm] = useState<FormState>(blank());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(blank());
+
+  function startEdit(item: RewardShopItem) {
+    setEditingId(item.id);
+    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes });
+  }
+
+  function saveEdit(itemId: string) {
+    if (!editForm.title.trim()) return;
+    onUpdate(itemId, { title: editForm.title.trim(), symbol: editForm.symbol || null, starCost: editForm.starCost, timerMinutes: editForm.timerMinutes });
+    setEditingId(null);
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -162,24 +178,70 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
 
       {items.length > 0 && (
         <ul className="reward-shop-settings__list">
-          {items.map((item) => (
-            <li key={item.id} className="reward-shop-settings__item">
-              <span className="reward-shop-settings__item-symbol">{item.symbol ?? "🎁"}</span>
-              <span className="reward-shop-settings__item-title">{item.title}</span>
-              <span className="reward-shop-settings__item-meta">
-                ⭐ {item.starCost}
-                {item.timerMinutes !== null && ` · ⏱ ${item.timerMinutes} min`}
-              </span>
-              <button
-                aria-label={`Ta bort ${item.title}`}
-                className="reward-shop-settings__remove"
-                onClick={() => onRemove(item.id)}
-                type="button"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
+          {items.map((item) =>
+            editingId === item.id ? (
+              <li key={item.id} className="reward-shop-settings__item reward-shop-settings__item--editing">
+                <EmojiPickerPortal
+                  symbol={editForm.symbol}
+                  onSelect={(emoji) => setEditForm((f) => ({ ...f, symbol: emoji }))}
+                  triggerClassName="reward-shop-settings__emoji-btn reward-shop-settings__emoji-btn--sm"
+                />
+                <input
+                  className="reward-shop-settings__input reward-shop-settings__input--sm"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  aria-label="Belöningens namn"
+                  autoFocus
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  className="reward-shop-settings__edit-number"
+                  value={editForm.starCost}
+                  onChange={(e) => setEditForm((f) => ({ ...f, starCost: Number(e.target.value) }))}
+                  aria-label="Stjärnor"
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={480}
+                  placeholder="—"
+                  className="reward-shop-settings__edit-number"
+                  value={editForm.timerMinutes ?? ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, timerMinutes: e.target.value === "" ? null : Number(e.target.value) }))}
+                  aria-label="Timer (min)"
+                />
+                <button className="reward-shop-settings__save" type="button" onClick={() => saveEdit(item.id)} aria-label="Spara">✓</button>
+                <button className="reward-shop-settings__remove" type="button" onClick={() => setEditingId(null)} aria-label="Avbryt">✕</button>
+              </li>
+            ) : (
+              <li key={item.id} className="reward-shop-settings__item">
+                <span className="reward-shop-settings__item-symbol">{item.symbol ?? "🎁"}</span>
+                <span className="reward-shop-settings__item-title">{item.title}</span>
+                <span className="reward-shop-settings__item-meta">
+                  ⭐ {item.starCost}
+                  {item.timerMinutes !== null && ` · ⏱ ${item.timerMinutes} min`}
+                </span>
+                <button
+                  aria-label={`Redigera ${item.title}`}
+                  className="reward-shop-settings__edit-btn"
+                  onClick={() => startEdit(item)}
+                  type="button"
+                >
+                  ✏
+                </button>
+                <button
+                  aria-label={`Ta bort ${item.title}`}
+                  className="reward-shop-settings__remove"
+                  onClick={() => onRemove(item.id)}
+                  type="button"
+                >
+                  ✕
+                </button>
+              </li>
+            )
+          )}
         </ul>
       )}
 

@@ -59,6 +59,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     shopItems,
     purchased,
     onAddShopItem,
+    onUpdateShopItem,
     onRemoveShopItem,
     onMovePurchased,
     onDeletePurchased,
@@ -85,6 +86,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           children={members.filter((m) => m.deletedAt === null && m.isChild)}
           purchased={purchased}
           onAdd={onAddShopItem}
+          onUpdate={onUpdateShopItem}
           onRemove={onRemoveShopItem}
           onRefund={onRefundPurchase}
           onMovePurchased={onMovePurchased}
