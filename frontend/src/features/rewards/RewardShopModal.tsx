@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import type { RewardShopItem } from "@shared/types";
 import type { Id } from "@shared/types";
-import { MYNT, denomCounts } from "../children/bankDenoms";
+import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 
 type Props = {
