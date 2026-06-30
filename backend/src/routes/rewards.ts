@@ -16,8 +16,8 @@ rewardsRouter.post("/", requireAuth, async (req, res) => {
 });
 
 rewardsRouter.patch("/:id", requireAuth, async (req, res) => {
-  const { title, starsNeeded } = req.body as { title?: string; starsNeeded?: number };
-  await rewards.updateReward(req.params.id, { title, starsNeeded });
+  const { title, starsNeeded, symbol } = req.body as { title?: string; starsNeeded?: number; symbol?: string | null };
+  await rewards.updateReward(req.params.id, { title, starsNeeded, ...("symbol" in req.body ? { symbol } : {}) });
   res.json({ ok: true });
 });
 

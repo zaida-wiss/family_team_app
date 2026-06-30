@@ -11,11 +11,12 @@ export async function createReward(data: unknown) {
   return { id: reward.id };
 }
 
-export async function updateReward(id: string, patch: { title?: string; starsNeeded?: number }) {
+export async function updateReward(id: string, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) {
   const reward = await RewardModel.findOne({ id });
   if (!reward || reward.deletedAt) throw new AppError(404, "Belöning hittades inte");
   if (patch.title !== undefined) reward.title = patch.title;
   if (patch.starsNeeded !== undefined) reward.starsNeeded = patch.starsNeeded;
+  if ("symbol" in patch) reward.symbol = patch.symbol ?? null;
   await reward.save();
 }
 

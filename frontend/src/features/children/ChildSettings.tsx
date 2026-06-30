@@ -1,8 +1,9 @@
 import "./ChildSettings.css";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { CheckCircle2, Pencil, Save, Star, Trophy, X, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Save, Star, X, XCircle } from "lucide-react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { hasPermission } from "../../utils/permissions";
 import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo } from "@shared/types";
 
@@ -12,14 +13,12 @@ type Props = {
   roles: Role[];
   todos: Todo[];
   rewards: Reward[];
-  wishStars: Record<Id, number>;
   onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
-  onSetWishStars: (rewardId: Id, stars: number) => void;
   onApproveTodo: (todoId: Id) => void;
   onRejectTodo: (todoId: Id) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
-  onUpdateWish: (rewardId: Id, patch: { title?: string; starsNeeded?: number }) => void;
+  onUpdateWish: (rewardId: Id, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) => void;
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onUpdateChildTimelineSettings: (memberId: Id, settings: ChildTimelineSettings) => void;
@@ -32,23 +31,13 @@ const DEFAULT_CHILD_TIMELINE_SETTINGS: ChildTimelineSettings = {
   endsAt: "21:00",
 };
 
-const WISH_STATUS_LABEL: Record<Reward["status"], string> = {
-  suggested: "Väntar på godkännande",
-  active: "Aktiv",
-  unlocked: "Upplåst",
-  redeemed: "Inlöst",
-  rejected: "Nekad",
-};
-
 export function ChildSettings({
   currentMember,
   members,
   roles,
   todos,
   rewards,
-  wishStars,
   onCreateWish,
-  onSetWishStars,
   onApproveTodo,
   onRejectTodo,
   onApproveWish,
@@ -67,6 +56,8 @@ export function ChildSettings({
   const [editingWishId, setEditingWishId] = useState<Id | null>(null);
   const [editWishTitle, setEditWishTitle] = useState("");
   const [editWishStars, setEditWishStars] = useState(10);
+  const [editWishSymbol, setEditWishSymbol] = useState("");
+
   const childMembers = members.filter((member) => {
     const role = roles.find((candidate) => candidate.id === member.roleId);
     return (
@@ -80,23 +71,17 @@ export function ChildSettings({
   const canApprove = hasPermission(currentMember, roles, "canApproveTodos");
   const canManageChildTodos = hasPermission(currentMember, roles, "canManageChildTodos");
 
-  const childWishes = rewards.filter(
+  const pendingWishes = rewards.filter(
     (reward) =>
       childIds.has(reward.wishedBy) &&
       reward.deletedAt === null &&
-      reward.status !== "rejected"
+      reward.status === "suggested"
   );
   const pendingTodos = todos.filter(
     (todo) =>
       childIds.has(todo.assignedTo ?? "") &&
       todo.status === "done" &&
       todo.deletedAt === null
-  );
-  const pendingWishes = rewards.filter(
-    (reward) =>
-      childIds.has(reward.wishedBy) &&
-      reward.status === "suggested" &&
-      reward.deletedAt === null
   );
 
   function getChildName(memberId: Id) {
@@ -131,11 +116,16 @@ export function ChildSettings({
     setEditingWishId(reward.id);
     setEditWishTitle(reward.title);
     setEditWishStars(reward.starsNeeded);
+    setEditWishSymbol(reward.symbol ?? "");
   }
 
   function saveEditWish(rewardId: Id) {
     if (!editWishTitle.trim()) return;
-    onUpdateWish(rewardId, { title: editWishTitle.trim(), starsNeeded: editWishStars });
+    onUpdateWish(rewardId, {
+      title: editWishTitle.trim(),
+      starsNeeded: editWishStars,
+      symbol: editWishSymbol || null,
+    });
     setEditingWishId(null);
   }
 
@@ -184,13 +174,18 @@ export function ChildSettings({
           />
           <button className="wish-form-btn" type="submit">Lägg till</button>
         </form>
-        {childWishes.length === 0 ? (
-          <p className="settings-sub-desc">Inga önskningar ännu.</p>
+        {pendingWishes.length === 0 ? (
+          <p className="settings-sub-desc">Inga önskningar väntar på godkännande.</p>
         ) : (
           <section className="approval-panel child-settings-panel" aria-label="Barnens önskningar">
-            {childWishes.map((reward) =>
+            {pendingWishes.map((reward) =>
               editingWishId === reward.id ? (
                 <div className="approval-row child-settings-row child-settings-row--editing" key={reward.id}>
+                  <EmojiPickerPortal
+                    symbol={editWishSymbol}
+                    onSelect={setEditWishSymbol}
+                    triggerClassName="reward-shop-settings__emoji-btn reward-shop-settings__emoji-btn--sm"
+                  />
                   <input
                     aria-label="Önskningsnamn"
                     className="wish-edit-input"
@@ -219,15 +214,25 @@ export function ChildSettings({
               ) : (
                 <div className="approval-row child-settings-row" key={reward.id}>
                   <div>
+                    {reward.symbol && <span className="wish-symbol">{reward.symbol}</span>}
                     <strong>{reward.title}</strong>
-                    <small>
-                      <Trophy size={14} />
-                      {getChildName(reward.wishedBy)} · {reward.starsNeeded} stjärnor · {WISH_STATUS_LABEL[reward.status]}
-                    </small>
+                    <small>{getChildName(reward.wishedBy)} · {reward.starsNeeded} stjärnor</small>
                   </div>
-                  <button aria-label="Redigera önskning" className="icon-button" onClick={() => startEditWish(reward)} type="button">
-                    <Pencil size={16} />
-                  </button>
+                  <div className="approval-actions">
+                    <button aria-label="Redigera önskning" className="icon-button" onClick={() => startEditWish(reward)} type="button">
+                      <Pencil size={16} />
+                    </button>
+                    {canApprove && (
+                      <>
+                        <button aria-label="Godkänn önskning" className="icon-button" onClick={() => onApproveWish(reward.id)} title="Godkänn — läggs till i butiken" type="button">
+                          <CheckCircle2 size={16} />
+                        </button>
+                        <button aria-label="Avvisa önskning" className="icon-button danger" onClick={() => onRejectWish(reward.id)} type="button">
+                          <XCircle size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )
             )}
@@ -294,15 +299,14 @@ export function ChildSettings({
         <h3 className="settings-sub-title">Godkännande</h3>
         {!canApprove ? (
           <p className="settings-sub-desc">Din roll kan inte godkänna barns uppgifter.</p>
-        ) : pendingTodos.length === 0 && pendingWishes.length === 0 ? (
-          <p className="settings-sub-desc">Inget väntar på godkännande.</p>
+        ) : pendingTodos.length === 0 ? (
+          <p className="settings-sub-desc">Inga uppgifter väntar på godkännande.</p>
         ) : (
           <section className="approval-panel child-settings-panel" aria-label="Barnens godkännanden">
             <div className="approval-header">
               <strong>Väntar</strong>
-              <span>{pendingTodos.length + pendingWishes.length}</span>
+              <span>{pendingTodos.length}</span>
             </div>
-
             {pendingTodos.map((todo) => (
               <div className="approval-row" key={todo.id}>
                 <div>
@@ -317,34 +321,6 @@ export function ChildSettings({
                     <CheckCircle2 size={16} />
                   </button>
                   <button className="icon-button danger" onClick={() => onRejectTodo(todo.id)} title="Neka" type="button">
-                    <XCircle size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {pendingWishes.map((reward) => (
-              <div className="approval-row" key={reward.id}>
-                <div>
-                  <strong>{reward.title}</strong>
-                  <small>
-                    <input
-                      aria-label="Antal stjärnor"
-                      className="stars-input"
-                      max={100}
-                      min={1}
-                      onChange={(event) => onSetWishStars(reward.id, Number(event.target.value))}
-                      type="number"
-                      value={wishStars[reward.id] ?? reward.starsNeeded}
-                    />
-                    stjärnor · {getChildName(reward.wishedBy)}
-                  </small>
-                </div>
-                <div className="approval-actions">
-                  <button className="icon-button" onClick={() => onApproveWish(reward.id)} title="Godkänn önskning" type="button">
-                    <CheckCircle2 size={16} />
-                  </button>
-                  <button className="icon-button danger" onClick={() => onRejectWish(reward.id)} title="Neka önskning" type="button">
                     <XCircle size={16} />
                   </button>
                 </div>

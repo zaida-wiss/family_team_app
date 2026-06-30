@@ -5,6 +5,7 @@ const rewardSchema = new Schema<Reward>({
   id: { type: String, required: true, unique: true },
   accountId: { type: String, default: null },
   title: { type: String, required: true },
+  symbol: { type: String, default: null },
   wishedBy: { type: String, required: true },
   starsNeeded: { type: Number, required: true },
   status: { type: String, enum: ["suggested", "active", "unlocked", "redeemed", "rejected"], required: true },

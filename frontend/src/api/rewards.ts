@@ -5,7 +5,7 @@ export const rewardsApi = {
   getAll: () => request<Reward[]>(api("rewards")),
   create: (reward: Reward) =>
     request<{ id: string }>(api("rewards"), { method: "POST", body: JSON.stringify(reward) }),
-  update: (id: string, patch: { title?: string; starsNeeded?: number }) =>
+  update: (id: string, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) =>
     request<{ ok: boolean }>(api(`rewards/${id}`), {
       method: "PATCH",
       body: JSON.stringify(patch)

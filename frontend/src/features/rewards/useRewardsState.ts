@@ -18,6 +18,7 @@ export function useRewardsState() {
     const newReward: Reward = {
       id: `reward-${Date.now()}`,
       title,
+      symbol: null,
       wishedBy: childId,
       starsNeeded,
       status: "suggested",
@@ -58,7 +59,7 @@ export function useRewardsState() {
     });
   }
 
-  function updateWish(rewardId: Id, patch: { title?: string; starsNeeded?: number }) {
+  function updateWish(rewardId: Id, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) {
     rewardsApi.update(rewardId, patch).catch(console.error);
     setRewards((current) =>
       current.map((r) => (r.id === rewardId ? { ...r, ...patch } : r))

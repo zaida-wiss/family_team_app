@@ -305,6 +305,7 @@ export type Reward = {
   id: Id;
   accountId?: Id;
   title: string;
+  symbol: string | null;
   wishedBy: Id;
   starsNeeded: number;
   status: "suggested" | "active" | "unlocked" | "redeemed" | "rejected";

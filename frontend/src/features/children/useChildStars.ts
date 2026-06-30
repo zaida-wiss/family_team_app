@@ -25,7 +25,7 @@ export function useChildStars(
           t.assignedTo === childId &&
           t.status === "approved" &&
           t.deletedAt === null &&
-          isSameLocalDay(t.approvedAt ?? t.completedAt, today)
+          isSameLocalDay(t.completedAt, today)
       )
       .reduce((sum, t) => sum + t.starValue, 0);
   }, [timelineTodos, childId, timerNow]);

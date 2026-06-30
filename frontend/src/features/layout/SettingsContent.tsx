@@ -51,7 +51,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     rewards,
     calendars,
     shoppingLists,
-    wishStars,
     canManageMembers,
     canManageRoles,
     canViewTrash,
@@ -129,9 +128,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           roles={roles}
           todos={todos}
           rewards={rewards}
-          wishStars={wishStars}
           onCreateWish={settingsProps.onCreateWish}
-          onSetWishStars={settingsProps.onSetWishStars}
           onApproveTodo={settingsProps.onApproveTodo}
           onRejectTodo={settingsProps.onRejectTodo}
           onApproveWish={settingsProps.onApproveWish}

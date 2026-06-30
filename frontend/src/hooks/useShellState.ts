@@ -206,9 +206,23 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles),
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string) => rejectTodo(todoId, currentMember.id),
-    onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
+    onApproveWish: (rewardId: string) => {
+      const wish = rewards.find((r) => r.id === rewardId);
+      if (wish) {
+        addShopItem({
+          id: `rsi-wish-${Date.now()}`,
+          title: wish.title,
+          symbol: wish.symbol ?? null,
+          starCost: wish.starsNeeded,
+          timerMinutes: null,
+          createdBy: currentMember.id,
+          deletedAt: null,
+        });
+      }
+      approveWish(rewardId, currentMember.id);
+    },
     onRejectWish: (rewardId: string) => rejectWish(rewardId, currentMember.id),
-    onUpdateWish: (rewardId: string, patch: { title?: string; starsNeeded?: number }) => updateWish(rewardId, patch),
+    onUpdateWish: (rewardId: string, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) => updateWish(rewardId, patch),
     onSetWishStars: (rewardId: string, stars: number) =>
       setWishStars((prev) => ({ ...prev, [rewardId]: stars })),
     shopItems,
