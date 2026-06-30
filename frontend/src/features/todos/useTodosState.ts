@@ -22,6 +22,16 @@ export function useTodosState() {
   }, []);
 
   useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshTodos().catch(console.error);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
     const intervalId = window.setInterval(syncScheduledTodos, 30_000);
 
     return () => window.clearInterval(intervalId);

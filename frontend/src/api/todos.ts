@@ -32,10 +32,16 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
-  subscribeToChanges: (onChange: () => void) =>
-    subscribeToServerEvents(api("todos/events"), (eventName) => {
+  subscribeToChanges: (onChange: () => void) => {
+    let initialConnect = true;
+    return subscribeToServerEvents(api("todos/events"), (eventName) => {
       if (eventName === "todos-changed") {
         onChange();
+      } else if (eventName === "connected") {
+        // Hoppa över den allra första anslutningen — initial fetch sker redan i useTodosState
+        if (initialConnect) { initialConnect = false; return; }
+        onChange();
       }
-    })
+    });
+  }
 };
