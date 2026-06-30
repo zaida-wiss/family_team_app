@@ -8,7 +8,7 @@ export const rewardShopApi = {
       method: "POST",
       body: JSON.stringify(item),
     }),
-  updateItem: (itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>) =>
+  updateItem: (itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) =>
     request<{ ok: boolean }>(api(`reward-shop/items/${itemId}`), {
       method: "PATCH",
       body: JSON.stringify(patch),
