@@ -1,0 +1,48 @@
+import type { BankDragZone } from "./useBankDragZone";
+
+type Props = Pick<BankDragZone,
+  "bills" | "coins" | "walletCounts" | "dragging" | "fadeOut" | "fadeIn" | "startDrag"
+>;
+
+export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fadeIn, startDrag }: Props) {
+  const itemClass = (v: number) =>
+    `bm-exch-item${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`;
+
+  return (
+    <div className="bm-bills-panel">
+      {bills.map((v) => (
+        <div key={v} className={itemClass(v)} onPointerDown={(e) => startDrag(v, e)}>
+          <div className="bm-exch-item-img">
+            {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
+              <img key={i} src={`/pengar/sedel-${v}.webp`}
+                alt={i === 0 ? `${v}-kronorssedel` : ""}
+                className={`bm-note-img${i > 0 ? " bm-stacked" : ""}`}
+                data-note={v} loading="lazy" decoding="async"
+              />
+            ))}
+          </div>
+          <span className="bm-item-label">{v} kr</span>
+        </div>
+      ))}
+
+      {coins.length > 0 && (
+        <div className="bm-coins-row">
+          {coins.map((v) => (
+            <div key={v} className={`${itemClass(v)} bm-exch-coin`} onPointerDown={(e) => startDrag(v, e)}>
+              <div className="bm-exch-item-img">
+                {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
+                  <div key={i} className={`bm-coin-clip${i > 0 ? " bm-stacked" : ""}`} data-coin={v}>
+                    <img src={`/pengar/mynt-${v}.webp`} alt={i === 0 ? `${v}-krona` : ""}
+                      className="bm-coin-img" loading="lazy" decoding="async"
+                    />
+                  </div>
+                ))}
+              </div>
+              <span className="bm-item-label">{v} kr</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
