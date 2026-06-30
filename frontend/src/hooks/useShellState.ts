@@ -216,6 +216,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
           starCost: wish.starsNeeded,
           timerMinutes: null,
           availability: null,
+          requiredCategories: [],
           createdBy: currentMember.id,
           deletedAt: null,
         });

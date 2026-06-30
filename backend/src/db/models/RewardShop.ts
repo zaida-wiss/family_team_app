@@ -28,6 +28,7 @@ const itemSchema = new Schema<RewardShopItem>(
     starCost:     { type: Number, required: true },
     timerMinutes: { type: Number, default: null },
     availability: { type: availabilitySchema, default: null },
+    requiredCategories: { type: [String], default: [] },
     createdBy:    { type: String, required: true },
     deletedAt:    { type: String, default: null },
   },

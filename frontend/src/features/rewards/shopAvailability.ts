@@ -1,4 +1,4 @@
-import type { RewardShopItem, ShopTimeInterval } from "@shared/types";
+import type { Id, RewardShopItem, ShopTimeInterval, Todo } from "@shared/types";
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
@@ -126,4 +126,28 @@ export function unavailableLabel(item: RewardShopItem, now = new Date()): string
   }
 
   return "Ej tillgänglig just nu";
+}
+
+/**
+ * Vilka av varans obligatoriska kategorier som fortfarande blockerar köpet —
+ * dvs. barnet har minst en ogodkänd (ej approved, ej borttagen) todo i den
+ * kategorin. Tom array = inga kvarvarande spärrar.
+ */
+export function blockingCategories(item: RewardShopItem, todos: Todo[], childId: Id): string[] {
+  if (item.requiredCategories.length === 0) return [];
+
+  const unresolved = new Set(
+    todos
+      .filter(
+        (t) =>
+          t.assignedTo === childId &&
+          t.deletedAt === null &&
+          t.status !== "approved" &&
+          t.routineCategory &&
+          item.requiredCategories.includes(t.routineCategory)
+      )
+      .map((t) => t.routineCategory as string)
+  );
+
+  return [...unresolved];
 }

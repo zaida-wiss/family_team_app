@@ -1,0 +1,28 @@
+.required-categories-editor {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.required-categories-editor__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  margin: 0;
+}
+
+.required-categories-editor__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.required-categories-editor__option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+}

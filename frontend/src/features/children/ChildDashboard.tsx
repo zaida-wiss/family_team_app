@@ -171,6 +171,7 @@ export function ChildDashboard({
         <RewardShopModal
           childId={child.id}
           items={shopItems}
+          todos={timelineTodos}
           availableStars={availableStars}
           onPurchase={(item) => {
             setLocalSpentStars((s) => s + item.starCost);

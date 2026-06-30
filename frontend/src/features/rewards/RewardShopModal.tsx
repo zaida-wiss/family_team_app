@@ -1,21 +1,22 @@
 import "./RewardShopModal.css";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
-import type { RewardShopItem } from "@shared/types";
+import type { RewardShopItem, Todo } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
-import { isExpired, isAvailableNow, unavailableLabel } from "./shopAvailability";
+import { isExpired, isAvailableNow, unavailableLabel, blockingCategories } from "./shopAvailability";
 
 type Props = {
   childId: Id;
   items: RewardShopItem[];
+  todos: Todo[];
   availableStars: number;
   onPurchase: (item: RewardShopItem) => void;
   onClose: () => void;
 };
 
-export function RewardShopModal({ childId, items, availableStars, onPurchase, onClose }: Props) {
+export function RewardShopModal({ childId, items, todos, availableStars, onPurchase, onClose }: Props) {
   const drag = useShopWalletDrag(childId);
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
@@ -63,8 +64,11 @@ export function RewardShopModal({ childId, items, availableStars, onPurchase, on
         ) : (
           <div className="reward-shop-modal__grid">
             {visibleItems.map((item) => {
-              const available = isAvailableNow(item);
-              const label = unavailableLabel(item);
+              const blocking = blockingCategories(item, todos, childId);
+              const available = isAvailableNow(item) && blocking.length === 0;
+              const label = blocking.length > 0
+                ? `Kräver: ${blocking.join(", ")}`
+                : unavailableLabel(item);
               const cardCounts = drag.pendingPayments[item.id] ?? {};
               const paid = drag.getCardTotal(item.id);
               const isTarget = drag.activeCardId === item.id;

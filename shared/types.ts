@@ -114,6 +114,10 @@ export type ShopAvailability = {
   timeIntervals: ShopTimeInterval[]; // tom = tillgänglig hela dagen
 };
 
+// Default-förslag för todo-kategorier — föräldern väljer fritt bland dessa
+// per belöning i RewardShopItem.requiredCategories.
+export const ROUTINE_CATEGORIES = ["Hälsa", "Trivsel", "Pengar"] as const;
+
 export type RewardShopItem = {
   id: Id;
   title: string;
@@ -121,6 +125,7 @@ export type RewardShopItem = {
   starCost: number;
   timerMinutes: number | null;
   availability: ShopAvailability | null; // null = alltid tillgänglig
+  requiredCategories: string[]; // tom = ingen kategori-spärr
   createdBy: Id;
   deletedAt: string | null;
 };

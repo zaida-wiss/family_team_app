@@ -3,6 +3,7 @@ import { Check, ChevronDown, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-r
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
+import { ROUTINE_CATEGORIES } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 import "./ChildRoutineCreator.css";
 
@@ -15,8 +16,6 @@ const WEEKDAYS: { key: Weekday; short: string }[] = [
   { key: "saturday",  short: "L" },
   { key: "sunday",    short: "S" },
 ];
-
-const CATEGORIES = ["Hälsa", "Trivsel", "Pengar"];
 
 const STAR_PRESETS = [1, 2, 3, 4, 5];
 
@@ -508,7 +507,7 @@ export function ChildRoutineCreator({
             aria-label="Kategori"
           >
             <option value="">Kategori</option>
-            {CATEGORIES.map((c) => (
+            {ROUTINE_CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
