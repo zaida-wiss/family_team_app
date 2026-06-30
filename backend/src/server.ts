@@ -19,48 +19,36 @@ async function syncAllSubscriptions() {
   }
 }
 
+async function backfillCollection(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Model: any,
+  ownerFields: string[],
+  byMemberId: Map<string, string>
+): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const docs: any[] = await Model.find({});
+  let fixed = 0;
+  for (const doc of docs) {
+    const aid = ownerFields.map((f) => byMemberId.get(doc[f] ?? "")).find(Boolean);
+    if (aid && doc.accountId !== aid) {
+      await Model.updateOne({ id: doc.id }, { accountId: aid });
+      fixed++;
+    }
+  }
+  return fixed;
+}
+
 async function backfillAccountIds() {
   const members = await MemberModel.find({});
   const byMemberId = new Map(members.map((m) => [m.get("id") as string, m.accountId]));
 
-  const [todos, cals, lists, rewards] = await Promise.all([
-    TodoModel.find({}),
-    CalendarModel.find({}),
-    ShoppingListModel.find({}),
-    RewardModel.find({}),
+  const counts = await Promise.all([
+    backfillCollection(TodoModel,         ["createdBy", "assignedTo"], byMemberId),
+    backfillCollection(CalendarModel,     ["ownerId"],                 byMemberId),
+    backfillCollection(ShoppingListModel, ["ownerId"],                 byMemberId),
+    backfillCollection(RewardModel,       ["wishedBy"],                byMemberId),
   ]);
-
-  let fixed = 0;
-
-  for (const todo of todos) {
-    const aid = byMemberId.get(todo.createdBy) ?? byMemberId.get(todo.assignedTo ?? "");
-    if (aid && todo.accountId !== aid) {
-      await TodoModel.updateOne({ id: todo.id }, { accountId: aid });
-      fixed++;
-    }
-  }
-  for (const cal of cals) {
-    const aid = byMemberId.get(cal.ownerId);
-    if (aid && cal.accountId !== aid) {
-      await CalendarModel.updateOne({ id: cal.id }, { accountId: aid });
-      fixed++;
-    }
-  }
-  for (const list of lists) {
-    const aid = byMemberId.get(list.ownerId);
-    if (aid && list.accountId !== aid) {
-      await ShoppingListModel.updateOne({ id: list.id }, { accountId: aid });
-      fixed++;
-    }
-  }
-  for (const reward of rewards) {
-    const aid = byMemberId.get(reward.wishedBy);
-    if (aid && reward.accountId !== aid) {
-      await RewardModel.updateOne({ id: reward.id }, { accountId: aid });
-      fixed++;
-    }
-  }
-
+  const fixed = counts.reduce((a, b) => a + b, 0);
   if (fixed > 0) logger.info(`Migrering: accountId korrigerat på ${fixed} dokument`);
 }
 

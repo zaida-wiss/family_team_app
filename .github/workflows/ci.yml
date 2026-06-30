@@ -51,3 +51,6 @@ jobs:
 
       - name: TypeScript
         run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm test
