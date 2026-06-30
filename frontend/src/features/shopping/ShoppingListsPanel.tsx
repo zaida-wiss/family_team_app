@@ -225,6 +225,7 @@ export function ShoppingListsPanel({
             <div className={styles.sharePanel}>
               <div className="calendar-event-form">
                 <select
+                  aria-label="Välj medlem att dela med"
                   className="text-input"
                   disabled={!canEditThisList}
                   onChange={(event) =>
@@ -242,6 +243,7 @@ export function ShoppingListsPanel({
                     ))}
                 </select>
                 <select
+                  aria-label="Behörighetsnivå"
                   className="text-input"
                   disabled={!canEditThisList}
                   onChange={(event) =>

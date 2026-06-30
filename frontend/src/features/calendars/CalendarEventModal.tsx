@@ -54,7 +54,7 @@ export function CalendarEventModal({
         ) : (
           <div className="cal-form-body">
             {editableCalendars.length > 1 && (
-              <select className="text-input" onChange={(e) => onSetField("calendarId", e.target.value)} value={form.calendarId}>
+              <select aria-label="Välj kalender" className="text-input" onChange={(e) => onSetField("calendarId", e.target.value)} value={form.calendarId}>
                 {editableCalendars.map((cal) => <option key={cal.id} value={cal.id}>{cal.name}</option>)}
               </select>
             )}
@@ -107,7 +107,7 @@ export function CalendarEventModal({
             <div className="cal-recurrence">
               <div className="cal-recurrence-top">
                 <RefreshCw size={15} />
-                <select className="text-input" onChange={(e) => onSetField("recurrenceType", e.target.value as EventRecurrence["type"])} value={form.recurrenceType}>
+                <select aria-label="Upprepning" className="text-input" onChange={(e) => onSetField("recurrenceType", e.target.value as EventRecurrence["type"])} value={form.recurrenceType}>
                   {(Object.keys(RECURRENCE_LABELS) as EventRecurrence["type"][]).map((k) => (
                     <option key={k} value={k}>{RECURRENCE_LABELS[k]}</option>
                   ))}
