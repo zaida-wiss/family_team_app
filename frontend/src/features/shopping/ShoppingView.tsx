@@ -107,6 +107,7 @@ export function ShoppingView({
                   value={draftItems[list.id] ?? ""}
                 />
                 <button
+                  aria-label="Lägg till vara"
                   className="icon-button"
                   onClick={() => addItem(list.id)}
                   type="button"

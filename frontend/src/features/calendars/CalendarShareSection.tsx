@@ -80,6 +80,7 @@ export function CalendarShareSection({
                 <small>{share.access === "edit" ? "Kan redigera" : "Kan se"}</small>
               </span>
               <button
+                aria-label={`Ta bort delning med ${getMemberName(share.memberId, members)}`}
                 className="icon-button danger"
                 disabled={!canEdit}
                 onClick={() => onRemoveCalendarShare(selectedCalendar.id, share.memberId)}

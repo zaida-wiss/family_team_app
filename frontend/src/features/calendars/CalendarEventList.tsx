@@ -94,7 +94,7 @@ export function CalendarEventList({
           </button>
         )}
         {onNewEvent && (
-          <button className="icon-button" onClick={onNewEvent} title="Ny händelse" type="button">
+          <button aria-label="Ny händelse" className="icon-button" onClick={onNewEvent} title="Ny händelse" type="button">
             <Plus size={16} />
           </button>
         )}
@@ -176,6 +176,7 @@ function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: Fi
     <div className="cal-filter-wrap">
       <button
         ref={filterButtonRef}
+        aria-label="Filtrera kalendrar"
         className={`icon-button${hiddenCalendarIds.size > 0 ? " icon-button--active" : ""}`}
         onClick={openFilter}
         title="Filtrera kalendrar"

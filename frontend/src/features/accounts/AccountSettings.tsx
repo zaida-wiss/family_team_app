@@ -195,6 +195,7 @@ export function AccountSettings({
                   const isOpen = openCalFilterId === member.id;
                   return (
                     <button
+                      aria-label={`Kalenderåtkomst för ${member.name}`}
                       className={`icon-button${isOpen ? " icon-button--active" : ""}`}
                       onClick={(e) => {
                         if (isOpen) {

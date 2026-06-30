@@ -251,6 +251,7 @@ export function Dashboard({
                   {isEditing ? (
                     <>
                       <button
+                        aria-label="Spara todo"
                         className="icon-button"
                         onClick={() => onSaveTodoTitle(todo.id)}
                         title="Spara todo"
@@ -259,6 +260,7 @@ export function Dashboard({
                         <Save size={16} />
                       </button>
                       <button
+                        aria-label="Avbryt redigering"
                         className="icon-button"
                         onClick={onCancelEditingTodo}
                         title="Avbryt"
@@ -270,6 +272,7 @@ export function Dashboard({
                   ) : (
                     <>
                       <button
+                        aria-label="Redigera todo"
                         className="icon-button"
                         onClick={() => onStartEditingTodo(todo)}
                         title="Redigera todo"
@@ -278,6 +281,7 @@ export function Dashboard({
                         <Pencil size={16} />
                       </button>
                       <button
+                        aria-label="Flytta todo till papperskorg"
                         className="icon-button danger"
                         onClick={() => onSoftDeleteTodo(todo.id)}
                         title="Flytta todo till papperskorg"
@@ -307,6 +311,7 @@ export function Dashboard({
                   </div>
                   <div className="approval-actions">
                     <button
+                      aria-label={`Godkänn ${todo.title}`}
                       className="icon-button"
                       disabled={!canApprove}
                       onClick={() => onApproveTodo(todo.id)}
@@ -316,6 +321,7 @@ export function Dashboard({
                       <CheckCircle2 size={16} />
                     </button>
                     <button
+                      aria-label={`Neka ${todo.title}`}
                       className="icon-button danger"
                       disabled={!canApprove}
                       onClick={() => onRejectTodo(todo.id)}
@@ -356,6 +362,7 @@ export function Dashboard({
                   </div>
                   <div className="approval-actions">
                     <button
+                      aria-label={`Godkänn önskan ${reward.title}`}
                       className="icon-button"
                       onClick={() => onApproveWish(reward.id)}
                       title="Godkänn"
@@ -364,6 +371,7 @@ export function Dashboard({
                       <CheckCircle2 size={16} />
                     </button>
                     <button
+                      aria-label={`Neka önskan ${reward.title}`}
                       className="icon-button danger"
                       onClick={() => onRejectWish(reward.id)}
                       title="Neka"

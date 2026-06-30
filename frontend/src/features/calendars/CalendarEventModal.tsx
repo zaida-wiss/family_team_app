@@ -33,7 +33,7 @@ export function CalendarEventModal({
       <div className="cal-form-modal" onClick={(e) => e.stopPropagation()}>
         <div className="cal-form-hdr">
           <span>{isEditing ? (eventIsEditable ? "Redigera händelse" : "Händelse") : "Ny händelse"}</span>
-          <button className="icon-button" onClick={onClose} type="button"><X size={18} /></button>
+          <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button"><X size={18} /></button>
         </div>
 
         {modal.kind === "edit" && !eventIsEditable ? (

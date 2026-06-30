@@ -211,6 +211,7 @@ export function CalendarSubscriptionsSection({
                   </div>
                   <div className={styles.subActions}>
                     <button
+                      aria-label="Redigera filtreringsord"
                       className="icon-button"
                       onClick={() => {
                         setEditingSubId(sub.id);
@@ -224,6 +225,7 @@ export function CalendarSubscriptionsSection({
                       <Pencil size={14} />
                     </button>
                     <button
+                      aria-label="Kopiera prenumerations-URL"
                       className="icon-button"
                       onClick={() => void navigator.clipboard.writeText(sub.url)}
                       title={sub.url}
@@ -232,6 +234,7 @@ export function CalendarSubscriptionsSection({
                       <Copy size={14} />
                     </button>
                     <button
+                      aria-label="Synka prenumeration nu"
                       className="icon-button"
                       disabled={syncingSubId === sub.id}
                       onClick={() => void syncSub(sub.id)}
@@ -253,6 +256,7 @@ export function CalendarSubscriptionsSection({
                           Radera
                         </button>
                         <button
+                          aria-label="Avbryt radering"
                           className="icon-button"
                           onClick={() => setConfirmDeleteSubId(null)}
                           type="button"
@@ -262,6 +266,7 @@ export function CalendarSubscriptionsSection({
                       </>
                     ) : (
                       <button
+                        aria-label="Ta bort prenumeration"
                         className="icon-button danger"
                         onClick={() => setConfirmDeleteSubId(sub.id)}
                         title="Ta bort prenumeration"

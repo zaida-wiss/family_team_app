@@ -138,6 +138,7 @@ export function ShoppingListsPanel({
             value={draftListName}
           />
           <button
+            aria-label="Skapa inköpslista"
             className="icon-button"
             disabled={!canCreateShoppingLists}
             onClick={createList}
@@ -209,6 +210,7 @@ export function ShoppingListsPanel({
                     value={draftItems[list.id] ?? ""}
                   />
                   <button
+                    aria-label="Lägg till vara"
                     className="icon-button"
                     disabled={!canEditThisList}
                     onClick={() => addItem(list.id)}
@@ -274,6 +276,7 @@ export function ShoppingListsPanel({
                         </small>
                       </span>
                       <button
+                        aria-label={`Ta bort delning med ${getMemberName(share.memberId, members)}`}
                         className="icon-button danger"
                         disabled={!canEditThisList}
                         onClick={() => onRemoveListShare(list.id, share.memberId)}

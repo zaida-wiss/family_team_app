@@ -229,6 +229,7 @@ export function CalendarPanel({
                 value={renameValue}
               />
               <button
+                aria-label="Spara nytt namn"
                 className="icon-button"
                 disabled={!renameValue.trim()}
                 onClick={() => {
@@ -259,6 +260,7 @@ export function CalendarPanel({
                 </select>
                 {transferOwnerId !== (selectedCalendar as Calendar & { ownerId?: string }).ownerId && (
                   <button
+                    aria-label="Tilldela kalender"
                     className="icon-button"
                     onClick={() => onTransferCalendar(selectedCalendar.id, transferOwnerId)}
                     title="Tilldela kalender"
@@ -321,6 +323,7 @@ export function CalendarPanel({
 
           <div className="calendar-actions">
             <button
+              aria-label="Radera kalender"
               className="icon-button danger"
               disabled={!canEditSelectedCalendar}
               onClick={() => {
@@ -334,6 +337,7 @@ export function CalendarPanel({
               <X size={16} />
             </button>
             <button
+              aria-label="Byt namn"
               className={`icon-button${isRenaming ? " icon-button--active" : ""}`}
               disabled={!canEditSelectedCalendar}
               onClick={() => { setRenameValue(selectedCalendar.name); setIsRenaming((v) => !v); }}
