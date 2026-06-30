@@ -25,6 +25,7 @@ const globalLimiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, forwardedHeader: false },
   handler: (_req: Request, res: Response) => {
     res.status(429).json({ error: "För många förfrågningar, försök igen senare" });
   }
@@ -35,6 +36,7 @@ const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, forwardedHeader: false },
   handler: (req: Request, res: Response) => {
     logger.warn({ ip: req.ip, path: req.path }, "Auth rate limit exceeded");
     res.status(429).json({ error: "För många inloggningsförsök, försök igen om 15 minuter" });
@@ -43,6 +45,7 @@ const authLimiter = rateLimit({
 
 export const app = express();
 
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
