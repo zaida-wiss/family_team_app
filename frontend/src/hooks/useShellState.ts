@@ -86,7 +86,6 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     roles,
     shopItems,
     purchased,
-    requireApprovalForCategories,
     onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
@@ -157,7 +156,6 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onToggleShoppingItem: toggleShoppingItem,
     shopItems,
     purchased,
-    requireApprovalForCategories,
     onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
@@ -233,10 +231,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
       setWishStars((prev) => ({ ...prev, [rewardId]: stars })),
     shopItems,
     purchased,
-    requireApprovalForCategories,
     onAddShopItem: (item: Parameters<typeof addShopItem>[0]) => void addShopItem(item),
     onUpdateShopItem: (id: string, patch: Parameters<typeof updateShopItem>[1]) => void updateShopItem(id, patch),
-    onUpdateShopSettings: (patch: { requireApprovalForCategories?: boolean }) => void updateShopSettings(patch),
     onRemoveShopItem: (id: string) => void removeShopItem(id),
     onMovePurchased: (id: string, startsAt: string) => void movePurchased(id, startsAt),
     onDeletePurchased: (id: string) => void deletePurchased(id),
@@ -253,6 +249,10 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     apiError,
     childContentProps,
     memberContentProps,
-    settingsProps
+    settingsProps,
+    shopSettings: {
+      requireApprovalForCategories,
+      updateSettings: updateShopSettings,
+    },
   };
 }

@@ -9,7 +9,6 @@ type Props = {
   roles: Role[];
   shopItems: RewardShopItem[];
   purchased: PurchasedReward[] | null;
-  requireApprovalForCategories: boolean;
   onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
@@ -36,7 +35,6 @@ export function ChildShellContent({
   roles,
   shopItems,
   purchased,
-  requireApprovalForCategories,
   onPurchaseReward,
   wishTitle,
   onSetWishTitle,
@@ -79,7 +77,6 @@ export function ChildShellContent({
       rejectedTodos={rejectedTodos}
       shopItems={shopItems}
       purchased={purchased}
-      requireApprovalForCategories={requireApprovalForCategories}
       onPurchaseReward={onPurchaseReward}
       wishTitle={wishTitle}
       onSetWishTitle={onSetWishTitle}

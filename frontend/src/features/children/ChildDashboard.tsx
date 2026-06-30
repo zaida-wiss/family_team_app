@@ -12,6 +12,7 @@ import { ChildPendingBadges } from "./ChildPendingBadges";
 import { useChildCompleteHold } from "./useChildCompleteHold";
 import { useChildStars } from "./useChildStars";
 import { RewardShopModal } from "../rewards/RewardShopModal";
+import { useRewardShopContext } from "../rewards/RewardShopContext";
 
 import "./ChildDashboard.css";
 import "./ChildResponsive.css";
@@ -27,7 +28,6 @@ type Props = {
   rejectedTodos: Todo[];
   shopItems: RewardShopItem[];
   purchased: PurchasedReward[] | null;
-  requireApprovalForCategories: boolean;
   onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
@@ -59,7 +59,6 @@ export function ChildDashboard({
   rejectedTodos,
   shopItems,
   purchased,
-  requireApprovalForCategories,
   onPurchaseReward,
   wishTitle,
   onSetWishTitle,
@@ -77,6 +76,7 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
+  const { requireApprovalForCategories } = useRewardShopContext();
   const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
@@ -175,7 +175,6 @@ export function ChildDashboard({
           items={shopItems}
           todos={timelineTodos}
           availableStars={availableStars}
-          requireApprovalForCategories={requireApprovalForCategories}
           onPurchase={(item) => {
             setLocalSpentStars((s) => s + item.starCost);
             void onPurchaseReward(item, child.id);

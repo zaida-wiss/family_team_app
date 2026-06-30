@@ -22,6 +22,7 @@ export function createMember(
     avatarUrl: null,
     color: null,
     spentStars: 0,
+    approvedStars: 0,
     dashboardTheme: null,
     deletedAt: null,
     deletedBy: null,

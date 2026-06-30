@@ -4,6 +4,7 @@ import { SettingsContent } from "./SettingsContent";
 import { ThemePicker } from "../../components/ThemePicker";
 import { useAppFont } from "../../components/FontPicker";
 import { useShellState } from "../../hooks/useShellState";
+import { RewardShopContext } from "../rewards/RewardShopContext";
 import type { Membership } from "@shared/types";
 
 export type ShellProps = {
@@ -95,6 +96,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     childContentProps,
     memberContentProps,
     settingsProps,
+    shopSettings,
   } = useShellState(activeMembership, onLogout);
 
   const selectedDashboardMember =
@@ -133,16 +135,18 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
 
       <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>
         <Suspense fallback={<p className="empty-note">Laddar...</p>}>
-          <PanelRouter
-            currentMember={currentMember}
-            activePanel={activePanel}
-            activeAccount={activeAccount}
-            settingsProps={settingsProps}
-            memberContentProps={memberContentProps}
-            childContentProps={childContentProps}
-            setActivePanel={setActivePanel}
-            onLogout={onLogout}
-          />
+          <RewardShopContext.Provider value={shopSettings}>
+            <PanelRouter
+              currentMember={currentMember}
+              activePanel={activePanel}
+              activeAccount={activeAccount}
+              settingsProps={settingsProps}
+              memberContentProps={memberContentProps}
+              childContentProps={childContentProps}
+              setActivePanel={setActivePanel}
+              onLogout={onLogout}
+            />
+          </RewardShopContext.Provider>
         </Suspense>
 
         {themePickerMember && (

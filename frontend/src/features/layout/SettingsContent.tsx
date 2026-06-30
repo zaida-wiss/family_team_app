@@ -57,10 +57,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onRefundPurchase,
     shopItems,
     purchased,
-    requireApprovalForCategories,
     onAddShopItem,
     onUpdateShopItem,
-    onUpdateShopSettings,
     onRemoveShopItem,
     onMovePurchased,
     onDeletePurchased,
@@ -87,10 +85,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           currentMemberId={currentMember.id}
           children={members.filter((m) => m.deletedAt === null && m.isChild)}
           purchased={purchased}
-          requireApprovalForCategories={requireApprovalForCategories}
           onAdd={onAddShopItem}
           onUpdate={onUpdateShopItem}
-          onUpdateSettings={onUpdateShopSettings}
           onRemove={onRemoveShopItem}
           onRefund={onRefundPurchase}
           onMovePurchased={onMovePurchased}

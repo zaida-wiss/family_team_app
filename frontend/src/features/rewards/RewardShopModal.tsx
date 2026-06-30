@@ -6,18 +6,19 @@ import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 import { isExpired, isAvailableNow, unavailableLabel, blockingCategories } from "./shopAvailability";
+import { useRewardShopContext } from "./RewardShopContext";
 
 type Props = {
   childId: Id;
   items: RewardShopItem[];
   todos: Todo[];
   availableStars: number;
-  requireApprovalForCategories: boolean;
   onPurchase: (item: RewardShopItem) => void;
   onClose: () => void;
 };
 
-export function RewardShopModal({ childId, items, todos, availableStars, requireApprovalForCategories, onPurchase, onClose }: Props) {
+export function RewardShopModal({ childId, items, todos, availableStars, onPurchase, onClose }: Props) {
+  const { requireApprovalForCategories } = useRewardShopContext();
   const drag = useShopWalletDrag(childId);
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());

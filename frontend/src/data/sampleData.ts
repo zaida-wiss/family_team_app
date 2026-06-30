@@ -71,6 +71,7 @@ export const members: Member[] = [
     color: null,
     dashboardTheme: "warm",
     spentStars: 0,
+    approvedStars: 0,
     deletedAt: null,
     deletedBy: null
   },
@@ -85,6 +86,7 @@ export const members: Member[] = [
     color: null,
     dashboardTheme: "space",
     spentStars: 0,
+    approvedStars: 0,
     deletedAt: null,
     deletedBy: null
   }

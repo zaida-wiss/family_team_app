@@ -2,6 +2,7 @@ import "./RewardShopSettings.css";
 import { useState } from "react";
 import type { Member, PurchasedReward, RewardShopItem, ShopAvailability } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
+import { useRewardShopContext } from "./RewardShopContext";
 import { AvailabilityEditor } from "./AvailabilityEditor";
 import { RequiredCategoriesEditor } from "./RequiredCategoriesEditor";
 
@@ -12,10 +13,8 @@ type Props = {
   currentMemberId: string;
   children: Member[];
   purchased: PurchasedReward[] | null;
-  requireApprovalForCategories: boolean;
   onAdd: (item: RewardShopItem) => void;
   onUpdate: (itemId: string, patch: ItemPatch) => void;
-  onUpdateSettings: (patch: { requireApprovalForCategories?: boolean }) => void;
   onRemove: (itemId: string) => void;
   onRefund: (childId: string, amount: number) => void;
   onMovePurchased: (id: string, startsAt: string) => void;
@@ -96,7 +95,8 @@ function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased
   );
 }
 
-export function RewardShopSettings({ items, currentMemberId, children, purchased, requireApprovalForCategories, onAdd, onUpdate, onUpdateSettings, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onUpdate, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
+  const { requireApprovalForCategories, updateSettings: onUpdateSettings } = useRewardShopContext();
   const [form, setForm] = useState<FormState>(blank());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(blank());
