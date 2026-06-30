@@ -13,5 +13,19 @@ export default defineConfig({
         proxy: {
             "/api": "http://localhost:3000"
         }
-    }
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/")) {
+                        return "vendor";
+                    }
+                    if (id.includes("node_modules/lucide-react")) {
+                        return "icons";
+                    }
+                },
+            },
+        },
+    },
 });
