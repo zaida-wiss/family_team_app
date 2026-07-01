@@ -4,7 +4,19 @@ import { AppError } from "./errors.js";
 export async function accountIdOf(memberId: string | undefined, userId?: string): Promise<string> {
   if (memberId) {
     const member = await MemberModel.findOne({ id: memberId, deletedAt: null });
-    if (member) return member.accountId;
+    if (member) {
+      if (userId && member.userId !== userId) {
+        // memberId tillhör en annan användare (t.ex. barn utan eget login).
+        // Verifiera att den autentiserade användaren är med i samma konto.
+        const isSameAccount = await MemberModel.exists({
+          userId,
+          accountId: member.accountId,
+          deletedAt: null,
+        });
+        if (!isSameAccount) throw new AppError(403, "Åtkomst nekad");
+      }
+      return member.accountId;
+    }
   }
   if (userId) {
     const member = await MemberModel.findOne({ userId, deletedAt: null });
