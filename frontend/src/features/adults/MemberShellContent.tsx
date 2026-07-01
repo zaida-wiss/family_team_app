@@ -5,16 +5,21 @@ import type { CalendarFilter } from "../calendars/CalendarView";
 const ChildDashboard = lazy(() =>
   import("../children/ChildDashboard").then((m) => ({ default: m.ChildDashboard }))
 );
-import { Dashboard } from "./Dashboard";
-import { CalendarPage } from "../../pages/CalendarPage";
+const CalendarPage = lazy(() =>
+  import("../../pages/CalendarPage").then((m) => ({ default: m.CalendarPage }))
+);
+const ShoppingView = lazy(() =>
+  import("../shopping/ShoppingView").then((m) => ({ default: m.ShoppingView }))
+);
+const TodosView = lazy(() =>
+  import("../todos/TodosView").then((m) => ({ default: m.TodosView }))
+);
 import { HomePage } from "../../pages/HomePage";
-import { ShoppingView } from "../shopping/ShoppingView";
-import { TodosView } from "../todos/TodosView";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
 
-type DashboardProps = ComponentProps<typeof Dashboard>;
+type DashboardProps = ComponentProps<(typeof import("./Dashboard"))["Dashboard"]>;
 
 type Props = {
   activePanel: ShellPanel;
@@ -169,63 +174,69 @@ export function MemberShellContent({
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   if (activePanel === "calendar") {
     return (
-      <CalendarPage
-        calendars={canSeeCalendar ? calendars : []}
-        currentMember={currentMember}
-        activeMembers={activeMembers}
-        roles={roles}
-        calendarSettings={calendarSettings}
-        calendarView={currentMember.calendarView ?? "month"}
-        filter={calendarFilter}
-        onCalendarViewChange={onUpdateCalendarView}
-        onAddEvent={onAddCalendarEvent}
-        onUpdateEvent={onUpdateCalendarEvent}
-        onDeleteEvent={onDeleteCalendarEvent}
-        onRsvpEvent={onRsvpCalendarEvent}
-        onMonthChange={onLoadEventsForMonth}
-      />
+      <Suspense fallback={null}>
+        <CalendarPage
+          calendars={canSeeCalendar ? calendars : []}
+          currentMember={currentMember}
+          activeMembers={activeMembers}
+          roles={roles}
+          calendarSettings={calendarSettings}
+          calendarView={currentMember.calendarView ?? "month"}
+          filter={calendarFilter}
+          onCalendarViewChange={onUpdateCalendarView}
+          onAddEvent={onAddCalendarEvent}
+          onUpdateEvent={onUpdateCalendarEvent}
+          onDeleteEvent={onDeleteCalendarEvent}
+          onRsvpEvent={onRsvpCalendarEvent}
+          onMonthChange={onLoadEventsForMonth}
+        />
+      </Suspense>
     );
   }
 
   // ── Inköps-vy (nav) — bocka av, lägg till varor, ingen hantering ─────────
   if (activePanel === "shopping") {
     return (
-      <ShoppingView
-        currentMember={currentMember}
-        roles={roles}
-        shoppingLists={canSeeShopping ? shoppingLists : []}
-        onAddItem={onAddShoppingItem}
-        onToggleItem={onToggleShoppingItem}
-      />
+      <Suspense fallback={null}>
+        <ShoppingView
+          currentMember={currentMember}
+          roles={roles}
+          shoppingLists={canSeeShopping ? shoppingLists : []}
+          onAddItem={onAddShoppingItem}
+          onToggleItem={onToggleShoppingItem}
+        />
+      </Suspense>
     );
   }
 
   // ── Todos-vy (nav) — skapa/klara/godkänn, ingen delnings-UI ─────────────
   if (activePanel === "todos") {
     return (
-      <TodosView
-        currentMember={currentMember}
-        members={activeMembers}
-        roles={roles}
-        todos={todos}
-        rewards={rewards}
-        editingTodoId={editingTodoId}
-        editingTodoTitle={editingTodoTitle}
-        canApproveTodos={canApproveTodos}
-        canSeeTodos={canSeeTodos}
-        wishStars={wishStars}
-        onSetEditingTodoTitle={onSetEditingTodoTitle}
-        onStartEditingTodo={onStartEditingTodo}
-        onSaveTodoTitle={onSaveTodoTitle}
-        onCancelEditingTodo={onCancelEditingTodo}
-        onCreateTodo={onCreateTodo}
-        onSoftDeleteTodo={onSoftDeleteTodo}
-        onApproveTodo={onApproveTodo}
-        onRejectTodo={onRejectTodo}
-        onApproveWish={onApproveWish}
-        onRejectWish={onRejectWish}
-        onSetWishStars={onSetWishStars}
-      />
+      <Suspense fallback={null}>
+        <TodosView
+          currentMember={currentMember}
+          members={activeMembers}
+          roles={roles}
+          todos={todos}
+          rewards={rewards}
+          editingTodoId={editingTodoId}
+          editingTodoTitle={editingTodoTitle}
+          canApproveTodos={canApproveTodos}
+          canSeeTodos={canSeeTodos}
+          wishStars={wishStars}
+          onSetEditingTodoTitle={onSetEditingTodoTitle}
+          onStartEditingTodo={onStartEditingTodo}
+          onSaveTodoTitle={onSaveTodoTitle}
+          onCancelEditingTodo={onCancelEditingTodo}
+          onCreateTodo={onCreateTodo}
+          onSoftDeleteTodo={onSoftDeleteTodo}
+          onApproveTodo={onApproveTodo}
+          onRejectTodo={onRejectTodo}
+          onApproveWish={onApproveWish}
+          onRejectWish={onRejectWish}
+          onSetWishStars={onSetWishStars}
+        />
+      </Suspense>
     );
   }
 
