@@ -71,10 +71,10 @@ export function useBankDragZone(
   const zoneTotal = Object.entries(zoneCounts).reduce((s, [k, n]) => s + +k * n, 0);
   const hasZoneItems = zoneTotal > 0;
 
-  const hitZone = (ref: RefObject<HTMLElement | null>, x: number, y: number) => {
-    const r = ref.current?.getBoundingClientRect();
-    return r ? x >= r.left && x <= r.right && y >= r.top && y <= r.bottom : false;
-  };
+  const cachedRectsRef = useRef<{ up: DOMRect | null; down: DOMRect | null; wish: DOMRect | null }>({ up: null, down: null, wish: null });
+
+  const hitCached = (rect: DOMRect | null, x: number, y: number) =>
+    rect ? x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom : false;
 
   const fireZoneConvert = () => {
     const zone = zoneCountsRef.current;
@@ -126,6 +126,11 @@ export function useBankDragZone(
   const startDrag = (value: number, e: ReactPointerEvent) => {
     e.preventDefault();
     setDragging(value);
+    cachedRectsRef.current = {
+      up: upRef.current?.getBoundingClientRect() ?? null,
+      down: downRef.current?.getBoundingClientRect() ?? null,
+      wish: wishRef.current?.getBoundingClientRect() ?? null,
+    };
     requestAnimationFrame(() => {
       if (ghostRef.current) {
         ghostRef.current.style.left = `${e.clientX}px`;
@@ -138,22 +143,25 @@ export function useBankDragZone(
         ghostRef.current.style.left = `${ev.clientX}px`;
         ghostRef.current.style.top = `${ev.clientY}px`;
       }
-      if (hitZone(upRef, ev.clientX, ev.clientY)) setActiveZone("up");
-      else if (hitZone(downRef, ev.clientX, ev.clientY)) setActiveZone("down");
-      else if (hitZone(wishRef, ev.clientX, ev.clientY)) setActiveZone("wish");
+      const { up, down, wish } = cachedRectsRef.current;
+      if (hitCached(up, ev.clientX, ev.clientY)) setActiveZone("up");
+      else if (hitCached(down, ev.clientX, ev.clientY)) setActiveZone("down");
+      else if (hitCached(wish, ev.clientX, ev.clientY)) setActiveZone("wish");
       else setActiveZone(null);
     };
 
     const onUp = (ev: PointerEvent) => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
-      if (hitZone(upRef, ev.clientX, ev.clientY)) {
+      const { up, down, wish } = cachedRectsRef.current;
+      cachedRectsRef.current = { up: null, down: null, wish: null };
+      if (hitCached(up, ev.clientX, ev.clientY)) {
         setDragging(null);
         setActiveZone(null);
         addToZone(value);
-      } else if (hitZone(downRef, ev.clientX, ev.clientY) && canSplit(value)) {
+      } else if (hitCached(down, ev.clientX, ev.clientY) && canSplit(value)) {
         performSplit(value);
-      } else if (hitZone(wishRef, ev.clientX, ev.clientY)) {
+      } else if (hitCached(wish, ev.clientX, ev.clientY)) {
         setDragging(null);
         setActiveZone(null);
         setWishCounts((prev) => ({ ...prev, [value]: (prev[value] ?? 0) + 1 }));

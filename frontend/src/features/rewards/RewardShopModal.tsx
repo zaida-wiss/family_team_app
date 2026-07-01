@@ -51,7 +51,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
     }
   });
 
-  return (
+  return createPortal(
     <div className="reward-shop-overlay" onClick={onClose}>
       <div className="reward-shop-modal" onClick={(e) => e.stopPropagation()}>
 
@@ -234,6 +234,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
         </div>,
         document.body
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

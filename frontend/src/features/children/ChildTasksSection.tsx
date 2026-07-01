@@ -6,7 +6,7 @@ import "./ChildTasks.css";
 type TaskCardStyle = CSSProperties & {
   "--task-accent"?: string;
   "--task-bg"?: string;
-  "--task-time-left"?: string;
+  "--task-time-fraction"?: number;
 };
 
 const KNOWN_CATEGORIES = ["hälsa", "trivsel", "skills", "pengar"] as const;
@@ -59,7 +59,7 @@ export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartH
             const style: TaskCardStyle = {
               animationDelay: `${i * 80}ms`,
               ...getTaskStyle(category),
-              ...(timeLeftPercent === null ? {} : { "--task-time-left": `${timeLeftPercent}%` }),
+              ...(timeLeftPercent === null ? {} : { "--task-time-fraction": timeLeftPercent / 100 }),
             };
             return (
               <button
