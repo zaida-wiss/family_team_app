@@ -75,7 +75,7 @@ export function CalendarEventList({
     if (!scrollEl || !targetEl) return;
 
     const frame = window.requestAnimationFrame(() => {
-      scrollEl.scrollTop = Math.max(0, targetEl.offsetTop - scrollEl.offsetTop - 6);
+      targetEl.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
 
     return () => window.cancelAnimationFrame(frame);
