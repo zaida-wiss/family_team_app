@@ -84,9 +84,6 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     todos,
     rewards,
     roles,
-    shopItems,
-    purchased,
-    onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
 
@@ -154,9 +151,6 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onShareShoppingList: shareShoppingList,
     onRemoveShoppingListShare: removeShoppingListShare,
     onToggleShoppingItem: toggleShoppingItem,
-    shopItems,
-    purchased,
-    onPurchaseReward: purchaseReward,
     ...sharedChildProps
   };
 
@@ -253,6 +247,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     shopSettings: {
       requireApprovalForCategories,
       updateSettings: updateShopSettings,
+      items: shopItems,
+      purchased,
+      onPurchaseReward: purchaseReward,
     },
   };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import type { Calendar, Id, Member, PurchasedReward, Reward, RewardShopItem, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, Reward, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -26,9 +26,6 @@ type Props = {
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
-  shopItems: RewardShopItem[];
-  purchased: PurchasedReward[] | null;
-  onPurchaseReward: (item: RewardShopItem, forMemberId: string) => Promise<void>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
@@ -57,9 +54,6 @@ export function ChildDashboard({
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
-  shopItems,
-  purchased,
-  onPurchaseReward,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
@@ -76,7 +70,7 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
-  const { requireApprovalForCategories } = useRewardShopContext();
+  const { requireApprovalForCategories, items: shopItems, purchased, onPurchaseReward } = useRewardShopContext();
   const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
