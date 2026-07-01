@@ -32,11 +32,26 @@ jobs:
         run: npm test
 
   backend:
-    name: Backend — typecheck
+    name: Backend — typecheck + tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGODB_URI: mongodb://localhost:27017/bmad-test
+      JWT_ACCESS_SECRET: ci-jwt-access-secret
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret
+      NODE_ENV: test
 
     steps:
       - uses: actions/checkout@v4
