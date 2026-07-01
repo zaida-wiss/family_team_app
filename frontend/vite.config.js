@@ -1,5 +1,7 @@
+var _a;
+/// <reference types="vitest" />
 import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 export default defineConfig({
     plugins: [react()],
@@ -10,14 +12,15 @@ export default defineConfig({
         }
     },
     server: {
+        host: true,
         proxy: {
-            "/api": "http://localhost:3000"
+            "/api": (_a = process.env.BACKEND_URL) !== null && _a !== void 0 ? _a : "http://localhost:3000"
         }
     },
     build: {
         rollupOptions: {
             output: {
-                manualChunks(id) {
+                manualChunks: function (id) {
                     if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/")) {
                         return "vendor";
                     }
@@ -28,4 +31,9 @@ export default defineConfig({
             },
         },
     },
+    test: {
+        globals: true,
+        environment: "node",
+        include: ["tests/**/*.test.ts"],
+    }
 });
