@@ -1,18 +1,32 @@
 import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
+import { CreateMemberBodySchema, MemberPatchSchema } from "../../../shared/schemas.js";
 
 export async function getAllMembers(accountId: string) {
   return MemberModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
-export async function createMember(data: unknown) {
-  const member = new MemberModel(data);
+// accountId, userId, spentStars, approvedStars, deletedAt, deletedBy sätts alltid
+// här — aldrig litat på från klientens body (se CreateMemberBodySchema).
+export async function createMember(accountId: string, data: unknown) {
+  const patch = CreateMemberBodySchema.parse(data);
+  const member = new MemberModel({
+    id: `member-${crypto.randomUUID()}`,
+    accountId,
+    userId: null,
+    ...patch,
+    spentStars: 0,
+    approvedStars: 0,
+    deletedAt: null,
+    deletedBy: null
+  });
   await member.save();
   return { id: member.id };
 }
 
-export async function updateMember(id: string, patch: unknown) {
-  const member = await MemberModel.findOne({ id });
+export async function updateMember(id: string, accountId: string, data: unknown) {
+  const patch = MemberPatchSchema.parse(data);
+  const member = await MemberModel.findOne({ id, accountId });
   if (!member) {
     throw new AppError(404, "Medlem hittades inte");
   }
@@ -20,8 +34,8 @@ export async function updateMember(id: string, patch: unknown) {
   await member.save();
 }
 
-export async function deleteMember(id: string, memberId: string | null) {
-  const member = await MemberModel.findOne({ id });
+export async function deleteMember(id: string, accountId: string, memberId: string | null) {
+  const member = await MemberModel.findOne({ id, accountId });
   if (!member) {
     throw new AppError(404, "Medlem hittades inte");
   }
@@ -30,8 +44,8 @@ export async function deleteMember(id: string, memberId: string | null) {
   await member.save();
 }
 
-export async function restoreMember(id: string) {
-  const member = await MemberModel.findOne({ id });
+export async function restoreMember(id: string, accountId: string) {
+  const member = await MemberModel.findOne({ id, accountId });
   if (!member) {
     throw new AppError(404, "Medlem hittades inte");
   }

@@ -11,20 +11,24 @@ membersRouter.get("/", requireAuth, async (req, res) => {
 });
 
 membersRouter.post("/", requireAuth, async (req, res) => {
-  res.status(201).json(await members.createMember(req.body));
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.status(201).json(await members.createMember(accountId, req.body));
 });
 
 membersRouter.patch("/:id", requireAuth, async (req, res) => {
-  await members.updateMember(req.params.id, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await members.updateMember(req.params.id, accountId, req.body);
   res.json({ ok: true });
 });
 
 membersRouter.delete("/:id", requireAuth, async (req, res) => {
-  await members.deleteMember(req.params.id, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await members.deleteMember(req.params.id, accountId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 membersRouter.patch("/:id/restore", requireAuth, async (req, res) => {
-  await members.restoreMember(req.params.id);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await members.restoreMember(req.params.id, accountId);
   res.json({ ok: true });
 });
