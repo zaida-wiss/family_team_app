@@ -4,13 +4,18 @@ import type { BankDragZone } from "./useBankDragZone";
 type Props = Pick<BankDragZone,
   "bills" | "coins" | "walletCounts" | "dragging" | "fadeOut" | "fadeIn" | "startDrag"
   | "addToZone" | "canSplit" | "performSplit" | "addToWish"
->;
+> & { mode: "drag" | "click" };
 
-export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fadeIn, startDrag, addToZone, canSplit, performSplit, addToWish }: Props) {
+export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fadeIn, startDrag, addToZone, canSplit, performSplit, addToWish, mode }: Props) {
+  const isClick = mode === "click";
+
   const itemClass = (v: number) =>
-    `bm-exch-item${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`;
+    `bm-exch-item${isClick ? " bm-item-clickmode" : ""}${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`;
 
   const stopDrag = (e: React.PointerEvent) => e.stopPropagation();
+  const onCardPointer = (v: number, e: React.PointerEvent) => {
+    if (!isClick) startDrag(v, e);
+  };
 
   const renderActions = (v: number, isCoin: boolean) => (
     <div className="bm-item-actions" onPointerDown={stopDrag}>
@@ -46,7 +51,7 @@ export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fade
   return (
     <div className="bm-bills-panel">
       {bills.map((v) => (
-        <div key={v} className={itemClass(v)} onPointerDown={(e) => startDrag(v, e)}>
+        <div key={v} className={itemClass(v)} onPointerDown={(e) => onCardPointer(v, e)}>
           <div className="bm-exch-item-img">
             {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
               <img key={i} src={`/pengar/sedel-${v}.webp`}
@@ -57,14 +62,14 @@ export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fade
             ))}
           </div>
           <span className="bm-item-label">{v} kr</span>
-          {renderActions(v, false)}
+          {isClick && renderActions(v, false)}
         </div>
       ))}
 
       {coins.length > 0 && (
         <div className="bm-coins-row">
           {coins.map((v) => (
-            <div key={v} className={`${itemClass(v)} bm-exch-coin`} onPointerDown={(e) => startDrag(v, e)}>
+            <div key={v} className={`${itemClass(v)} bm-exch-coin`} onPointerDown={(e) => onCardPointer(v, e)}>
               <div className="bm-exch-item-img">
                 {Array.from({ length: walletCounts[v] ?? 0 }).map((_, i) => (
                   <div key={i} className={`bm-coin-clip${i > 0 ? " bm-stacked" : ""}`} data-coin={v}>
@@ -75,7 +80,7 @@ export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fade
                 ))}
               </div>
               <span className="bm-item-label">{v} kr</span>
-              {renderActions(v, true)}
+              {isClick && renderActions(v, true)}
             </div>
           ))}
         </div>

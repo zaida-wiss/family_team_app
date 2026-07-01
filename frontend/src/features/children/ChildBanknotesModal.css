@@ -115,6 +115,48 @@
   flex-shrink: 0;
 }
 
+/* ── Dra / Klicka-toggle ── */
+
+.bm-mode-toggle {
+  display: flex;
+  margin: 6px 18px 0;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.bm-mode-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: transparent;
+  color: var(--muted-fg);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.bm-mode-btn + .bm-mode-btn {
+  border-left: 1.5px solid var(--border);
+}
+
+.bm-mode-btn.bm-mode-active {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.bm-mode-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.bm-item-clickmode {
+  cursor: pointer;
+  touch-action: auto;
+}
+
 /* ── Exchange-layout: pengar till vänster, drop-rutor till höger ── */
 
 .bm-exchange-layout {
