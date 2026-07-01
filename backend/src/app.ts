@@ -18,6 +18,7 @@ import { rolesRouter } from "./routes/roles.js";
 import { shoppingRouter } from "./routes/shopping.js";
 import { todosRouter } from "./routes/todos.js";
 import { analyticsRouter } from "./routes/analytics.js";
+import { adminRouter } from "./routes/admin.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
@@ -69,6 +70,7 @@ app.use("/api/shopping", shoppingRouter);
 app.use("/api/rewards", rewardsRouter);
 app.use("/api/reward-shop", rewardShopRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/admin", adminRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);

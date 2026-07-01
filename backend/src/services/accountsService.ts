@@ -149,10 +149,15 @@ export async function exportAccount(accountId: string, memberId: string | null |
   };
 }
 
-// GDPR artikel 17 (rätten till radering) kräver äkta radering av persondata — inte bara
-// deletedAt-flaggan som används för ångra-inom-30-dagar på enskilda poster (todos,
-// kalenderhändelser etc). Detta är den enda platsen i kodbasen som avsiktligt gör hard
-// delete, se docs/engineering-os/08-documentation/records/decisions/ADR-0007.
+const DELETION_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+
+// GDPR artikel 17 (rätten till radering). Tvåstegsprocess, se
+// docs/engineering-os/08-documentation/records/decisions/ADR-0007:
+// 1) deleteAccount sätter deletedAt — memberUtils.accountIdOf spärrar därefter all
+//    åtkomst till kontot omedelbart, precis som frontend redan lovar användaren.
+// 2) purgeExpiredAccounts (körs av ett schemalagt jobb) hard-raderar konton vars
+//    deletedAt är äldre än gallringsfönstret. Detta är de enda två platserna i
+//    kodbasen som avsiktligt avviker från "aldrig hard delete".
 export async function deleteAccount(accountId: string, memberId: string | null | undefined) {
   const member = await MemberModel.findOne({ id: memberId });
   if (!member) {
@@ -168,6 +173,13 @@ export async function deleteAccount(accountId: string, memberId: string | null |
     throw new AppError(403, "Åtkomst nekad");
   }
 
+  account.deletedAt = new Date().toISOString();
+  await account.save();
+
+  logger.info({ accountId, initiatedBy: memberId }, "Konto markerat för radering (GDPR artikel 17)");
+}
+
+async function purgeAccount(accountId: string) {
   const accountMembers = await MemberModel.find({ accountId }, { userId: 1, _id: 0 });
   const candidateUserIds = [...new Set(accountMembers.map((m) => m.userId).filter((id): id is string => !!id))];
 
@@ -191,6 +203,20 @@ export async function deleteAccount(accountId: string, memberId: string | null |
   }
 
   await AccountModel.deleteOne({ id: accountId });
+}
 
-  logger.info({ accountId, initiatedBy: memberId }, "Konto raderat (GDPR artikel 17)");
+// Anropas av det schemalagda gallringsjobbet (routes/admin.ts), inte direkt av användare.
+export async function purgeExpiredAccounts(now = new Date()) {
+  const cutoff = new Date(now.getTime() - DELETION_GRACE_PERIOD_MS).toISOString();
+  const expired = await AccountModel.find(
+    { deletedAt: { $ne: null, $lte: cutoff } },
+    { id: 1, _id: 0 }
+  );
+
+  for (const account of expired) {
+    await purgeAccount(account.id);
+    logger.info({ accountId: account.id }, "Konto hard-raderat efter gallringsfönster (GDPR artikel 17)");
+  }
+
+  return { purgedCount: expired.length };
 }
