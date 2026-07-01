@@ -1,7 +1,9 @@
 import { RewardShopModel } from "../db/models/RewardShop.js";
 import { PurchasedRewardModel } from "../db/models/PurchasedReward.js";
 import { MemberModel } from "../db/models/Member.js";
+import { TodoModel } from "../db/models/Todo.js";
 import type { RewardShopItem } from "../../../shared/types.js";
+import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
 
 export async function accountIdOf(memberId: string): Promise<string> {
@@ -82,6 +84,27 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
   const shop = await RewardShopModel.findOne({ accountId: forMember.accountId });
   const item = shop?.items.find((i) => i.id === itemId && i.deletedAt === null);
   if (!item) throw new AppError(404, "Vara hittades inte");
+
+  const availableStars = forMember.approvedStars - forMember.spentStars;
+  if (availableStars < item.starCost) {
+    throw new AppError(409, "Otillräckligt stjärnsaldo för köpet");
+  }
+
+  if ((item.requiredCategories ?? []).length > 0) {
+    const todos = await TodoModel.find(
+      { accountId: forMember.accountId, assignedTo: forMemberId, deletedAt: null },
+      { _id: 0, __v: 0 }
+    );
+    const blocking = blockingCategories(
+      item,
+      todos,
+      forMemberId,
+      shop?.requireApprovalForCategories ?? false
+    );
+    if (blocking.length > 0) {
+      throw new AppError(409, `Kategorispärr blockerar köpet: ${blocking.join(", ")}`);
+    }
+  }
 
   await MemberModel.updateOne({ id: forMemberId }, { $inc: { spentStars: item.starCost } });
 
