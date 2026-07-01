@@ -5,15 +5,10 @@ import { TodoModel } from "../db/models/Todo.js";
 import type { RewardShopItem } from "../../../shared/types.js";
 import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
-export async function accountIdOf(memberId: string): Promise<string> {
-  const member = await MemberModel.findOne({ id: memberId });
-  if (!member) throw new AppError(404, "Medlem hittades inte");
-  return member.accountId;
-}
-
-export async function getShop(memberId: string) {
-  const accountId = await accountIdOf(memberId);
+export async function getShop(memberId: string, userId: string) {
+  const accountId = await accountIdOf(memberId, userId);
   const shop = await RewardShopModel.findOne({ accountId });
   const items = (shop?.items.filter((i) => i.deletedAt === null) ?? []).map((i) => ({
     id: i.id,
@@ -29,16 +24,16 @@ export async function getShop(memberId: string) {
   return { items, requireApprovalForCategories: shop?.requireApprovalForCategories ?? false };
 }
 
-export async function updateSettings(memberId: string, patch: { requireApprovalForCategories?: boolean }) {
-  const accountId = await accountIdOf(memberId);
+export async function updateSettings(memberId: string, userId: string, patch: { requireApprovalForCategories?: boolean }) {
+  const accountId = await accountIdOf(memberId, userId);
   const update: Record<string, unknown> = {};
   if (patch.requireApprovalForCategories !== undefined) update.requireApprovalForCategories = patch.requireApprovalForCategories;
   if (Object.keys(update).length === 0) return;
   await RewardShopModel.updateOne({ accountId }, { $set: update }, { upsert: true });
 }
 
-export async function addItem(memberId: string, item: RewardShopItem) {
-  const accountId = await accountIdOf(memberId);
+export async function addItem(memberId: string, userId: string, item: RewardShopItem) {
+  const accountId = await accountIdOf(memberId, userId);
   await RewardShopModel.findOneAndUpdate(
     { accountId },
     { $push: { items: item } },
@@ -46,8 +41,8 @@ export async function addItem(memberId: string, item: RewardShopItem) {
   );
 }
 
-export async function updateItem(memberId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) {
-  const accountId = await accountIdOf(memberId);
+export async function updateItem(memberId: string, userId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) {
+  const accountId = await accountIdOf(memberId, userId);
   const update: Record<string, unknown> = {};
   if (patch.title !== undefined) update["items.$.title"] = patch.title;
   if (patch.symbol !== undefined) update["items.$.symbol"] = patch.symbol;
@@ -58,8 +53,8 @@ export async function updateItem(memberId: string, itemId: string, patch: Partia
   await RewardShopModel.updateOne({ accountId, "items.id": itemId }, { $set: update });
 }
 
-export async function removeItem(memberId: string, itemId: string) {
-  const accountId = await accountIdOf(memberId);
+export async function removeItem(memberId: string, userId: string, itemId: string) {
+  const accountId = await accountIdOf(memberId, userId);
   await RewardShopModel.updateOne(
     { accountId, "items.id": itemId },
     { $set: { "items.$.deletedAt": new Date().toISOString(), "items.$.deletedBy": memberId } }

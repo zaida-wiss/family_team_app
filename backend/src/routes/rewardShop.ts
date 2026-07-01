@@ -1,30 +1,31 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as shop from "../services/rewardShopService.js";
+import { accountIdOf } from "../utils/memberUtils.js";
 
 export const rewardShopRouter = Router();
 
 rewardShopRouter.get("/", requireAuth, async (req, res) => {
-  res.json(await shop.getShop(req.memberId!));
+  res.json(await shop.getShop(req.memberId!, req.userId!));
 });
 
 rewardShopRouter.patch("/settings", requireAuth, async (req, res) => {
-  await shop.updateSettings(req.memberId!, req.body);
+  await shop.updateSettings(req.memberId!, req.userId!, req.body);
   res.json({ ok: true });
 });
 
 rewardShopRouter.post("/items", requireAuth, async (req, res) => {
-  await shop.addItem(req.memberId!, req.body);
+  await shop.addItem(req.memberId!, req.userId!, req.body);
   res.status(201).json({ ok: true });
 });
 
 rewardShopRouter.patch("/items/:itemId", requireAuth, async (req, res) => {
-  await shop.updateItem(req.memberId!, req.params.itemId, req.body);
+  await shop.updateItem(req.memberId!, req.userId!, req.params.itemId, req.body);
   res.json({ ok: true });
 });
 
 rewardShopRouter.delete("/items/:itemId", requireAuth, async (req, res) => {
-  await shop.removeItem(req.memberId!, req.params.itemId);
+  await shop.removeItem(req.memberId!, req.userId!, req.params.itemId);
   res.json({ ok: true });
 });
 
@@ -36,7 +37,7 @@ rewardShopRouter.post("/purchase/:itemId", requireAuth, async (req, res) => {
 });
 
 rewardShopRouter.get("/purchased", requireAuth, async (req, res) => {
-  const accountId = await shop.accountIdOf(req.memberId!);
+  const accountId = await accountIdOf(req.memberId!, req.userId!);
   res.json(await shop.getPurchasedRewards(accountId));
 });
 
