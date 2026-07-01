@@ -5,6 +5,7 @@ import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
 import { ROUTINE_CATEGORIES } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 import { RoutineList } from "./RoutineList";
+import { applyTemplateToOccurrence, getDateKey } from "../todos/recurringTodos";
 import {
   STAR_PRESETS,
   WEEKDAYS,
@@ -146,20 +147,37 @@ export function ChildRoutineCreator({
           .map((routine) => [routine.assignedTo, routine])
       );
       const selectedChildIdSet = new Set(selectedChildIds);
-      const patch: Partial<Todo> = {
+      const templateFields = {
         title: t,
         starValue: stars,
-        visual: { type: "lucide-icon", value: emoji },
-        recurrence: { type: "weekly", daysOfWeek: days },
+        visual: { type: "lucide-icon" as const, value: emoji },
+        routineCategory: category || null,
         visibleFrom: timeToAnchorISO(startTime),
         expiresAt: timeToAnchorISO(endTime),
-        routineCategory: category || null,
       };
+      const patch: Partial<Todo> = {
+        ...templateFields,
+        recurrence: { type: "weekly", daysOfWeek: days },
+      };
+      const todayKey = getDateKey(new Date());
 
       for (const childId of selectedChildIds) {
         const existing = editedByChild.get(childId);
         if (existing) {
           onUpdateTodo(existing.id, { ...patch, assignedTo: childId });
+
+          // Dagens redan skapade kopia av rutinen är en frusen ögonblicksbild —
+          // synka den direkt så ändringen syns på dashboarden idag, inte först imorgon.
+          // Redan avklarade/godkända kopior rörs inte (skulle retroaktivt ändra utdelade stjärnor).
+          const todaysOccurrence = todos.find(
+            (todo) =>
+              todo.recurringSourceId === existing.id &&
+              todo.occurrenceDate === todayKey &&
+              todo.status === "pending"
+          );
+          if (todaysOccurrence) {
+            onUpdateTodo(todaysOccurrence.id, applyTemplateToOccurrence(todaysOccurrence, templateFields));
+          }
         } else {
           createRoutineForChild(childId, t);
         }

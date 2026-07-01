@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { todosApi } from "../../api";
 import { canCompleteTodo, canDeleteTodo, canEditTodo } from "../../utils/permissions";
-import { getDateKey, getDueRecurringTodoOccurrences } from "./recurringTodos";
+import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
 
@@ -278,7 +278,12 @@ export function useTodosState() {
     };
 
     if (existingOccurrence) {
-      updateTodo(existingOccurrence.id, pendingPatch);
+      // Synka samtidigt med mallens aktuella värden — annars visas fortsatt
+      // gårdagens/en redigerad tid/titel trots att uppdraget "visas igen".
+      updateTodo(existingOccurrence.id, {
+        ...applyTemplateToOccurrence(existingOccurrence, routine),
+        ...pendingPatch
+      });
       return;
     }
 

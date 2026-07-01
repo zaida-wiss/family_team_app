@@ -144,3 +144,27 @@ function withOccurrenceDate(value: string | null, dateKey: string) {
 function startOfLocalDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
+
+/**
+ * Ett redigerat rutinmall-fält (titel, stjärnor, tid m.m.) speglas inte automatiskt
+ * på en redan skapad dagens-kopia av rutinen — den är en frusen ögonblicksbild.
+ * Använd denna för att synka en occurrence med sin malls aktuella värden,
+ * t.ex. direkt efter en redigering eller vid manuell "visa igen idag".
+ */
+export function applyTemplateToOccurrence(
+  occurrence: Pick<Todo, "occurrenceDate">,
+  template: Pick<Todo, "title" | "starValue" | "visual" | "routineCategory" | "visibleFrom" | "expiresAt">
+): Partial<Todo> {
+  const dateKey = occurrence.occurrenceDate ?? getDateKey(new Date());
+  const visibleFrom = withOccurrenceDate(template.visibleFrom, dateKey);
+  const expiresAt = createOccurrenceExpiresAt(template.visibleFrom, template.expiresAt, visibleFrom, dateKey);
+
+  return {
+    title: template.title,
+    starValue: template.starValue,
+    visual: template.visual,
+    routineCategory: template.routineCategory,
+    visibleFrom,
+    expiresAt,
+  };
+}
