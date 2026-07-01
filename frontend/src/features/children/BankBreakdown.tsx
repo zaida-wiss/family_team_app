@@ -70,7 +70,7 @@ export function BankBreakdown({ counts, onSplit, onZoneConvert, isEmpty, onOpenB
               <img src={`/pengar/mynt-${zone.dragging}.webp`} alt="" className="bm-coin-img" />
             </div>
           ) : (
-            <img src={`/pengar/sedel-${zone.dragging}.webp`} alt="" className="bm-note-img" data-note={zone.dragging} />
+            <img src={`/pengar/sedel-${zone.dragging}.webp`} alt="" className="bm-note-img" data-note={zone.dragging} draggable={false} />
           )}
         </div>,
         document.body
