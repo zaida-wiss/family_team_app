@@ -1,6 +1,7 @@
 import "./AvailabilityEditor.css";
 import { useState } from "react";
 import type { ShopAvailability, ShopTimeInterval } from "@shared/types";
+import { DateInput } from "../../components/DateInput";
 
 type Props = {
   value: ShopAvailability | null;
@@ -60,24 +61,22 @@ export function AvailabilityEditor({ value, onChange }: Props) {
       {open && (
         <div className="availability-editor__body">
           <div className="availability-editor__dates">
-            <label className="availability-editor__label">
-              Från datum
-              <input
-                type="date"
-                className="availability-editor__input"
+            <div className="availability-editor__label">
+              <label htmlFor="av-from-year" className="availability-editor__field-label">Från datum</label>
+              <DateInput
+                id="av-from-year"
                 value={av.startDate ?? ""}
-                onChange={(e) => patch({ startDate: e.target.value || null })}
+                onChange={(v) => patch({ startDate: v || null })}
               />
-            </label>
-            <label className="availability-editor__label">
-              Till datum
-              <input
-                type="date"
-                className="availability-editor__input"
+            </div>
+            <div className="availability-editor__label">
+              <label htmlFor="av-to-year" className="availability-editor__field-label">Till datum</label>
+              <DateInput
+                id="av-to-year"
                 value={av.endDate ?? ""}
-                onChange={(e) => patch({ endDate: e.target.value || null })}
+                onChange={(v) => patch({ endDate: v || null })}
               />
-            </label>
+            </div>
           </div>
 
           <p className="availability-editor__hint">

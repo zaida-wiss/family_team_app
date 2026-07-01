@@ -3,6 +3,19 @@ import { calendarsApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
 
+const CALS_CACHE = "cals_v1";
+function readCalsCache(): Calendar[] {
+  try {
+    const raw = localStorage.getItem(CALS_CACHE);
+    return raw ? (JSON.parse(raw) as Calendar[]) : [];
+  } catch {
+    return [];
+  }
+}
+function writeCalsCache(data: Calendar[]) {
+  try { localStorage.setItem(CALS_CACHE, JSON.stringify(data)); } catch { /* quota */ }
+}
+
 export type AddEventInput = {
   title: string;
   startsAt: string;
@@ -32,7 +45,8 @@ function monthWindow(year: number, month: number) {
 }
 
 export function useCalendarsState() {
-  const [calendars, setCalendars] = useState<Calendar[]>([]);
+  // Stale-while-revalidate: visa cachad data direkt, hämta färsk i bakgrunden
+  const [calendars, setCalendars] = useState<Calendar[]>(readCalsCache);
   const loadedFrom = useRef<string>("");
   const loadedUntil = useRef<string>("");
 
@@ -41,7 +55,10 @@ export function useCalendarsState() {
     const { from, until } = monthWindow(now.getFullYear(), now.getMonth());
     loadedFrom.current = from;
     loadedUntil.current = until;
-    calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
+    calendarsApi.getAll(from, until).then((fresh) => {
+      setCalendars(fresh);
+      writeCalsCache(fresh);
+    }).catch(console.error);
   }, []);
 
   async function loadEventsForMonth(year: number, month: number) {
