@@ -182,12 +182,7 @@ export function useTodosState() {
   function approveTodo(todoId: Id, approverId: Id) {
     setTodos((current) =>
       current.map((todo) => {
-        if (todo.id !== todoId || todo.status !== "done") {
-          return todo;
-        }
-
-        todosApi.approve(todoId).catch(console.error);
-        trackEvent("todo-approved");
+        if (todo.id !== todoId || todo.status !== "done") return todo;
         return {
           ...todo,
           status: "approved" as const,
@@ -196,16 +191,16 @@ export function useTodosState() {
         };
       })
     );
+    todosApi.approve(todoId)
+      .then(() => refreshTodos())
+      .catch(console.error);
+    trackEvent("todo-approved");
   }
 
   function rejectTodo(todoId: Id, rejecterId: Id) {
     setTodos((current) =>
       current.map((todo) => {
-        if (todo.id !== todoId || todo.status !== "done") {
-          return todo;
-        }
-
-        todosApi.reject(todoId).catch(console.error);
+        if (todo.id !== todoId || todo.status !== "done") return todo;
         if (canRetryRejectedTodo(todo)) {
           return {
             ...todo,
@@ -217,7 +212,6 @@ export function useTodosState() {
             rejectedAt: null
           };
         }
-
         return {
           ...todo,
           status: "rejected" as const,
@@ -226,6 +220,9 @@ export function useTodosState() {
         };
       })
     );
+    todosApi.reject(todoId)
+      .then(() => refreshTodos())
+      .catch(console.error);
   }
 
   function dismissRejectedTodo(todoId: Id, memberId: Id) {
