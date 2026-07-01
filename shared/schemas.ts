@@ -17,9 +17,13 @@ export const CalendarViewModeSchema = z.enum(["month", "week", "list", "timeline
 
 export const CalendarFilterKeySchema = z.enum(["home", "calendar"]);
 
-export const CalendarFilterSettingsSchema = z
-  .record(CalendarFilterKeySchema, z.object({ visibleCalendarIds: z.array(IdSchema) }))
-  .partial();
+// Partial<Record<CalendarFilterKey, ...>> — z.record().partial() finns inte i denna
+// zod-version (ZodRecord saknar .partial(), bara ZodObject har den), och CalendarFilterKey
+// har bara två kända nycklar, så ett explicit objekt uttrycker exakt samma typ.
+export const CalendarFilterSettingsSchema = z.object({
+  home: z.object({ visibleCalendarIds: z.array(IdSchema) }).optional(),
+  calendar: z.object({ visibleCalendarIds: z.array(IdSchema) }).optional()
+});
 
 export const ChildTimelineSettingsSchema = z.object({
   startsAt: z.string(),
@@ -46,18 +50,51 @@ export const DashboardThemeIdSchema = z.enum([
 export const MemberSchema = z.object({
   id: IdSchema,
   accountId: IdSchema,
+  userId: IdSchema.nullable(),
   name: z.string().min(1, "Namn krävs"),
   roleId: IdSchema,
   isChild: z.boolean(),
   avatarUrl: z.string().nullable(),
+  color: z.string().nullable(),
   dashboardTheme: DashboardThemeIdSchema.nullable(),
   calendarFilterSettings: CalendarFilterSettingsSchema.optional(),
   childTimelineSettings: ChildTimelineSettingsSchema.optional(),
   lastActivePanel: AppPanelSchema.optional(),
   lastSelectedDashboardMemberId: IdSchema.nullable().optional(),
   calendarView: CalendarViewModeSchema.optional(),
+  spentStars: z.number().int().min(0),
+  approvedStars: z.number().int().min(0),
   deletedAt: z.string().nullable(),
   deletedBy: IdSchema.nullable()
+});
+
+// Fält en klient får patcha på en befintlig medlem. Uttryckligen uteslutna: id, accountId,
+// userId, isChild (kontobyte/rollkapning/kontoflytt), approvedStars (får bara ökas via
+// godkänd todo, aldrig direkt av klienten), deletedAt/deletedBy (egna dedikerade endpoints).
+export const MemberPatchSchema = MemberSchema.pick({
+  name: true,
+  roleId: true,
+  avatarUrl: true,
+  color: true,
+  dashboardTheme: true,
+  calendarFilterSettings: true,
+  childTimelineSettings: true,
+  lastActivePanel: true,
+  lastSelectedDashboardMemberId: true,
+  calendarView: true,
+  spentStars: true
+}).partial();
+
+// Fält en klient får skicka när en ny medlem skapas (barn, av en förälder). accountId,
+// userId, spentStars, approvedStars, deletedAt/deletedBy sätts alltid server-side —
+// aldrig litat på från klienten, se membersService.createMember.
+export const CreateMemberBodySchema = MemberSchema.pick({
+  name: true,
+  roleId: true,
+  isChild: true,
+  avatarUrl: true,
+  color: true,
+  dashboardTheme: true
 });
 
 export const PermissionKeySchema = z.enum([
