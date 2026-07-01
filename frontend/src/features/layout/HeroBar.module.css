@@ -43,7 +43,6 @@
   background: transparent;
   color: var(--theme-nav-muted, var(--muted-fg));
   cursor: pointer;
-  transition: background 0.13s, color 0.13s;
 }
 
 .navBtn:hover,
