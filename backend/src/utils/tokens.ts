@@ -3,8 +3,17 @@ import type { Response } from "express";
 import { MemberModel } from "../db/models/Member.js";
 import { AccountModel } from "../db/models/Account.js";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret";
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret";
+function requireSecret(name: "JWT_ACCESS_SECRET" | "JWT_REFRESH_SECRET"): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} saknas — sätt den i miljövariablerna innan servern startar (se .env.example)`);
+  }
+  return value;
+}
+
+const ACCESS_SECRET = requireSecret("JWT_ACCESS_SECRET");
+const REFRESH_SECRET = requireSecret("JWT_REFRESH_SECRET");
+const JWT_ALGORITHM = "HS256" as const;
 const IS_PROD = (process.env.FRONTEND_URL ?? "http://localhost").startsWith("https://");
 const COOKIE_SAME_SITE = IS_PROD ? "none" : "lax";
 const REFRESH_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -12,15 +21,19 @@ const REFRESH_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export type AccessPayload = { userId: string };
 
 export function signAccess(userId: string) {
-  return jwt.sign({ userId } satisfies AccessPayload, ACCESS_SECRET, { expiresIn: "15m" });
+  return jwt.sign({ userId } satisfies AccessPayload, ACCESS_SECRET, { expiresIn: "15m", algorithm: JWT_ALGORITHM });
 }
 
 export function signRefresh(userId: string, tokenVersion: number) {
-  return jwt.sign({ userId, tokenVersion }, REFRESH_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId, tokenVersion }, REFRESH_SECRET, { expiresIn: "7d", algorithm: JWT_ALGORITHM });
+}
+
+export function verifyAccess(token: string): AccessPayload {
+  return jwt.verify(token, ACCESS_SECRET, { algorithms: [JWT_ALGORITHM] }) as AccessPayload;
 }
 
 export function verifyRefresh(token: string): { userId: string; tokenVersion: number } {
-  return jwt.verify(token, REFRESH_SECRET) as { userId: string; tokenVersion: number };
+  return jwt.verify(token, REFRESH_SECRET, { algorithms: [JWT_ALGORITHM] }) as { userId: string; tokenVersion: number };
 }
 
 export function setRefreshCookie(res: Response, token: string) {

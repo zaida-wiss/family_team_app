@@ -1,8 +1,7 @@
-import jwt from "jsonwebtoken";
 import type { NextFunction, Request, Response } from "express";
 import { logger } from "../utils/logger.js";
+import { verifyAccess } from "../utils/tokens.js";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret";
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
 // CSRF-skydd för endpoints som enbart förlitar sig på cookie (utan Authorization-header).
@@ -18,8 +17,6 @@ export function requireSameOrigin(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-export type AccessPayload = { userId: string };
-
 export function requireAuth(request: Request, response: Response, next: NextFunction) {
   const authHeader = request.headers.authorization;
 
@@ -31,7 +28,7 @@ export function requireAuth(request: Request, response: Response, next: NextFunc
   const token = authHeader.slice(7);
 
   try {
-    const payload = jwt.verify(token, ACCESS_SECRET) as AccessPayload;
+    const payload = verifyAccess(token);
     request.userId = payload.userId;
 
     const memberId = request.headers["x-member-id"];
