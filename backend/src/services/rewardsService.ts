@@ -11,8 +11,8 @@ export async function createReward(data: unknown) {
   return { id: reward.id };
 }
 
-export async function updateReward(id: string, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) {
-  const reward = await RewardModel.findOne({ id });
+export async function updateReward(id: string, accountId: string, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) {
+  const reward = await RewardModel.findOne({ id, accountId });
   if (!reward || reward.deletedAt) throw new AppError(404, "Belöning hittades inte");
   if (patch.title !== undefined) reward.title = patch.title;
   if (patch.starsNeeded !== undefined) reward.starsNeeded = patch.starsNeeded;
@@ -20,8 +20,8 @@ export async function updateReward(id: string, patch: { title?: string; starsNee
   await reward.save();
 }
 
-export async function approveReward(id: string, starsNeeded: number, memberId: string | null) {
-  const reward = await RewardModel.findOne({ id });
+export async function approveReward(id: string, accountId: string, starsNeeded: number, memberId: string | null) {
+  const reward = await RewardModel.findOne({ id, accountId });
   if (!reward || reward.status !== "suggested") {
     throw new AppError(404, "Belöning hittades inte eller är inte suggested");
   }
@@ -32,8 +32,8 @@ export async function approveReward(id: string, starsNeeded: number, memberId: s
   await reward.save();
 }
 
-export async function rejectReward(id: string, memberId: string | null) {
-  const reward = await RewardModel.findOne({ id });
+export async function rejectReward(id: string, accountId: string, memberId: string | null) {
+  const reward = await RewardModel.findOne({ id, accountId });
   if (!reward || reward.status !== "suggested") {
     throw new AppError(404, "Belöning hittades inte eller är inte suggested");
   }
@@ -43,8 +43,8 @@ export async function rejectReward(id: string, memberId: string | null) {
   await reward.save();
 }
 
-export async function redeemReward(id: string) {
-  const reward = await RewardModel.findOne({ id });
+export async function redeemReward(id: string, accountId: string) {
+  const reward = await RewardModel.findOne({ id, accountId });
   if (!reward || reward.status !== "unlocked") {
     throw new AppError(404, "Belöning hittades inte eller är inte unlocked");
   }
@@ -53,8 +53,8 @@ export async function redeemReward(id: string) {
   await reward.save();
 }
 
-export async function deleteReward(id: string, memberId: string | null) {
-  const reward = await RewardModel.findOne({ id });
+export async function deleteReward(id: string, accountId: string, memberId: string | null) {
+  const reward = await RewardModel.findOne({ id, accountId });
   if (!reward) {
     throw new AppError(404, "Belöning hittades inte");
   }
