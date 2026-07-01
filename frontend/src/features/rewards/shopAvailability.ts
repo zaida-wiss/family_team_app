@@ -130,27 +130,38 @@ export function unavailableLabel(item: RewardShopItem, now = new Date()): string
 
 /**
  * Vilka av varans obligatoriska kategorier som fortfarande blockerar köpet.
- * requireApproval=true  → barnet måste ha fått uppgifterna godkända av förälder (status=approved)
- * requireApproval=false → det räcker att barnet markerat dem som avklarade (status=done|approved)
+ *
+ * Regel: bara uppgifter som VISAS PÅ DASHBOARDEN JUST NU blockerar.
+ * Ett uppdrag som missades igår eller vars tidsfönster (visibleFrom/expiresAt)
+ * har passerat räknas inte — det syns inte på dashboarden och ska inte spela roll.
+ *
+ * requireApproval=true  → barnet måste ha fått uppgiften godkänd av förälder (status=approved)
+ * requireApproval=false → det räcker att barnet markerat den som avklarad (status ≠ pending)
  */
 export function blockingCategories(
   item: RewardShopItem,
   todos: Todo[],
   childId: Id,
-  requireApproval = false
+  requireApproval = false,
+  now = Date.now()
 ): string[] {
   if ((item.requiredCategories ?? []).length === 0) return [];
 
   const unresolved = new Set(
     todos
-      .filter(
-        (t) =>
-          t.assignedTo === childId &&
-          t.deletedAt === null &&
-          (requireApproval ? t.status !== "approved" : t.status === "pending") &&
-          t.routineCategory &&
-          item.requiredCategories.includes(t.routineCategory)
-      )
+      .filter((t) => {
+        if (t.assignedTo !== childId) return false;
+        if (t.deletedAt !== null) return false;
+        if (!t.routineCategory) return false;
+        if (!item.requiredCategories.includes(t.routineCategory)) return false;
+
+        // Speglar isTodoVisibleNow: bara uppgifter inom sitt aktiva tidsfönster
+        const from = t.visibleFrom ? new Date(t.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
+        const until = t.expiresAt ? new Date(t.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+        if (!(from <= now && now < until)) return false;
+
+        return requireApproval ? t.status !== "approved" : t.status === "pending";
+      })
       .map((t) => t.routineCategory as string)
   );
 
