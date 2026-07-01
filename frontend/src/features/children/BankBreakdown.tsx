@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useState } from "react";
 import { MYNT } from "./bankDenoms";
 import { useBankDragZone } from "./useBankDragZone";
 import { BankWallet } from "./BankWallet";
