@@ -3,12 +3,17 @@ import { AccountModel } from "../db/models/Account.js";
 import { CalendarModel } from "../db/models/Calendar.js";
 import { MemberModel } from "../db/models/Member.js";
 import { RewardModel } from "../db/models/Reward.js";
+import { RewardShopModel } from "../db/models/RewardShop.js";
+import { PurchasedRewardModel } from "../db/models/PurchasedReward.js";
+import { InvitationModel } from "../db/models/Invitation.js";
+import { AnalyticsEventModel } from "../db/models/AnalyticsEvent.js";
 import { RoleModel } from "../db/models/Role.js";
 import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { TodoModel } from "../db/models/Todo.js";
 import { UserModel } from "../db/models/User.js";
 import { validate } from "../utils/validate.js";
 import { AppError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 import type { PermissionKey } from "../../../shared/types.js";
 
 const setupSchema = z.object({
@@ -144,6 +149,10 @@ export async function exportAccount(accountId: string, memberId: string | null |
   };
 }
 
+// GDPR artikel 17 (rätten till radering) kräver äkta radering av persondata — inte bara
+// deletedAt-flaggan som används för ångra-inom-30-dagar på enskilda poster (todos,
+// kalenderhändelser etc). Detta är den enda platsen i kodbasen som avsiktligt gör hard
+// delete, se docs/engineering-os/08-documentation/records/decisions/ADR-0007.
 export async function deleteAccount(accountId: string, memberId: string | null | undefined) {
   const member = await MemberModel.findOne({ id: memberId });
   if (!member) {
@@ -159,6 +168,29 @@ export async function deleteAccount(accountId: string, memberId: string | null |
     throw new AppError(403, "Åtkomst nekad");
   }
 
-  account.deletedAt = new Date().toISOString();
-  await account.save();
+  const accountMembers = await MemberModel.find({ accountId }, { userId: 1, _id: 0 });
+  const candidateUserIds = [...new Set(accountMembers.map((m) => m.userId).filter((id): id is string => !!id))];
+
+  await Promise.all([
+    MemberModel.deleteMany({ accountId }),
+    TodoModel.deleteMany({ accountId }),
+    CalendarModel.deleteMany({ accountId }),
+    ShoppingListModel.deleteMany({ accountId }),
+    RewardModel.deleteMany({ accountId }),
+    RewardShopModel.deleteMany({ accountId }),
+    PurchasedRewardModel.deleteMany({ accountId }),
+    InvitationModel.deleteMany({ accountId }),
+    AnalyticsEventModel.deleteMany({ accountId })
+  ]);
+
+  for (const userId of candidateUserIds) {
+    const stillHasOtherAccount = await MemberModel.exists({ userId });
+    if (!stillHasOtherAccount) {
+      await UserModel.deleteOne({ id: userId });
+    }
+  }
+
+  await AccountModel.deleteOne({ id: accountId });
+
+  logger.info({ accountId, initiatedBy: memberId }, "Konto raderat (GDPR artikel 17)");
 }
