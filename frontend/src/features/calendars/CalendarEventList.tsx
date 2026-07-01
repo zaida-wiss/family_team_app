@@ -53,9 +53,21 @@ export function CalendarEventList({
   const hasFilter = !!searchQuery.trim() || hiddenCalendarIds.size > 0;
   const scrollRef = useRef<HTMLDivElement>(null);
   const firstCurrentRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState(30);
   const now = Date.now();
   const firstCurrentIndex = allEvents.findIndex((ev) => isCurrentOrFutureEvent(ev, now));
-  const listKey = allEvents.map((ev) => `${ev.id}:${ev.startsAt}:${ev.endsAt}`).join("|");
+  const displayedEvents = allEvents.slice(0, visibleCount);
+  const listKey = displayedEvents.map((ev) => `${ev.id}:${ev.startsAt}:${ev.endsAt}`).join("|");
+
+  useEffect(() => {
+    setVisibleCount(30);
+  }, [searchQuery, hiddenCalendarIds, scope, viewYear, viewMonth, selectedDay]);
+
+  useEffect(() => {
+    if (firstCurrentIndex >= visibleCount) {
+      setVisibleCount(Math.min(allEvents.length, firstCurrentIndex + 1));
+    }
+  }, [allEvents.length, firstCurrentIndex, visibleCount]);
 
   useEffect(() => {
     const scrollEl = scrollRef.current;
@@ -104,7 +116,7 @@ export function CalendarEventList({
         <p className="cal-empty-note">{emptyNote(hasFilter, selectedDay, scope)}</p>
       ) : (
         <div className="cal-event-list-scroll" ref={scrollRef}>
-          {allEvents.map((ev, index) => (
+          {displayedEvents.map((ev, index) => (
             <EventRow
               key={ev.id}
               ref={index === firstCurrentIndex ? firstCurrentRef : undefined}
@@ -116,6 +128,15 @@ export function CalendarEventList({
               onEventClick={onEventClick}
             />
           ))}
+          {visibleCount < allEvents.length && (
+            <button
+              className="secondary-button cal-event-list-more"
+              onClick={() => setVisibleCount((count) => Math.min(allEvents.length, count + 30))}
+              type="button"
+            >
+              Visa fler ({allEvents.length - visibleCount})
+            </button>
+          )}
         </div>
       )}
     </div>

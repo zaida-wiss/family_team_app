@@ -9,9 +9,10 @@
   var f = localStorage.getItem("app-font");
   if (f) document.documentElement.className = (document.documentElement.className + " font-" + f).trim();
   var l = document.createElement("link");
-  l.rel = "stylesheet";
+  l.rel = "preload";
+  l.as = "style";
   l.href = "https://fonts.googleapis.com/css2?family=" + (FONTS[f] || FONTS.baloo) + "&display=swap";
-  l.media = "print";
-  l.onload = function () { this.media = "all"; this.onload = null; };
+  l.crossOrigin = "";
+  l.onload = function () { this.rel = "stylesheet"; this.onload = null; };
   document.head.appendChild(l);
 })();
