@@ -214,6 +214,47 @@
   white-space: nowrap;
 }
 
+/* Tangentbordsalternativ för drag (WCAG 2.5.7) */
+.bm-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.bm-exch-coin .bm-item-actions {
+  flex-direction: row;
+  margin-left: 0;
+  margin-top: 4px;
+}
+
+.bm-item-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--muted-fg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.bm-item-action-btn:hover {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+
+.bm-item-action-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* ── Drop-panel: de två rutorna till höger ── */
 
 .bm-drop-panel {

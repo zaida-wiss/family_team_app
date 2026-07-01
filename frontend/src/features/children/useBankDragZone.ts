@@ -24,6 +24,9 @@ export type BankDragZone = {
   clearWish: () => void;
   splitRule: { s?: Array<[number, number]> } | null;
   startDrag: (value: number, e: ReactPointerEvent) => void;
+  addToZone: (value: number) => void;
+  performSplit: (value: number) => void;
+  addToWish: (value: number) => void;
   upRef: RefObject<HTMLDivElement>;
   downRef: RefObject<HTMLDivElement>;
   wishRef: RefObject<HTMLDivElement>;
@@ -43,6 +46,7 @@ export function useBankDragZone(
   const [timerActive, setTimerActive] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
   const [wishCounts, setWishCounts] = useState<Record<number, number>>({});
+  const wishCountsRef = useRef<Record<number, number>>({});
 
   const upRef = useRef<HTMLDivElement>(null);
   const downRef = useRef<HTMLDivElement>(null);
@@ -63,7 +67,20 @@ export function useBankDragZone(
 
   const wishTotal = Object.entries(wishCounts).reduce((s, [k, n]) => s + +k * n, 0);
 
-  const clearWish = () => setWishCounts({});
+  const clearWish = () => {
+    setWishCounts({});
+    wishCountsRef.current = {};
+  };
+
+  const addToWish = (value: number) => {
+    setWishCounts((prev) => {
+      const walletAvail = (counts[value] ?? 0) - (zoneCountsRef.current[value] ?? 0) - (prev[value] ?? 0);
+      if (walletAvail < 1) return prev;
+      const next = { ...prev, [value]: (prev[value] ?? 0) + 1 };
+      wishCountsRef.current = next;
+      return next;
+    });
+  };
 
   const bills = SEDLAR.filter((v) => (walletCounts[v] ?? 0) > 0);
   const coins = MYNT.filter((v) => (walletCounts[v] ?? 0) > 0);
@@ -91,7 +108,7 @@ export function useBankDragZone(
   };
 
   const addToZone = (value: number) => {
-    const walletAvail = (counts[value] ?? 0) - (zoneCountsRef.current[value] ?? 0);
+    const walletAvail = (counts[value] ?? 0) - (zoneCountsRef.current[value] ?? 0) - (wishCountsRef.current[value] ?? 0);
     if (walletAvail < 1) return;
     const newZone = { ...zoneCountsRef.current, [value]: (zoneCountsRef.current[value] ?? 0) + 1 };
     zoneCountsRef.current = newZone;
@@ -164,7 +181,7 @@ export function useBankDragZone(
       } else if (hitCached(wish, ev.clientX, ev.clientY)) {
         setDragging(null);
         setActiveZone(null);
-        setWishCounts((prev) => ({ ...prev, [value]: (prev[value] ?? 0) + 1 }));
+        addToWish(value);
       } else {
         setDragging(null);
         setActiveZone(null);
@@ -197,6 +214,9 @@ export function useBankDragZone(
     clearWish,
     splitRule: dragging !== null ? (DENOM_RULES[dragging] ?? null) : null,
     startDrag,
+    addToZone,
+    performSplit,
+    addToWish,
     upRef,
     downRef,
     wishRef,

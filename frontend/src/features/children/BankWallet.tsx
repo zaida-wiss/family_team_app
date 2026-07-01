@@ -1,12 +1,47 @@
+import { Plus, Scissors, Star } from "lucide-react";
 import type { BankDragZone } from "./useBankDragZone";
 
 type Props = Pick<BankDragZone,
   "bills" | "coins" | "walletCounts" | "dragging" | "fadeOut" | "fadeIn" | "startDrag"
+  | "addToZone" | "canSplit" | "performSplit" | "addToWish"
 >;
 
-export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fadeIn, startDrag }: Props) {
+export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fadeIn, startDrag, addToZone, canSplit, performSplit, addToWish }: Props) {
   const itemClass = (v: number) =>
     `bm-exch-item${dragging === v ? " bm-item-dragging" : ""}${fadeOut === v ? " bm-item-fade-out" : ""}${fadeIn.includes(v) ? " bm-item-fade-in" : ""}`;
+
+  const stopDrag = (e: React.PointerEvent) => e.stopPropagation();
+
+  const renderActions = (v: number, isCoin: boolean) => (
+    <div className="bm-item-actions" onPointerDown={stopDrag}>
+      <button
+        className="bm-item-action-btn"
+        type="button"
+        onClick={() => addToZone(v)}
+        aria-label={`Lägg till ${v}-kronors${isCoin ? "mynt" : "sedel"} i byteszonen`}
+      >
+        <Plus size={13} />
+      </button>
+      {canSplit(v) && (
+        <button
+          className="bm-item-action-btn"
+          type="button"
+          onClick={() => performSplit(v)}
+          aria-label={`Dela upp ${v}-kronors${isCoin ? "mynt" : "sedel"} i mindre valörer`}
+        >
+          <Scissors size={13} />
+        </button>
+      )}
+      <button
+        className="bm-item-action-btn"
+        type="button"
+        onClick={() => addToWish(v)}
+        aria-label={`Lägg ${v}-kronors${isCoin ? "mynt" : "sedel"} i önskningslistan`}
+      >
+        <Star size={13} />
+      </button>
+    </div>
+  );
 
   return (
     <div className="bm-bills-panel">
@@ -22,6 +57,7 @@ export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fade
             ))}
           </div>
           <span className="bm-item-label">{v} kr</span>
+          {renderActions(v, false)}
         </div>
       ))}
 
@@ -39,6 +75,7 @@ export function BankWallet({ bills, coins, walletCounts, dragging, fadeOut, fade
                 ))}
               </div>
               <span className="bm-item-label">{v} kr</span>
+              {renderActions(v, true)}
             </div>
           ))}
         </div>
