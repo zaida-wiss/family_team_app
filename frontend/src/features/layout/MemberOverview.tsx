@@ -1,11 +1,7 @@
-import { lazy, Suspense } from "react";
+import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
 import styles from "./MemberOverview.module.css";
-
-const CalendarView = lazy(() =>
-  import("../calendars/CalendarView").then((m) => ({ default: m.CalendarView }))
-);
 
 type Props = {
   currentMember: Member;
@@ -47,21 +43,19 @@ export function MemberOverview({
           <div className={styles.calendarToolbar}>
             <span className={styles.calendarLabel}>Familjens kalender</span>
           </div>
-          <Suspense fallback={null}>
-            <CalendarView
-              displayOnly
-              calendars={calendars}
-              currentMember={currentMember}
-              activeMembers={activeMembers}
-              roles={roles}
-              calendarSettings={calendarSettings}
-              filter={calendarFilter}
-              onAddEvent={onAddEvent}
-              onUpdateEvent={onUpdateEvent}
-              onDeleteEvent={onDeleteEvent}
-              onMonthChange={onLoadEventsForMonth}
-            />
-          </Suspense>
+          <CalendarView
+            displayOnly
+            calendars={calendars}
+            currentMember={currentMember}
+            activeMembers={activeMembers}
+            roles={roles}
+            calendarSettings={calendarSettings}
+            filter={calendarFilter}
+            onAddEvent={onAddEvent}
+            onUpdateEvent={onUpdateEvent}
+            onDeleteEvent={onDeleteEvent}
+            onMonthChange={onLoadEventsForMonth}
+          />
         </div>
       )}
     </div>
