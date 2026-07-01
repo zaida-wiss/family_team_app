@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import type { CalendarFilter } from "../calendars/CalendarView";
-import { ChildDashboard } from "../children/ChildDashboard";
+
+const ChildDashboard = lazy(() =>
+  import("../children/ChildDashboard").then((m) => ({ default: m.ChildDashboard }))
+);
 import { Dashboard } from "./Dashboard";
 import { CalendarPage } from "../../pages/CalendarPage";
 import { HomePage } from "../../pages/HomePage";
@@ -260,26 +263,28 @@ export function MemberShellContent({
     );
 
     return (
-      <ChildDashboard
-        child={selectedDashboardMember}
-        calendars={calendars}
-        roles={roles}
-        childRewards={childRewards}
-        timelineTodos={todos}
-        activeChildTodos={activeChildTodos}
-        rejectedTodos={rejectedTodos}
-        shopItems={shopItems}
-        purchased={purchased}
-        onPurchaseReward={onPurchaseReward}
-        wishTitle={wishTitle}
-        onSetWishTitle={onSetWishTitle}
-        onCreateWish={onCreateWish}
-        onCompleteTodo={(todoId) => onCompleteTodo(selectedDashboardMember, todoId, roles)}
-        onDismissRejectedTodo={(todoId) =>
-          onDismissRejectedTodo(todoId, selectedDashboardMember.id)
-        }
-        onThemePickerOpen={onThemePickerOpen}
-      />
+      <Suspense fallback={null}>
+        <ChildDashboard
+          child={selectedDashboardMember}
+          calendars={calendars}
+          roles={roles}
+          childRewards={childRewards}
+          timelineTodos={todos}
+          activeChildTodos={activeChildTodos}
+          rejectedTodos={rejectedTodos}
+          shopItems={shopItems}
+          purchased={purchased}
+          onPurchaseReward={onPurchaseReward}
+          wishTitle={wishTitle}
+          onSetWishTitle={onSetWishTitle}
+          onCreateWish={onCreateWish}
+          onCompleteTodo={(todoId) => onCompleteTodo(selectedDashboardMember, todoId, roles)}
+          onDismissRejectedTodo={(todoId) =>
+            onDismissRejectedTodo(todoId, selectedDashboardMember.id)
+          }
+          onThemePickerOpen={onThemePickerOpen}
+        />
+      </Suspense>
     );
   }
 

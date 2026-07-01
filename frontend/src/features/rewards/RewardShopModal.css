@@ -213,20 +213,12 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, #a855f7 30%, transparent);
 }
 
-/* Grön flash vid köp — ::before hanterar bakgrundstone (composited opacity),
-   outline-color hanterar glöd-ringen (paint, ej layout) */
+/* Grön flash vid köp — ::before opacity är composited (GPU), ingen layout/paint */
 @keyframes shop-card-blink {
   0%   { opacity: 0; }
-  25%  { opacity: 0.28; }
-  60%  { opacity: 0.28; }
+  25%  { opacity: 0.35; }
+  60%  { opacity: 0.35; }
   100% { opacity: 0; }
-}
-
-@keyframes shop-card-blink-ring {
-  0%   { outline-color: transparent; }
-  25%  { outline-color: #22c55e; }
-  60%  { outline-color: #22c55e; }
-  100% { outline-color: transparent; }
 }
 
 .reward-shop-card::before {
@@ -237,11 +229,6 @@
   background: #22c55e;
   opacity: 0;
   pointer-events: none;
-}
-
-.reward-shop-card--flash {
-  outline: 4px solid transparent;
-  animation: shop-card-blink-ring 0.65s ease forwards;
 }
 
 .reward-shop-card--flash::before {
