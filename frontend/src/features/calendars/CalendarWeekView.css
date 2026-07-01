@@ -44,7 +44,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--muted-fg);
+  color: var(--foreground);
 }
 
 .cal-week-col-date {
@@ -81,7 +81,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: white;
+  color: oklch(from var(--event-color, var(--primary)) clamp(0, (0.6 - l) * 9999, 1) 0 0);
   cursor: pointer;
   line-height: 1.35;
 }
