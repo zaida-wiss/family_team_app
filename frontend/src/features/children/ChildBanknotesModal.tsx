@@ -20,13 +20,12 @@ function loadCounts(childId: Id, totalKronor: number): Record<number, number> {
       | { counts: Record<number, number>; savedTotal: number }
       | null;
     if (!stored) return denomCounts(totalKronor);
-    if (stored.savedTotal === totalKronor) return stored.counts;
-    if (totalKronor > stored.savedTotal) {
-      const delta = denomCounts(totalKronor - stored.savedTotal);
+    const storedSum = Object.entries(stored.counts).reduce((s, [k, n]) => s + +k * n, 0);
+    if (storedSum === totalKronor) return stored.counts;
+    if (totalKronor > storedSum) {
+      const delta = denomCounts(totalKronor - storedSum);
       const merged = { ...stored.counts };
-      for (const [d, n] of Object.entries(delta)) {
-        merged[Number(d)] = (merged[Number(d)] ?? 0) + n;
-      }
+      for (const [d, n] of Object.entries(delta)) merged[Number(d)] = (merged[Number(d)] ?? 0) + n;
       return merged;
     }
     return denomCounts(totalKronor);
