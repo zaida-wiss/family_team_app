@@ -44,7 +44,7 @@ export function useChildStars(
 
   // Använd server-fältet om det är populerat, annars todo-summan.
   // Math.max säkerställer att vi aldrig visar färre stjärnor än vad som syns i listan.
-  const totalApprovedStars = Math.max(child.approvedStars, starsFromRecentTodos);
+  const totalApprovedStars = Math.max(child.approvedStars ?? 0, starsFromRecentTodos);
 
   const pendingApprovalTodos = useMemo(
     () =>
