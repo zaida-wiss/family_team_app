@@ -1,7 +1,22 @@
 import jwt from "jsonwebtoken";
 import type { NextFunction, Request, Response } from "express";
+import { logger } from "../utils/logger.js";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret";
+const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
+
+// CSRF-skydd för endpoints som enbart förlitar sig på cookie (utan Authorization-header).
+// Browsers skickar alltid Origin på cross-site POST — blockera allt utom känd frontend-URL.
+// Direkta requests (curl, server-till-server) saknar Origin och tillåts.
+export function requireSameOrigin(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin;
+  if (origin && origin !== FRONTEND_URL) {
+    logger.warn({ origin, path: req.path }, "CSRF-försök blockerat");
+    res.status(403).json({ error: "Cross-site-förfrågan nekad" });
+    return;
+  }
+  next();
+}
 
 export type AccessPayload = { userId: string };
 

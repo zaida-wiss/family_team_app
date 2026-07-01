@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as authService from "../services/authService.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireSameOrigin } from "../middleware/auth.js";
 import { setRefreshCookie, clearRefreshCookie } from "../utils/tokens.js";
 
 export const authRouter = Router();
@@ -19,14 +19,14 @@ authRouter.post("/login", async (req, res) => {
   res.json({ accessToken, user, memberships });
 });
 
-authRouter.post("/refresh", async (req, res) => {
+authRouter.post("/refresh", requireSameOrigin, async (req, res) => {
   const cookie = (req.cookies as Record<string, string>)["refresh_token"];
   const { refreshToken, accessToken, user, memberships } = await authService.refresh(cookie);
   setRefreshCookie(res, refreshToken);
   res.json({ accessToken, user, memberships });
 });
 
-authRouter.post("/logout", (_req, res) => {
+authRouter.post("/logout", requireSameOrigin, (_req, res) => {
   authService.logout();
   clearRefreshCookie(res);
   res.json({ ok: true });
