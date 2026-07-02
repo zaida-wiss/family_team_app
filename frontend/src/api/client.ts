@@ -147,6 +147,24 @@ async function retryAfterRefresh(path: string, options: RequestInit): Promise<Re
   }
 }
 
+async function handleUnauthorized<T>(
+  path: string,
+  options: RequestInit,
+  skipUnauthorizedHandler: boolean
+): Promise<T> {
+  if (!skipUnauthorizedHandler && refreshSession) {
+    const retried = await retryAfterRefresh(path, options);
+    if (retried) {
+      return handleResponse<T>(retried);
+    }
+  }
+
+  if (!skipUnauthorizedHandler) {
+    onApiError?.("Sessionen kunde inte förnyas");
+  }
+  throw new Error("Inte autentiserad");
+}
+
 async function performRequest<T>(
   path: string,
   options: RequestInit,
@@ -161,21 +179,9 @@ async function performRequest<T>(
     throw new Error(message);
   }
 
-  if (response.status !== 401) {
-    return handleResponse<T>(response);
-  }
-
-  if (!skipUnauthorizedHandler && refreshSession) {
-    const retried = await retryAfterRefresh(path, options);
-    if (retried) {
-      return handleResponse<T>(retried);
-    }
-  }
-
-  if (!skipUnauthorizedHandler) {
-    onApiError?.("Sessionen kunde inte förnyas");
-  }
-  throw new Error("Inte autentiserad");
+  return response.status === 401
+    ? handleUnauthorized<T>(path, options, skipUnauthorizedHandler)
+    : handleResponse<T>(response);
 }
 
 function extractEventName(chunk: string): string | undefined {
@@ -184,6 +190,25 @@ function extractEventName(chunk: string): string | undefined {
     .find((line) => line.startsWith("event:"))
     ?.slice("event:".length)
     .trim();
+}
+
+// Delar upp bufferten i kompletta SSE-meddelanden ("\n\n"-separerade) och skickar ut
+// eventnamnet för varje. Returnerar den ofärdiga resten som ska sparas till nästa läsning.
+function emitCompleteEvents(
+  buffer: string,
+  onEvent: (eventName: string) => void
+): string {
+  const chunks = buffer.split("\n\n");
+  const rest = chunks.pop() ?? "";
+
+  for (const chunk of chunks) {
+    const eventName = extractEventName(chunk);
+    if (eventName) {
+      onEvent(eventName);
+    }
+  }
+
+  return rest;
 }
 
 async function readEventStream(
@@ -201,16 +226,7 @@ async function readEventStream(
       break;
     }
 
-    buffer += decoder.decode(value, { stream: true });
-    const chunks = buffer.split("\n\n");
-    buffer = chunks.pop() ?? "";
-
-    for (const chunk of chunks) {
-      const eventName = extractEventName(chunk);
-      if (eventName) {
-        onEvent(eventName);
-      }
-    }
+    buffer = emitCompleteEvents(buffer + decoder.decode(value, { stream: true }), onEvent);
   }
 }
 
