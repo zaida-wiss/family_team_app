@@ -98,7 +98,6 @@
 
   .top,
   .account,
-  .bottom,
   .tip {
     display: none;
   }
@@ -114,6 +113,47 @@
 
   .navLabel {
     display: none;
+  }
+
+  /* .bottom var tidigare dold här av misstag (regression från en CSS-refaktorering
+     som gjorde sidopanelen ikon-bara) — det tog bort enda vägen att byta konto
+     (onSwitchAccount) och temaknappen ur gränssnittet helt. Återställd som en
+     kompakt ikonstapel som matchar den smala 64px-panelen; medlemsnamn/"Byt vy"-
+     text och tipstexten döljs (som .navLabel ovan), bara ikonerna är kvar. */
+  .bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .bottomRow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .memberBtn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .memberInfo {
+    display: none;
+  }
+
+  .themeBtn {
+    width: 44px;
+    height: 44px;
   }
 }
 
