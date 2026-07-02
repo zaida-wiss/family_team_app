@@ -130,3 +130,40 @@ export function unavailableLabel(item: RewardShopItem, now = new Date()): string
 
   return "Ej tillgänglig just nu";
 }
+
+/**
+ * Minuter kvar tills varan blir tillgänglig via sitt tidsfönster (startDatum eller
+ * nästa lediga tidsintervall) — null om den redan är tillgänglig, om den saknar ett
+ * tidsfönster (t.ex. bara kategori-spärrad), eller om nästa tillfälle inte går att
+ * räkna ut (inget kommande intervall finns alls). Används för att visa "snart
+ * tillgänglig"-toning istället för att dölja varan helt.
+ */
+export function minutesUntilAvailable(item: RewardShopItem, now = new Date()): number | null {
+  const { availability, timerMinutes } = item;
+  if (!availability) return null;
+  if (isAvailableNow(item, now)) return null;
+
+  const today = toDateStr(now);
+
+  if (availability.startDate && today < availability.startDate) {
+    const startOfDay = new Date(`${availability.startDate}T00:00:00`);
+    return Math.round((startOfDay.getTime() - now.getTime()) / 60_000);
+  }
+
+  if (availability.timeIntervals.length === 0) return null;
+
+  const nowTime = toTimeStr(now);
+  const next = nextUsableIntervalStart(availability.timeIntervals, nowTime, timerMinutes);
+  if (next) {
+    return toMinutes(next) - toMinutes(nowTime);
+  }
+
+  // Alla dagens intervall passerade — hitta första användbara imorgon
+  const firstUsable = [...availability.timeIntervals]
+    .filter((iv) => timerMinutes === null || toMinutes(iv.end) - toMinutes(iv.start) >= timerMinutes)
+    .sort((a, b) => a.start.localeCompare(b.start))[0]?.start;
+  if (!firstUsable) return null;
+
+  const minutesLeftToday = 24 * 60 - toMinutes(nowTime);
+  return minutesLeftToday + toMinutes(firstUsable);
+}

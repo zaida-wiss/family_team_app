@@ -5,8 +5,10 @@ import type { RewardShopItem, Todo } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
-import { isExpired, isAvailableNow, unavailableLabel, blockingCategories } from "./shopAvailability";
+import { isExpired, isAvailableNow, minutesUntilAvailable, unavailableLabel, blockingCategories } from "./shopAvailability";
 import { useRewardShopContext } from "./RewardShopContext";
+
+const UPCOMING_WINDOW_MINUTES = 4 * 60;
 
 type Props = {
   childId: Id;
@@ -23,8 +25,25 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
 
-  // Dölj varor vars slutdatum passerat — de finns kvar i databasen men ska inte visas
-  const visibleItems = items.filter((item) => !isExpired(item));
+  // Dölj varor vars slutdatum passerat och varor som är kategori-spärrade (ogjord
+  // uppgift). Varor som öppnar inom 4 timmar visas tonade så barnet ser att de är på
+  // väg; allt annat tidsfönster-blockerat döljs helt tills det är nära nog att spela roll.
+  // Sortering: tillgängliga överst, tonade (snart tillgängliga) längst ner; billigast
+  // först inom varje grupp.
+  const visibleItems = items
+    .filter((item) => {
+      if (isExpired(item)) return false;
+      const blocking = blockingCategories(item, todos, childId, requireApprovalForCategories);
+      if (blocking.length > 0) return false;
+      if (isAvailableNow(item)) return true;
+      const minutesLeft = minutesUntilAvailable(item);
+      return minutesLeft !== null && minutesLeft <= UPCOMING_WINDOW_MINUTES;
+    })
+    .sort((a, b) => {
+      const availableDiff = Number(isAvailableNow(b)) - Number(isAvailableNow(a));
+      if (availableDiff !== 0) return availableDiff;
+      return a.starCost - b.starCost;
+    });
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -66,11 +85,8 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
         ) : (
           <div className="reward-shop-modal__grid">
             {visibleItems.map((item) => {
-              const blocking = blockingCategories(item, todos, childId, requireApprovalForCategories);
-              const available = isAvailableNow(item) && blocking.length === 0;
-              const label = blocking.length > 0
-                ? `Kräver: ${blocking.join(", ")}`
-                : unavailableLabel(item);
+              const available = isAvailableNow(item);
+              const label = available ? null : unavailableLabel(item);
               const cardCounts = drag.pendingPayments[item.id] ?? {};
               const paid = drag.getCardTotal(item.id);
               const isTarget = drag.activeCardId === item.id;
