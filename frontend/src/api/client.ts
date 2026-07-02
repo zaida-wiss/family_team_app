@@ -37,6 +37,10 @@ function buildHeaders() {
   };
 }
 
+function fetchWithAuth(path: string, options: RequestInit = {}) {
+  return fetch(path, { ...options, headers: buildHeaders(), credentials: "include" });
+}
+
 export async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -66,31 +70,21 @@ export function subscribeToServerEvents(
   let cancelled = false;
   let abortController: AbortController | null = null;
 
+  async function attemptConnection() {
+    abortController = new AbortController();
+    const response = await fetchEventStream(path, abortController.signal);
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Eventströmmen svarade med HTTP ${response.status}`);
+    }
+
+    await readEventStream(response.body, onEvent, () => cancelled);
+  }
+
   async function connect() {
     while (!cancelled) {
-      abortController = new AbortController();
-
       try {
-        let response = await fetch(path, {
-          headers: buildHeaders(),
-          credentials: "include",
-          signal: abortController.signal
-        });
-
-        if (response.status === 401 && refreshSession) {
-          await refreshSession();
-          response = await fetch(path, {
-            headers: buildHeaders(),
-            credentials: "include",
-            signal: abortController.signal
-          });
-        }
-
-        if (!response.ok || !response.body) {
-          throw new Error(`Eventströmmen svarade med HTTP ${response.status}`);
-        }
-
-        await readEventStream(response.body, onEvent, () => cancelled);
+        await attemptConnection();
       } catch (error) {
         if (!cancelled) {
           console.error(error);
@@ -111,6 +105,16 @@ export function subscribeToServerEvents(
   };
 }
 
+async function fetchEventStream(path: string, signal: AbortSignal) {
+  const response = await fetch(path, { headers: buildHeaders(), credentials: "include", signal });
+  if (response.status !== 401 || !refreshSession) {
+    return response;
+  }
+
+  await refreshSession();
+  return fetch(path, { headers: buildHeaders(), credentials: "include", signal });
+}
+
 function isDedupeableGet(options: RequestInit) {
   return !options.body && (!options.method || options.method.toUpperCase() === "GET");
 }
@@ -124,6 +128,25 @@ function getRequestKey(path: string, skipUnauthorizedHandler: boolean) {
   });
 }
 
+// Deduplicerar samtidiga refresh-anrop — flera 401:or i rad ska bara trigga en enda
+// riktig refreshSession(), inte en per request.
+function refreshSessionOnce() {
+  refreshPromise ??= refreshSession!().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
+async function retryAfterRefresh(path: string, options: RequestInit): Promise<Response | null> {
+  try {
+    await refreshSessionOnce();
+    const response = await fetchWithAuth(path, options);
+    return response.status === 401 ? null : response;
+  } catch {
+    return null;
+  }
+}
+
 async function performRequest<T>(
   path: string,
   options: RequestInit,
@@ -131,37 +154,36 @@ async function performRequest<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, { ...options, headers: buildHeaders(), credentials: "include" });
+    response = await fetchWithAuth(path, options);
   } catch {
     const message = "Servern är inte nåbar";
     onApiError?.(message);
     throw new Error(message);
   }
 
-  const isJson = response.headers.get("content-type")?.includes("application/json");
-
-  if (response.status === 401) {
-    if (!skipUnauthorizedHandler && refreshSession) {
-      try {
-        refreshPromise ??= refreshSession().finally(() => {
-          refreshPromise = null;
-        });
-        await refreshPromise;
-        response = await fetch(path, { ...options, headers: buildHeaders(), credentials: "include" });
-        if (response.status !== 401) {
-          return handleResponse<T>(response);
-        }
-      } catch {
-        // Fall through to the explicit unauthorized handling below.
-      }
-    }
-    if (!skipUnauthorizedHandler) {
-      onApiError?.("Sessionen kunde inte förnyas");
-    }
-    throw new Error("Inte autentiserad");
+  if (response.status !== 401) {
+    return handleResponse<T>(response);
   }
 
-  return handleResponse<T>(response);
+  if (!skipUnauthorizedHandler && refreshSession) {
+    const retried = await retryAfterRefresh(path, options);
+    if (retried) {
+      return handleResponse<T>(retried);
+    }
+  }
+
+  if (!skipUnauthorizedHandler) {
+    onApiError?.("Sessionen kunde inte förnyas");
+  }
+  throw new Error("Inte autentiserad");
+}
+
+function extractEventName(chunk: string): string | undefined {
+  return chunk
+    .split("\n")
+    .find((line) => line.startsWith("event:"))
+    ?.slice("event:".length)
+    .trim();
 }
 
 async function readEventStream(
@@ -184,12 +206,7 @@ async function readEventStream(
     buffer = chunks.pop() ?? "";
 
     for (const chunk of chunks) {
-      const eventName = chunk
-        .split("\n")
-        .find((line) => line.startsWith("event:"))
-        ?.slice("event:".length)
-        .trim();
-
+      const eventName = extractEventName(chunk);
       if (eventName) {
         onEvent(eventName);
       }
@@ -201,12 +218,16 @@ function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+async function parseErrorMessage(response: Response, isJson: boolean): Promise<string> {
+  const body = isJson ? await response.json().catch(() => ({})) : {};
+  return (body as { error?: string }).error ?? `HTTP ${response.status}`;
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
-  const isJson = response.headers.get("content-type")?.includes("application/json");
+  const isJson = response.headers.get("content-type")?.includes("application/json") ?? false;
 
   if (!response.ok) {
-    const body = isJson ? await response.json().catch(() => ({})) : {};
-    const message = (body as { error?: string }).error ?? `HTTP ${response.status}`;
+    const message = await parseErrorMessage(response, isJson);
     onApiError?.(message);
     throw new Error(message);
   }
