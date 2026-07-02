@@ -12,5 +12,5 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "../shared/types.ts", "../shared/rewardShopAvailability.ts", "../shared/schemas.ts"]
+  "include": ["src", "../shared/types.ts", "../shared/rewardShopAvailability.ts", "../shared/schemas.ts", "../shared/permissions.ts"]
 }

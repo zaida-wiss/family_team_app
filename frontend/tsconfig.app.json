@@ -22,5 +22,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "tests", "../shared/types.ts", "../shared/rewardShopAvailability.ts"]
+  "include": ["src", "tests", "../shared/types.ts", "../shared/rewardShopAvailability.ts", "../shared/permissions.ts"]
 }

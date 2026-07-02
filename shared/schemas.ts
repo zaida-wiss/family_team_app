@@ -152,8 +152,11 @@ export const PermissionsSchema = z.object({
 export const RoleSchema = z.object({
   id: IdSchema,
   name: z.string().min(1, "Rollnamn krävs"),
+  isChildRole: z.boolean(),
   permissions: PermissionsSchema
 });
+
+export const PermissionsPatchSchema = PermissionsSchema.partial();
 
 export const AccessLevelSchema = z.enum(["view", "edit"]);
 
