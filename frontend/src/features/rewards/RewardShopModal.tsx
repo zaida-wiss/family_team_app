@@ -7,8 +7,10 @@ import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 import { isExpired, isAvailableNow, minutesUntilAvailable, unavailableLabel, blockingCategories } from "./shopAvailability";
 import { useRewardShopContext } from "./RewardShopContext";
+import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 
 const UPCOMING_WINDOW_MINUTES = 4 * 60;
+const FREE_HOLD_DURATION_MS = 2000;
 
 type Props = {
   childId: Id;
@@ -24,6 +26,10 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
   const drag = useShopWalletDrag(childId, availableStars);
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
+  // Gratis belöningar (0 kr) har inga pengar att dra — håll in kortet 2 sekunder
+  // istället, samma mönster som att avklara ett uppdragskort.
+  const { heldId: heldFreeItemId, startHold: startFreeHold, clearHold: clearFreeHold } =
+    useHoldToConfirm(FREE_HOLD_DURATION_MS);
 
   // Dölj varor vars slutdatum passerat och varor som är kategori-spärrade (ogjord
   // uppgift). Varor som öppnar inom 4 timmar visas tonade så barnet ser att de är på
@@ -70,6 +76,14 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
     }
   });
 
+  function confirmFreeItem(item: RewardShopItem) {
+    setFlashingId(item.id);
+    setTimeout(() => {
+      onPurchase(item);
+      setFlashingId(null);
+    }, 650);
+  }
+
   return (
     <div className="reward-shop-overlay" onClick={onClose}>
       <div className="reward-shop-modal" onClick={(e) => e.stopPropagation()}>
@@ -92,6 +106,8 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
               const isTarget = drag.activeCardId === item.id;
               const isFlashing = flashingId === item.id;
               const hasPayment = paid > 0;
+              const isFree = item.starCost === 0;
+              const isHeldFree = isFree && heldFreeItemId === item.id;
 
               return (
                 <div
@@ -102,7 +118,16 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                     !available ? "reward-shop-card--unavailable" : "",
                     isTarget ? "reward-shop-card--drag-target" : "",
                     isFlashing ? "reward-shop-card--flash" : "",
+                    isHeldFree ? "reward-shop-card--holding" : "",
                   ].filter(Boolean).join(" ")}
+                  {...(isFree && available
+                    ? {
+                        onPointerDown: () => startFreeHold(item.id, () => confirmFreeItem(item)),
+                        onPointerUp: clearFreeHold,
+                        onPointerLeave: clearFreeHold,
+                        onPointerCancel: clearFreeHold,
+                      }
+                    : {})}
                 >
                   {/* Prislapp */}
                   <span className="shop-price-tag">{item.starCost} kr</span>
