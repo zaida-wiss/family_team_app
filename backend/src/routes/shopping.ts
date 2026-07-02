@@ -16,32 +16,38 @@ shoppingRouter.post("/", requireAuth, async (req, res) => {
 });
 
 shoppingRouter.post("/:id/items", requireAuth, async (req, res) => {
-  await shopping.addItem(req.params.id, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await shopping.addItem(req.params.id, accountId, req.body);
   res.status(201).json({ ok: true });
 });
 
 shoppingRouter.patch("/:id/items/:itemId/toggle", requireAuth, async (req, res) => {
-  await shopping.toggleItem(req.params.id, req.params.itemId);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await shopping.toggleItem(req.params.id, accountId, req.params.itemId);
   res.json({ ok: true });
 });
 
 shoppingRouter.post("/:id/share", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
   const { memberId, access } = req.body;
-  await shopping.shareList(req.params.id, memberId, access);
+  await shopping.shareList(req.params.id, accountId, memberId, access);
   res.json({ ok: true });
 });
 
 shoppingRouter.delete("/:id/share/:memberId", requireAuth, async (req, res) => {
-  await shopping.unshareList(req.params.id, req.params.memberId);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await shopping.unshareList(req.params.id, accountId, req.params.memberId);
   res.json({ ok: true });
 });
 
 shoppingRouter.delete("/:id", requireAuth, async (req, res) => {
-  await shopping.deleteList(req.params.id, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await shopping.deleteList(req.params.id, accountId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 shoppingRouter.patch("/:id/restore", requireAuth, async (req, res) => {
-  await shopping.restoreList(req.params.id);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await shopping.restoreList(req.params.id, accountId);
   res.json({ ok: true });
 });

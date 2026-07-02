@@ -1,5 +1,6 @@
 import { CalendarModel } from "../db/models/Calendar.js";
 import { AppError } from "../utils/errors.js";
+import { CalendarEventPatchSchema } from "../../../shared/schemas.js";
 
 export async function getAllCalendars(accountId: string, from?: string, until?: string) {
   const now = new Date();
@@ -47,8 +48,8 @@ export async function createCalendar(data: unknown) {
   return { id: calendar.id };
 }
 
-export async function updateCalendar(calendarId: string, patch: unknown) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function updateCalendar(calendarId: string, accountId: string, patch: unknown) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const { color, name, ownerId, keepAllHistory } = patch as {
@@ -61,8 +62,8 @@ export async function updateCalendar(calendarId: string, patch: unknown) {
   await calendar.save();
 }
 
-export async function deleteCalendar(calendarId: string, memberId: string | null) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function deleteCalendar(calendarId: string, accountId: string, memberId: string | null) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   calendar.deletedAt = new Date().toISOString();
@@ -70,8 +71,8 @@ export async function deleteCalendar(calendarId: string, memberId: string | null
   await calendar.save();
 }
 
-export async function restoreCalendar(calendarId: string) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function restoreCalendar(calendarId: string, accountId: string) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   calendar.deletedAt = null;
@@ -79,8 +80,8 @@ export async function restoreCalendar(calendarId: string) {
   await calendar.save();
 }
 
-export async function shareCalendar(calendarId: string, memberId: string, access: "view" | "edit") {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function shareCalendar(calendarId: string, accountId: string, memberId: string, access: "view" | "edit") {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const existing = calendar.sharedWith.find((s) => s.memberId === memberId);
@@ -90,8 +91,8 @@ export async function shareCalendar(calendarId: string, memberId: string, access
   await calendar.save();
 }
 
-export async function unshareCalendar(calendarId: string, memberId: string) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function unshareCalendar(calendarId: string, accountId: string, memberId: string) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   calendar.sharedWith = calendar.sharedWith.filter((s) => s.memberId !== memberId);
@@ -99,16 +100,16 @@ export async function unshareCalendar(calendarId: string, memberId: string) {
   await calendar.save();
 }
 
-export async function addEvent(calendarId: string, event: unknown) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function addEvent(calendarId: string, accountId: string, event: unknown) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   calendar.events.push(event as any);
   await calendar.save();
 }
 
-export async function importEvents(calendarId: string, source: unknown, events: unknown[]) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function importEvents(calendarId: string, accountId: string, source: unknown, events: unknown[]) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   calendar.importedSources.push(source as any);
@@ -116,20 +117,21 @@ export async function importEvents(calendarId: string, source: unknown, events: 
   await calendar.save();
 }
 
-export async function updateEvent(calendarId: string, eventId: string, patch: unknown) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function updateEvent(calendarId: string, accountId: string, eventId: string, patch: unknown) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const event = calendar.events.find((e) => e.id === eventId);
   if (!event) throw new AppError(404, "Händelse hittades inte");
 
-  Object.assign(event, patch);
+  const validated = CalendarEventPatchSchema.parse(patch);
+  Object.assign(event, validated);
   calendar.markModified("events");
   await calendar.save();
 }
 
-export async function deleteEvent(calendarId: string, eventId: string, memberId: string | null) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function deleteEvent(calendarId: string, accountId: string, eventId: string, memberId: string | null) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const event = calendar.events.find((e) => e.id === eventId);
@@ -143,11 +145,12 @@ export async function deleteEvent(calendarId: string, eventId: string, memberId:
 
 export async function rsvpEvent(
   calendarId: string,
+  accountId: string,
   eventId: string,
   memberId: string,
   status: "pending" | "accepted" | "declined"
 ) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const event = calendar.events.find((e) => e.id === eventId);

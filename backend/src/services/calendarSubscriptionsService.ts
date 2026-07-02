@@ -76,8 +76,8 @@ function applyFilters(
 
 // ── Prenumerations-CRUD och synk ──────────────────────────────────────────────
 
-export async function createSubscription(calendarId: string, body: unknown) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function createSubscription(calendarId: string, accountId: string, body: unknown) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const b = body as {
@@ -106,8 +106,8 @@ export async function createSubscription(calendarId: string, body: unknown) {
   return sub;
 }
 
-export async function updateSubscription(calendarId: string, subId: string, patch: unknown) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function updateSubscription(calendarId: string, accountId: string, subId: string, patch: unknown) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const sub = calendar.subscriptions.find((s) => s.id === subId);
@@ -129,8 +129,8 @@ export async function updateSubscription(calendarId: string, subId: string, patc
   await calendar.save();
 }
 
-export async function deleteSubscription(calendarId: string, subId: string) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function deleteSubscription(calendarId: string, accountId: string, subId: string) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const now = new Date().toISOString();
@@ -143,8 +143,8 @@ export async function deleteSubscription(calendarId: string, subId: string) {
   await calendar.save();
 }
 
-export async function syncSubscriptionById(calendarId: string, subId: string) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
+export async function syncSubscriptionById(calendarId: string, accountId: string, subId: string) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const sub = calendar.subscriptions.find((s) => s.id === subId);

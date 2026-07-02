@@ -184,6 +184,16 @@ export const CalendarEventSchema = z.object({
   deletedBy: IdSchema.nullable()
 });
 
+// Fält en klient får patcha på en befintlig kalenderhändelse. calendarId/id/
+// createdBy/deletedAt/deletedBy sätts av servern eller har egna dedikerade
+// endpoints (delete/restore/rsvp), aldrig via den generiska PATCH-routen.
+export const CalendarEventPatchSchema = CalendarEventSchema.pick({
+  title: true,
+  startsAt: true,
+  endsAt: true,
+  notes: true
+}).partial();
+
 export const ImportedCalendarSourceSchema = z.object({
   id: IdSchema,
   type: z.literal("ics-file"),

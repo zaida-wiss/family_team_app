@@ -11,8 +11,8 @@ export async function createList(data: unknown) {
   return { id: list.id };
 }
 
-export async function addItem(listId: string, item: unknown) {
-  const list = await ShoppingListModel.findOne({ id: listId });
+export async function addItem(listId: string, accountId: string, item: unknown) {
+  const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
@@ -20,8 +20,8 @@ export async function addItem(listId: string, item: unknown) {
   await list.save();
 }
 
-export async function toggleItem(listId: string, itemId: string) {
-  const list = await ShoppingListModel.findOne({ id: listId });
+export async function toggleItem(listId: string, accountId: string, itemId: string) {
+  const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
@@ -34,8 +34,8 @@ export async function toggleItem(listId: string, itemId: string) {
   await list.save();
 }
 
-export async function shareList(listId: string, memberId: string, access: "view" | "edit") {
-  const list = await ShoppingListModel.findOne({ id: listId });
+export async function shareList(listId: string, accountId: string, memberId: string, access: "view" | "edit") {
+  const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
@@ -49,8 +49,8 @@ export async function shareList(listId: string, memberId: string, access: "view"
   await list.save();
 }
 
-export async function unshareList(listId: string, memberId: string) {
-  const list = await ShoppingListModel.findOne({ id: listId });
+export async function unshareList(listId: string, accountId: string, memberId: string) {
+  const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
@@ -59,8 +59,8 @@ export async function unshareList(listId: string, memberId: string) {
   await list.save();
 }
 
-export async function deleteList(id: string, memberId: string | null) {
-  const list = await ShoppingListModel.findOne({ id });
+export async function deleteList(id: string, accountId: string, memberId: string | null) {
+  const list = await ShoppingListModel.findOne({ id, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
@@ -69,8 +69,8 @@ export async function deleteList(id: string, memberId: string | null) {
   await list.save();
 }
 
-export async function restoreList(id: string) {
-  const list = await ShoppingListModel.findOne({ id });
+export async function restoreList(id: string, accountId: string) {
+  const list = await ShoppingListModel.findOne({ id, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }

@@ -18,40 +18,47 @@ calendarsRouter.post("/", requireAuth, async (req, res) => {
 });
 
 calendarsRouter.post("/:id/events", requireAuth, async (req, res) => {
-  await calendars.addEvent(req.params.id, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.addEvent(req.params.id, accountId, req.body);
   res.status(201).json({ ok: true });
 });
 
 calendarsRouter.post("/:id/share", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
   const { memberId, access } = req.body;
-  await calendars.shareCalendar(req.params.id, memberId, access);
+  await calendars.shareCalendar(req.params.id, accountId, memberId, access);
   res.json({ ok: true });
 });
 
 calendarsRouter.delete("/:id/share/:memberId", requireAuth, async (req, res) => {
-  await calendars.unshareCalendar(req.params.id, req.params.memberId);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.unshareCalendar(req.params.id, accountId, req.params.memberId);
   res.json({ ok: true });
 });
 
 // ── subscriptions ─────────────────────────────────────────────────────────────
 
 calendarsRouter.post("/:id/subscriptions", requireAuth, async (req, res) => {
-  const sub = await subscriptions.createSubscription(req.params.id, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  const sub = await subscriptions.createSubscription(req.params.id, accountId, req.body);
   res.status(201).json(sub);
 });
 
 calendarsRouter.patch("/:id/subscriptions/:subId", requireAuth, async (req, res) => {
-  await subscriptions.updateSubscription(req.params.id, req.params.subId, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await subscriptions.updateSubscription(req.params.id, accountId, req.params.subId, req.body);
   res.json({ ok: true });
 });
 
 calendarsRouter.delete("/:id/subscriptions/:subId", requireAuth, async (req, res) => {
-  await subscriptions.deleteSubscription(req.params.id, req.params.subId);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await subscriptions.deleteSubscription(req.params.id, accountId, req.params.subId);
   res.json({ ok: true });
 });
 
 calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, async (req, res) => {
-  await subscriptions.syncSubscriptionById(req.params.id, req.params.subId);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await subscriptions.syncSubscriptionById(req.params.id, accountId, req.params.subId);
   res.json({ ok: true });
 });
 
@@ -63,38 +70,45 @@ calendarsRouter.post("/:id/fetch-ics", requireAuth, async (req, res) => {
 });
 
 calendarsRouter.post("/:id/import", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
   const { source, events } = req.body;
-  await calendars.importEvents(req.params.id, source, events);
+  await calendars.importEvents(req.params.id, accountId, source, events);
   res.json({ ok: true });
 });
 
 calendarsRouter.patch("/:id/events/:eventId", requireAuth, async (req, res) => {
-  await calendars.updateEvent(req.params.id, req.params.eventId, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.updateEvent(req.params.id, accountId, req.params.eventId, req.body);
   res.json({ ok: true });
 });
 
 calendarsRouter.delete("/:id/events/:eventId", requireAuth, async (req, res) => {
-  await calendars.deleteEvent(req.params.id, req.params.eventId, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.deleteEvent(req.params.id, accountId, req.params.eventId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 calendarsRouter.patch("/:id/events/:eventId/rsvp", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
   const { memberId, status } = req.body as { memberId: string; status: "pending" | "accepted" | "declined" };
-  await calendars.rsvpEvent(req.params.id, req.params.eventId, memberId, status);
+  await calendars.rsvpEvent(req.params.id, accountId, req.params.eventId, memberId, status);
   res.json({ ok: true });
 });
 
 calendarsRouter.patch("/:id", requireAuth, async (req, res) => {
-  await calendars.updateCalendar(req.params.id, req.body);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.updateCalendar(req.params.id, accountId, req.body);
   res.json({ ok: true });
 });
 
 calendarsRouter.delete("/:id", requireAuth, async (req, res) => {
-  await calendars.deleteCalendar(req.params.id, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.deleteCalendar(req.params.id, accountId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 calendarsRouter.patch("/:id/restore", requireAuth, async (req, res) => {
-  await calendars.restoreCalendar(req.params.id);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await calendars.restoreCalendar(req.params.id, accountId);
   res.json({ ok: true });
 });
