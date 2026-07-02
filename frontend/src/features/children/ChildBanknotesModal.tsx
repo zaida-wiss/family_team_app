@@ -3,7 +3,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Id } from "@shared/types";
-import { applyZoneConvert, applySplit, denomCounts } from "./bankDenoms";
+import { applyZoneConvert, applySplit, reconcileCounts } from "./bankDenoms";
 import { BankBreakdown } from "./BankBreakdown";
 import { BankCatalog } from "./BankCatalog";
 
@@ -19,18 +19,9 @@ function loadCounts(childId: Id, totalKronor: number): Record<number, number> {
     const stored = JSON.parse(localStorage.getItem(`bank-counts-${childId}`) ?? "null") as
       | { counts: Record<number, number>; savedTotal: number }
       | null;
-    if (!stored) return denomCounts(totalKronor);
-    const storedSum = Object.entries(stored.counts).reduce((s, [k, n]) => s + +k * n, 0);
-    if (storedSum === totalKronor) return stored.counts;
-    if (totalKronor > storedSum) {
-      const delta = denomCounts(totalKronor - storedSum);
-      const merged = { ...stored.counts };
-      for (const [d, n] of Object.entries(delta)) merged[Number(d)] = (merged[Number(d)] ?? 0) + n;
-      return merged;
-    }
-    return denomCounts(totalKronor);
+    return reconcileCounts(stored, totalKronor);
   } catch {
-    return denomCounts(totalKronor);
+    return reconcileCounts(null, totalKronor);
   }
 }
 

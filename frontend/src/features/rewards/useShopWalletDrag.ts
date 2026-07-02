@@ -1,18 +1,21 @@
 import { useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { MYNT, SEDLAR } from "../children/bankDenoms";
+import { MYNT, SEDLAR, reconcileCounts } from "../children/bankDenoms";
 import type { Id } from "@shared/types";
 
 type WalletStorage = { counts: Record<number, number>; savedTotal: number };
 
-function loadWallet(childId: Id): Record<number, number> {
+// Måste stämma av mot totalKronor precis som plånboken (ChildBanknotesModal) gör —
+// annars visar shopen en cachad, inaktuell summa om barnet tjänat fler stjärnor sen
+// plånboken senast öppnades. Se bankDenoms.reconcileCounts.
+function loadWallet(childId: Id, totalKronor: number): Record<number, number> {
   try {
     const stored = JSON.parse(
       localStorage.getItem(`bank-counts-${childId}`) ?? "null"
     ) as WalletStorage | null;
-    return stored?.counts ?? {};
+    return reconcileCounts(stored, totalKronor);
   } catch {
-    return {};
+    return reconcileCounts(null, totalKronor);
   }
 }
 
@@ -25,9 +28,9 @@ function saveWallet(childId: Id, counts: Record<number, number>) {
   localStorage.setItem(`bank-counts-${childId}`, JSON.stringify({ counts: cleaned, savedTotal }));
 }
 
-export function useShopWalletDrag(childId: Id) {
+export function useShopWalletDrag(childId: Id, availableStars: number) {
   const [walletCounts, setWalletCounts] = useState<Record<number, number>>(
-    () => loadWallet(childId)
+    () => loadWallet(childId, availableStars)
   );
   const [dragging, setDragging] = useState<number | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);

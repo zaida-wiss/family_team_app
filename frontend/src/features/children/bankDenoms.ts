@@ -25,6 +25,28 @@ export function denomCounts(kr: number): Record<number, number> {
   return result;
 }
 
+// Stämmer av en cachad sedel/mynt-fördelning mot det sanna saldot (approvedStars -
+// spentStars). Om det sanna saldot är högre (fler stjärnor godkända sen sist) läggs
+// mellanskillnaden till som nya sedlar/mynt. Om det är lägre (t.ex. spenderat i shopen)
+// byggs fördelningen om från grunden — den gamla, för höga uppdelningen litar man inte på.
+// Delad mellan plånboken (ChildBanknotesModal) och shopen (useShopWalletDrag) så de två
+// vyerna aldrig kan visa olika belopp för samma barn.
+export function reconcileCounts(
+  stored: { counts: Record<number, number>; savedTotal: number } | null,
+  totalKronor: number
+): Record<number, number> {
+  if (!stored) return denomCounts(totalKronor);
+  const storedSum = Object.entries(stored.counts).reduce((s, [k, n]) => s + Number(k) * n, 0);
+  if (storedSum === totalKronor) return stored.counts;
+  if (totalKronor > storedSum) {
+    const delta = denomCounts(totalKronor - storedSum);
+    const merged = { ...stored.counts };
+    for (const [d, n] of Object.entries(delta)) merged[Number(d)] = (merged[Number(d)] ?? 0) + n;
+    return merged;
+  }
+  return denomCounts(totalKronor);
+}
+
 export function countsDiffer(a: Record<number, number>, b: Record<number, number>): boolean {
   const ka = Object.keys(a).sort().join(",");
   const kb = Object.keys(b).sort().join(",");

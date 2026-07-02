@@ -19,7 +19,7 @@ type Props = {
 
 export function RewardShopModal({ childId, items, todos, availableStars, onPurchase, onClose }: Props) {
   const { requireApprovalForCategories } = useRewardShopContext();
-  const drag = useShopWalletDrag(childId);
+  const drag = useShopWalletDrag(childId, availableStars);
   const [flashingId, setFlashingId] = useState<string | null>(null);
   const purchasingRef = useRef<Set<string>>(new Set());
 
