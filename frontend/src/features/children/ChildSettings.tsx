@@ -15,7 +15,7 @@ type Props = {
   rewards: Reward[];
   onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
   onApproveTodo: (todoId: Id) => void;
-  onRejectTodo: (todoId: Id) => void;
+  onRejectTodo: (todoId: Id, reason: string | null) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
   onUpdateWish: (rewardId: Id, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) => void;
@@ -57,6 +57,24 @@ export function ChildSettings({
   const [editWishTitle, setEditWishTitle] = useState("");
   const [editWishStars, setEditWishStars] = useState(10);
   const [editWishSymbol, setEditWishSymbol] = useState("");
+  const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  function startRejecting(todoId: Id) {
+    setRejectingTodoId(todoId);
+    setRejectionReason("");
+  }
+
+  function cancelRejecting() {
+    setRejectingTodoId(null);
+    setRejectionReason("");
+  }
+
+  function confirmRejecting(todoId: Id) {
+    onRejectTodo(todoId, rejectionReason.trim() || null);
+    setRejectingTodoId(null);
+    setRejectionReason("");
+  }
 
   const childMembers = members.filter((member) => {
     const role = roles.find((candidate) => candidate.id === member.roleId);
@@ -316,14 +334,36 @@ export function ChildSettings({
                     {getChildName(todo.assignedTo ?? "")} · {todo.starValue} stjärnor
                   </small>
                 </div>
-                <div className="approval-actions">
-                  <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">
-                    <CheckCircle2 size={16} />
-                  </button>
-                  <button className="icon-button danger" onClick={() => onRejectTodo(todo.id)} title="Neka" type="button">
-                    <XCircle size={16} />
-                  </button>
-                </div>
+                {rejectingTodoId === todo.id ? (
+                  <div className="approval-reject-form">
+                    <input
+                      autoFocus
+                      className="text-input"
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") confirmRejecting(todo.id);
+                        if (e.key === "Escape") cancelRejecting();
+                      }}
+                      placeholder="Varför? (valfritt)"
+                      value={rejectionReason}
+                    />
+                    <button className="icon-button danger" onClick={() => confirmRejecting(todo.id)} title="Skicka" type="button">
+                      <XCircle size={16} />
+                    </button>
+                    <button className="icon-button" onClick={cancelRejecting} title="Avbryt" type="button">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="approval-actions">
+                    <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">
+                      <CheckCircle2 size={16} />
+                    </button>
+                    <button className="icon-button danger" onClick={() => startRejecting(todo.id)} title="Neka" type="button">
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </section>

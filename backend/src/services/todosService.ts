@@ -111,7 +111,7 @@ export async function approveTodo(id: string, memberId: string | null) {
   broadcastTodosChanged();
 }
 
-export async function rejectTodo(id: string, memberId: string | null) {
+export async function rejectTodo(id: string, memberId: string | null, reason: string | null) {
   const todo = await TodoModel.findOne({ id });
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
@@ -123,6 +123,7 @@ export async function rejectTodo(id: string, memberId: string | null) {
     todo.approvedAt = null;
     todo.rejectedBy = null;
     todo.rejectedAt = null;
+    todo.rejectedReason = reason;
     await todo.save();
     broadcastTodosChanged();
     return;
@@ -131,6 +132,7 @@ export async function rejectTodo(id: string, memberId: string | null) {
   todo.status = "rejected";
   todo.rejectedBy = memberId;
   todo.rejectedAt = new Date().toISOString();
+  todo.rejectedReason = reason;
   await todo.save();
   broadcastTodosChanged();
 }

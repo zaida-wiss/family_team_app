@@ -197,7 +197,7 @@ export function useTodosState() {
     trackEvent("todo-approved");
   }
 
-  function rejectTodo(todoId: Id, rejecterId: Id) {
+  function rejectTodo(todoId: Id, rejecterId: Id, reason: string | null) {
     setTodos((current) =>
       current.map((todo) => {
         if (todo.id !== todoId || todo.status !== "done") return todo;
@@ -209,18 +209,20 @@ export function useTodosState() {
             approvedBy: null,
             approvedAt: null,
             rejectedBy: null,
-            rejectedAt: null
+            rejectedAt: null,
+            rejectedReason: reason
           };
         }
         return {
           ...todo,
           status: "rejected" as const,
           rejectedBy: rejecterId,
-          rejectedAt: new Date().toISOString()
+          rejectedAt: new Date().toISOString(),
+          rejectedReason: reason
         };
       })
     );
-    todosApi.reject(todoId)
+    todosApi.reject(todoId, reason)
       .then(() => refreshTodos())
       .catch(console.error);
   }

@@ -1,4 +1,5 @@
-import { CheckCircle2, Pencil, Save, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Save, Send, Trash2, X, XCircle } from "lucide-react";
+import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo } from "@shared/types";
 import { TodoCreator } from "./TodoCreator";
 import { getVisibleTodos } from "./selectors";
@@ -22,7 +23,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveTodo: (todoId: Id) => void;
-  onRejectTodo: (todoId: Id) => void;
+  onRejectTodo: (todoId: Id, reason: string | null) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
   onSetWishStars: (rewardId: Id, stars: number) => void;
@@ -67,6 +68,25 @@ export function TodosView({
   const suggestedRewards = canApproveTodos
     ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null)
     : [];
+
+  const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  function startRejecting(todoId: Id) {
+    setRejectingTodoId(todoId);
+    setRejectionReason("");
+  }
+
+  function cancelRejecting() {
+    setRejectingTodoId(null);
+    setRejectionReason("");
+  }
+
+  function confirmRejecting(todoId: Id) {
+    onRejectTodo(todoId, rejectionReason.trim() || null);
+    setRejectingTodoId(null);
+    setRejectionReason("");
+  }
 
   return (
     <article className="dashboard">
@@ -152,14 +172,36 @@ export function TodosView({
                     {getAssigneeName(todo, members)} · {todo.starValue} stjärnor om den godkänns
                   </small>
                 </div>
-                <div className="approval-actions">
-                  <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">
-                    <CheckCircle2 size={16} />
-                  </button>
-                  <button className="icon-button danger" onClick={() => onRejectTodo(todo.id)} title="Neka" type="button">
-                    <XCircle size={16} />
-                  </button>
-                </div>
+                {rejectingTodoId === todo.id ? (
+                  <div className="approval-reject-form">
+                    <input
+                      autoFocus
+                      className="text-input"
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") confirmRejecting(todo.id);
+                        if (e.key === "Escape") cancelRejecting();
+                      }}
+                      placeholder="Varför? (valfritt)"
+                      value={rejectionReason}
+                    />
+                    <button className="icon-button danger" onClick={() => confirmRejecting(todo.id)} title="Skicka" type="button">
+                      <Send size={16} />
+                    </button>
+                    <button className="icon-button" onClick={cancelRejecting} title="Avbryt" type="button">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="approval-actions">
+                    <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">
+                      <CheckCircle2 size={16} />
+                    </button>
+                    <button className="icon-button danger" onClick={() => startRejecting(todo.id)} title="Neka" type="button">
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </section>

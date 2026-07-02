@@ -127,6 +127,7 @@ export function ChildRoutineCreator({
       approvedAt: null,
       rejectedBy: null,
       rejectedAt: null,
+      rejectedReason: null,
       deletedAt: null,
       deletedBy: null,
       routineCategory: category || null,

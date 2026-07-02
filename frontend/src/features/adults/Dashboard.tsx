@@ -4,7 +4,9 @@ import {
   ListTodo,
   Pencil,
   Save,
+  Send,
   ShoppingCart,
+  X,
   XCircle,
   Trash2
 } from "lucide-react";
@@ -41,7 +43,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveTodo: (todoId: Id) => void;
-  onRejectTodo: (todoId: Id) => void;
+  onRejectTodo: (todoId: Id, reason: string | null) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
   onSetWishStars: (rewardId: Id, stars: number) => void;
@@ -131,6 +133,24 @@ export function Dashboard({
 }: Props) {
   const firstTab: DashboardTab = initialTab ?? (canSeeCalendar ? "calendar" : canSeeTodos ? "todo" : "shopping");
   const [tab, setTab] = useState<DashboardTab>(firstTab);
+  const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  function startRejecting(todoId: Id) {
+    setRejectingTodoId(todoId);
+    setRejectionReason("");
+  }
+
+  function cancelRejecting() {
+    setRejectingTodoId(null);
+    setRejectionReason("");
+  }
+
+  function confirmRejecting(todoId: Id) {
+    onRejectTodo(todoId, rejectionReason.trim() || null);
+    setRejectingTodoId(null);
+    setRejectionReason("");
+  }
 
   return (
     <article
@@ -309,28 +329,50 @@ export function Dashboard({
                     <strong>{todo.title}</strong>
                     <small>{todo.starValue} stjärnor om den godkänns</small>
                   </div>
-                  <div className="approval-actions">
-                    <button
-                      aria-label={`Godkänn ${todo.title}`}
-                      className="icon-button"
-                      disabled={!canApprove}
-                      onClick={() => onApproveTodo(todo.id)}
-                      title="Godkänn"
-                      type="button"
-                    >
-                      <CheckCircle2 size={16} />
-                    </button>
-                    <button
-                      aria-label={`Neka ${todo.title}`}
-                      className="icon-button danger"
-                      disabled={!canApprove}
-                      onClick={() => onRejectTodo(todo.id)}
-                      title="Neka"
-                      type="button"
-                    >
-                      <XCircle size={16} />
-                    </button>
-                  </div>
+                  {rejectingTodoId === todo.id ? (
+                    <div className="approval-reject-form">
+                      <input
+                        autoFocus
+                        className="text-input"
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") confirmRejecting(todo.id);
+                          if (e.key === "Escape") cancelRejecting();
+                        }}
+                        placeholder="Varför? (valfritt)"
+                        value={rejectionReason}
+                      />
+                      <button className="icon-button danger" onClick={() => confirmRejecting(todo.id)} title="Skicka" type="button">
+                        <Send size={16} />
+                      </button>
+                      <button className="icon-button" onClick={cancelRejecting} title="Avbryt" type="button">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="approval-actions">
+                      <button
+                        aria-label={`Godkänn ${todo.title}`}
+                        className="icon-button"
+                        disabled={!canApprove}
+                        onClick={() => onApproveTodo(todo.id)}
+                        title="Godkänn"
+                        type="button"
+                      >
+                        <CheckCircle2 size={16} />
+                      </button>
+                      <button
+                        aria-label={`Neka ${todo.title}`}
+                        className="icon-button danger"
+                        disabled={!canApprove}
+                        onClick={() => startRejecting(todo.id)}
+                        title="Neka"
+                        type="button"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </section>

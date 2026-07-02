@@ -314,6 +314,7 @@ export type Todo = {
   approvedAt: string | null;
   rejectedBy: Id | null;
   rejectedAt: string | null;
+  rejectedReason: string | null;
   deletedAt: string | null;
   deletedBy: Id | null;
   routineCategory?: string | null;

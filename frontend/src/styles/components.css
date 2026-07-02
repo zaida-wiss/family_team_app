@@ -300,6 +300,18 @@ h3 {
   justify-content: space-between;
 }
 
+.approval-reject-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.approval-reject-form .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .approval-header span {
   display: grid;
   place-items: center;

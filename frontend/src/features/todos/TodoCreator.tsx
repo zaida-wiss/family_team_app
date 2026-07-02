@@ -83,6 +83,7 @@ export function TodoCreator({
       approvedAt: null,
       rejectedBy: null,
       rejectedAt: null,
+      rejectedReason: null,
       deletedAt: null,
       deletedBy: null
     } satisfies Omit<Todo, "assignedTo" | "isShared">;

@@ -24,6 +24,7 @@ const todoSchema = new Schema<Todo>({
   approvedAt: { type: String, default: null },
   rejectedBy: { type: String, default: null },
   rejectedAt: { type: String, default: null },
+  rejectedReason: { type: String, default: null },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null },
   routineCategory: { type: String, default: null }

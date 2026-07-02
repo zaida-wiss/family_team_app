@@ -3,6 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
 import { accountIdOf } from "../utils/memberUtils.js";
+import { RejectTodoBodySchema } from "../../../shared/schemas.js";
 
 export const todosRouter = Router();
 
@@ -40,7 +41,8 @@ todosRouter.patch("/:id/approve", requireAuth, async (req, res) => {
 });
 
 todosRouter.patch("/:id/reject", requireAuth, async (req, res) => {
-  await todos.rejectTodo(req.params.id, req.memberId ?? null);
+  const { reason } = RejectTodoBodySchema.parse(req.body ?? {});
+  await todos.rejectTodo(req.params.id, req.memberId ?? null, reason ?? null);
   res.json({ ok: true });
 });
 

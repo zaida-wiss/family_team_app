@@ -109,7 +109,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onCreateTodo: createTodo,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
-    onRejectTodo: (todoId: string) => rejectTodo(todoId, currentMember.id),
+    onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
     onRejectWish: (rewardId: string) => rejectWish(rewardId, currentMember.id),
     onSetWishStars: (rewardId: string, stars: number) =>
@@ -201,7 +201,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRefreshRoutine: refreshRoutineOccurrence,
     onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles),
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
-    onRejectTodo: (todoId: string) => rejectTodo(todoId, currentMember.id),
+    onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => {
       const wish = rewards.find((r) => r.id === rewardId);
       if (wish) {

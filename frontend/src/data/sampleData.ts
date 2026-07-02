@@ -181,6 +181,7 @@ export const todos: Todo[] = [
     approvedAt: null,
     rejectedBy: null,
     rejectedAt: null,
+    rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
     routineCategory: "Hälsa & trivsel"
@@ -207,6 +208,7 @@ export const todos: Todo[] = [
     approvedAt: null,
     rejectedBy: null,
     rejectedAt: null,
+    rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
     routineCategory: "Hälsa & trivsel"
@@ -233,6 +235,7 @@ export const todos: Todo[] = [
     approvedAt: null,
     rejectedBy: null,
     rejectedAt: null,
+    rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
     routineCategory: "Hemmet"
@@ -256,6 +259,7 @@ export const todos: Todo[] = [
     approvedAt: null,
     rejectedBy: null,
     rejectedAt: null,
+    rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
     routineCategory: null
@@ -279,6 +283,7 @@ export const todos: Todo[] = [
     approvedAt: "2026-06-07T18:00:00",
     rejectedBy: null,
     rejectedAt: null,
+    rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
     routineCategory: "Hemmet"

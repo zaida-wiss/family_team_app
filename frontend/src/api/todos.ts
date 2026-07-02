@@ -20,10 +20,10 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
-  reject: (id: string) =>
+  reject: (id: string, reason: string | null) =>
     request<{ ok: boolean }>(api(`todos/${id}/reject`), {
       method: "PATCH",
-      body: JSON.stringify({})
+      body: JSON.stringify({ reason })
     }),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}`), { method: "DELETE" }),

@@ -268,8 +268,13 @@ export const TodoSchema = z.object({
   approvedAt: z.string().nullable(),
   rejectedBy: IdSchema.nullable(),
   rejectedAt: z.string().nullable(),
+  rejectedReason: z.string().nullable(),
   deletedAt: z.string().nullable(),
   deletedBy: IdSchema.nullable()
+});
+
+export const RejectTodoBodySchema = z.object({
+  reason: z.string().trim().min(1).max(200).nullable().optional()
 });
 
 export const RewardStatusSchema = z.enum([
@@ -305,6 +310,7 @@ export const CreateTodoInputSchema = TodoSchema.omit({
   approvedAt: true,
   rejectedBy: true,
   rejectedAt: true,
+  rejectedReason: true,
   deletedAt: true,
   deletedBy: true
 });

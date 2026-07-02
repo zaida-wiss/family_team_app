@@ -112,6 +112,7 @@ export function createTodo(overrides: Partial<Todo> = {}): Todo {
     approvedAt: null,
     rejectedBy: null,
     rejectedAt: null,
+    rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
     ...overrides

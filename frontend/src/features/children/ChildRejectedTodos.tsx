@@ -15,7 +15,7 @@ export function ChildRejectedTodos({ rejectedTodos, onDismiss }: Props) {
           <span>{todo.visual.value}</span>
           <div>
             <strong>{todo.title}</strong>
-            <small>Den här gick inte igenom – prova igen!</small>
+            <small>{todo.rejectedReason || "Den här gick inte igenom – prova igen!"}</small>
           </div>
           <button
             className="rejected-dismiss"
