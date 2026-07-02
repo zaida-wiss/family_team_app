@@ -17,7 +17,7 @@ shoppingRouter.post("/", requireAuth, async (req, res) => {
 
 shoppingRouter.post("/:id/items", requireAuth, async (req, res) => {
   const accountId = await accountIdOf(req.memberId, req.userId);
-  await shopping.addItem(req.params.id, accountId, req.body);
+  await shopping.addItem(req.params.id, accountId, req.memberId!, req.body);
   res.status(201).json({ ok: true });
 });
 

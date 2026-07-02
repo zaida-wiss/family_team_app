@@ -1,5 +1,6 @@
 import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { AppError } from "../utils/errors.js";
+import { ShoppingItemSchema } from "../../../shared/schemas.js";
 
 export async function getAllLists(accountId: string) {
   return ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 });
@@ -11,12 +12,13 @@ export async function createList(data: unknown) {
   return { id: list.id };
 }
 
-export async function addItem(listId: string, accountId: string, item: unknown) {
+export async function addItem(listId: string, accountId: string, memberId: string, item: unknown) {
   const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
-  list.items.push(item as any);
+  const validated = ShoppingItemSchema.parse(item);
+  list.items.push({ ...validated, createdBy: memberId } as any);
   await list.save();
 }
 

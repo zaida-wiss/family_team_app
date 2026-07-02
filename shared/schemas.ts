@@ -172,13 +172,32 @@ export const OwnedSharedResourceSchema = z.object({
   deletedBy: IdSchema.nullable()
 });
 
+export const EventRecurrenceSchema = z.object({
+  type: z.enum(["none", "daily", "weekly", "monthly", "yearly"]),
+  interval: z.number().int().min(1),
+  until: z.string().nullable()
+});
+
+export const EventAttendeeSchema = z.object({
+  memberId: IdSchema,
+  status: z.enum(["pending", "accepted", "declined"])
+});
+
 export const CalendarEventSchema = z.object({
   id: IdSchema,
   calendarId: IdSchema,
   title: z.string().min(1, "Händelsetitel krävs"),
   startsAt: z.string(),
   endsAt: z.string(),
+  isAllDay: z.boolean(),
+  color: z.string().nullable(),
+  uid: z.string().nullable(),
+  subscriptionId: z.string().nullable(),
+  location: z.string().nullable(),
   notes: z.string().nullable(),
+  recurrence: EventRecurrenceSchema,
+  attendees: z.array(EventAttendeeSchema),
+  symbol: z.string().nullable(),
   createdBy: IdSchema,
   deletedAt: z.string().nullable(),
   deletedBy: IdSchema.nullable()

@@ -1,6 +1,6 @@
 import { CalendarModel } from "../db/models/Calendar.js";
 import { AppError } from "../utils/errors.js";
-import { CalendarEventPatchSchema } from "../../../shared/schemas.js";
+import { CalendarEventPatchSchema, CalendarEventSchema, ImportedCalendarSourceSchema } from "../../../shared/schemas.js";
 
 export async function getAllCalendars(accountId: string, from?: string, until?: string) {
   const now = new Date();
@@ -100,20 +100,25 @@ export async function unshareCalendar(calendarId: string, accountId: string, mem
   await calendar.save();
 }
 
-export async function addEvent(calendarId: string, accountId: string, event: unknown) {
+export async function addEvent(calendarId: string, accountId: string, memberId: string, event: unknown) {
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
-  calendar.events.push(event as any);
+  const validated = CalendarEventSchema.parse(event);
+  calendar.events.push({ ...validated, calendarId, createdBy: memberId } as any);
   await calendar.save();
 }
 
-export async function importEvents(calendarId: string, accountId: string, source: unknown, events: unknown[]) {
+export async function importEvents(calendarId: string, accountId: string, memberId: string, source: unknown, events: unknown[]) {
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
-  calendar.importedSources.push(source as any);
-  for (const event of events) { calendar.events.push(event as any); }
+  const validatedSource = ImportedCalendarSourceSchema.parse(source);
+  calendar.importedSources.push(validatedSource as any);
+  for (const event of events) {
+    const validated = CalendarEventSchema.parse(event);
+    calendar.events.push({ ...validated, calendarId, createdBy: memberId } as any);
+  }
   await calendar.save();
 }
 
