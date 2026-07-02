@@ -1,6 +1,7 @@
 import { MapPin, X } from "lucide-react";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 import { fmtDayLabel, fmtDaysFromToday, fmtEventTime } from "./timelineMath";
+import { useModalA11y } from "../../hooks/useModalA11y";
 
 type Props = {
   event: EnrichedEvent;
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export function TimelineEventDetail({ event, onClose }: Props) {
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
     <div
       className="child-tl-detail-backdrop"
@@ -20,6 +22,7 @@ export function TimelineEventDetail({ event, onClose }: Props) {
         aria-modal="true"
         aria-label={`Information om ${event.title}`}
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
       >
         <button
           className="child-tl-detail-close"

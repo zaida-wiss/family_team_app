@@ -3,6 +3,7 @@ import { MapPin, Pencil, X } from "lucide-react";
 import type { CalendarEvent, Member } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
 import { fmtFullDate, fmtTime } from "./calendarHelpers";
+import { useModalA11y } from "../../hooks/useModalA11y";
 
 type CalendarCssVars = React.CSSProperties & {
   "--event-color"?: string;
@@ -26,10 +27,18 @@ export function CalendarEventDetail({
   const eventColorStyle: CalendarCssVars = {
     "--event-color": event.color ?? calendarDisplayColor.get(event.calendarId) ?? event.calendarColor,
   };
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
     <div className="cal-form-overlay" onClick={onClose}>
-      <div className="cal-form-modal cal-event-detail-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        aria-labelledby="cal-event-detail-title"
+        aria-modal="true"
+        className="cal-form-modal cal-event-detail-modal"
+        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+      >
         <div className="cal-form-hdr">
           <span>Händelse</span>
           <button aria-label="Stäng händelse" className="icon-button" onClick={onClose} title="Stäng" type="button">
@@ -39,7 +48,7 @@ export function CalendarEventDetail({
         <div className="cal-form-body cal-event-detail-body">
           <div className="cal-event-detail-title-row">
             <div className="cal-event-color-dot" style={eventColorStyle} />
-            <h2 className="cal-event-detail-title">{event.title}</h2>
+            <h2 className="cal-event-detail-title" id="cal-event-detail-title">{event.title}</h2>
           </div>
           <p className="cal-event-row-meta">
             {event.isAllDay

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Palette, X } from "lucide-react";
 import "./FontPicker.css";
+import { useModalA11y } from "../hooks/useModalA11y";
 
 export type FontId = "baloo" | "nunito" | "fredoka" | "comfortaa" | "poppins";
 
@@ -61,28 +62,7 @@ export function FontPicker({ fontId, onSelect }: Props) {
   return (
     <div className="font-picker-root" ref={panelRef}>
       {open && (
-        <div className="font-picker-panel" role="dialog" aria-label="Välj typsnitt">
-          <div className="font-picker-head">
-            <span>Typsnitt</span>
-            <button className="font-picker-close" onClick={() => setOpen(false)} aria-label="Stäng">
-              <X size={14} />
-            </button>
-          </div>
-          <div className="font-picker-grid">
-            {FONTS.map((f) => (
-              <button
-                key={f.id}
-                className={`font-picker-option font-${f.id}${fontId === f.id ? " font-picker-option--active" : ""}`}
-                onClick={() => select(f.id)}
-                type="button"
-                title={`${f.display} + ${f.body}`}
-              >
-                <span className="font-picker-preview">Aa</span>
-                <span className="font-picker-label">{f.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <FontPickerPanel fontId={fontId} onSelect={select} onClose={() => setOpen(false)} />
       )}
       <button
         className="font-picker-trigger"
@@ -93,6 +73,42 @@ export function FontPicker({ fontId, onSelect }: Props) {
       >
         <Palette size={20} />
       </button>
+    </div>
+  );
+}
+
+function FontPickerPanel({
+  fontId,
+  onSelect,
+  onClose,
+}: {
+  fontId: FontId;
+  onSelect: (id: FontId) => void;
+  onClose: () => void;
+}) {
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  return (
+    <div className="font-picker-panel" role="dialog" aria-modal="true" aria-label="Välj typsnitt" ref={dialogRef}>
+      <div className="font-picker-head">
+        <span>Typsnitt</span>
+        <button className="font-picker-close" onClick={onClose} aria-label="Stäng">
+          <X size={14} />
+        </button>
+      </div>
+      <div className="font-picker-grid">
+        {FONTS.map((f) => (
+          <button
+            key={f.id}
+            className={`font-picker-option font-${f.id}${fontId === f.id ? " font-picker-option--active" : ""}`}
+            onClick={() => onSelect(f.id)}
+            type="button"
+            title={`${f.display} + ${f.body}`}
+          >
+            <span className="font-picker-preview">Aa</span>
+            <span className="font-picker-label">{f.name}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

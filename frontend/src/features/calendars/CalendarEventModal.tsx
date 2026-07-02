@@ -6,6 +6,7 @@ import type { Calendar, Member } from "@shared/types";
 import type { FormState, ModalMode } from "./calendarTypes";
 import { RECURRENCE_LABELS, RECURRENCE_UNIT, fmtFullDate, fmtTime } from "./calendarHelpers";
 import type { EventRecurrence } from "@shared/types";
+import { useModalA11y } from "../../hooks/useModalA11y";
 
 type Props = {
   modal: ModalMode;
@@ -27,12 +28,20 @@ export function CalendarEventModal({
   editableCalendars, otherMembers,
   onClose, onSubmit, onDelete, onSetField, onToggleAttendee,
 }: Props) {
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
     <>
     <div className="cal-form-overlay" onClick={onClose}>
-      <div className="cal-form-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        aria-labelledby="cal-form-title"
+        aria-modal="true"
+        className="cal-form-modal"
+        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+      >
         <div className="cal-form-hdr">
-          <span>{isEditing ? (eventIsEditable ? "Redigera händelse" : "Händelse") : "Ny händelse"}</span>
+          <span id="cal-form-title">{isEditing ? (eventIsEditable ? "Redigera händelse" : "Händelse") : "Ny händelse"}</span>
           <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button"><X size={18} /></button>
         </div>
 

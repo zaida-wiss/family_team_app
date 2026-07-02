@@ -8,6 +8,7 @@ import { useShopWalletDrag } from "./useShopWalletDrag";
 import { isExpired, isAvailableNow, minutesUntilAvailable, unavailableLabel, blockingCategories } from "./shopAvailability";
 import { useRewardShopContext } from "./RewardShopContext";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { useModalA11y } from "../../hooks/useModalA11y";
 
 const UPCOMING_WINDOW_MINUTES = 4 * 60;
 const FREE_HOLD_DURATION_MS = 2000;
@@ -51,13 +52,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
       return a.starCost - b.starCost;
     });
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   // Auto-purchase when dragged total reaches the price
   useEffect(() => {
@@ -86,10 +81,17 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
 
   return (
     <div className="reward-shop-overlay" onClick={onClose}>
-      <div className="reward-shop-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        aria-labelledby="reward-shop-modal-title"
+        aria-modal="true"
+        className="reward-shop-modal"
+        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+      >
 
         <div className="reward-shop-modal__header">
-          <span className="reward-shop-modal__title">🏪 Belöningsbutiken</span>
+          <span className="reward-shop-modal__title" id="reward-shop-modal-title">🏪 Belöningsbutiken</span>
           <span className="reward-shop-modal__stars">⭐ {availableStars}</span>
           <button className="reward-shop-modal__close" onClick={onClose} aria-label="Stäng">✕</button>
         </div>

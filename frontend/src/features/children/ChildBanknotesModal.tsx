@@ -6,6 +6,7 @@ import type { Id } from "@shared/types";
 import { applyZoneConvert, applySplit, reconcileCounts } from "./bankDenoms";
 import { BankBreakdown } from "./BankBreakdown";
 import { BankCatalog } from "./BankCatalog";
+import { useModalA11y } from "../../hooks/useModalA11y";
 
 type Props = {
   childId: Id;
@@ -40,10 +41,18 @@ export function ChildBanknotesModal({ childId, totalKronor, onClose, onCreateWis
   const onSplit = (value: number) => setCounts((prev) => applySplit(value, prev));
   const onZoneConvert = (remove: Record<number, number>, total: number) =>
     setCounts((prev) => applyZoneConvert(prev, remove, total));
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return createPortal(
     <div className="bm-overlay" onClick={onClose}>
-      <div className="bm-sheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        aria-labelledby="bm-title"
+        aria-modal="true"
+        className="bm-sheet"
+        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+      >
         <div className="bm-handle" />
 
         <div className="bm-header">
@@ -54,7 +63,7 @@ export function ChildBanknotesModal({ childId, totalKronor, onClose, onCreateWis
               </button>
             )}
             <div>
-              <h3 className="bm-title">{showBank ? "Banken" : "Dina stjärnor i pengar"}</h3>
+              <h3 className="bm-title" id="bm-title">{showBank ? "Banken" : "Dina stjärnor i pengar"}</h3>
               {!showBank && <p className="bm-amount">{totalKronor} kr</p>}
             </div>
           </div>
