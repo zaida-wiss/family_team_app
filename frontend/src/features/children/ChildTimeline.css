@@ -211,11 +211,13 @@
 
 .child-tl-reward-pin {
   position: absolute;
-  right: 4px;
   z-index: 10;
-  /* Köpta belöningar dubbelt så stora som uppdragsikonerna (--done) så de syns tydligt. */
+  /* Köpta belöningar dubbelt så stora som uppdragsikonerna (--done) och
+     centrerade kring inköpstidpunkten (left är beräknat som centrum, inte
+     vänsterkant) så de syns tydligt — t.ex. en glass köpt mitt på dagen. */
   font-size: clamp(1.3rem, 2.4vw, 2.2rem);
   line-height: 1;
+  transform: translateX(-50%);
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
   pointer-events: none;
 }
@@ -223,6 +225,8 @@
 .child-tl-reward-pin--done {
   font-size: clamp(0.65rem, 1.2vw, 1.1rem);
   opacity: 0.85;
+  /* Uppdragsikoner sprids (vänsterankrade), bara belöningsikoner centreras. */
+  transform: none;
 }
 
 .child-tl-reward-block {

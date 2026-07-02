@@ -114,8 +114,23 @@ export function markerLeft(todoId: string): string {
   return `${4 + (h % 74)}%`;
 }
 
-export function pinPositions(items: { id: string; isoTime: string }[], range: TimelineRange) {
+// Ikoner för samma tidsfack radbryts (ny rad nedanför, ROW_HEIGHT_PX) istället
+// för att försvinna utanför synfältet om det är fler än MAX_PER_ROW stycken.
+// Den vertikala positionen (top) motsvarar alltid den faktiska tidpunkten,
+// oavsett hur många ikoner som delar facket.
+// - Uppdragsikoner (center=false) sprids åt höger, som tidigare.
+// - Belöningsikoner (center=true) centreras kring tidpunkten istället, så en
+//   ensam belöning (t.ex. en glass köpt mitt på dagen) syns tydligt centrerad.
+export function pinPositions(
+  items: { id: string; isoTime: string }[],
+  range: TimelineRange,
+  center = false
+) {
   const SLOT_SIZE = 14;
+  const MAX_PER_ROW = 4;
+  const COL_STEP_PCT = 22;
+  const ROW_HEIGHT_PX = 22;
+
   const groups = new Map<number, string[]>();
   for (const { id, isoTime } of items) {
     const slot = Math.round(minuteOfDay(isoTime) / SLOT_SIZE);
@@ -123,11 +138,17 @@ export function pinPositions(items: { id: string; isoTime: string }[], range: Ti
     g.push(id);
     groups.set(slot, g);
   }
-  const result = new Map<string, { top: number; left: string }>();
+  const result = new Map<string, { top: string; left: string }>();
   for (const [slot, ids] of groups) {
-    const top = Math.max(0, Math.min(100, ((slot * SLOT_SIZE) - range.startMinute) / (range.endMinute - range.startMinute) * 100));
+    const baseTop = Math.max(0, Math.min(100, ((slot * SLOT_SIZE) - range.startMinute) / (range.endMinute - range.startMinute) * 100));
     ids.forEach((id, i) => {
-      const left = `${4 + i * 22}%`;
+      const row = Math.floor(i / MAX_PER_ROW);
+      const col = i % MAX_PER_ROW;
+      const colsInRow = Math.min(MAX_PER_ROW, ids.length - row * MAX_PER_ROW);
+      const left = center
+        ? `${50 + (col - (colsInRow - 1) / 2) * COL_STEP_PCT}%`
+        : `${4 + col * COL_STEP_PCT}%`;
+      const top = row === 0 ? `${baseTop}%` : `calc(${baseTop}% + ${row * ROW_HEIGHT_PX}px)`;
       result.set(id, { top, left });
     });
   }

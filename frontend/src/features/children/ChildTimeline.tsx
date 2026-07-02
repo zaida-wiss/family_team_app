@@ -167,11 +167,15 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
       t.deletedAt === null
   );
 
-  const dayPins = [
-    ...completedTodos.map((t) => ({ id: t.id, isoTime: t.completedAt! })),
-    ...dayPurchased.filter((pr) => pr.durationMinutes === null).map((pr) => ({ id: pr.id, isoTime: pr.startsAt })),
-  ];
-  const pinPos = pinPositions(dayPins, timelineRange);
+  const todoPinPos = pinPositions(
+    completedTodos.map((t) => ({ id: t.id, isoTime: t.completedAt! })),
+    timelineRange
+  );
+  const rewardPinPos = pinPositions(
+    dayPurchased.filter((pr) => pr.durationMinutes === null).map((pr) => ({ id: pr.id, isoTime: pr.startsAt })),
+    timelineRange,
+    true
+  );
 
   return (
     <section className="child-timeline" aria-label="Min dag">
@@ -217,13 +221,13 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
 
                 {/* Completed todo pins */}
                 {completedTodos.map((t) => {
-                  const pos = pinPos.get(t.id);
+                  const pos = todoPinPos.get(t.id);
                   if (!pos) return null;
                   return (
                     <div
                       key={t.id}
                       className="child-tl-reward-pin child-tl-reward-pin--done"
-                      style={{ top: `${pos.top}%`, left: pos.left }}
+                      style={{ top: pos.top, left: pos.left }}
                       title={t.title}
                     >
                       {t.visual.value}
@@ -234,13 +238,13 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
                 {/* Purchased rewards */}
                 {dayPurchased.map((pr) => {
                   if (pr.durationMinutes === null) {
-                    const pos = pinPos.get(pr.id);
+                    const pos = rewardPinPos.get(pr.id);
                     if (!pos) return null;
                     return (
                       <div
                         key={pr.id}
                         className="child-tl-reward-pin"
-                        style={{ top: `${pos.top}%`, left: pos.left }}
+                        style={{ top: pos.top, left: pos.left }}
                         title={pr.itemTitle}
                       >
                         {pr.itemSymbol ?? "🎁"}
