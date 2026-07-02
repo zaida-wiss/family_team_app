@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
 import type { Calendar, Id, Member, Reward, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
@@ -71,7 +70,7 @@ export function ChildDashboard({
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
   const { requireApprovalForCategories, items: shopItems, purchased, onPurchaseReward } = useRewardShopContext();
-  const { heldTodoId, completedCue, startHold, clearHold } = useChildCompleteHold(
+  const { heldTodoId, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
   );
@@ -146,20 +145,6 @@ export function ChildDashboard({
             />
           </div>
 
-          {completedCue && (
-            <div className="child-complete-cue" role="status" aria-live="polite">
-              <div className="child-complete-cue-icon">
-                <span>{completedCue.visual}</span>
-              </div>
-              <div>
-                <strong>{completedCue.title}</strong>
-                <small>Flyttad till väntar på godkännande</small>
-              </div>
-              <span className="child-complete-cue-stars">
-                +{completedCue.starValue} <Star size={12} fill="currentColor" />
-              </span>
-            </div>
-          )}
         </div>
       </div>
 

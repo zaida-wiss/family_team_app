@@ -507,22 +507,6 @@
   color: var(--on-c6);
 }
 
-/* Complete cue */
-.child-dashboard[class*="theme-"] .child-complete-cue {
-  background: var(--c7);
-  color: var(--on-c7);
-  border-color: color-mix(in srgb, var(--c7) 48%, transparent);
-}
-
-.child-dashboard[class*="theme-"] .child-complete-cue-icon {
-  background: var(--c0);
-  color: var(--on-c0);
-}
-
-.child-dashboard[class*="theme-"] .child-complete-cue-stars {
-  color: var(--c1);
-}
-
 /* =========================================================
    THEME PICKER
    ========================================================= */

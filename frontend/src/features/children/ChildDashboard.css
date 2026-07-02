@@ -82,38 +82,6 @@
   overflow: visible;
 }
 
-.child-complete-cue {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid;
-  border-radius: 14px;
-  background: var(--card);
-  color: var(--foreground);
-  pointer-events: none;
-}
-
-.child-complete-cue-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--primary-fg);
-  font-size: 1.2rem;
-}
-
-.child-complete-cue-stars {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 900;
-  color: var(--primary);
-}
-
 .rejected-notice {
   display: grid;
   gap: 8px;
