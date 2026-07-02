@@ -114,6 +114,7 @@
   min-height: 12px;
   pointer-events: none;
   overflow: visible;
+  opacity: 0.65;
 }
 
 .child-tl-task-marker--window::after {
@@ -224,7 +225,7 @@
 
 .child-tl-reward-pin--done {
   font-size: clamp(0.65rem, 1.2vw, 1.1rem);
-  opacity: 0.85;
+  opacity: 0.65;
   /* Uppdragsikoner sprids (vänsterankrade), bara belöningsikoner centreras. */
   transform: none;
 }
