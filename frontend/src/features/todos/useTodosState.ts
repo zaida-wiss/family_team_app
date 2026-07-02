@@ -127,15 +127,10 @@ export function useTodosState() {
       return;
     }
 
-    setTodos((current) =>
-      current.map((todo) => {
-        if (todo.id !== todoId || !canEditTodo(member, roles, todo)) {
-          return todo;
-        }
-
-        return { ...todo, title: trimmedTitle };
-      })
-    );
+    const todo = todos.find((t) => t.id === todoId);
+    if (todo && canEditTodo(member, roles, todo)) {
+      updateTodo(todoId, { title: trimmedTitle });
+    }
     setEditingTodoId(null);
     setEditingTodoTitle("");
   }
