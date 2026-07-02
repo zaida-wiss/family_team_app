@@ -3,6 +3,15 @@ import type { IcsSubscription } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import { validateAndNormalizeIcsUrl } from "../utils/icsUrl.js";
+import { convertSiteVisionEventsToIcs } from "../utils/siteVisionEvents.js";
+
+// Tolererar en URL som inte pekar på en färdig ICS-fil utan på en sida som
+// råkar bädda in evenemang i SiteVisions "SchoolBreakListing"-format (se
+// siteVisionEvents.ts). Vanliga ICS-flöden går igenom oförändrade.
+function resolveIcsText(rawText: string): string {
+  if (rawText.includes("BEGIN:VCALENDAR")) return rawText;
+  return convertSiteVisionEventsToIcs(rawText) ?? rawText;
+}
 
 // ── ICS-parsning (privat) ─────────────────────────────────────────────────────
 
@@ -156,12 +165,12 @@ export async function syncSubscriptionById(calendarId: string, subId: string) {
 export async function fetchIcs(url: unknown): Promise<string> {
   const normalizedUrl = validateAndNormalizeIcsUrl(url);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
     const icsResponse = await fetch(normalizedUrl, { signal: controller.signal });
     clearTimeout(timeout);
     if (!icsResponse.ok) throw new AppError(502, "Kunde inte hämta kalender från URL");
-    return icsResponse.text();
+    return resolveIcsText(await icsResponse.text());
   } catch (err) {
     clearTimeout(timeout);
     if (err instanceof AppError) throw err;
@@ -175,13 +184,13 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
 
   const fetchUrl = sub.url.replace(/^webcal:\/\//i, "https://");
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const timeout = setTimeout(() => controller.abort(), 45_000);
   let icsText: string;
   try {
     const res = await fetch(fetchUrl, { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) return;
-    icsText = await res.text();
+    icsText = resolveIcsText(await res.text());
   } catch {
     clearTimeout(timeout);
     return;
