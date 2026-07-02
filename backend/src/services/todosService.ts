@@ -2,6 +2,7 @@ import { TodoModel } from "../db/models/Todo.js";
 import { MemberModel } from "../db/models/Member.js";
 import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { AppError } from "../utils/errors.js";
+import { TodoPatchSchema } from "../../../shared/schemas.js";
 import type { Todo } from "../../../shared/types.js";
 
 export async function getAllTodos(accountId: string) {
@@ -70,8 +71,8 @@ function isDuplicateKeyError(error: unknown) {
   );
 }
 
-export async function completeTodo(id: string, memberId: string | null) {
-  const todo = await TodoModel.findOne({ id });
+export async function completeTodo(id: string, accountId: string, memberId: string | null) {
+  const todo = await TodoModel.findOne({ id, accountId });
   if (!todo || todo.status !== "pending") {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
@@ -81,8 +82,9 @@ export async function completeTodo(id: string, memberId: string | null) {
   broadcastTodosChanged();
 }
 
-export async function updateTodo(id: string, patch: unknown) {
-  const todo = await TodoModel.findOne({ id });
+export async function updateTodo(id: string, accountId: string, data: unknown) {
+  const patch = TodoPatchSchema.parse(data);
+  const todo = await TodoModel.findOne({ id, accountId });
   if (!todo) {
     throw new AppError(404, "Todo hittades inte");
   }
@@ -93,8 +95,8 @@ export async function updateTodo(id: string, patch: unknown) {
   return { ok: true };
 }
 
-export async function approveTodo(id: string, memberId: string | null) {
-  const todo = await TodoModel.findOne({ id });
+export async function approveTodo(id: string, accountId: string, memberId: string | null) {
+  const todo = await TodoModel.findOne({ id, accountId });
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
   }
@@ -111,8 +113,8 @@ export async function approveTodo(id: string, memberId: string | null) {
   broadcastTodosChanged();
 }
 
-export async function rejectTodo(id: string, memberId: string | null, reason: string | null) {
-  const todo = await TodoModel.findOne({ id });
+export async function rejectTodo(id: string, accountId: string, memberId: string | null, reason: string | null) {
+  const todo = await TodoModel.findOne({ id, accountId });
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
   }
@@ -145,8 +147,8 @@ function canRetryRejectedTodo(todo: { expiresAt: string | null }, now = Date.now
   return new Date(todo.expiresAt).getTime() > now;
 }
 
-export async function deleteTodo(id: string, memberId: string | null) {
-  const todo = await TodoModel.findOne({ id });
+export async function deleteTodo(id: string, accountId: string, memberId: string | null) {
+  const todo = await TodoModel.findOne({ id, accountId });
   if (!todo) {
     throw new AppError(404, "Todo hittades inte");
   }
@@ -156,8 +158,8 @@ export async function deleteTodo(id: string, memberId: string | null) {
   broadcastTodosChanged();
 }
 
-export async function restoreTodo(id: string) {
-  const todo = await TodoModel.findOne({ id });
+export async function restoreTodo(id: string, accountId: string) {
+  const todo = await TodoModel.findOne({ id, accountId });
   if (!todo) {
     throw new AppError(404, "Todo hittades inte");
   }

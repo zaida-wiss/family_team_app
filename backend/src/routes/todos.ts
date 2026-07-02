@@ -27,31 +27,37 @@ todosRouter.get("/events", requireAuth, async (_req, res) => {
 });
 
 todosRouter.patch("/:id", requireAuth, async (req, res) => {
-  res.json(await todos.updateTodo(req.params.id, req.body));
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  res.json(await todos.updateTodo(req.params.id, accountId, req.body));
 });
 
 todosRouter.patch("/:id/complete", requireAuth, async (req, res) => {
-  await todos.completeTodo(req.params.id, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await todos.completeTodo(req.params.id, accountId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 todosRouter.patch("/:id/approve", requireAuth, async (req, res) => {
-  await todos.approveTodo(req.params.id, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await todos.approveTodo(req.params.id, accountId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 todosRouter.patch("/:id/reject", requireAuth, async (req, res) => {
+  const accountId = await accountIdOf(req.memberId, req.userId);
   const { reason } = RejectTodoBodySchema.parse(req.body ?? {});
-  await todos.rejectTodo(req.params.id, req.memberId ?? null, reason ?? null);
+  await todos.rejectTodo(req.params.id, accountId, req.memberId ?? null, reason ?? null);
   res.json({ ok: true });
 });
 
 todosRouter.delete("/:id", requireAuth, async (req, res) => {
-  await todos.deleteTodo(req.params.id, req.memberId ?? null);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await todos.deleteTodo(req.params.id, accountId, req.memberId ?? null);
   res.json({ ok: true });
 });
 
 todosRouter.patch("/:id/restore", requireAuth, async (req, res) => {
-  await todos.restoreTodo(req.params.id);
+  const accountId = await accountIdOf(req.memberId, req.userId);
+  await todos.restoreTodo(req.params.id, accountId);
   res.json({ ok: true });
 });

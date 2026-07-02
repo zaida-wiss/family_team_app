@@ -251,6 +251,7 @@ export const TodoVisualSchema = z.object({
 
 export const TodoSchema = z.object({
   id: IdSchema,
+  accountId: IdSchema.optional(),
   title: z.string().min(1, "Uppgiftstitel krävs"),
   createdBy: IdSchema,
   assignedTo: IdSchema.nullable(),
@@ -270,7 +271,37 @@ export const TodoSchema = z.object({
   rejectedAt: z.string().nullable(),
   rejectedReason: z.string().nullable(),
   deletedAt: z.string().nullable(),
-  deletedBy: IdSchema.nullable()
+  deletedBy: IdSchema.nullable(),
+  routineCategory: z.string().nullable().optional()
+});
+
+// Fält en klient får patcha på en befintlig todo (titelredigering, rutinredigering via
+// ChildRoutineCreator). completedAt/approvedBy/approvedAt/rejectedBy/rejectedAt/
+// deletedAt/deletedBy får bara sättas till null och status bara till "pending" — det är
+// den enda kombinationen "uppdatera rutin"-flödet (refreshRoutineOccurrence) behöver för
+// att återställa en dagens-kopia, aldrig en riktig godkänn/neka/radera-väg (de har egna
+// dedikerade endpoints: complete/approve/reject/delete/restore).
+export const TodoPatchSchema = TodoSchema.pick({
+  title: true,
+  assignedTo: true,
+  isShared: true,
+  starValue: true,
+  visual: true,
+  recurrence: true,
+  recurringSourceId: true,
+  occurrenceDate: true,
+  visibleFrom: true,
+  expiresAt: true,
+  routineCategory: true
+}).partial().extend({
+  status: z.literal("pending").optional(),
+  completedAt: z.null().optional(),
+  approvedBy: z.null().optional(),
+  approvedAt: z.null().optional(),
+  rejectedBy: z.null().optional(),
+  rejectedAt: z.null().optional(),
+  deletedAt: z.null().optional(),
+  deletedBy: z.null().optional()
 });
 
 export const RejectTodoBodySchema = z.object({
