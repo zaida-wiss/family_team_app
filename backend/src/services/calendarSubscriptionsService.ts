@@ -169,38 +169,43 @@ export async function fetchIcs(url: unknown): Promise<string> {
   }
 }
 
-export async function syncSubscription(calendarId: string, sub: IcsSubscription) {
-  const calendar = await CalendarModel.findOne({ id: calendarId });
-  if (!calendar) return;
+const SCHOOL_CLOSED = /stängningsdag|kompetensdag/i;
 
-  const fetchUrl = sub.url.replace(/^webcal:\/\//i, "https://");
+async function fetchIcsTextOrNull(url: string): Promise<string | null> {
+  const fetchUrl = url.replace(/^webcal:\/\//i, "https://");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
-  let icsText: string;
   try {
     const res = await fetch(fetchUrl, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!res.ok) return;
-    icsText = await res.text();
+    if (!res.ok) return null;
+    return await res.text();
   } catch {
+    return null;
+  } finally {
     clearTimeout(timeout);
-    return;
   }
+}
 
-  const nowDate = new Date();
-  const nowStr = nowDate.toISOString();
-  const sub3mAgo = new Date(nowDate); sub3mAgo.setMonth(sub3mAgo.getMonth() - 3);
-  const cutoffSub = sub3mAgo.toISOString().slice(0, 10);
-  const sub1mAgo = new Date(nowDate); sub1mAgo.setMonth(sub1mAgo.getMonth() - 1);
-  const cutoffAll = sub1mAgo.toISOString().slice(0, 10);
+function subscriptionCutoffs(now: Date) {
+  const sub3mAgo = new Date(now); sub3mAgo.setMonth(sub3mAgo.getMonth() - 3);
+  const sub1mAgo = new Date(now); sub1mAgo.setMonth(sub1mAgo.getMonth() - 1);
+  return {
+    cutoffSub: sub3mAgo.toISOString().slice(0, 10),
+    cutoffAll: sub1mAgo.toISOString().slice(0, 10),
+  };
+}
 
-  const incoming = applyFilters(parseIcsEvents(icsText), sub)
-    .filter((ev) => ev.startsAt.slice(0, 10) >= cutoffSub);
-  const incomingByUid = new Map(incoming.filter((e) => e.uid).map((e) => [e.uid!, e]));
-
-  const SCHOOL_CLOSED = /stängningsdag|kompetensdag/i;
-  const subId = sub.id;
-
+// Matchar inkommande ICS-händelser mot redan sparade (via UID): uppdaterar de
+// som fortfarande finns i flödet, soft-deletar de som försvunnit. Muterar
+// incomingByUid (tar bort matchade poster) så att kvarvarande poster i den
+// mappen är just de som ska läggas till som nya händelser.
+function reconcileExistingEvents(
+  calendar: { events: any[] },
+  subId: string,
+  incomingByUid: Map<string, ReturnType<typeof parseIcsEvents>[number]>,
+  cutoffSub: string,
+  nowStr: string
+) {
   for (const ev of calendar.events) {
     if (ev.subscriptionId !== subId || ev.deletedAt) continue;
     if ((ev.startsAt ?? "").slice(0, 10) < cutoffSub) continue;
@@ -217,7 +222,14 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
       ev.deletedBy = null;
     }
   }
+}
 
+function insertNewEvents(
+  calendar: { events: any[]; ownerId: string },
+  calendarId: string,
+  subId: string,
+  incoming: ReturnType<typeof parseIcsEvents>
+) {
   const existingUids = new Set(calendar.events.filter((e) => e.subscriptionId === subId).map((e) => e.uid));
   for (const src of incoming) {
     if (src.uid && existingUids.has(src.uid)) continue;
@@ -241,15 +253,42 @@ export async function syncSubscription(calendarId: string, sub: IcsSubscription)
       deletedBy: null,
     } as any);
   }
+}
 
-  const keepAllHistory = (calendar as any).keepAllHistory ?? false;
+// Skriver om calendar.events till bara de poster som fortfarande ligger inom
+// retention-fönstret (3 mån för prenumererade, 1 mån för manuella om inte
+// keepAllHistory är satt). Returnerar om något faktiskt togs bort.
+function pruneOldEvents(calendar: any, cutoffSub: string, cutoffAll: string): boolean {
+  const keepAllHistory = calendar.keepAllHistory ?? false;
   const beforeCount = calendar.events.length;
   calendar.events = (calendar.events as any[]).filter((ev) => {
     const d = (ev.startsAt ?? "").slice(0, 10);
     if (ev.subscriptionId) return d >= cutoffSub;
     return keepAllHistory || d >= cutoffAll;
   }) as any;
-  if (calendar.events.length !== beforeCount) calendar.markModified("events");
+  return calendar.events.length !== beforeCount;
+}
+
+export async function syncSubscription(calendarId: string, sub: IcsSubscription) {
+  const calendar = await CalendarModel.findOne({ id: calendarId });
+  if (!calendar) return;
+
+  const icsText = await fetchIcsTextOrNull(sub.url);
+  if (icsText === null) return;
+
+  const nowStr = new Date().toISOString();
+  const { cutoffSub, cutoffAll } = subscriptionCutoffs(new Date());
+
+  const incoming = applyFilters(parseIcsEvents(icsText), sub)
+    .filter((ev) => ev.startsAt.slice(0, 10) >= cutoffSub);
+  const incomingByUid = new Map(incoming.filter((e) => e.uid).map((e) => [e.uid!, e]));
+
+  reconcileExistingEvents(calendar, sub.id, incomingByUid, cutoffSub, nowStr);
+  insertNewEvents(calendar, calendarId, sub.id, incoming);
+  calendar.markModified("events");
+
+  const pruned = pruneOldEvents(calendar, cutoffSub, cutoffAll);
+  if (pruned) calendar.markModified("events");
 
   sub.lastSyncedAt = nowStr;
   calendar.markModified("subscriptions");
