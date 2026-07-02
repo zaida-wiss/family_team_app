@@ -213,16 +213,11 @@
   position: absolute;
   right: 4px;
   z-index: 10;
-  font-size: clamp(1rem, 2vw, 2.2rem);
+  /* Köpta belöningar dubbelt så stora som uppdragsikonerna (--done) så de syns tydligt. */
+  font-size: clamp(1.3rem, 2.4vw, 2.2rem);
   line-height: 1;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
   pointer-events: none;
-}
-
-@media (min-width: 800px) {
-  .child-tl-reward-pin:not(.child-tl-reward-pin--done) {
-    font-size: clamp(2rem, 4vw, 4.4rem);
-  }
 }
 
 .child-tl-reward-pin--done {
@@ -248,7 +243,7 @@
 }
 
 .child-tl-reward-block__symbol {
-  font-size: clamp(0.8rem, 1.5vw, 1.8rem);
+  font-size: clamp(1.3rem, 2.4vw, 2.2rem);
   flex-shrink: 0;
 }
 

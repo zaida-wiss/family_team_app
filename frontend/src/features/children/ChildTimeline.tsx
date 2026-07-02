@@ -247,7 +247,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
                       </div>
                     );
                   }
-                  const top = timePct(pr.startsAt, timelineRange);
+                  const top = Math.max(0, Math.min(100, timePct(pr.startsAt, timelineRange)));
                   const endsAt = new Date(new Date(pr.startsAt).getTime() + pr.durationMinutes * 60000).toISOString();
                   const height = durPct(pr.startsAt, endsAt, timelineRange);
                   return (
