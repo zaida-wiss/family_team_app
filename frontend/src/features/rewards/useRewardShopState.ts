@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { rewardShopApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
@@ -45,9 +45,12 @@ export function useRewardShopState() {
     return () => { cancelled = true; };
   }, [purchasedPageNum, purchaseVersion]);
 
-  function loadMorePurchased() {
+  // Stabil referens krävs: PurchasedList skapar om sin IntersectionObserver när onLoadMore
+  // byter identitet, och observern triggar direkt om sentinel redan är synlig — utan useCallback
+  // skulle varje orelaterad omrendering av appskalet ge en självförstärkande hämtningsloop.
+  const loadMorePurchased = useCallback(() => {
     setPurchasedPageNum((p) => p + 1);
-  }
+  }, []);
 
   async function addItem(item: RewardShopItem) {
     await rewardShopApi.addItem(item);
