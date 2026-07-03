@@ -6,6 +6,7 @@ import type { RewardShopItem } from "../../../shared/types.js";
 import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
 import { accountIdOf } from "../utils/memberUtils.js";
+import { broadcastRewardShopChanged } from "../realtime/rewardShopEvents.js";
 
 export async function getShop(memberId: string, userId: string) {
   const accountId = await accountIdOf(memberId, userId);
@@ -117,6 +118,7 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
     deletedAt: null,
   });
 
+  broadcastRewardShopChanged();
   return purchased;
 }
 
@@ -145,14 +147,16 @@ export async function getPurchasedRewardsPage(accountId: string, page: number, p
   return { items, page, pageSize, total };
 }
 
-export async function movePurchasedReward(id: string, startsAt: string) {
-  await PurchasedRewardModel.updateOne({ id }, { $set: { startsAt } });
+export async function movePurchasedReward(id: string, accountId: string, startsAt: string) {
+  await PurchasedRewardModel.updateOne({ id, accountId }, { $set: { startsAt } });
+  broadcastRewardShopChanged();
 }
 
-export async function deletePurchasedReward(id: string) {
-  const pr = await PurchasedRewardModel.findOne({ id });
+export async function deletePurchasedReward(id: string, accountId: string) {
+  const pr = await PurchasedRewardModel.findOne({ id, accountId });
   if (pr) {
     await MemberModel.updateOne({ id: pr.memberId }, { $inc: { spentStars: -pr.starCost } });
     await PurchasedRewardModel.updateOne({ id }, { $set: { deletedAt: new Date().toISOString() } });
+    broadcastRewardShopChanged();
   }
 }

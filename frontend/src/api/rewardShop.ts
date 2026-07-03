@@ -1,5 +1,5 @@
 import type { PaginatedPurchasedRewards, PurchasedReward, RewardShopItem } from "@shared/types";
-import { api, request } from "./client";
+import { api, request, subscribeToServerEvents } from "./client";
 
 export type ShopResponse = { items: RewardShopItem[]; requireApprovalForCategories: boolean };
 
@@ -38,4 +38,16 @@ export const rewardShopApi = {
     }),
   deletePurchased: (id: string) =>
     request<{ ok: boolean }>(api(`reward-shop/purchased/${id}`), { method: "DELETE" }),
+  subscribeToChanges: (onChange: () => void) => {
+    let initialConnect = true;
+    return subscribeToServerEvents(api("reward-shop/events"), (eventName) => {
+      if (eventName === "reward-shop-changed") {
+        onChange();
+      } else if (eventName === "connected") {
+        // Hoppa över den allra första anslutningen — initial fetch sker redan i useRewardShopState
+        if (initialConnect) { initialConnect = false; return; }
+        onChange();
+      }
+    });
+  },
 };

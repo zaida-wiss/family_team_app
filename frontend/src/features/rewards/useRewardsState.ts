@@ -38,14 +38,17 @@ export function useRewardsState() {
     }
   }
 
-  function approveWish(rewardId: Id, approverId: Id) {
+  async function approveWish(rewardId: Id, approverId: Id) {
     const starsNeeded = wishStars[rewardId] ?? 10;
 
-    rewardsApi.approve(rewardId, starsNeeded).catch(console.error);
-    trackEvent("wish-approved");
+    // Sätt bara igång API-anropet om önskningen faktiskt fortfarande är suggested lokalt —
+    // annars kan ett dubbelklick (knappen har ingen laddningsspärr) hinna skicka två
+    // godkänn-anrop, där det andra får 404 av backend eftersom statusen redan bytt.
+    let eligible = false;
     setRewards((current) =>
       current.map((r) => {
         if (r.id !== rewardId || r.status !== "suggested") return r;
+        eligible = true;
         return {
           ...r,
           status: "active" as const,
@@ -55,11 +58,29 @@ export function useRewardsState() {
         };
       })
     );
+    if (!eligible) return;
+
     setWishStars((prev) => {
       const next = { ...prev };
       delete next[rewardId];
       return next;
     });
+
+    try {
+      await rewardsApi.approve(rewardId, starsNeeded);
+      trackEvent("wish-approved");
+    } catch (error) {
+      console.error(error);
+      // API-anropet misslyckades — återställ den optimistiska uppdateringen så UI inte
+      // visar en godkänd önskning som aldrig faktiskt sparades på servern.
+      setRewards((current) =>
+        current.map((r) =>
+          r.id === rewardId
+            ? { ...r, status: "suggested" as const, approvedBy: null, approvedAt: null }
+            : r
+        )
+      );
+    }
   }
 
   function updateWish(rewardId: Id, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) {
@@ -69,11 +90,12 @@ export function useRewardsState() {
     );
   }
 
-  function rejectWish(rewardId: Id, rejecterId: Id) {
-    rewardsApi.reject(rewardId).catch(console.error);
+  async function rejectWish(rewardId: Id, rejecterId: Id) {
+    let eligible = false;
     setRewards((current) =>
       current.map((r) => {
         if (r.id !== rewardId || r.status !== "suggested") return r;
+        eligible = true;
         return {
           ...r,
           status: "rejected" as const,
@@ -82,6 +104,18 @@ export function useRewardsState() {
         };
       })
     );
+    if (!eligible) return;
+
+    try {
+      await rewardsApi.reject(rewardId);
+    } catch (error) {
+      console.error(error);
+      setRewards((current) =>
+        current.map((r) =>
+          r.id === rewardId ? { ...r, status: "suggested" as const, deletedAt: null, deletedBy: null } : r
+        )
+      );
+    }
   }
 
   return { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish, updateWish };

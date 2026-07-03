@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import * as shop from "../services/rewardShopService.js";
 import { accountIdOf } from "../utils/memberUtils.js";
+import { addRewardShopEventsClient } from "../realtime/rewardShopEvents.js";
 
 export const rewardShopRouter = Router();
 
@@ -17,6 +18,15 @@ const purchasedQuerySchema = z.object({
 
 rewardShopRouter.get("/", requireAuth, async (req, res) => {
   res.json(await shop.getShop(req.memberId!, req.userId!));
+});
+
+rewardShopRouter.get("/events", requireAuth, async (_req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive"
+  });
+  addRewardShopEventsClient(res);
 });
 
 rewardShopRouter.patch("/settings", requireAuth, async (req, res) => {
@@ -60,11 +70,13 @@ rewardShopRouter.get("/purchased", requireAuth, async (req, res) => {
 });
 
 rewardShopRouter.patch("/purchased/:id/move", requireAuth, async (req, res) => {
-  await shop.movePurchasedReward(req.params.id, req.body.startsAt);
+  const accountId = await accountIdOf(req.memberId!, req.userId!);
+  await shop.movePurchasedReward(req.params.id, accountId, req.body.startsAt);
   res.json({ ok: true });
 });
 
 rewardShopRouter.delete("/purchased/:id", requireAuth, async (req, res) => {
-  await shop.deletePurchasedReward(req.params.id);
+  const accountId = await accountIdOf(req.memberId!, req.userId!);
+  await shop.deletePurchasedReward(req.params.id, accountId);
   res.json({ ok: true });
 });

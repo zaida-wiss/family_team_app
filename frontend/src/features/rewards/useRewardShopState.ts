@@ -25,6 +25,14 @@ export function useRewardShopState() {
     }).catch(console.error);
   }, []);
 
+  // Realtidssynk mellan enheter: ett köp/flytt/borttag på en annan enhet ska synas här
+  // utan att man själv behöver trigga en omhämtning (samma SSE-mönster som todos).
+  useEffect(() => {
+    return rewardShopApi.subscribeToChanges(() => {
+      setPurchaseVersion((v) => v + 1);
+    });
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     // En köp/flytt/borttag-mutation gör listan inaktuell — börja om från sida 1 oavsett hur långt ner man skrollat
