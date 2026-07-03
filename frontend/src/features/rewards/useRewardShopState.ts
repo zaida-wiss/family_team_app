@@ -35,8 +35,11 @@ export function useRewardShopState() {
     setPurchasedLoading(true);
     rewardShopApi.getPurchasedPage(pageToFetch).then((res) => {
       if (cancelled) return;
-      setPurchasedItems((prev) => (pageToFetch === 1 ? res.items : [...prev, ...res.items]));
-      setPurchasedTotal(res.total);
+      // Defensiv fallback mot oväntad svarsform (t.ex. tillfällig frontend/backend-versionsskillnad
+      // under en deploy) — undefined ska aldrig kunna hamna i state och krascha renderingen.
+      const newItems = res.items ?? [];
+      setPurchasedItems((prev) => (pageToFetch === 1 ? newItems : [...prev, ...newItems]));
+      setPurchasedTotal(res.total ?? 0);
       if (versionChanged) setPurchasedPageNum(1);
     }).catch(console.error).finally(() => {
       if (!cancelled) setPurchasedLoading(false);

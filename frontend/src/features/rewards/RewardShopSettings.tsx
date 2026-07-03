@@ -55,7 +55,10 @@ type PurchasedListProps = {
 
 function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, children, onMovePurchased, onDeletePurchased, onRefund }: PurchasedListProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const hasMore = purchasedTotal !== null && purchasedItems.length < purchasedTotal;
+  // Defensiv fallback: ett oväntat/mellanliggande svarsformat (t.ex. under en deploy-övergång
+  // där frontend och backend tillfälligt är av olika versioner) ska aldrig krascha renderingen.
+  const items = purchasedItems ?? [];
+  const hasMore = purchasedTotal !== null && items.length < purchasedTotal;
 
   useEffect(() => {
     if (!hasMore || purchasedLoading) return;
@@ -79,7 +82,7 @@ function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoa
   return (
     <div className="reward-shop-settings__purchased">
       <p className="reward-shop-settings__refund-heading">Uthämtade belöningar</p>
-      {purchasedItems.map((pr) => {
+      {items.map((pr) => {
         const child = children.find((c) => c.id === pr.memberId);
         const localStart = toLocalDateTimeInput(pr.startsAt);
         return (
@@ -128,7 +131,7 @@ function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoa
       <span className="reward-shop-settings__sr-only" aria-live="polite">
         {purchasedLoading
           ? "Laddar fler belöningar…"
-          : `Visar ${purchasedItems.length} av ${purchasedTotal} uthämtade belöningar`}
+          : `Visar ${items.length} av ${purchasedTotal} uthämtade belöningar`}
       </span>
     </div>
   );
