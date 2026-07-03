@@ -7,13 +7,18 @@ import { visualizer } from "rollup-plugin-visualizer";
 export default defineConfig({
   plugins: [
     react(),
-    visualizer({
-      filename: "dist/bundle-report.html",
-      template: "treemap",
-      gzipSize: true,
-      brotliSize: true,
-      open: false,
-    }),
+    // Bygger bara bundle-rapporten när man uttryckligen ber om den (ANALYZE=true npm run build).
+    // Körde tidigare på varje bygge — lade dist/bundle-report.html i dist/, som Lighthouse CI:s
+    // static-dist-dir-autodiscovery av misstag testade som en riktig app-sida (fick 0 i poäng
+    // på LCP/animations-mätningar som inte är meningsfulla för en treemap-visualisering).
+    process.env.ANALYZE === "true" &&
+      visualizer({
+        filename: "dist/bundle-report.html",
+        template: "treemap",
+        gzipSize: true,
+        brotliSize: true,
+        open: false,
+      }),
   ],
   resolve: {
     alias: {

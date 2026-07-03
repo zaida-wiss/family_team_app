@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "postinstall": "npm --prefix ../shared ci",
     "dev": "tsx watch src/server.ts",
-    "build": "npm --prefix ../shared ci && tsc",
+    "build": "tsc",
     "start": "node dist/backend/src/server.js",
     "seed": "tsx src/db/seed.ts",
     "test": "vitest run"

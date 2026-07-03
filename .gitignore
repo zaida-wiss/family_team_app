@@ -3,6 +3,8 @@ dist
 frontend/vite.config.js
 frontend/vite.config.d.ts
 .test-dist
+test-results/
+.lighthouseci/
 .DS_Store
 .env
 .env.local
