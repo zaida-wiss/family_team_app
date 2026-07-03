@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { calendarsApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { generateId } from "../../utils/uuid";
-import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
+import { useCalendarSubscriptions } from "./useCalendarSubscriptions";
+import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
 
 const CALS_CACHE = "cals_v1";
 function readCalsCache(): Calendar[] {
@@ -381,50 +382,8 @@ export function useCalendarsState() {
     );
   }
 
-  function addSubscription(calendarId: Id, sub: Omit<IcsSubscription, "id" | "calendarId" | "lastSyncedAt">) {
-    calendarsApi.createSubscription(calendarId, sub).then((created) => {
-      setCalendars((current) =>
-        current.map((cal) =>
-          cal.id !== calendarId ? cal : { ...cal, subscriptions: [...cal.subscriptions, created] }
-        )
-      );
-    }).catch(console.error);
-  }
-
-  async function updateSubscription(calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "dateFrom" | "dateTo" | "displaySymbol">>) {
-    setCalendars((current) =>
-      current.map((cal) =>
-        cal.id !== calendarId ? cal : {
-          ...cal,
-          subscriptions: cal.subscriptions.map((s) => s.id !== subId ? s : { ...s, ...patch })
-        }
-      )
-    );
-    await calendarsApi.updateSubscription(calendarId, subId, patch);
-  }
-
-  function removeSubscription(calendarId: Id, subId: Id) {
-    calendarsApi.deleteSubscription(calendarId, subId).catch(console.error);
-    const deletedAt = new Date().toISOString();
-    setCalendars((current) =>
-      current.map((cal) => {
-        if (cal.id !== calendarId) return cal;
-        return {
-          ...cal,
-          subscriptions: cal.subscriptions.filter((s) => s.id !== subId),
-          events: cal.events.map((ev) =>
-            ev.subscriptionId === subId && !ev.deletedAt ? { ...ev, deletedAt } : ev
-          )
-        };
-      })
-    );
-  }
-
-  async function syncSubscription(calendarId: Id, subId: Id) {
-    await calendarsApi.syncSubscription(calendarId, subId);
-    const updated = await calendarsApi.getAll();
-    setCalendars(updated);
-  }
+  const { addSubscription, updateSubscription, removeSubscription, syncSubscription } =
+    useCalendarSubscriptions(setCalendars);
 
   return {
     calendars,
