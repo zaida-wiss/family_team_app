@@ -185,10 +185,12 @@ export function useTodosState() {
     );
   }
 
-  function approveTodo(todoId: Id, approverId: Id) {
+  async function approveTodo(todoId: Id, approverId: Id) {
+    let eligible = false;
     setTodos((current) =>
       current.map((todo) => {
         if (todo.id !== todoId || todo.status !== "done") return todo;
+        eligible = true;
         return {
           ...todo,
           status: "approved" as const,
@@ -197,16 +199,34 @@ export function useTodosState() {
         };
       })
     );
-    todosApi.approve(todoId)
-      .then(() => refreshTodos())
-      .catch(console.error);
+    if (!eligible) return;
+
     trackEvent("todo-approved");
+
+    try {
+      await todosApi.approve(todoId);
+      await refreshTodos();
+    } catch (error) {
+      console.error(error);
+      // API-anropet misslyckades — återställ den optimistiska uppdateringen så UI inte
+      // visar en godkänd uppgift som aldrig faktiskt sparades på servern (samma mönster
+      // som approveWish i useRewardsState.ts).
+      setTodos((current) =>
+        current.map((todo) =>
+          todo.id === todoId
+            ? { ...todo, status: "done" as const, approvedBy: null, approvedAt: null }
+            : todo
+        )
+      );
+    }
   }
 
-  function rejectTodo(todoId: Id, rejecterId: Id, reason: string | null) {
+  async function rejectTodo(todoId: Id, rejecterId: Id, reason: string | null) {
+    let previous: Todo | null = null;
     setTodos((current) =>
       current.map((todo) => {
         if (todo.id !== todoId || todo.status !== "done") return todo;
+        previous = todo;
         if (canRetryRejectedTodo(todo)) {
           return {
             ...todo,
@@ -228,9 +248,18 @@ export function useTodosState() {
         };
       })
     );
-    todosApi.reject(todoId, reason)
-      .then(() => refreshTodos())
-      .catch(console.error);
+    if (!previous) return;
+    const previousTodo = previous;
+
+    try {
+      await todosApi.reject(todoId, reason);
+      await refreshTodos();
+    } catch (error) {
+      console.error(error);
+      setTodos((current) =>
+        current.map((todo) => (todo.id === todoId ? previousTodo : todo))
+      );
+    }
   }
 
   function dismissRejectedTodo(todoId: Id, memberId: Id) {
