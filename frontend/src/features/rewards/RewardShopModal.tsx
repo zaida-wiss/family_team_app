@@ -1,6 +1,6 @@
 import "./RewardShopModal.css";
 import { createPortal } from "react-dom";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { RewardShopItem, Todo } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
@@ -34,6 +34,13 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
   const { heldId: heldFreeItemId, startHold: startFreeHold, clearHold: clearFreeHold } =
     useHoldToConfirm(FREE_HOLD_DURATION_MS);
 
+  // Klick-läge (WCAG 2.1.1/2.5.7) — samma "Dra/Klicka"-mönster som redan finns i
+  // ChildBanknotesModal/BankBreakdown för samma sorts sedel/mynt-interaktion.
+  // I klick-läge väljer man först ett kort som betalmål, sedan klickar man pengar
+  // i plånboken för att lägga dem på det valda kortet.
+  const [mode, setMode] = useState<"drag" | "click">("drag");
+  const [selectedCardIdRaw, setSelectedCardId] = useState<string | null>(null);
+
   // Dölj varor vars slutdatum passerat och varor som är kategori-spärrade (ogjord
   // uppgift). Varor som öppnar inom 4 timmar visas tonade så barnet ser att de är på
   // väg; allt annat tidsfönster-blockerat döljs helt tills det är nära nog att spela roll.
@@ -53,6 +60,11 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
       if (availableDiff !== 0) return availableDiff;
       return a.starCost - b.starCost;
     });
+
+  // Självläkande — om det valda kortet hinner köpas/försvinna (t.ex. via auto-köp)
+  // innan man hunnit avmarkera det, ska plånbokens klick-knappar inte fortsätta peka
+  // på ett kort som inte längre finns.
+  const selectedCardId = visibleItems.some((i) => i.id === selectedCardIdRaw) ? selectedCardIdRaw : null;
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
@@ -81,6 +93,33 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
           <button className="reward-shop-modal__close" onClick={onClose} aria-label="Stäng">✕</button>
         </div>
 
+        <div className="reward-shop-modal__mode-toggle" role="group" aria-label="Välj interaktionssätt">
+          <button
+            type="button"
+            className={`reward-shop-modal__mode-btn${mode === "drag" ? " reward-shop-modal__mode-btn--active" : ""}`}
+            onClick={() => { setMode("drag"); setSelectedCardId(null); }}
+            aria-pressed={mode === "drag"}
+          >
+            Dra
+          </button>
+          <button
+            type="button"
+            className={`reward-shop-modal__mode-btn${mode === "click" ? " reward-shop-modal__mode-btn--active" : ""}`}
+            onClick={() => setMode("click")}
+            aria-pressed={mode === "click"}
+          >
+            Klicka
+          </button>
+        </div>
+
+        {mode === "click" && (
+          <p className="reward-shop-modal__mode-hint">
+            {selectedCardId
+              ? "Klicka pengar i plånboken för att lägga dem på den valda belöningen."
+              : "Klicka en belöning för att välja den som betalmål."}
+          </p>
+        )}
+
         {visibleItems.length === 0 ? (
           <p className="reward-shop-modal__empty">Inga belöningar finns än.</p>
         ) : (
@@ -90,11 +129,17 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
               const label = available ? null : unavailableLabel(item);
               const cardCounts = drag.pendingPayments[item.id] ?? {};
               const paid = drag.getCardTotal(item.id);
-              const isTarget = drag.activeCardId === item.id;
+              const isFree = item.starCost === 0;
+              const isSelectable = mode === "click" && available && !isFree;
+              const isSelected = isSelectable && selectedCardId === item.id;
+              const isTarget = mode === "drag" ? drag.activeCardId === item.id : isSelected;
               const isFlashing = flashingId === item.id;
               const hasPayment = paid > 0;
-              const isFree = item.starCost === 0;
               const isHeldFree = isFree && heldFreeItemId === item.id;
+
+              function toggleSelected() {
+                setSelectedCardId((current) => (current === item.id ? null : item.id));
+              }
 
               return (
                 <div
@@ -107,12 +152,27 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                     isFlashing ? "reward-shop-card--flash" : "",
                     isHeldFree ? "reward-shop-card--holding" : "",
                   ].filter(Boolean).join(" ")}
-                  {...(isFree && available
+                  {...(mode === "drag" && isFree && available
                     ? {
                         onPointerDown: () => startFreeHold(item.id, () => confirmFreeItem(item)),
                         onPointerUp: clearFreeHold,
                         onPointerLeave: clearFreeHold,
                         onPointerCancel: clearFreeHold,
+                      }
+                    : {})}
+                  {...(isSelectable
+                    ? {
+                        role: "button" as const,
+                        tabIndex: 0,
+                        "aria-pressed": isSelected,
+                        "aria-label": `${item.title}, ${item.starCost} kr${isSelected ? " — valt som betalmål" : ""}`,
+                        onClick: toggleSelected,
+                        onKeyDown: (e: React.KeyboardEvent) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleSelected();
+                          }
+                        },
                       }
                     : {})}
                 >
@@ -127,6 +187,15 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                   )}
                   {label && (
                     <span className="reward-shop-card__unavailable-label">{label}</span>
+                  )}
+                  {mode === "click" && isFree && available && (
+                    <button
+                      className="reward-shop-card__claim-btn"
+                      type="button"
+                      onClick={() => confirmFreeItem(item)}
+                    >
+                      Hämta
+                    </button>
                   )}
 
                   {/* Pengar lagda ovanpå kortet */}
@@ -180,17 +249,32 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
           return (
             <div className="shop-wallet">
               <span className="shop-wallet__label">
-                💳 Plånbok{walletTotal > 0 ? <> — <strong>{walletTotal} kr</strong> — dra till en belöning</> : ""}
+                💳 Plånbok{walletTotal > 0 ? <> — <strong>{walletTotal} kr</strong> — {mode === "drag" ? "dra till en belöning" : "klicka för att lägga på vald belöning"}</> : ""}
               </span>
               {hasBills || hasCoins ? (
                 <div className="shop-wallet__strip" ref={walletStripRef}>
                   {drag.bills.map((v) => {
                     const count = drag.walletCounts[v] ?? 0;
+                    const clickDisabled = mode === "click" && !selectedCardId;
                     return (
                       <div
                         key={v}
-                        className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}`}
-                        onPointerDown={(e) => drag.startDrag(v, e)}
+                        className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}${clickDisabled ? " shop-wallet-denom--disabled" : ""}`}
+                        {...(mode === "drag"
+                          ? { onPointerDown: (e: React.PointerEvent) => drag.startDrag(v, e) }
+                          : {
+                              role: "button" as const,
+                              tabIndex: clickDisabled ? -1 : 0,
+                              "aria-disabled": clickDisabled,
+                              "aria-label": `Lägg ${v} kr på vald belöning`,
+                              onClick: () => selectedCardId && drag.addOneToCard(v, selectedCardId),
+                              onKeyDown: (e: React.KeyboardEvent) => {
+                                if ((e.key === "Enter" || e.key === " ") && selectedCardId) {
+                                  e.preventDefault();
+                                  drag.addOneToCard(v, selectedCardId);
+                                }
+                              },
+                            })}
                       >
                         <div className="shop-note-stack">
                           {Array.from({ length: count }).map((_, i) => (
@@ -210,11 +294,26 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                   })}
                   {drag.coins.map((v) => {
                     const count = drag.walletCounts[v] ?? 0;
+                    const clickDisabled = mode === "click" && !selectedCardId;
                     return (
                       <div
                         key={v}
-                        className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}`}
-                        onPointerDown={(e) => drag.startDrag(v, e)}
+                        className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}${clickDisabled ? " shop-wallet-denom--disabled" : ""}`}
+                        {...(mode === "drag"
+                          ? { onPointerDown: (e: React.PointerEvent) => drag.startDrag(v, e) }
+                          : {
+                              role: "button" as const,
+                              tabIndex: clickDisabled ? -1 : 0,
+                              "aria-disabled": clickDisabled,
+                              "aria-label": `Lägg ${v} kr på vald belöning`,
+                              onClick: () => selectedCardId && drag.addOneToCard(v, selectedCardId),
+                              onKeyDown: (e: React.KeyboardEvent) => {
+                                if ((e.key === "Enter" || e.key === " ") && selectedCardId) {
+                                  e.preventDefault();
+                                  drag.addOneToCard(v, selectedCardId);
+                                }
+                              },
+                            })}
                       >
                         <div className="shop-coin-stack">
                           {Array.from({ length: count }).map((_, i) => (

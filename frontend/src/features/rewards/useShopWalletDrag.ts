@@ -109,6 +109,23 @@ export function useShopWalletDrag(childId: Id, availableStars: number) {
     });
   }
 
+  // Klick-lägets motsvarighet till att dra en sedel/mynt och släppa på ett kort (WCAG
+  // 2.1.1/2.5.7) — samma statändring som startDrag:s onUp, bara utan pekarhändelsen.
+  function addOneToCard(value: number, itemId: string) {
+    if ((walletCounts[value] ?? 0) < 1) return;
+    setWalletCounts((prev) => ({
+      ...prev,
+      [value]: Math.max(0, (prev[value] ?? 0) - 1),
+    }));
+    setPendingPayments((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...(prev[itemId] ?? {}),
+        [value]: (prev[itemId]?.[value] ?? 0) + 1,
+      },
+    }));
+  }
+
   function startDrag(value: number, e: ReactPointerEvent) {
     if ((walletCounts[value] ?? 0) < 1) return;
     e.preventDefault();
@@ -245,5 +262,6 @@ export function useShopWalletDrag(childId: Id, availableStars: number) {
     depositToWallet,
     startDrag,
     startCardDrag,
+    addOneToCard,
   };
 }

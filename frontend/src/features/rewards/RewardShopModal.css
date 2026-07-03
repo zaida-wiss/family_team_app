@@ -55,6 +55,83 @@
   background: var(--bg-hover, #f0f0f0);
 }
 
+.reward-shop-modal__close:focus-visible,
+.reward-shop-card:focus-visible,
+.shop-wallet-denom[role="button"]:focus-visible,
+.reward-shop-modal__mode-btn:focus-visible,
+.reward-shop-card__claim-btn:focus-visible {
+  outline: 3px solid #a855f7;
+  outline-offset: 2px;
+}
+
+/* Klick-läge (WCAG 2.1.1/2.5.7) — alternativ till pekar-drag, samma
+   Dra/Klicka-mönster som ChildBanknotesModal/BankBreakdown. */
+.reward-shop-modal__mode-toggle {
+  display: inline-flex;
+  align-self: flex-end;
+  border: 1.5px solid var(--border, #ddd);
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.reward-shop-modal__mode-btn {
+  min-height: 36px;
+  padding: 4px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.reward-shop-modal__mode-btn + .reward-shop-modal__mode-btn {
+  border-left: 1.5px solid var(--border, #ddd);
+}
+
+.reward-shop-modal__mode-btn--active {
+  background: #a855f7;
+  color: #fff;
+}
+
+.reward-shop-modal__mode-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #666);
+  text-align: center;
+  margin: -4px 0 0;
+}
+
+.reward-shop-card__claim-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 14px;
+  margin-top: 4px;
+  border: 2px solid #a855f7;
+  border-radius: 10px;
+  background: #a855f7;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.reward-shop-card__claim-btn:hover {
+  filter: brightness(1.08);
+}
+
+.shop-wallet-denom[role="button"] {
+  cursor: pointer;
+  touch-action: auto;
+  border-radius: 8px;
+}
+
+.shop-wallet-denom--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .reward-shop-modal__active {
   display: flex;
   flex-direction: column;
