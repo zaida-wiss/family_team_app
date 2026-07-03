@@ -2,7 +2,6 @@ import { lazy, Suspense } from "react";
 import { HeroBar } from "./HeroBar";
 import { SettingsContent } from "./SettingsContent";
 import { ThemePicker } from "../../components/ThemePicker";
-import { useAppFont } from "../../components/FontPicker";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
 import { RewardShopContext } from "../rewards/RewardShopContext";
@@ -83,8 +82,6 @@ function PanelRouter({
 }
 
 export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
-  const { fontId, setFontId } = useAppFont();
-
   const {
     activeAccount,
     currentMember,
@@ -98,6 +95,8 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     memberContentProps,
     settingsProps,
     shopSettings,
+    fontId,
+    setFontId,
   } = useShellState(activeMembership, onLogout);
 
   const selectedDashboardMember =

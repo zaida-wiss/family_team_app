@@ -2,9 +2,15 @@ import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
 import { useShellPermissions } from "./useShellPermissions";
 import { useRewardShopState } from "../features/rewards/useRewardShopState";
+import { useAppFont } from "../components/FontPicker";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership } from "@shared/types";
 
 export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
+  // En enda instans delad mellan flytande temaväljaren (Shell) och Inställningar-panelen
+  // (SettingsContent) — annars visar de "aktiv"-markering utifrån varsin egen state och
+  // ett typsnittsbyte i den ena syns inte som markerad i den andra förrän omladdning.
+  const { fontId, setFontId } = useAppFont();
+
   const {
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
@@ -169,6 +175,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     members,
     roles,
     todos,
+    fontId,
+    setFontId,
     rewards,
     calendars,
     shoppingLists,
@@ -250,6 +258,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     childContentProps,
     memberContentProps,
     settingsProps,
+    fontId,
+    setFontId,
     shopSettings: {
       requireApprovalForCategories,
       updateSettings: updateShopSettings,

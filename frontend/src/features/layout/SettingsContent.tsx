@@ -4,7 +4,6 @@ import { LogOut } from "lucide-react";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
-import { useAppFont } from "../../components/FontPicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
@@ -54,6 +53,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     canManageMembers,
     canManageRoles,
     canViewTrash,
+    fontId,
+    setFontId,
     shopItems,
     purchasedItems,
     purchasedTotal,
@@ -66,8 +67,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onDeletePurchased,
     onUpdateWish,
   } = settingsProps;
-
-  const { fontId, setFontId } = useAppFont();
 
   return (
     <div className="settings-accordion">
