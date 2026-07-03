@@ -2,12 +2,13 @@ import { CheckCircle2, Pencil, Save, Send, Trash2, X, XCircle } from "lucide-rea
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo } from "@shared/types";
 import { TodoCreator } from "./TodoCreator";
-import { getVisibleTodos } from "./selectors";
+import { getAssigneeName, getVisibleTodos } from "./selectors";
 import { hasPermission } from "../../utils/permissions";
 
 type Props = {
   currentMember: Member;
   members: Member[];
+  allMembers: Member[];
   roles: Role[];
   todos: Todo[];
   rewards: Reward[];
@@ -35,13 +36,10 @@ function getTodoSummary(todo: { status: string; starValue: number }) {
   return `${todo.starValue} stjärnor`;
 }
 
-function getAssigneeName(todo: Todo, members: Member[]) {
-  return members.find((member) => member.id === todo.assignedTo)?.name ?? "Okänt barn";
-}
-
 export function TodosView({
   currentMember,
   members,
+  allMembers,
   roles,
   todos,
   rewards,
@@ -125,7 +123,7 @@ export function TodosView({
               ) : (
                 <span>
                   {todo.title}
-                  <small>{getAssigneeName(todo, members)}</small>
+                  <small>{getAssigneeName(todo, allMembers)}</small>
                 </span>
               )}
               <strong>{getTodoSummary(todo)}</strong>
@@ -169,7 +167,7 @@ export function TodosView({
                 <div>
                   <strong>{todo.title}</strong>
                   <small>
-                    {getAssigneeName(todo, members)} · {todo.starValue} stjärnor om den godkänns
+                    {getAssigneeName(todo, allMembers)} · {todo.starValue} stjärnor om den godkänns
                   </small>
                 </div>
                 {rejectingTodoId === todo.id ? (

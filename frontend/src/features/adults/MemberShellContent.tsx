@@ -26,6 +26,7 @@ type Props = {
   accountName: string;
   currentMember: Member;
   activeMembers: Member[];
+  members: Member[];
   selectedDashboardMemberId: string | null;
   roles: Role[];
   todos: Todo[];
@@ -92,7 +93,7 @@ function isTodoVisibleNow(
 export function MemberShellContent({
   activePanel, accountName,
 
-  currentMember, activeMembers, selectedDashboardMemberId, roles,
+  currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   editingTodoId, editingTodoTitle, wishStars, wishTitle,
@@ -216,6 +217,7 @@ export function MemberShellContent({
         <TodosView
           currentMember={currentMember}
           members={activeMembers}
+          allMembers={members}
           roles={roles}
           todos={todos}
           rewards={rewards}

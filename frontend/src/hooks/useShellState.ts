@@ -100,6 +100,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
   const memberContentProps = {
     currentMember,
     activeMembers,
+    members,
     selectedDashboardMemberId,
     roles,
     todos,

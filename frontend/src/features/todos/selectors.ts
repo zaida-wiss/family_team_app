@@ -25,3 +25,10 @@ export function getVisibleTodos(
 
   return activeTodos.filter(isOwnCreation);
 }
+
+// allMembers måste vara den ofiltrerade medlemslistan (inte activeMembers) — annars
+// kan en todo som tillhör ett borttaget barn inte slå upp namnet längre och visas
+// permanent som "Okänt barn" i historiken, trots att medlemmen bara är dold, inte raderad.
+export function getAssigneeName(todo: Todo, allMembers: Member[]) {
+  return allMembers.find((member) => member.id === todo.assignedTo)?.name ?? "Okänt barn";
+}
