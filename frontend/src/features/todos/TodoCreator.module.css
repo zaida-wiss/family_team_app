@@ -1,17 +1,6 @@
 .todoCreator {
   display: grid;
   gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  background: var(--muted);
-}
-
-.todoCreatorHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .todoCreatorGrid {

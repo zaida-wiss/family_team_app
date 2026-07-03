@@ -1,5 +1,4 @@
 import styles from "./TodoCreator.module.css";
-import { PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { hasPermission } from "../../utils/permissions";
 import { generateId } from "../../utils/uuid";
@@ -11,13 +10,15 @@ type TodoCreatorProps = {
   members: Member[];
   roles: Role[];
   onCreateTodo: (todo: Todo) => void;
+  onSubmitted?: () => void;
 };
 
 export function TodoCreator({
   currentMember,
   members,
   roles,
-  onCreateTodo
+  onCreateTodo,
+  onSubmitted
 }: TodoCreatorProps) {
   const assignableMembers = useMemo(() => {
     const childRoleIds = new Set(roles.filter((role) => role.isChildRole).map((role) => role.id));
@@ -104,18 +105,11 @@ export function TodoCreator({
     setRecurrenceType("none");
     setVisibleFrom("");
     setExpiresAt("");
+    onSubmitted?.();
   }
 
   return (
     <section className={styles.todoCreator} aria-label="Skapa todo">
-      <div className={styles.todoCreatorHeader}>
-        <div>
-          <p className="eyebrow">Ny uppgift</p>
-          <h3>Skapa todo</h3>
-        </div>
-        <PlusCircle size={22} />
-      </div>
-
       <div className={styles.todoCreatorGrid}>
         <label className="field-label">
           Titel

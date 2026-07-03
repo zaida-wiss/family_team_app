@@ -1,8 +1,8 @@
-import { CheckCircle2, Pencil, Save, Send, Trash2, X, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, PlusCircle, Save, Send, Trash2, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo } from "@shared/types";
-import { TodoCreator } from "./TodoCreator";
-import { getAssigneeName, getVisibleTodos } from "./selectors";
+import { TodoCreatorModal } from "./TodoCreatorModal";
+import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { hasPermission } from "../../utils/permissions";
 
 type Props = {
@@ -60,7 +60,9 @@ export function TodosView({
   onRejectWish,
   onSetWishStars
 }: Props) {
-  const visibleTodos = canSeeTodos ? getVisibleTodos(currentMember, roles, todos) : [];
+  const visibleTodos = canSeeTodos
+    ? getVisibleTodos(currentMember, roles, todos).filter((t) => !isTodoHistory(t))
+    : [];
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
   const approvalTodos = canApproveTodos ? todos.filter((t) => t.status === "done") : [];
   const suggestedRewards = canApproveTodos
@@ -69,6 +71,7 @@ export function TodosView({
 
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   function startRejecting(todoId: Id) {
     setRejectingTodoId(todoId);
@@ -97,11 +100,23 @@ export function TodosView({
 
       <div className="dashboard-list">
         {canCreate && (
-          <TodoCreator
+          <button
+            className="primary-button"
+            onClick={() => setIsCreateModalOpen(true)}
+            type="button"
+          >
+            <PlusCircle size={18} />
+            Skapa todo
+          </button>
+        )}
+
+        {isCreateModalOpen && (
+          <TodoCreatorModal
             currentMember={currentMember}
             members={members}
             roles={roles}
             onCreateTodo={onCreateTodo}
+            onClose={() => setIsCreateModalOpen(false)}
           />
         )}
 

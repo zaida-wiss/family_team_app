@@ -5,6 +5,7 @@ import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
+import { TodoHistory } from "../todos/TodoHistory";
 import type { useShellState } from "../../hooks/useShellState";
 
 const AccountSettings = lazy(() =>
@@ -122,6 +123,15 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
             <InviteForm accountId={activeAccount.id} roles={roles} />
           </div>
         )}
+      </SettingsSection>
+
+      <SettingsSection title="📋 Todo-historik">
+        <TodoHistory
+          currentMember={currentMember}
+          roles={roles}
+          todos={todos}
+          allMembers={members}
+        />
       </SettingsSection>
 
       <SettingsSection title="Barn">
