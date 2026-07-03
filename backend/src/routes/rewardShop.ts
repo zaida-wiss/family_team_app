@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { attachAccountId } from "../middleware/accountScope.js";
 import * as shop from "../services/rewardShopService.js";
-import { accountIdOf } from "../utils/memberUtils.js";
 import { addRewardShopEventsClient } from "../realtime/rewardShopEvents.js";
 
 export const rewardShopRouter = Router();
@@ -56,27 +56,24 @@ rewardShopRouter.post("/purchase/:itemId", requireAuth, async (req, res) => {
   res.json(purchased);
 });
 
-rewardShopRouter.get("/purchased", requireAuth, async (req, res) => {
-  const accountId = await accountIdOf(req.memberId!, req.userId!);
+rewardShopRouter.get("/purchased", requireAuth, attachAccountId, async (req, res) => {
   const { date, page, pageSize } = purchasedQuerySchema.parse(req.query);
 
   if (date) {
-    res.json(await shop.getPurchasedRewardsByDate(accountId, date));
+    res.json(await shop.getPurchasedRewardsByDate(req.accountId!, date));
     return;
   }
 
   const cappedPageSize = Math.min(pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-  res.json(await shop.getPurchasedRewardsPage(accountId, page ?? 1, cappedPageSize));
+  res.json(await shop.getPurchasedRewardsPage(req.accountId!, page ?? 1, cappedPageSize));
 });
 
-rewardShopRouter.patch("/purchased/:id/move", requireAuth, async (req, res) => {
-  const accountId = await accountIdOf(req.memberId!, req.userId!);
-  await shop.movePurchasedReward(req.params.id, accountId, req.body.startsAt);
+rewardShopRouter.patch("/purchased/:id/move", requireAuth, attachAccountId, async (req, res) => {
+  await shop.movePurchasedReward(req.params.id, req.accountId!, req.body.startsAt);
   res.json({ ok: true });
 });
 
-rewardShopRouter.delete("/purchased/:id", requireAuth, async (req, res) => {
-  const accountId = await accountIdOf(req.memberId!, req.userId!);
-  await shop.deletePurchasedReward(req.params.id, accountId);
+rewardShopRouter.delete("/purchased/:id", requireAuth, attachAccountId, async (req, res) => {
+  await shop.deletePurchasedReward(req.params.id, req.accountId!);
   res.json({ ok: true });
 });

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { attachAccountId } from "../middleware/accountScope.js";
 import { AnalyticsEventModel } from "../db/models/AnalyticsEvent.js";
 import { MemberModel } from "../db/models/Member.js";
-import { accountIdOf } from "../utils/memberUtils.js";
 
 export const analyticsRouter = Router();
 
@@ -22,15 +22,14 @@ const trackSchema = z.object({
   event: z.string().refine((e) => ALLOWED_EVENTS.has(e), { message: "Okänd händelse" }),
 });
 
-analyticsRouter.post("/track", requireAuth, async (req, res) => {
+analyticsRouter.post("/track", requireAuth, attachAccountId, async (req, res) => {
   const { event } = trackSchema.parse(req.body);
-  const accountId = await accountIdOf(req.memberId, req.userId);
   const member = await MemberModel.findOne({ id: req.memberId });
   const role = member?.isChild ? "child" : "parent";
 
   await AnalyticsEventModel.create({
     id: `evt-${crypto.randomUUID()}`,
-    accountId,
+    accountId: req.accountId!,
     event,
     role,
     timestamp: new Date().toISOString(),
@@ -39,8 +38,8 @@ analyticsRouter.post("/track", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-analyticsRouter.get("/summary", requireAuth, async (req, res) => {
-  const accountId = await accountIdOf(req.memberId, req.userId);
+analyticsRouter.get("/summary", requireAuth, attachAccountId, async (req, res) => {
+  const accountId = req.accountId!;
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
