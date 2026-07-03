@@ -2,6 +2,11 @@ export const SEDLAR = [1000, 500, 200, 100, 50, 20];
 export const MYNT = [10, 5, 2, 1];
 export const ALL_DENOMS = [...SEDLAR, ...MYNT];
 
+// { 100: 2, 20: 1 } -> [100, 100, 20] — en lista av enskilda valörer, en post per sedel/mynt
+export function flattenCounts(counts: Record<number, number>): number[] {
+  return Object.entries(counts).flatMap(([denom, count]) => Array(count).fill(Number(denom)));
+}
+
 // s: lista av [målvalör, antal] — vilka sedlar/mynt man får tillbaka vid växling
 export const DENOM_RULES: Partial<Record<number, { s?: Array<[number, number]> }>> = {
   1000: { s: [[500,  2]]          },
@@ -64,6 +69,38 @@ export function applySplit(value: number, prev: Record<number, number>): Record<
     next[target] = (next[target] ?? 0) + qty;
   }
   return next;
+}
+
+// Avgör vilka av de nedlagda sedlarna/mynten som faktiskt behövdes för att nå priset,
+// och vilka som blev över. De överblivna sedlarna/mynten returneras oförändrade — samma
+// fysiska valör man la dit. Ingen automatisk växling: om enda sättet att nå priset är en
+// enskild sedel som själv är större än priset (t.ex. en 100:a för en 20-krones-vara)
+// räknas den som nödvändig och konsumeras hel, precis som idag — vill barnet ha exakt
+// betalning får de själva växla sedeln i plånboken innan de handlar (manuell växling).
+export function splitPayment(
+  cardCounts: Record<number, number>,
+  cost: number
+): { excessCounts: Record<number, number> } {
+  const bills: number[] = [];
+  for (const [denomStr, count] of Object.entries(cardCounts)) {
+    const denom = Number(denomStr);
+    for (let i = 0; i < count; i++) bills.push(denom);
+  }
+  bills.sort((a, b) => a - b);
+
+  let sum = 0;
+  const excess: number[] = [];
+  for (const bill of bills) {
+    if (sum >= cost) {
+      excess.push(bill);
+    } else {
+      sum += bill;
+    }
+  }
+
+  const excessCounts: Record<number, number> = {};
+  for (const v of excess) excessCounts[v] = (excessCounts[v] ?? 0) + 1;
+  return { excessCounts };
 }
 
 export function applyZoneConvert(

@@ -3,6 +3,14 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { MYNT, SEDLAR, reconcileCounts } from "../children/bankDenoms";
 import type { Id } from "@shared/types";
 
+function mergeCounts(base: Record<number, number>, add: Record<number, number>): Record<number, number> {
+  const next = { ...base };
+  for (const [k, n] of Object.entries(add)) {
+    next[Number(k)] = (next[Number(k)] ?? 0) + n;
+  }
+  return next;
+}
+
 type WalletStorage = { counts: Record<number, number>; savedTotal: number };
 
 // Måste stämma av mot totalKronor precis som plånboken (ChildBanknotesModal) gör —
@@ -60,6 +68,30 @@ export function useShopWalletDrag(childId: Id, availableStars: number) {
     setPendingPayments((prev) => {
       const next = { ...prev };
       delete next[itemId];
+      return next;
+    });
+  }
+
+  // Plockar bort de sedlar/mynt som blev över från kortet (utan att lägga dem i
+  // plånboken än) — det ger den svepande återlämnings-animationen (RewardShopModal)
+  // något att visa på väg mot plånboken innan de faktiskt landar där.
+  function removeExcessFromCard(itemId: string, excessCounts: Record<number, number>) {
+    setPendingPayments((prev) => {
+      const current = { ...(prev[itemId] ?? {}) };
+      for (const [k, n] of Object.entries(excessCounts)) {
+        const key = Number(k);
+        current[key] = Math.max(0, (current[key] ?? 0) - n);
+        if (current[key] === 0) delete current[key];
+      }
+      return { ...prev, [itemId]: current };
+    });
+  }
+
+  // Landar de överblivna sedlarna/mynten i plånboken sedan sväp-animationen är klar.
+  function depositToWallet(counts: Record<number, number>) {
+    setWalletCounts((current) => {
+      const next = mergeCounts(current, counts);
+      saveWallet(childId, next);
       return next;
     });
   }
@@ -209,6 +241,8 @@ export function useShopWalletDrag(childId: Id, availableStars: number) {
     getCardTotal,
     clearCardPayment,
     commitPurchase,
+    removeExcessFromCard,
+    depositToWallet,
     startDrag,
     startCardDrag,
   };

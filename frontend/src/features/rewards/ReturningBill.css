@@ -1,0 +1,8 @@
+.returning-bill {
+  position: fixed;
+  pointer-events: none;
+  z-index: 400;
+  transform: translate(-50%, -50%);
+  transition: left 1.3s cubic-bezier(0.32, 0, 0.2, 1), top 1.3s cubic-bezier(0.32, 0, 0.2, 1);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.3));
+}

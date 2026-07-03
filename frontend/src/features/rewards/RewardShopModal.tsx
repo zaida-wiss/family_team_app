@@ -1,10 +1,12 @@
 import "./RewardShopModal.css";
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import type { RewardShopItem, Todo } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
 import { useShopWalletDrag } from "./useShopWalletDrag";
+import { useAutoPurchase } from "./useAutoPurchase";
+import { ReturningBill } from "./ReturningBill";
 import { isExpired, isAvailableNow, minutesUntilAvailable, unavailableLabel, blockingCategories } from "./shopAvailability";
 import { useRewardShopContext } from "./RewardShopContext";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
@@ -25,8 +27,8 @@ type Props = {
 export function RewardShopModal({ childId, items, todos, availableStars, onPurchase, onClose }: Props) {
   const { requireApprovalForCategories } = useRewardShopContext();
   const drag = useShopWalletDrag(childId, availableStars);
-  const [flashingId, setFlashingId] = useState<string | null>(null);
-  const purchasingRef = useRef<Set<string>>(new Set());
+  const walletStripRef = useRef<HTMLDivElement>(null);
+  const { flashingId, setFlashingId, returningBills } = useAutoPurchase(items, drag, walletStripRef, onPurchase);
   // Gratis belöningar (0 kr) har inga pengar att dra — håll in kortet 2 sekunder
   // istället, samma mönster som att avklara ett uppdragskort.
   const { heldId: heldFreeItemId, startHold: startFreeHold, clearHold: clearFreeHold } =
@@ -53,23 +55,6 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
     });
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
-
-  // Auto-purchase when dragged total reaches the price
-  useEffect(() => {
-    for (const item of items) {
-      const paid = drag.getCardTotal(item.id);
-      if (paid >= item.starCost && paid > 0 && !purchasingRef.current.has(item.id)) {
-        purchasingRef.current.add(item.id);
-        setFlashingId(item.id);
-        setTimeout(() => {
-          drag.commitPurchase(item.id);
-          onPurchase(item);
-          setFlashingId(null);
-          purchasingRef.current.delete(item.id);
-        }, 650);
-      }
-    }
-  });
 
   function confirmFreeItem(item: RewardShopItem) {
     setFlashingId(item.id);
@@ -198,7 +183,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                 💳 Plånbok{walletTotal > 0 ? <> — <strong>{walletTotal} kr</strong> — dra till en belöning</> : ""}
               </span>
               {hasBills || hasCoins ? (
-                <div className="shop-wallet__strip">
+                <div className="shop-wallet__strip" ref={walletStripRef}>
                   {drag.bills.map((v) => {
                     const count = drag.walletCounts[v] ?? 0;
                     return (
@@ -275,6 +260,15 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
             />
           )}
         </div>,
+        document.body
+      )}
+
+      {returningBills.length > 0 && createPortal(
+        <>
+          {returningBills.map((bill) => (
+            <ReturningBill key={bill.id} {...bill} />
+          ))}
+        </>,
         document.body
       )}
     </div>
