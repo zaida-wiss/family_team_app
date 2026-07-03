@@ -4,6 +4,7 @@ import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
 import { ROUTINE_CATEGORIES } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
+import { generateId } from "../../utils/uuid";
 import { RoutineList } from "./RoutineList";
 import { applyTemplateToOccurrence, getDateKey } from "../todos/recurringTodos";
 import {
@@ -109,7 +110,7 @@ export function ChildRoutineCreator({
 
   function createRoutineForChild(childId: Id, trimmedTitle: string) {
     onCreateTodo({
-      id: `routine-${crypto.randomUUID()}` as Id,
+      id: `routine-${generateId()}` as Id,
       title: trimmedTitle,
       createdBy: currentMember.id,
       assignedTo: childId,

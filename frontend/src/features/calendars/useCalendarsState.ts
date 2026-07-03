@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { calendarsApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
+import { generateId } from "../../utils/uuid";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id, IcsSubscription } from "@shared/types";
 
 const CALS_CACHE = "cals_v1";
@@ -82,7 +83,7 @@ export function useCalendarsState() {
 
   function createCalendar(name: string, memberId: Id, color: string) {
     const newCalendar: Calendar = {
-      id: `calendar-${crypto.randomUUID()}`,
+      id: `calendar-${generateId()}`,
       name,
       ownerId: memberId,
       color,
@@ -128,7 +129,7 @@ export function useCalendarsState() {
 
   function addCalendarEvent(calendarId: Id, event: AddEventInput, memberId: Id) {
     const newEvent: Calendar["events"][number] = {
-      id: `event-${crypto.randomUUID()}`,
+      id: `event-${generateId()}`,
       calendarId,
       title: event.title,
       startsAt: event.startsAt,
@@ -230,13 +231,13 @@ export function useCalendarsState() {
     memberId: Id
   ) {
     const source = {
-      id: `import-${crypto.randomUUID()}`,
+      id: `import-${generateId()}`,
       type: "ics-file" as const,
       name: sourceName,
       importedAt: new Date().toISOString()
     };
     const newEvents: Calendar["events"] = events.map((event) => ({
-      id: `event-${crypto.randomUUID()}`,
+      id: `event-${generateId()}`,
       calendarId,
       title: event.title,
       startsAt: event.startsAt,

@@ -2,6 +2,7 @@ import styles from "./TodoCreator.module.css";
 import { PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { hasPermission } from "../../utils/permissions";
+import { generateId } from "../../utils/uuid";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import type { Id, Member, RecurrenceRule, Role, Todo } from "@shared/types";
 
@@ -64,7 +65,7 @@ export function TodoCreator({
     }
 
     const baseTodo = {
-      id: `todo-${crypto.randomUUID()}`,
+      id: `todo-${generateId()}`,
       title: trimmedTitle,
       createdBy: currentMember.id,
       status: "pending",
@@ -91,7 +92,7 @@ export function TodoCreator({
     for (const memberId of selectedMemberIds) {
       onCreateTodo({
         ...baseTodo,
-        id: `todo-${crypto.randomUUID()}`,
+        id: `todo-${generateId()}`,
         assignedTo: memberId,
         isShared: false
       });

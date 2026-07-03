@@ -5,6 +5,7 @@ import {
   createPermissionMap,
   getPermissionGroups
 } from "./permissionsConfig";
+import { generateId } from "../../utils/uuid";
 import styles from "./RoleEditor.module.css";
 import type { Id, Member, PermissionKey, Role } from "@shared/types";
 
@@ -40,7 +41,7 @@ export function RoleEditor({
     const trimmedName = roleName.trim();
     if (!trimmedName) return;
     onCreateRole({
-      id: `role-${crypto.randomUUID()}`,
+      id: `role-${generateId()}`,
       name: trimmedName,
       isChildRole: false,
       permissions: createPermissionMap(draftPermissions)

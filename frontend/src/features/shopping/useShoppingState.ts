@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { shoppingApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
+import { generateId } from "../../utils/uuid";
 import type { AccessLevel, Id, ShoppingList } from "@shared/types";
 
 export function useShoppingState() {
@@ -12,7 +13,7 @@ export function useShoppingState() {
 
   function createShoppingList(name: string, memberId: Id) {
     const newList: ShoppingList = {
-      id: `shopping-${crypto.randomUUID()}`,
+      id: `shopping-${generateId()}`,
       name,
       ownerId: memberId,
       color: "#2f7d6d",
@@ -29,7 +30,7 @@ export function useShoppingState() {
 
   function addShoppingItem(listId: Id, title: string, memberId: Id) {
     const newItem: ShoppingList["items"][number] = {
-      id: `shopping-item-${crypto.randomUUID()}`,
+      id: `shopping-item-${generateId()}`,
       title,
       createdBy: memberId,
       done: false,

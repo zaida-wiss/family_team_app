@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { uploadImage } from "../../utils/uploadImage";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { canViewResource, hasPermission } from "../../utils/permissions";
+import { generateId } from "../../utils/uuid";
 import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role } from "@shared/types";
 
 const DEFAULT_CALENDAR_SETTINGS: CalendarSettings = {
@@ -62,7 +63,7 @@ export function AccountSettings({
     const selectedRole = roles.find((r) => r.id === roleId);
     const isChild = selectedRole?.isChildRole ?? false;
     onCreateMember({
-      id: `member-${crypto.randomUUID()}`,
+      id: `member-${generateId()}`,
       accountId: account.id,
       userId: null,
       name: trimmedName,
