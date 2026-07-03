@@ -109,13 +109,18 @@ export async function addEvent(calendarId: string, accountId: string, memberId: 
   await calendar.save();
 }
 
-export async function importEvents(calendarId: string, accountId: string, memberId: string, source: unknown, events: unknown[]) {
+export async function importEvents(
+  calendarId: string,
+  accountId: string,
+  memberId: string,
+  payload: { source: unknown; events: unknown[] }
+) {
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
-  const validatedSource = ImportedCalendarSourceSchema.parse(source);
+  const validatedSource = ImportedCalendarSourceSchema.parse(payload.source);
   calendar.importedSources.push(validatedSource as any);
-  for (const event of events) {
+  for (const event of payload.events) {
     const validated = CalendarEventSchema.parse(event);
     calendar.events.push({ ...validated, calendarId, createdBy: memberId } as any);
   }

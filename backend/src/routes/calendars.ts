@@ -72,7 +72,7 @@ calendarsRouter.post("/:id/fetch-ics", requireAuth, async (req, res) => {
 calendarsRouter.post("/:id/import", requireAuth, async (req, res) => {
   const accountId = await accountIdOf(req.memberId, req.userId);
   const { source, events } = req.body;
-  await calendars.importEvents(req.params.id, accountId, req.memberId!, source, events);
+  await calendars.importEvents(req.params.id, accountId, req.memberId!, { source, events });
   res.json({ ok: true });
 });
 
