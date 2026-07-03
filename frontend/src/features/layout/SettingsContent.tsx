@@ -54,7 +54,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     canManageMembers,
     canManageRoles,
     canViewTrash,
-    onRefundPurchase,
     shopItems,
     purchasedItems,
     purchasedTotal,
@@ -94,7 +93,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onAdd={onAddShopItem}
           onUpdate={onUpdateShopItem}
           onRemove={onRemoveShopItem}
-          onRefund={onRefundPurchase}
           onMovePurchased={onMovePurchased}
           onDeletePurchased={onDeletePurchased}
         />

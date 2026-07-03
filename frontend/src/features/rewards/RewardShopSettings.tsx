@@ -19,7 +19,6 @@ type Props = {
   onAdd: (item: RewardShopItem) => void;
   onUpdate: (itemId: string, patch: ItemPatch) => void;
   onRemove: (itemId: string) => void;
-  onRefund: (childId: string, amount: number) => void;
   onMovePurchased: (id: string, startsAt: string) => void;
   onDeletePurchased: (id: string) => void;
 };
@@ -50,10 +49,9 @@ type PurchasedListProps = {
   children: Member[];
   onMovePurchased: (id: string, startsAt: string) => void;
   onDeletePurchased: (id: string) => void;
-  onRefund: (childId: string, amount: number) => void;
 };
 
-function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, children, onMovePurchased, onDeletePurchased, onRefund }: PurchasedListProps) {
+function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, children, onMovePurchased, onDeletePurchased }: PurchasedListProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   // Defensiv fallback: ett oväntat/mellanliggande svarsformat (t.ex. under en deploy-övergång
   // där frontend och backend tillfälligt är av olika versioner) ska aldrig krascha renderingen.
@@ -106,10 +104,7 @@ function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoa
             <button
               aria-label={`Ta bort ${pr.itemTitle} och återbetala ${pr.starCost} stjärnor`}
               className="reward-shop-settings__remove"
-              onClick={() => {
-                onRefund(pr.memberId, pr.starCost);
-                onDeletePurchased(pr.id);
-              }}
+              onClick={() => onDeletePurchased(pr.id)}
               type="button"
             >✕</button>
           </div>
@@ -137,7 +132,7 @@ function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoa
   );
 }
 
-export function RewardShopSettings({ items, currentMemberId, children, purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, onAdd, onUpdate, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, onAdd, onUpdate, onRemove, onMovePurchased, onDeletePurchased }: Props) {
   const { requireApprovalForCategories, updateSettings: onUpdateSettings } = useRewardShopContext();
   const [form, setForm] = useState<FormState>(blank());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -329,33 +324,6 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
         </ul>
       )}
 
-      {children.some((c) => (c.spentStars ?? 0) > 0) && items.length > 0 && (
-        <div className="reward-shop-settings__refund">
-          <p className="reward-shop-settings__refund-heading">Ångra köp</p>
-          {children
-            .filter((c) => (c.spentStars ?? 0) > 0)
-            .map((child) => (
-              <div key={child.id} className="reward-shop-settings__refund-child">
-                <span className="reward-shop-settings__refund-name">
-                  {child.name} · ⭐ {child.spentStars} spenderade
-                </span>
-                <div className="reward-shop-settings__refund-items">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      className="reward-shop-settings__refund-btn"
-                      onClick={() => onRefund(child.id, item.starCost)}
-                      disabled={(child.spentStars ?? 0) < item.starCost}
-                    >
-                      {item.symbol ?? "🎁"} {item.title} (−⭐ {item.starCost})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
-
       <PurchasedList
         purchasedItems={purchasedItems}
         purchasedTotal={purchasedTotal}
@@ -364,7 +332,6 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
         children={children}
         onMovePurchased={onMovePurchased}
         onDeletePurchased={onDeletePurchased}
-        onRefund={onRefund}
       />
     </section>
   );
