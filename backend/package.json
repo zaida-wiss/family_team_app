@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "npm --prefix ../shared ci && tsc",
     "start": "node dist/backend/src/server.js",
     "seed": "tsx src/db/seed.ts",
     "test": "vitest run"
