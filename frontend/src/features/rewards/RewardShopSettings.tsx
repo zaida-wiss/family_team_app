@@ -1,5 +1,5 @@
 import "./RewardShopSettings.css";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Member, PurchasedReward, RewardShopItem, ShopAvailability } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useRewardShopContext } from "./RewardShopContext";
@@ -12,7 +12,10 @@ type Props = {
   items: RewardShopItem[];
   currentMemberId: string;
   children: Member[];
-  purchased: PurchasedReward[] | null;
+  purchasedItems: PurchasedReward[];
+  purchasedTotal: number | null;
+  purchasedLoading: boolean;
+  onLoadMore: () => void;
   onAdd: (item: RewardShopItem) => void;
   onUpdate: (itemId: string, patch: ItemPatch) => void;
   onRemove: (itemId: string) => void;
@@ -40,25 +43,43 @@ function toLocalDateTimeInput(iso: string): string {
 }
 
 type PurchasedListProps = {
-  purchased: PurchasedReward[] | null;
+  purchasedItems: PurchasedReward[];
+  purchasedTotal: number | null;
+  purchasedLoading: boolean;
+  onLoadMore: () => void;
   children: Member[];
   onMovePurchased: (id: string, startsAt: string) => void;
   onDeletePurchased: (id: string) => void;
   onRefund: (childId: string, amount: number) => void;
 };
 
-function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased, onRefund }: PurchasedListProps) {
-  if (purchased === null) {
+function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, children, onMovePurchased, onDeletePurchased, onRefund }: PurchasedListProps) {
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const hasMore = purchasedTotal !== null && purchasedItems.length < purchasedTotal;
+
+  useEffect(() => {
+    if (!hasMore || purchasedLoading) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) onLoadMore();
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, purchasedLoading, onLoadMore]);
+
+  if (purchasedTotal === null) {
     return <div className="reward-shop-settings__purchased-placeholder" aria-hidden="true" />;
   }
-  if (purchased.length === 0) return null;
-
-  const sorted = [...purchased].sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt));
+  if (purchasedTotal === 0) return null;
 
   return (
     <div className="reward-shop-settings__purchased">
       <p className="reward-shop-settings__refund-heading">Uthämtade belöningar</p>
-      {sorted.map((pr) => {
+      {purchasedItems.map((pr) => {
         const child = children.find((c) => c.id === pr.memberId);
         const localStart = toLocalDateTimeInput(pr.startsAt);
         return (
@@ -91,11 +112,29 @@ function PurchasedList({ purchased, children, onMovePurchased, onDeletePurchased
           </div>
         );
       })}
+      {hasMore && (
+        <div className="reward-shop-settings__pagination">
+          <div ref={sentinelRef} aria-hidden="true" />
+          <button
+            type="button"
+            className="reward-shop-settings__page-btn"
+            disabled={purchasedLoading}
+            onClick={onLoadMore}
+          >
+            {purchasedLoading ? "Laddar…" : "Ladda fler"}
+          </button>
+        </div>
+      )}
+      <span className="reward-shop-settings__sr-only" aria-live="polite">
+        {purchasedLoading
+          ? "Laddar fler belöningar…"
+          : `Visar ${purchasedItems.length} av ${purchasedTotal} uthämtade belöningar`}
+      </span>
     </div>
   );
 }
 
-export function RewardShopSettings({ items, currentMemberId, children, purchased, onAdd, onUpdate, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, onAdd, onUpdate, onRemove, onRefund, onMovePurchased, onDeletePurchased }: Props) {
   const { requireApprovalForCategories, updateSettings: onUpdateSettings } = useRewardShopContext();
   const [form, setForm] = useState<FormState>(blank());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -315,7 +354,10 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
       )}
 
       <PurchasedList
-        purchased={purchased}
+        purchasedItems={purchasedItems}
+        purchasedTotal={purchasedTotal}
+        purchasedLoading={purchasedLoading}
+        onLoadMore={onLoadMore}
         children={children}
         onMovePurchased={onMovePurchased}
         onDeletePurchased={onDeletePurchased}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Calendar, Id, Member, Reward, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, PurchasedReward, Reward, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -12,6 +12,8 @@ import { useChildCompleteHold } from "./useChildCompleteHold";
 import { useChildStars } from "./useChildStars";
 import { RewardShopModal } from "../rewards/RewardShopModal";
 import { useRewardShopContext } from "../rewards/RewardShopContext";
+import { rewardShopApi } from "../../api";
+import { toLocalDateStr } from "../calendars/calendarHelpers";
 
 import "./ChildDashboard.css";
 import "./ChildResponsive.css";
@@ -69,7 +71,7 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
-  const { requireApprovalForCategories, items: shopItems, purchased, onPurchaseReward } = useRewardShopContext();
+  const { requireApprovalForCategories, items: shopItems, purchaseVersion, onPurchaseReward } = useRewardShopContext();
   const { heldTodoId, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
@@ -81,6 +83,17 @@ export function ChildDashboard({
     const id = window.setInterval(() => setTimerNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  const [dayPurchased, setDayPurchased] = useState<PurchasedReward[]>([]);
+  const selectedDayStr = toLocalDateStr(selectedDay);
+
+  useEffect(() => {
+    let cancelled = false;
+    rewardShopApi.getPurchasedByDate(selectedDayStr).then((all) => {
+      if (!cancelled) setDayPurchased(all.filter((pr) => pr.memberId === child.id));
+    }).catch(console.error);
+    return () => { cancelled = true; };
+  }, [selectedDayStr, child.id, purchaseVersion]);
 
   const today = new Date(timerNow);
   const weekStripDays = getWeekStripDays(selectedDay);
@@ -104,7 +117,7 @@ export function ChildDashboard({
             roles={roles}
             selectedDay={selectedDay}
             todos={timelineTodos}
-            purchased={(purchased ?? []).filter((pr) => pr.memberId === child.id)}
+            purchased={dayPurchased}
           />
         </div>
 

@@ -144,6 +144,13 @@ export type PurchasedReward = {
   deletedAt: string | null;
 };
 
+export type PaginatedPurchasedRewards = {
+  items: PurchasedReward[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 export type PermissionKey =
   | "canManageMembers"
   | "canManageRoles"

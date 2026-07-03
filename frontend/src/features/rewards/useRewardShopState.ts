@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { rewardShopApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
@@ -7,16 +7,47 @@ export type { PurchasedReward };
 
 export function useRewardShopState() {
   const [items, setItems] = useState<RewardShopItem[]>([]);
-  const [purchased, setPurchased] = useState<PurchasedReward[] | null>(null);
   const [requireApprovalForCategories, setRequireApprovalForCategories] = useState(false);
+
+  // Infinite-scroll-lista över uthämtade belöningar: sidor läggs till i slutet, ersätter inte varandra
+  const [purchasedItems, setPurchasedItems] = useState<PurchasedReward[]>([]);
+  const [purchasedTotal, setPurchasedTotal] = useState<number | null>(null);
+  const [purchasedLoading, setPurchasedLoading] = useState(false);
+  const [purchasedPageNum, setPurchasedPageNum] = useState(1);
+  // Ökas vid köp/flytt/borttag så både belöningsbutikens lista och barnets tidslinje vet att hämta om
+  const [purchaseVersion, setPurchaseVersion] = useState(0);
+  const lastPurchaseVersionRef = useRef(purchaseVersion);
 
   useEffect(() => {
     rewardShopApi.getShop().then(({ items: shopItems, requireApprovalForCategories: raf }) => {
       setItems(shopItems);
       setRequireApprovalForCategories(raf);
     }).catch(console.error);
-    rewardShopApi.getPurchased().then(setPurchased).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    // En köp/flytt/borttag-mutation gör listan inaktuell — börja om från sida 1 oavsett hur långt ner man skrollat
+    const versionChanged = lastPurchaseVersionRef.current !== purchaseVersion;
+    lastPurchaseVersionRef.current = purchaseVersion;
+    const pageToFetch = versionChanged ? 1 : purchasedPageNum;
+
+    setPurchasedLoading(true);
+    rewardShopApi.getPurchasedPage(pageToFetch).then((res) => {
+      if (cancelled) return;
+      setPurchasedItems((prev) => (pageToFetch === 1 ? res.items : [...prev, ...res.items]));
+      setPurchasedTotal(res.total);
+      if (versionChanged) setPurchasedPageNum(1);
+    }).catch(console.error).finally(() => {
+      if (!cancelled) setPurchasedLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [purchasedPageNum, purchaseVersion]);
+
+  function loadMorePurchased() {
+    setPurchasedPageNum((p) => p + 1);
+  }
 
   async function addItem(item: RewardShopItem) {
     await rewardShopApi.addItem(item);
@@ -39,22 +70,35 @@ export function useRewardShopState() {
   }
 
   async function purchase(item: RewardShopItem, forMemberId: string) {
-    const pr = await rewardShopApi.purchase(item.id, forMemberId);
+    await rewardShopApi.purchase(item.id, forMemberId);
     trackEvent("reward-redeemed");
-    setPurchased((prev) => [...(prev ?? []), pr]);
+    setPurchaseVersion((v) => v + 1);
   }
 
   async function movePurchased(id: string, startsAt: string) {
     await rewardShopApi.movePurchased(id, startsAt);
-    setPurchased((prev) =>
-      (prev ?? []).map((pr) => (pr.id === id ? { ...pr, startsAt } : pr))
-    );
+    setPurchaseVersion((v) => v + 1);
   }
 
   async function deletePurchased(id: string) {
     await rewardShopApi.deletePurchased(id);
-    setPurchased((prev) => (prev ?? []).filter((pr) => pr.id !== id));
+    setPurchaseVersion((v) => v + 1);
   }
 
-  return { items, purchased, requireApprovalForCategories, addItem, updateItem, updateSettings, removeItem, purchase, movePurchased, deletePurchased };
+  return {
+    items,
+    requireApprovalForCategories,
+    purchasedItems,
+    purchasedTotal,
+    purchasedLoading,
+    loadMorePurchased,
+    purchaseVersion,
+    addItem,
+    updateItem,
+    updateSettings,
+    removeItem,
+    purchase,
+    movePurchased,
+    deletePurchased,
+  };
 }

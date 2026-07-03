@@ -38,7 +38,11 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
 
   const {
     items: shopItems,
-    purchased,
+    purchasedItems,
+    purchasedTotal,
+    purchasedLoading,
+    loadMorePurchased,
+    purchaseVersion,
     requireApprovalForCategories,
     purchase: purchaseReward,
     movePurchased,
@@ -224,7 +228,10 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onSetWishStars: (rewardId: string, stars: number) =>
       setWishStars((prev) => ({ ...prev, [rewardId]: stars })),
     shopItems,
-    purchased,
+    purchasedItems,
+    purchasedTotal,
+    purchasedLoading,
+    loadMorePurchased,
     onAddShopItem: (item: Parameters<typeof addShopItem>[0]) => void addShopItem(item),
     onUpdateShopItem: (id: string, patch: Parameters<typeof updateShopItem>[1]) => void updateShopItem(id, patch),
     onRemoveShopItem: (id: string) => void removeShopItem(id),
@@ -248,7 +255,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
       requireApprovalForCategories,
       updateSettings: updateShopSettings,
       items: shopItems,
-      purchased,
+      purchaseVersion,
       onPurchaseReward: purchaseReward,
     },
   };

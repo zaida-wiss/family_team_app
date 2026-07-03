@@ -120,8 +120,29 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
   return purchased;
 }
 
-export async function getPurchasedRewards(accountId: string) {
-  return PurchasedRewardModel.find({ accountId, deletedAt: null }, { _id: 0, __v: 0 });
+// Ett enskilt dygn (lokalt datum, YYYY-MM-DD) — används av barnets tidslinje, som bara visar en dag åt gången
+export async function getPurchasedRewardsByDate(accountId: string, date: string) {
+  return PurchasedRewardModel.find(
+    {
+      accountId,
+      deletedAt: null,
+      $expr: { $eq: [{ $substrCP: ["$startsAt", 0, 10] }, date] },
+    },
+    { _id: 0, __v: 0 }
+  );
+}
+
+// Offset-paginerad, senaste köp först — används av belöningsbutikens hanteringsvy (ADR-0003)
+export async function getPurchasedRewardsPage(accountId: string, page: number, pageSize: number) {
+  const skip = (page - 1) * pageSize;
+  const [items, total] = await Promise.all([
+    PurchasedRewardModel.find({ accountId, deletedAt: null }, { _id: 0, __v: 0 })
+      .sort({ purchasedAt: -1 })
+      .skip(skip)
+      .limit(pageSize),
+    PurchasedRewardModel.countDocuments({ accountId, deletedAt: null }),
+  ]);
+  return { items, page, pageSize, total };
 }
 
 export async function movePurchasedReward(id: string, startsAt: string) {

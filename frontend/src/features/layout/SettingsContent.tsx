@@ -56,7 +56,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     canViewTrash,
     onRefundPurchase,
     shopItems,
-    purchased,
+    purchasedItems,
+    purchasedTotal,
+    purchasedLoading,
+    loadMorePurchased,
     onAddShopItem,
     onUpdateShopItem,
     onRemoveShopItem,
@@ -84,7 +87,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           items={shopItems}
           currentMemberId={currentMember.id}
           children={members.filter((m) => m.deletedAt === null && m.isChild)}
-          purchased={purchased}
+          purchasedItems={purchasedItems}
+          purchasedTotal={purchasedTotal}
+          purchasedLoading={purchasedLoading}
+          onLoadMore={loadMorePurchased}
           onAdd={onAddShopItem}
           onUpdate={onUpdateShopItem}
           onRemove={onRemoveShopItem}

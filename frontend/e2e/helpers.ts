@@ -41,6 +41,13 @@ export async function mockDataAPIs(page: Page) {
   await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
+  await page.route(/\/api\/reward-shop$/, (route) =>
+    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
+  );
+  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
+  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
+    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
+  );
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 }
 

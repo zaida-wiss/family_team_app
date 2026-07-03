@@ -1,9 +1,19 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import * as shop from "../services/rewardShopService.js";
 import { accountIdOf } from "../utils/memberUtils.js";
 
 export const rewardShopRouter = Router();
+
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 25;
+
+const purchasedQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).optional(),
+});
 
 rewardShopRouter.get("/", requireAuth, async (req, res) => {
   res.json(await shop.getShop(req.memberId!, req.userId!));
@@ -38,7 +48,15 @@ rewardShopRouter.post("/purchase/:itemId", requireAuth, async (req, res) => {
 
 rewardShopRouter.get("/purchased", requireAuth, async (req, res) => {
   const accountId = await accountIdOf(req.memberId!, req.userId!);
-  res.json(await shop.getPurchasedRewards(accountId));
+  const { date, page, pageSize } = purchasedQuerySchema.parse(req.query);
+
+  if (date) {
+    res.json(await shop.getPurchasedRewardsByDate(accountId, date));
+    return;
+  }
+
+  const cappedPageSize = Math.min(pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+  res.json(await shop.getPurchasedRewardsPage(accountId, page ?? 1, cappedPageSize));
 });
 
 rewardShopRouter.patch("/purchased/:id/move", requireAuth, async (req, res) => {

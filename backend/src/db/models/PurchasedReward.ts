@@ -13,4 +13,6 @@ const schema = new Schema({
   deletedAt: { type: String, default: null },
 });
 
+schema.index({ accountId: 1, purchasedAt: -1 });
+
 export const PurchasedRewardModel = model("PurchasedReward", schema);

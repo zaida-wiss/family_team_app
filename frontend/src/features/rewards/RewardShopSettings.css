@@ -372,3 +372,50 @@
   color: var(--text-primary, #111);
   flex-shrink: 0;
 }
+
+.reward-shop-settings__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.reward-shop-settings__page-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--border, #ddd);
+  border-radius: 10px;
+  background: var(--bg-secondary, #f8f8f8);
+  color: var(--text-primary, #111);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reward-shop-settings__page-btn:hover:not(:disabled) {
+  border-color: var(--c1, #6366f1);
+}
+
+.reward-shop-settings__page-btn:focus-visible {
+  outline: 2px solid var(--c1, #6366f1);
+  outline-offset: 2px;
+}
+
+.reward-shop-settings__page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.reward-shop-settings__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

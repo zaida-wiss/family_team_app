@@ -1,4 +1,4 @@
-import type { PurchasedReward, RewardShopItem } from "@shared/types";
+import type { PaginatedPurchasedRewards, PurchasedReward, RewardShopItem } from "@shared/types";
 import { api, request } from "./client";
 
 export type ShopResponse = { items: RewardShopItem[]; requireApprovalForCategories: boolean };
@@ -27,7 +27,10 @@ export const rewardShopApi = {
       method: "POST",
       body: JSON.stringify({ forMemberId }),
     }),
-  getPurchased: () => request<PurchasedReward[]>(api("reward-shop/purchased")),
+  getPurchasedByDate: (date: string) =>
+    request<PurchasedReward[]>(api(`reward-shop/purchased?date=${date}`)),
+  getPurchasedPage: (page: number) =>
+    request<PaginatedPurchasedRewards>(api(`reward-shop/purchased?page=${page}`)),
   movePurchased: (id: string, startsAt: string) =>
     request<{ ok: boolean }>(api(`reward-shop/purchased/${id}/move`), {
       method: "PATCH",
