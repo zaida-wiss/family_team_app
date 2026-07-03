@@ -1,21 +1,11 @@
 import { Router } from "express";
-import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as rewards from "../services/rewardsService.js";
+import { ApproveRewardBodySchema, RewardPatchSchema } from "../../../shared/schemas.js";
 
 export const rewardsRouter = Router();
 rewardsRouter.use(requireAuth, attachAccountId);
-
-const rewardPatchSchema = z.object({
-  title: z.string().min(1).optional(),
-  starsNeeded: z.number().int().min(1).optional(),
-  symbol: z.string().nullable().optional()
-});
-
-const approveRewardSchema = z.object({
-  starsNeeded: z.number().int().min(1)
-});
 
 rewardsRouter.get("/", async (req, res) => {
   res.json(await rewards.getAllRewards(req.accountId!));
@@ -26,13 +16,13 @@ rewardsRouter.post("/", async (req, res) => {
 });
 
 rewardsRouter.patch("/:id", async (req, res) => {
-  const patch = rewardPatchSchema.parse(req.body);
+  const patch = RewardPatchSchema.parse(req.body);
   await rewards.updateReward(req.params.id, req.accountId!, patch);
   res.json({ ok: true });
 });
 
 rewardsRouter.patch("/:id/approve", async (req, res) => {
-  const { starsNeeded } = approveRewardSchema.parse(req.body);
+  const { starsNeeded } = ApproveRewardBodySchema.parse(req.body);
   await rewards.approveReward(req.params.id, req.accountId!, starsNeeded, req.memberId ?? null);
   res.json({ ok: true });
 });

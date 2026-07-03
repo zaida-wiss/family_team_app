@@ -390,3 +390,37 @@ export const CreateRewardInputSchema = RewardSchema.omit({
   deletedAt: true,
   deletedBy: true
 });
+
+// Flyttade hit från route-filerna (Sprint 3 S6) — låg tidigare som tre separata
+// inline-scheman i analytics.ts/rewardShop.ts/rewards.ts.
+
+export const AnalyticsEventNameSchema = z.enum([
+  "todo-completed",
+  "todo-approved",
+  "calendar-event-added",
+  "reward-redeemed",
+  "wish-created",
+  "wish-approved",
+  "login",
+  "shopping-item-checked"
+]);
+
+export const TrackEventBodySchema = z.object({
+  event: AnalyticsEventNameSchema
+});
+
+export const PurchasedRewardsQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).optional()
+});
+
+export const RewardPatchSchema = z.object({
+  title: z.string().min(1).optional(),
+  starsNeeded: z.number().int().min(1).optional(),
+  symbol: z.string().nullable().optional()
+});
+
+export const ApproveRewardBodySchema = z.object({
+  starsNeeded: z.number().int().min(1)
+});

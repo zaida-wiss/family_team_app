@@ -1,29 +1,14 @@
 import { Router } from "express";
-import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import { AnalyticsEventModel } from "../db/models/AnalyticsEvent.js";
 import { MemberModel } from "../db/models/Member.js";
+import { TrackEventBodySchema } from "../../../shared/schemas.js";
 
 export const analyticsRouter = Router();
 
-const ALLOWED_EVENTS = new Set([
-  "todo-completed",
-  "todo-approved",
-  "calendar-event-added",
-  "reward-redeemed",
-  "wish-created",
-  "wish-approved",
-  "login",
-  "shopping-item-checked",
-]);
-
-const trackSchema = z.object({
-  event: z.string().refine((e) => ALLOWED_EVENTS.has(e), { message: "Okänd händelse" }),
-});
-
 analyticsRouter.post("/track", requireAuth, attachAccountId, async (req, res) => {
-  const { event } = trackSchema.parse(req.body);
+  const { event } = TrackEventBodySchema.parse(req.body);
   const member = await MemberModel.findOne({ id: req.memberId });
   const role = member?.isChild ? "child" : "parent";
 
