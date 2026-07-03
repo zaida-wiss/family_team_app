@@ -3,6 +3,7 @@ import { HeroBar } from "./HeroBar";
 import { SettingsContent } from "./SettingsContent";
 import { ThemePicker } from "../../components/ThemePicker";
 import { useAppFont } from "../../components/FontPicker";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
 import { RewardShopContext } from "../rewards/RewardShopContext";
 import type { Membership } from "@shared/types";
@@ -134,20 +135,24 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
       />
 
       <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>
-        <Suspense fallback={<p className="empty-note">Laddar...</p>}>
-          <RewardShopContext.Provider value={shopSettings}>
-            <PanelRouter
-              currentMember={currentMember}
-              activePanel={activePanel}
-              activeAccount={activeAccount}
-              settingsProps={settingsProps}
-              memberContentProps={memberContentProps}
-              childContentProps={childContentProps}
-              setActivePanel={setActivePanel}
-              onLogout={onLogout}
-            />
-          </RewardShopContext.Provider>
-        </Suspense>
+        {/* key={activePanel} — en krasch i en panel ska inte permanent låsa hela appen;
+            navigerar man till en annan panel får felgränsen en ny chans (ommonteras). */}
+        <ErrorBoundary key={activePanel}>
+          <Suspense fallback={<p className="empty-note">Laddar...</p>}>
+            <RewardShopContext.Provider value={shopSettings}>
+              <PanelRouter
+                currentMember={currentMember}
+                activePanel={activePanel}
+                activeAccount={activeAccount}
+                settingsProps={settingsProps}
+                memberContentProps={memberContentProps}
+                childContentProps={childContentProps}
+                setActivePanel={setActivePanel}
+                onLogout={onLogout}
+              />
+            </RewardShopContext.Provider>
+          </Suspense>
+        </ErrorBoundary>
 
         {themePickerMember && (
           <ThemePicker

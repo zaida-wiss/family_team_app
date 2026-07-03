@@ -1,0 +1,44 @@
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.error-boundary__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--foreground, #111);
+  margin: 0;
+}
+
+.error-boundary__message {
+  font-size: 0.9rem;
+  color: var(--muted-fg, #666);
+  margin: 0 0 8px;
+}
+
+.error-boundary__reload {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: var(--c1, #4338ca);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error-boundary__reload:hover {
+  opacity: 0.85;
+}
+
+.error-boundary__reload:focus-visible {
+  outline: 2px solid var(--c1, #4338ca);
+  outline-offset: 2px;
+}
