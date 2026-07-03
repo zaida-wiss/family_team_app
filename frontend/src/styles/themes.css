@@ -418,6 +418,8 @@
 }
 
 .child-dashboard[class*="theme-"] .child-hero p:not(.child-hero-month) {
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--white);
   color: color-mix(in srgb, var(--white) 76%, var(--c2));
 }
 

@@ -117,6 +117,8 @@
 }
 
 .rejected-todo-card small {
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--c0, #ef4444);
   color: color-mix(in srgb, var(--c0, #ef4444) 70%, var(--black, #000));
   font-size: 0.82rem;
 }

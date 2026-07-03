@@ -149,6 +149,8 @@
   left: 50%;
   bottom: clamp(4px, 0.8vw, 8px);
   display: block;
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--on-c4, #fff);
   color: color-mix(in srgb, var(--on-c4, #fff) 58%, transparent);
   font-size: clamp(0.62rem, 1vw, 0.78rem);
   line-height: 1;

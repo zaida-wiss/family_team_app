@@ -23,6 +23,8 @@
   border: 0;
   border-radius: 12px;
   background: transparent;
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--on-c4, #fff);
   color: color-mix(in srgb, var(--on-c4, #fff) 76%, var(--c2, #fff));
   box-shadow: none;
   cursor: pointer;

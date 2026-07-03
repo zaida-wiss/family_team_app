@@ -140,6 +140,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras.
+     var(--muted-fg) matchar det avsedda dämpade utseendet bättre än ren --foreground. */
+  color: var(--muted-fg, var(--foreground));
   color: color-mix(in oklch, var(--foreground) 34%, transparent);
   font-size: 0.54rem;
   font-weight: 800;

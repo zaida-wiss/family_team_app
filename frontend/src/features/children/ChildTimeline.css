@@ -65,6 +65,8 @@
 .child-tl-hour-labels span {
   position: absolute;
   left: 0;
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--on-c4, #ffffff);
   color: color-mix(in srgb, var(--on-c4, #ffffff) 82%, var(--c2, #ffffff));
   font-size: clamp(0.72rem, 1.1vw, 0.9rem);
   font-variant-numeric: tabular-nums;
@@ -366,6 +368,8 @@
 }
 
 .child-tl-detail-calendar {
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--black, #000000);
   color: color-mix(in srgb, var(--black, #000000) 62%, transparent);
 }
 

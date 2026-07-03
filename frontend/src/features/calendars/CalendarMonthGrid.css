@@ -126,6 +126,9 @@
   padding: 2px 5px;
   border-radius: 4px;
   background: color-mix(in oklch, var(--event-color, var(--primary)) 22%, transparent);
+  /* Fallback för webbläsare utan color-mix()-stöd (t.ex. Safari < 16.2) — ogiltig
+     deklaration ignoreras, den vanliga färgen ovanför används istället. */
+  color: var(--foreground);
   color: color-mix(in oklch, var(--event-color, var(--primary)) 55%, var(--foreground));
   white-space: nowrap;
   overflow: hidden;
