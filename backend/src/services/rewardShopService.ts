@@ -28,6 +28,7 @@ export async function updateSettings(accountId: string, patch: { requireApproval
   if (patch.requireApprovalForCategories !== undefined) update.requireApprovalForCategories = patch.requireApprovalForCategories;
   if (Object.keys(update).length === 0) return;
   await RewardShopModel.updateOne({ accountId }, { $set: update }, { upsert: true });
+  broadcastRewardShopChanged();
 }
 
 export async function addItem(accountId: string, item: RewardShopItem) {
@@ -36,6 +37,7 @@ export async function addItem(accountId: string, item: RewardShopItem) {
     { $push: { items: item } },
     { upsert: true }
   );
+  broadcastRewardShopChanged();
 }
 
 export async function updateItem(accountId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) {
@@ -47,6 +49,7 @@ export async function updateItem(accountId: string, itemId: string, patch: Parti
   if ("availability" in patch) update["items.$.availability"] = patch.availability ?? null;
   if (patch.requiredCategories !== undefined) update["items.$.requiredCategories"] = patch.requiredCategories;
   await RewardShopModel.updateOne({ accountId, "items.id": itemId }, { $set: update });
+  broadcastRewardShopChanged();
 }
 
 export async function removeItem(accountId: string, itemId: string, memberId: string) {
@@ -54,6 +57,7 @@ export async function removeItem(accountId: string, itemId: string, memberId: st
     { accountId, "items.id": itemId },
     { $set: { "items.$.deletedAt": new Date().toISOString(), "items.$.deletedBy": memberId } }
   );
+  broadcastRewardShopChanged();
 }
 
 export async function purchaseItem(itemId: string, callerId: string, forMemberId: string) {

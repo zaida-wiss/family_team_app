@@ -18,20 +18,27 @@ export function useRewardShopState() {
   const [purchaseVersion, setPurchaseVersion] = useState(0);
   const lastPurchaseVersionRef = useRef(purchaseVersion);
 
-  useEffect(() => {
-    rewardShopApi.getShop().then(({ items: shopItems, requireApprovalForCategories: raf }) => {
+  const refreshShop = useCallback(() => {
+    return rewardShopApi.getShop().then(({ items: shopItems, requireApprovalForCategories: raf }) => {
       setItems(shopItems);
       setRequireApprovalForCategories(raf);
     }).catch(console.error);
   }, []);
 
-  // Realtidssynk mellan enheter: ett köp/flytt/borttag på en annan enhet ska synas här
-  // utan att man själv behöver trigga en omhämtning (samma SSE-mönster som todos).
+  useEffect(() => {
+    refreshShop();
+  }, [refreshShop]);
+
+  // Realtidssynk mellan enheter: ett köp/flytt/borttag ELLER en katalogändring (ny/redigerad/
+  // borttagen vara, ändrade inställningar) på en annan enhet ska synas här utan att man själv
+  // behöver trigga en omhämtning (samma SSE-mönster som todos). Ett enda händelsenamn täcker
+  // båda — katalogändringar är sällsynta nog att en extra getShop()-hämtning är billig.
   useEffect(() => {
     return rewardShopApi.subscribeToChanges(() => {
       setPurchaseVersion((v) => v + 1);
+      refreshShop();
     });
-  }, []);
+  }, [refreshShop]);
 
   useEffect(() => {
     let cancelled = false;
