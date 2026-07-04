@@ -1,0 +1,18 @@
+.todo-view-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.todo-view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 12px;
+}
+
+.todo-view-toggle button.active {
+  background: var(--primary);
+  color: var(--primary-fg);
+}

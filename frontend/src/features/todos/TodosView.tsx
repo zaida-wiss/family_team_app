@@ -1,7 +1,9 @@
-import { CheckCircle2, Pencil, PlusCircle, Save, Send, Trash2, X, XCircle } from "lucide-react";
+import "./TodosView.css";
+import { CheckCircle2, List, Pencil, PlusCircle, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
+import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { hasPermission } from "../../utils/permissions";
 
@@ -72,6 +74,7 @@ export function TodosView({
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "thread">("list");
 
   function startRejecting(todoId: Id) {
     setRejectingTodoId(todoId);
@@ -120,7 +123,34 @@ export function TodosView({
           />
         )}
 
-        {visibleTodos.map((todo) => {
+        {canSeeTodos && visibleTodos.length > 0 && (
+          <div className="todo-view-toggle" role="group" aria-label="Visningsläge för todos">
+            <button
+              type="button"
+              className={`icon-button${viewMode === "list" ? " active" : ""}`}
+              aria-pressed={viewMode === "list"}
+              onClick={() => setViewMode("list")}
+              title="Lista"
+            >
+              <List size={16} /> Lista
+            </button>
+            <button
+              type="button"
+              className={`icon-button${viewMode === "thread" ? " active" : ""}`}
+              aria-pressed={viewMode === "thread"}
+              onClick={() => setViewMode("thread")}
+              title="Bollar i tråd"
+            >
+              <Waypoints size={16} /> Bollar i tråd
+            </button>
+          </div>
+        )}
+
+        {viewMode === "thread" && canSeeTodos && visibleTodos.length > 0 && (
+          <ParentTodoThreadView todos={visibleTodos} members={allMembers} />
+        )}
+
+        {viewMode === "list" && visibleTodos.map((todo) => {
           const isEditing = editingTodoId === todo.id;
           return (
             <div className="dashboard-row todo-dashboard-row" key={todo.id}>
