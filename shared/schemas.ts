@@ -424,3 +424,15 @@ export const RewardPatchSchema = z.object({
 export const ApproveRewardBodySchema = z.object({
   starsNeeded: z.number().int().min(1)
 });
+
+// Medaljer/Rekord (Sprint 4 S1)
+
+export const CreateTimedTaskBodySchema = z.object({
+  title: z.string().min(1, "Titel krävs"),
+  symbol: z.string().nullable().optional(),
+  assignedTo: IdSchema
+});
+
+export const RecordTimedAttemptBodySchema = z.object({
+  durationMs: z.number().int().min(1)
+});

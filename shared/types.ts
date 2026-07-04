@@ -151,6 +151,36 @@ export type PaginatedPurchasedRewards = {
   total: number;
 };
 
+// Medaljer/Rekord (Sprint 4 S1) — helt skild från Todo/belöningsflödet, se
+// docs/engineering-os/.../discussions/2026-07-04-designspike-medaljer-och-foraldravy.md.
+// Start/stopp mäts klientsidan (Date.now()); bara den färdiga varaktigheten skickas
+// till servern — inget "pågående försök"-tillstånd att tappa bort om fliken stängs.
+export type TimedTask = {
+  id: Id;
+  accountId: Id;
+  title: string;
+  symbol: string | null;
+  assignedTo: Id;
+  createdBy: Id;
+  deletedAt: string | null;
+  deletedBy: Id | null;
+};
+
+export type TimedAttempt = {
+  id: Id;
+  timedTaskId: Id;
+  memberId: Id;
+  durationMs: number;
+  achievedAt: string;
+  isNewRecord: boolean;
+};
+
+export type TimedTaskWithBest = TimedTask & {
+  bestDurationMs: number | null;
+  bestAchievedAt: string | null;
+  attemptCount: number;
+};
+
 export type PermissionKey =
   | "canManageMembers"
   | "canManageRoles"

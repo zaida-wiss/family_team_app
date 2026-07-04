@@ -19,6 +19,7 @@ import { shoppingRouter } from "./routes/shopping.js";
 import { todosRouter } from "./routes/todos.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { adminRouter } from "./routes/admin.js";
+import { timedTasksRouter } from "./routes/timedTasks.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
@@ -69,6 +70,7 @@ app.use("/api/calendars", calendarsRouter);
 app.use("/api/shopping", shoppingRouter);
 app.use("/api/rewards", rewardsRouter);
 app.use("/api/reward-shop", rewardShopRouter);
+app.use("/api/timed-tasks", timedTasksRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/admin", adminRouter);
 
