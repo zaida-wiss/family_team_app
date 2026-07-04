@@ -51,6 +51,18 @@ const authLimiter = rateLimit({
 export const app = express();
 
 app.set("trust proxy", 1);
+// Express genererar annars en ETag per svar (baserat på innehållet) — kombinerat
+// med Vercels/Cloudflares standard-cachepolicy för proxade svar utan eget
+// Cache-Control-huvud gjorde det möjligt för ett delat mellanlager att lagra och
+// återanvända ett /api-svar. Upptäckt live 2026-07-04: ett godkänt uppdrag
+// sparades korrekt i databasen, men en efterföljande hämtning kunde ändå visa
+// den gamla, inaktuella statusen. Autentiserad, per-konto-data ska aldrig kunna
+// cachelagras av ett delat mellanlager.
+app.set("etag", false);
+app.use((_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use(helmet());
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
