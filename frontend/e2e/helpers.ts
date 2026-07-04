@@ -49,6 +49,7 @@ export async function mockDataAPIs(page: Page) {
     route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
   );
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
+  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
 }
 
 // mockAuthAndData — simulerar en redan inloggad användare vid sidladdning.

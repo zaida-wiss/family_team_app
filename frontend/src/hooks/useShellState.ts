@@ -2,6 +2,7 @@ import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
 import { useShellPermissions } from "./useShellPermissions";
 import { useRewardShopState } from "../features/rewards/useRewardShopState";
+import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
 import { useAppFont } from "../components/FontPicker";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership } from "@shared/types";
 
@@ -58,6 +59,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     updateSettings: updateShopSettings,
     removeItem: removeShopItem,
   } = useRewardShopState();
+
+  const { timedTasks, createTimedTask, removeTimedTask } = useTimedTasksState();
 
   const permissions = useShellPermissions(currentMember, roles);
 
@@ -245,6 +248,10 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRemoveShopItem: (id: string) => void removeShopItem(id),
     onMovePurchased: (id: string, startsAt: string) => void movePurchased(id, startsAt),
     onDeletePurchased: (id: string) => void deletePurchased(id),
+    timedTasks,
+    onCreateTimedTask: (title: string, symbol: string | null, assignedTo: string) =>
+      void createTimedTask(title, symbol, assignedTo),
+    onRemoveTimedTask: (id: string) => void removeTimedTask(id),
   };
 
   return {

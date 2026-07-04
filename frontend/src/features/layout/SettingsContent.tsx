@@ -6,6 +6,7 @@ import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import { TodoHistory } from "../todos/TodoHistory";
+import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
 const AccountSettings = lazy(() =>
@@ -67,6 +68,9 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onMovePurchased,
     onDeletePurchased,
     onUpdateWish,
+    timedTasks,
+    onCreateTimedTask,
+    onRemoveTimedTask,
   } = settingsProps;
 
   return (
@@ -123,6 +127,15 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
             <InviteForm accountId={activeAccount.id} roles={roles} />
           </div>
         )}
+      </SettingsSection>
+
+      <SettingsSection title="🏃 Medaljer/Rekord">
+        <TimedTaskSettings
+          timedTasks={timedTasks}
+          children={members.filter((m) => m.deletedAt === null && m.isChild)}
+          onCreate={onCreateTimedTask}
+          onRemove={onRemoveTimedTask}
+        />
       </SettingsSection>
 
       <SettingsSection title="📋 Todo-historik">
