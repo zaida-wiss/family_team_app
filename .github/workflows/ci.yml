@@ -51,6 +51,7 @@ jobs:
       MONGODB_URI: mongodb://localhost:27017/bmad-test
       JWT_ACCESS_SECRET: ci-jwt-access-secret
       JWT_REFRESH_SECRET: ci-jwt-refresh-secret
+      CALENDAR_ENCRYPTION_MASTER_KEY: tVvu+g0Te0rI1rQjSkBVBhC0Owa6kRy8dcEvaEd9QwE=
       NODE_ENV: test
 
     steps:

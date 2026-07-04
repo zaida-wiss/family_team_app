@@ -1,6 +1,18 @@
 import { CalendarModel } from "../db/models/Calendar.js";
 import { AppError } from "../utils/errors.js";
 import { CalendarEventPatchSchema, CalendarEventSchema, ImportedCalendarSourceSchema } from "../../../shared/schemas.js";
+import { decryptNullable, encryptField, encryptNullable } from "../utils/calendarEncryption.js";
+
+// Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
+// title/notes krypteras precis innan de sparas och dekrypteras precis innan de
+// returneras. API-kontraktet är oförändrat (ADR-0014).
+function decryptEvent<T extends { title: string; notes: string | null }>(accountId: string, event: T): T {
+  return {
+    ...event,
+    title: decryptNullable(accountId, event.title) as string,
+    notes: decryptNullable(accountId, event.notes) ?? null
+  };
+}
 
 export async function getAllCalendars(accountId: string, from?: string, until?: string) {
   const now = new Date();
@@ -13,7 +25,7 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
 
   // Filtrera händelser i MongoDB i stället för i JavaScript — minskar payload
   // dramatiskt när ICS-prenumerationer importerat tusentals händelser.
-  return CalendarModel.aggregate([
+  const calendars = await CalendarModel.aggregate([
     { $match: { accountId } },
     {
       $addFields: {
@@ -40,6 +52,13 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
     },
     { $project: { _id: 0, __v: 0 } },
   ]);
+
+  return calendars.map((calendar) => ({
+    ...calendar,
+    events: calendar.events.map((event: { title: string; notes: string | null }) =>
+      decryptEvent(accountId, event)
+    )
+  }));
 }
 
 export async function createCalendar(data: unknown) {
@@ -105,7 +124,13 @@ export async function addEvent(calendarId: string, accountId: string, memberId: 
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
   const validated = CalendarEventSchema.parse(event);
-  calendar.events.push({ ...validated, calendarId, createdBy: memberId } as any);
+  calendar.events.push({
+    ...validated,
+    title: encryptField(accountId, validated.title),
+    notes: encryptNullable(accountId, validated.notes) ?? null,
+    calendarId,
+    createdBy: memberId
+  } as any);
   await calendar.save();
 }
 
@@ -122,7 +147,13 @@ export async function importEvents(
   calendar.importedSources.push(validatedSource as any);
   for (const event of payload.events) {
     const validated = CalendarEventSchema.parse(event);
-    calendar.events.push({ ...validated, calendarId, createdBy: memberId } as any);
+    calendar.events.push({
+      ...validated,
+      title: encryptField(accountId, validated.title),
+      notes: encryptNullable(accountId, validated.notes) ?? null,
+      calendarId,
+      createdBy: memberId
+    } as any);
   }
   await calendar.save();
 }
@@ -135,6 +166,8 @@ export async function updateEvent(calendarId: string, accountId: string, eventId
   if (!event) throw new AppError(404, "Händelse hittades inte");
 
   const validated = CalendarEventPatchSchema.parse(patch);
+  if (validated.title !== undefined) validated.title = encryptField(accountId, validated.title);
+  if ("notes" in validated) validated.notes = encryptNullable(accountId, validated.notes) ?? null;
   Object.assign(event, validated);
   calendar.markModified("events");
   await calendar.save();
