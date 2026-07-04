@@ -27,7 +27,17 @@ const todoSchema = new Schema<Todo>({
   rejectedReason: { type: String, default: null },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null },
-  routineCategory: { type: String, default: null }
+  routineCategory: { type: String, default: null },
+  subtasks: {
+    type: [
+      {
+        id: { type: String, required: true },
+        title: { type: String, required: true },
+        done: { type: Boolean, required: true }
+      }
+    ],
+    default: undefined
+  }
 });
 
 export const TodoModel = model<Todo>("Todo", todoSchema);

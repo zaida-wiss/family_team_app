@@ -377,6 +377,16 @@ export type Todo = {
   deletedAt: string | null;
   deletedBy: Id | null;
   routineCategory?: string | null;
+  // Föräldravyn med delmoment (Sprint 6) — valfritt, lika vikt (procent = avbockade
+  // / totalt). Påverkar inte befintlig todo-logik (listning, godkännande, historik)
+  // när det saknas, se discussions/2026-07-04-designspike-medaljer-och-foraldravy.md.
+  subtasks?: TodoSubtask[];
+};
+
+export type TodoSubtask = {
+  id: Id;
+  title: string;
+  done: boolean;
 };
 
 export type Reward = {

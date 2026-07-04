@@ -53,3 +53,8 @@ todosRouter.patch("/:id/restore", requireAuth, attachAccountId, async (req, res)
   await todos.restoreTodo(req.params.id, req.accountId!);
   res.json({ ok: true });
 });
+
+todosRouter.patch("/:id/subtasks/:subtaskId", requireAuth, attachAccountId, async (req, res) => {
+  const result = await todos.toggleSubtask(req.params.id, req.accountId!, req.params.subtaskId);
+  res.json(result);
+});

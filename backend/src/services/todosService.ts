@@ -193,3 +193,22 @@ export async function restoreTodo(id: string, accountId: string) {
   await todo.save();
   broadcastTodosChanged();
 }
+
+// Föräldravyn med delmoment (Sprint 6 S1) — bockar av/på ett enskilt delmoment,
+// oberoende av complete/approve/reject-flödet. Lika vikt, ingen viktning (se
+// discussions/2026-07-04-designspike-medaljer-och-foraldravy.md).
+export async function toggleSubtask(id: string, accountId: string, subtaskId: string) {
+  const todo = await TodoModel.findOne({ id, accountId });
+  if (!todo) {
+    throw new AppError(404, "Todo hittades inte");
+  }
+  const subtask = todo.subtasks?.find((s) => s.id === subtaskId);
+  if (!subtask) {
+    throw new AppError(404, "Delmoment hittades inte");
+  }
+  subtask.done = !subtask.done;
+  todo.markModified("subtasks");
+  await todo.save();
+  broadcastTodosChanged();
+  return { done: subtask.done };
+}
