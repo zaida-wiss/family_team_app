@@ -402,7 +402,9 @@ export const AnalyticsEventNameSchema = z.enum([
   "wish-created",
   "wish-approved",
   "login",
-  "shopping-item-checked"
+  "shopping-item-checked",
+  "timed-task-started",
+  "timed-task-completed"
 ]);
 
 export const TrackEventBodySchema = z.object({

@@ -143,6 +143,29 @@ test("Barnets Rekord-vy: begär skärm-wake-lock medan tidtagning pågår, släp
   ).toContain("release");
 });
 
+test("Barnets Rekord-vy: skickar timed-task-started/completed till analytics", async ({ page }) => {
+  const trackedEvents: string[] = [];
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [TIMED_TASK] }));
+  await page.route("**/api/timed-tasks/tt-1/attempts", (route) =>
+    route.fulfill({
+      status: 201,
+      json: { id: "ta-1", durationMs: 1000, achievedAt: new Date().toISOString(), isNewRecord: false },
+    })
+  );
+  await page.route("**/api/analytics/track", (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}") as { event: string };
+    trackedEvents.push(body.event);
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
+  await expect.poll(() => trackedEvents).toContain("timed-task-started");
+
+  await page.getByRole("button", { name: "Stoppa tidtagning för Springa ett varv" }).click();
+  await expect.poll(() => trackedEvents).toContain("timed-task-completed");
+});
+
 test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/timed-tasks", (route) => {

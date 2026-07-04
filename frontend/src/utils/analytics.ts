@@ -8,7 +8,9 @@ export type AnalyticsEvent =
   | "wish-created"
   | "wish-approved"
   | "login"
-  | "shopping-item-checked";
+  | "shopping-item-checked"
+  | "timed-task-started"
+  | "timed-task-completed";
 
 // Använde tidigare en egen rå fetch() utan Authorization-headern — /api/analytics/track
 // kräver requireAuth server-side, så anropet fick alltid 401, tyst (felet gömdes av

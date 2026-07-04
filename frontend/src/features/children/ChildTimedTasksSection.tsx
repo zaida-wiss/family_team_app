@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Play, Square, Trophy } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
+import { trackEvent } from "../../utils/analytics";
 
 type Props = {
   timedTasks: TimedTaskWithBest[];
@@ -55,6 +56,7 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
       return;
     }
     setRunning({ id: task.id, startedAt: Date.now() });
+    trackEvent("timed-task-started");
   }
 
   return (

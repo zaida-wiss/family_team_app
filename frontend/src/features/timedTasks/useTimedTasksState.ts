@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { timedTasksApi } from "../../api";
+import { trackEvent } from "../../utils/analytics";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 
 export function useTimedTasksState() {
@@ -28,6 +29,7 @@ export function useTimedTasksState() {
   // nytt personbästa/antal försök syns direkt.
   async function recordAttempt(id: Id, durationMs: number) {
     const attempt = await timedTasksApi.recordAttempt(id, durationMs);
+    trackEvent("timed-task-completed");
     await refresh();
     return attempt;
   }
