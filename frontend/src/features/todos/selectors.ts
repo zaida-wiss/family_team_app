@@ -35,16 +35,18 @@ export function getAssigneeName(todo: Todo, allMembers: Member[]) {
 
 // Avslutade uppgifter (S3, Sprint 3) — flyttade ur den aktiva Todos-vyn till
 // Inställningar för att den aktiva vyn inte ska samla på sig historik i all evighet.
+// Zaida: "historiken (utgångna/avklarade todos)" — expired hör alltså till historiken,
+// inte bara godkända/nekade (missades i första versionen av S3).
 export function isTodoHistory(todo: Todo): boolean {
-  return todo.status === "approved" || todo.status === "rejected";
+  return todo.status === "approved" || todo.status === "rejected" || todo.status === "expired";
+}
+
+function historySortDate(todo: Todo): number {
+  return new Date(todo.approvedAt ?? todo.rejectedAt ?? todo.expiresAt ?? 0).getTime();
 }
 
 export function getTodoHistory(member: Member, roles: Role[], todos: Todo[]): Todo[] {
   return getVisibleTodos(member, roles, todos)
     .filter(isTodoHistory)
-    .sort((a, b) => {
-      const aTime = new Date(a.approvedAt ?? a.rejectedAt ?? 0).getTime();
-      const bTime = new Date(b.approvedAt ?? b.rejectedAt ?? 0).getTime();
-      return bTime - aTime;
-    });
+    .sort((a, b) => historySortDate(b) - historySortDate(a));
 }

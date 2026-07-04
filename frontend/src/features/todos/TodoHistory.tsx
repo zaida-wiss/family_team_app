@@ -13,6 +13,12 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function statusLabel(status: Todo["status"]) {
+  if (status === "approved") return "Godkänd";
+  if (status === "rejected") return "Nekad";
+  return "Utgången";
+}
+
 export function TodoHistory({ currentMember, roles, todos, allMembers }: Props) {
   const history = getTodoHistory(currentMember, roles, todos);
 
@@ -30,9 +36,9 @@ export function TodoHistory({ currentMember, roles, todos, allMembers }: Props) 
           </div>
           <div className="todo-history-status">
             <span className={`todo-history-badge todo-history-badge--${todo.status}`}>
-              {todo.status === "approved" ? "Godkänd" : "Nekad"}
+              {statusLabel(todo.status)}
             </span>
-            <small>{fmtDate(todo.approvedAt ?? todo.rejectedAt ?? todo.completedAt ?? new Date().toISOString())}</small>
+            <small>{fmtDate(todo.approvedAt ?? todo.rejectedAt ?? todo.expiresAt ?? todo.completedAt ?? new Date().toISOString())}</small>
             {todo.status === "rejected" && todo.rejectedReason && (
               <small className="todo-history-reason">{todo.rejectedReason}</small>
             )}

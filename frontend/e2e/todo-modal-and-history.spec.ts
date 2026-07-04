@@ -36,6 +36,20 @@ const PENDING_TODO = {
   approvedAt: null,
 };
 
+// Reproducerar buggen Zaida hittade i produktion 3 juli: expired räknades inte som
+// historik i första versionen av S3, så utgångna uppgifter fortsatte synas i den
+// aktiva Todos-listan.
+const EXPIRED_TODO = {
+  ...APPROVED_TODO,
+  id: "todo-expired",
+  title: "Duka undan",
+  status: "expired",
+  completedAt: null,
+  approvedBy: null,
+  approvedAt: null,
+  expiresAt: "2026-06-02T00:00:00.000Z",
+};
+
 test.describe("Todos: skapa-modal och historik i Inställningar", () => {
   test.beforeEach(async ({ page }) => {
     await mockAuthAndData(page);
@@ -57,9 +71,9 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await expect(page.getByRole("dialog", { name: "Skapa todo" })).toHaveCount(0);
   });
 
-  test("Godkänd uppgift visas inte i aktiva Todos-listan, men syns i Inställningars historik", async ({ page }) => {
+  test("Godkänd och utgången uppgift visas inte i aktiva Todos-listan, men syns i Inställningars historik", async ({ page }) => {
     await page.route("**/api/todos", (route) =>
-      route.fulfill({ json: route.request().method() === "GET" ? [APPROVED_TODO, PENDING_TODO] : {} })
+      route.fulfill({ json: route.request().method() === "GET" ? [APPROVED_TODO, PENDING_TODO, EXPIRED_TODO] : {} })
     );
 
     await page.goto("/");
@@ -67,11 +81,14 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
 
     await expect(page.getByText("Dammsuga")).toBeVisible();
     await expect(page.getByText("Diska")).toHaveCount(0);
+    await expect(page.getByText("Duka undan")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "📋 Todo-historik" }).click();
 
     await expect(page.getByText("Diska")).toBeVisible();
     await expect(page.getByText("Godkänd", { exact: true })).toBeVisible();
+    await expect(page.getByText("Duka undan")).toBeVisible();
+    await expect(page.getByText("Utgången", { exact: true })).toBeVisible();
   });
 });
