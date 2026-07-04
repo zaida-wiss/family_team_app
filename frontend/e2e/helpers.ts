@@ -35,8 +35,16 @@ export const LOGIN_RESPONSE = {
 // Används när testet hanterar auth separat.
 export async function mockDataAPIs(page: Page) {
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
+  // Matchar även /api/members/:id (t.ex. update/restore/remove) — utan denna
+  // föll anrop som membersApi.update() (bl.a. lastActivePanel-persistering vid
+  // panelbyte) igenom till en riktig, ej mockad backend och gav ett äkta 401
+  // (ogiltig fake-access-token), vilket triggade "Sessionen kunde inte förnyas".
+  await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  // SSE-strömmen för todo-ändringar — utan denna faller den igenom till en riktig
+  // backend och 401:ar (ofarligt i sig, men brusigt och kan racea med riktiga tester).
+  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));

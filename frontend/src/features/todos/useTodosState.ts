@@ -64,11 +64,24 @@ export function useTodosState() {
     setTodos((current) => {
       const fresh = expirePendingTodos(loadedTodos, Date.now());
       if (pendingMutationIds.current.size === 0) return fresh;
-      return fresh.map((todo) =>
-        pendingMutationIds.current.has(todo.id)
-          ? current.find((t) => t.id === todo.id) ?? todo
-          : todo
-      );
+      return fresh.map((todo) => {
+        if (!pendingMutationIds.current.has(todo.id)) return todo;
+        const optimistic = current.find((t) => t.id === todo.id);
+        if (!optimistic) return todo;
+        // Servern har hunnit ikapp den optimistiska statusen — mutationen är
+        // bekräftad, sluta skydda den. Innan dess: behåll den optimistiska vyn.
+        // Skyddet får INTE tas bort bara för att den här specifika
+        // godkänn/neka-anropets EGEN refreshTodos()-anrop råkar vinna
+        // token-racet — vid flera samtidiga godkännanden (t.ex. godkänn alla 19
+        // i snabb följd) kan en ANNAN mutations refresh vinna med data hämtad
+        // innan DEN HÄR mutationen hunnit landa på servern, vilket annars
+        // skriver tillbaka den till "done" igen.
+        if (todo.status === optimistic.status) {
+          pendingMutationIds.current.delete(todo.id);
+          return todo;
+        }
+        return optimistic;
+      });
     });
     await syncScheduledTodos(loadedTodos);
   }
@@ -243,7 +256,10 @@ export function useTodosState() {
       console.error(error);
       // API-anropet misslyckades — återställ den optimistiska uppdateringen så UI inte
       // visar en godkänd uppgift som aldrig faktiskt sparades på servern (samma mönster
-      // som approveWish i useRewardsState.ts).
+      // som approveWish i useRewardsState.ts). Skyddet tas bort direkt här (inte i en
+      // gemensam finally) eftersom refreshTodos() själv nu lazy-rensar det när servern
+      // bekräftar — vid ett misslyckat anrop vet vi redan sanningen och behöver inte vänta.
+      pendingMutationIds.current.delete(todoId);
       setTodos((current) =>
         current.map((todo) =>
           todo.id === todoId
@@ -251,8 +267,6 @@ export function useTodosState() {
             : todo
         )
       );
-    } finally {
-      pendingMutationIds.current.delete(todoId);
     }
   }
 
@@ -292,11 +306,13 @@ export function useTodosState() {
       await refreshTodos();
     } catch (error) {
       console.error(error);
+      // Se motsvarande kommentar i approveTodo — skyddet tas bort direkt här
+      // (inte i en gemensam finally) eftersom refreshTodos() själv nu lazy-rensar
+      // det när servern bekräftar mutationen.
+      pendingMutationIds.current.delete(todoId);
       setTodos((current) =>
         current.map((todo) => (todo.id === todoId ? previousTodo : todo))
       );
-    } finally {
-      pendingMutationIds.current.delete(todoId);
     }
   }
 
