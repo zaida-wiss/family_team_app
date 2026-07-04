@@ -1,9 +1,15 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "crypto";
 
-// Fält-nivå-kryptering av kalenderns title/notes — ADR-0014. Per-konto-nyckel
-// härledd deterministiskt via HKDF från en huvudnyckel; inget att lagra eller
-// provisionera separat vid nytt konto. AES-256-GCM (autentiserad), slumpmässig
-// 12-byte IV per krypteringsoperation, aldrig återanvänd.
+// Generisk fält-nivå-kryptering (ADR-0014, utökad till todos/rewards 2026-07-04
+// — se ADR-0014 tillägg). Ursprungligen byggd för kalenderns title/notes, men
+// vet inget kalenderspecifikt — funkar för valfritt textfält, given ett accountId.
+// Per-konto-nyckel härledd deterministiskt via HKDF från en huvudnyckel; inget
+// att lagra eller provisionera separat vid nytt konto. AES-256-GCM (autentiserad),
+// slumpmässig 12-byte IV per krypteringsoperation, aldrig återanvänd.
+//
+// Miljövariabeln heter fortfarande CALENDAR_ENCRYPTION_MASTER_KEY (historiska skäl
+// — redan satt i Render, ingen anledning att döpa om och kräva ännu en manuell
+// konfigurationsändring) trots att den nu används generiskt för fler entiteter.
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;

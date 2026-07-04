@@ -1,7 +1,7 @@
 import { CalendarModel } from "../db/models/Calendar.js";
 import { AppError } from "../utils/errors.js";
 import { CalendarEventPatchSchema, CalendarEventSchema, ImportedCalendarSourceSchema } from "../../../shared/schemas.js";
-import { decryptNullable, encryptField, encryptNullable } from "../utils/calendarEncryption.js";
+import { decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 
 // Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
 // title/notes krypteras precis innan de sparas och dekrypteras precis innan de

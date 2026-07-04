@@ -3,6 +3,7 @@ import { MemberModel } from "../db/models/Member.js";
 import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { AppError } from "../utils/errors.js";
 import { TodoPatchSchema } from "../../../shared/schemas.js";
+import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import type { Todo } from "../../../shared/types.js";
 
 export async function getAllTodos(accountId: string) {
@@ -11,7 +12,7 @@ export async function getAllTodos(accountId: string) {
   const cutoff7 = new Date();
   cutoff7.setDate(cutoff7.getDate() - 7);
 
-  return TodoModel.find(
+  const todos = await TodoModel.find(
     {
       accountId,
       $and: [
@@ -24,7 +25,13 @@ export async function getAllTodos(accountId: string) {
       ],
     },
     { _id: 0, __v: 0 }
-  );
+  ).lean();
+
+  return todos.map((todo) => ({
+    ...todo,
+    title: decryptField(accountId, todo.title),
+    rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null
+  }));
 }
 
 export async function createTodo(data: unknown) {
@@ -36,7 +43,14 @@ export async function createTodo(data: unknown) {
     }
   }
 
-  const todo = new TodoModel(data);
+  const input = data as Partial<Todo> & { accountId: string; title: string };
+  const encrypted = {
+    ...input,
+    title: encryptField(input.accountId, input.title),
+    rejectedReason: encryptNullable(input.accountId, input.rejectedReason) ?? null
+  };
+
+  const todo = new TodoModel(encrypted);
   try {
     await todo.save();
   } catch (error) {
@@ -89,6 +103,8 @@ export async function updateTodo(id: string, accountId: string, data: unknown) {
     throw new AppError(404, "Todo hittades inte");
   }
 
+  if (patch.title !== undefined) patch.title = encryptField(accountId, patch.title);
+
   Object.assign(todo, patch);
   await todo.save();
   broadcastTodosChanged();
@@ -118,6 +134,7 @@ export async function rejectTodo(id: string, accountId: string, memberId: string
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
   }
+  const encryptedReason = encryptNullable(accountId, reason) ?? null;
   if (canRetryRejectedTodo({ expiresAt: todo.expiresAt })) {
     todo.status = "pending";
     todo.completedAt = null;
@@ -125,7 +142,7 @@ export async function rejectTodo(id: string, accountId: string, memberId: string
     todo.approvedAt = null;
     todo.rejectedBy = null;
     todo.rejectedAt = null;
-    todo.rejectedReason = reason;
+    todo.rejectedReason = encryptedReason;
     await todo.save();
     broadcastTodosChanged();
     return;
@@ -134,7 +151,7 @@ export async function rejectTodo(id: string, accountId: string, memberId: string
   todo.status = "rejected";
   todo.rejectedBy = memberId;
   todo.rejectedAt = new Date().toISOString();
-  todo.rejectedReason = reason;
+  todo.rejectedReason = encryptedReason;
   await todo.save();
   broadcastTodosChanged();
 }

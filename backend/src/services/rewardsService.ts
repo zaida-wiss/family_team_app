@@ -1,12 +1,15 @@
 import { RewardModel } from "../db/models/Reward.js";
 import { AppError } from "../utils/errors.js";
+import { decryptField, encryptField } from "../utils/fieldEncryption.js";
 
 export async function getAllRewards(accountId: string) {
-  return RewardModel.find({ accountId }, { _id: 0, __v: 0 });
+  const rewards = await RewardModel.find({ accountId }, { _id: 0, __v: 0 }).lean();
+  return rewards.map((reward) => ({ ...reward, title: decryptField(accountId, reward.title) }));
 }
 
 export async function createReward(data: unknown) {
-  const reward = new RewardModel(data);
+  const input = data as { accountId: string; title: string };
+  const reward = new RewardModel({ ...input, title: encryptField(input.accountId, input.title) });
   await reward.save();
   return { id: reward.id };
 }
@@ -14,7 +17,7 @@ export async function createReward(data: unknown) {
 export async function updateReward(id: string, accountId: string, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) {
   const reward = await RewardModel.findOne({ id, accountId });
   if (!reward || reward.deletedAt) throw new AppError(404, "Belöning hittades inte");
-  if (patch.title !== undefined) reward.title = patch.title;
+  if (patch.title !== undefined) reward.title = encryptField(accountId, patch.title);
   if (patch.starsNeeded !== undefined) reward.starsNeeded = patch.starsNeeded;
   if ("symbol" in patch) reward.symbol = patch.symbol ?? null;
   await reward.save();

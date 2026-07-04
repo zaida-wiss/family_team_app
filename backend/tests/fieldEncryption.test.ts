@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { describe, it, expect } from "vitest";
-import { decryptField, decryptNullable, encryptField, encryptNullable } from "../src/utils/calendarEncryption.js";
+import { decryptField, decryptNullable, encryptField, encryptNullable } from "../src/utils/fieldEncryption.js";
 
-describe("Fält-kryptering av kalenderns title/notes (ADR-0014)", () => {
+describe("Generisk fält-kryptering (ADR-0014, utökad till todos/rewards)", () => {
   it("krypterar och dekrypterar tillbaka till samma klartext", () => {
     const plaintext = "Läkarbesök hos dr Andersson";
     const encrypted = encryptField("acc-1", plaintext);
