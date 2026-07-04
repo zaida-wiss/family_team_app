@@ -62,7 +62,7 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
         isShared: false,
         status: "pending",
         starValue: 5,
-        icon: { type: "lucide-icon", value: "Star" },
+        visual: { type: "lucide-icon", value: "Star" },
         recurrence: { type: "none", interval: 1, until: null },
         visibleFrom: null,
         expiresAt: null,
