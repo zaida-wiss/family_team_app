@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Calendar, Id, Member, PurchasedReward, Reward, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, PurchasedReward, Reward, Role, Todo, TimedTaskWithBest } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
 import { ChildWeekStrip } from "./ChildWeekStrip";
 import { ChildTasksSection } from "./ChildTasksSection";
 import { ChildRejectedTodos } from "./ChildRejectedTodos";
+import { ChildTimedTasksSection } from "./ChildTimedTasksSection";
 import { ChildStarsPanel } from "./ChildStarsPanel";
 import { ChildPendingBadges } from "./ChildPendingBadges";
 import { useChildCompleteHold } from "./useChildCompleteHold";
@@ -27,6 +28,8 @@ type Props = {
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
+  timedTasks: TimedTaskWithBest[];
+  onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
@@ -55,6 +58,8 @@ export function ChildDashboard({
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
+  timedTasks,
+  onRecordTimedAttempt,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
@@ -144,6 +149,12 @@ export function ChildDashboard({
           <ChildRejectedTodos
             rejectedTodos={rejectedTodos}
             onDismiss={onDismissRejectedTodo}
+          />
+
+          <ChildTimedTasksSection
+            timedTasks={timedTasks}
+            timerNow={timerNow}
+            onRecordAttempt={onRecordTimedAttempt}
           />
 
           <div className="child-stars-anchor">

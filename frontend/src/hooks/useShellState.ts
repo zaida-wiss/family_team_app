@@ -60,7 +60,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     removeItem: removeShopItem,
   } = useRewardShopState();
 
-  const { timedTasks, createTimedTask, removeTimedTask } = useTimedTasksState();
+  const { timedTasks, createTimedTask, removeTimedTask, recordAttempt } = useTimedTasksState();
 
   const permissions = useShellPermissions(currentMember, roles);
 
@@ -88,7 +88,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onCreateWish: createWish,
     onCompleteTodo: completeTodo,
     onDismissRejectedTodo: dismissRejectedTodo,
-    onThemePickerOpen: setThemePickerMemberId
+    onThemePickerOpen: setThemePickerMemberId,
+    timedTasks,
+    onRecordTimedAttempt: recordAttempt
   };
 
   const childContentProps = {

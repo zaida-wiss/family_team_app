@@ -17,7 +17,7 @@ const TodosView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Member, Reward, Role, ShoppingList, Todo } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TimedTaskWithBest } from "@shared/types";
 
 type DashboardProps = ComponentProps<(typeof import("./Dashboard"))["Dashboard"]>;
 
@@ -33,6 +33,8 @@ type Props = {
   rewards: Reward[];
   calendars: Calendar[];
   shoppingLists: ShoppingList[];
+  timedTasks: TimedTaskWithBest[];
+  onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
   canSeeCalendar: boolean;
   canSeeTodos: boolean;
   canSeeShopping: boolean;
@@ -94,7 +96,7 @@ export function MemberShellContent({
   activePanel, accountName,
 
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
-  todos, rewards, calendars, shoppingLists,
+  todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   editingTodoId, editingTodoTitle, wishStars, wishTitle,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
@@ -281,6 +283,8 @@ export function MemberShellContent({
           timelineTodos={todos}
           activeChildTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}
+          timedTasks={timedTasks.filter((t) => t.assignedTo === selectedDashboardMember.id)}
+          onRecordTimedAttempt={onRecordTimedAttempt}
           wishTitle={wishTitle}
           onSetWishTitle={onSetWishTitle}
           onCreateWish={onCreateWish}

@@ -1,5 +1,5 @@
 import { ChildDashboard } from "./ChildDashboard";
-import type { Calendar, Member, Reward, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, Reward, Role, Todo, TimedTaskWithBest } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -7,6 +7,8 @@ type Props = {
   todos: Todo[];
   rewards: Reward[];
   roles: Role[];
+  timedTasks: TimedTaskWithBest[];
+  onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
   wishTitle: string;
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
@@ -30,6 +32,8 @@ export function ChildShellContent({
   todos,
   rewards,
   roles,
+  timedTasks,
+  onRecordTimedAttempt,
   wishTitle,
   onSetWishTitle,
   onCreateWish,
@@ -38,6 +42,7 @@ export function ChildShellContent({
   onThemePickerOpen,
 }: Props) {
   const childRewards = rewards.filter((r) => r.wishedBy === currentMember.id);
+  const childTimedTasks = timedTasks.filter((t) => t.assignedTo === currentMember.id);
   const now = Date.now();
   const activeChildTodos = todos
     .filter(
@@ -69,6 +74,8 @@ export function ChildShellContent({
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}
+      timedTasks={childTimedTasks}
+      onRecordTimedAttempt={onRecordTimedAttempt}
       wishTitle={wishTitle}
       onSetWishTitle={onSetWishTitle}
       onCreateWish={onCreateWish}
