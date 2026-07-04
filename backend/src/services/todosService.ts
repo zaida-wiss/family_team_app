@@ -4,6 +4,7 @@ import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { AppError } from "../utils/errors.js";
 import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
+import { writeAuditLog } from "./auditLogService.js";
 import type { Todo } from "../../../shared/types.js";
 
 export async function getAllTodos(accountId: string) {
@@ -124,6 +125,13 @@ export async function approveTodo(id: string, accountId: string, memberId: strin
     await MemberModel.updateOne(
       { id: todo.assignedTo },
       { $inc: { approvedStars: todo.starValue } }
+    );
+    const member = await MemberModel.findOne({ id: todo.assignedTo });
+    await writeAuditLog(
+      accountId,
+      "stars_approved",
+      memberId,
+      `Godkände ${todo.starValue} stjärnor för "${decryptField(accountId, todo.title)}" (${member?.name ?? "okänd medlem"})`
     );
   }
   broadcastTodosChanged();

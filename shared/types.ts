@@ -151,6 +151,27 @@ export type PaginatedPurchasedRewards = {
   total: number;
 };
 
+// Audit-logg (Sprint 5 S4) — spårar stjärnor/köp/rolländringar. summary är
+// förformaterad server-side vid skrivning (svenska, klar för visning) — enklare
+// än en generisk details-bag som varje klientvy skulle behöva formatera per typ.
+export type AuditLogAction = "stars_approved" | "reward_purchased" | "role_permissions_changed";
+
+export type AuditLogEntry = {
+  id: Id;
+  accountId: Id;
+  action: AuditLogAction;
+  actorMemberId: Id | null;
+  summary: string;
+  createdAt: string;
+};
+
+export type PaginatedAuditLog = {
+  items: AuditLogEntry[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 // Medaljer/Rekord (Sprint 4 S1) — helt skild från Todo/belöningsflödet, se
 // docs/engineering-os/.../discussions/2026-07-04-designspike-medaljer-och-foraldravy.md.
 // Start/stopp mäts klientsidan (Date.now()); bara den färdiga varaktigheten skickas

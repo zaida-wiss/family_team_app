@@ -33,6 +33,6 @@ rolesRouter.post("/", async (req, res) => {
 
 rolesRouter.patch("/:id/permissions", async (req, res) => {
   await requireCanManageRoles(req.memberId, req.accountId!);
-  await roles.updatePermissions(req.params.id, req.accountId!, req.body);
+  await roles.updatePermissions(req.params.id, req.accountId!, req.body, req.memberId ?? null);
   res.json({ ok: true });
 });

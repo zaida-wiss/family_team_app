@@ -2,6 +2,7 @@ import { RoleModel } from "../db/models/Role.js";
 import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
 import { RoleSchema, PermissionsPatchSchema } from "../../../shared/schemas.js";
+import { writeAuditLog } from "./auditLogService.js";
 
 export async function getAllRoles(accountId: string) {
   const members = await MemberModel.find({ accountId, deletedAt: null }, { roleId: 1, _id: 0 });
@@ -25,7 +26,7 @@ export async function createRole(data: unknown) {
   return { id: created.id };
 }
 
-export async function updatePermissions(id: string, accountId: string, patch: unknown) {
+export async function updatePermissions(id: string, accountId: string, patch: unknown, actorMemberId: string | null) {
   await assertRoleInAccount(id, accountId);
   const permissions = PermissionsPatchSchema.parse(patch);
   const role = await RoleModel.findOne({ id });
@@ -35,4 +36,10 @@ export async function updatePermissions(id: string, accountId: string, patch: un
   role.permissions = { ...role.permissions, ...permissions };
   role.markModified("permissions");
   await role.save();
+  await writeAuditLog(
+    accountId,
+    "role_permissions_changed",
+    actorMemberId,
+    `Ändrade behörigheter för rollen "${role.name}" (${Object.keys(permissions).join(", ")})`
+  );
 }

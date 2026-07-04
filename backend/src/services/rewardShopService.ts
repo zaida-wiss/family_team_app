@@ -6,6 +6,7 @@ import type { RewardShopItem } from "../../../shared/types.js";
 import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
 import { broadcastRewardShopChanged } from "../realtime/rewardShopEvents.js";
+import { writeAuditLog } from "./auditLogService.js";
 
 export async function getShop(accountId: string) {
   const shop = await RewardShopModel.findOne({ accountId });
@@ -115,6 +116,13 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
     durationMinutes: item.timerMinutes,
     deletedAt: null,
   });
+
+  await writeAuditLog(
+    forMember.accountId,
+    "reward_purchased",
+    callerId,
+    `Köpte "${item.title}" (${item.starCost} stjärnor)${callerId !== forMemberId ? ` åt ${forMember.name}` : ""}`
+  );
 
   broadcastRewardShopChanged();
   return purchased;

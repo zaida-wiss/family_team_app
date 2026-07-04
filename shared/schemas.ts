@@ -296,6 +296,11 @@ export const PurchasedRewardsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).optional()
 });
 
+export const AuditLogQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).optional()
+});
+
 export const RewardPatchSchema = z.object({
   title: z.string().min(1).optional(),
   starsNeeded: z.number().int().min(1).optional(),
