@@ -15,7 +15,12 @@
  *
  * Två pass:
  * 1) Roller som en befintlig medlem faktiskt använder — accountId härleds direkt
- *    från den medlemmen.
+ *    från den medlemmen. Om medlemmar i FLERA olika konton delar samma roll
+ *    (förekom i praktiken 2026-07-04, se docs/.../incidents/2026-07-04-
+ *    testkonton-skapade-i-produktion.md — en "Admin"-roll delad mellan två
+ *    riktiga familjekonton) går det inte att gissa rätt konto automatiskt.
+ *    Sådana roller flaggas och hoppas över — kräver en manuell lösning
+ *    (skapa en ny, egen roll åt respektive konto och peka om deras medlemmar).
  * 2) Konton som efter pass 1 fortfarande saknar en barn-roll helt (den gamla,
  *    ägarlösa "Barn"-rollen hade inga medlemmar och gick inte att matcha) — får
  *    en ny, korrekt kontoscopad "Barn"-roll. Den gamla ägarlösa rollen lämnas
@@ -52,15 +57,25 @@ async function run() {
 
   const rolesWithoutAccount = await RoleModel.find({ accountId: { $exists: false } });
   let resolvedViaMember = 0;
+  let ambiguous = 0;
   for (const role of rolesWithoutAccount) {
-    const member = await MemberModel.findOne({ roleId: role.id });
-    if (member) {
-      role.accountId = member.accountId;
-      await role.save();
-      resolvedViaMember++;
+    const members = await MemberModel.find({ roleId: role.id });
+    const distinctAccountIds = [...new Set(members.map((m) => m.accountId))];
+    if (distinctAccountIds.length === 0) continue;
+    if (distinctAccountIds.length > 1) {
+      console.warn(
+        `  Roll ${role.id} ("${role.name}") delas av medlemmar i ${distinctAccountIds.length} olika konton (${distinctAccountIds.join(", ")}) — hoppar över, kräver manuell lösning.`
+      );
+      ambiguous++;
+      continue;
     }
+    role.accountId = distinctAccountIds[0];
+    await role.save();
+    resolvedViaMember++;
   }
-  console.log(`Pass 1: ${resolvedViaMember} roller fick accountId härlett från en medlem som använder rollen.`);
+  console.log(
+    `Pass 1: ${resolvedViaMember} roller fick accountId härlett från en medlem som använder rollen, ${ambiguous} hoppades över (delade av flera konton, se konsolvarningarna ovan).`
+  );
 
   const accounts = await AccountModel.find({ deletedAt: null });
   let createdNewChildRole = 0;
