@@ -94,3 +94,28 @@ test("Barnets Rekord-vy: start/stopp spelar in ett försök", async ({ page }) =
   expect(recordedDurationMs).toBeGreaterThan(500);
   expect(recordedDurationMs).toBeLessThan(5000);
 });
+
+test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        json: [{
+          ...TIMED_TASK,
+          bestDurationMs: 12000,
+          bestAchievedAt: "2026-06-01T10:00:00.000Z",
+          attemptCount: 4,
+        }],
+      });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await page.goto("/");
+  const medalBtn = page.getByRole("button", { name: "Visa rekorddetaljer för Springa ett varv" });
+  await expect(medalBtn).toBeVisible();
+
+  await medalBtn.click();
+  await expect(page.getByText("Antal försök: 4")).toBeVisible();
+  await expect(page.getByText(/Tid: 0:12/)).toBeVisible();
+});

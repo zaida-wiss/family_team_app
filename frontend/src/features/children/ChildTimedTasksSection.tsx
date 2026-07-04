@@ -1,6 +1,6 @@
 import "./ChildTimedTasksSection.css";
 import { useState } from "react";
-import { Play, Square } from "lucide-react";
+import { Play, Square, Trophy } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 
 type Props = {
@@ -9,11 +9,23 @@ type Props = {
   onRecordAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
 };
 
+const FLASH_MS = 650;
+
 function fmtDuration(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("sv-SE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 // Start/stopp-tryck, inte håll-in (Zaidas beslut, S9-spiken) — många tidtagna
@@ -22,6 +34,8 @@ function fmtDuration(ms: number): string {
 // ingen egen duplicerad interval här.
 export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }: Props) {
   const [running, setRunning] = useState<{ id: Id; startedAt: number } | null>(null);
+  const [flashingId, setFlashingId] = useState<Id | null>(null);
+  const [expandedId, setExpandedId] = useState<Id | null>(null);
 
   if (timedTasks.length === 0) return null;
 
@@ -29,7 +43,12 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
     if (running?.id === task.id) {
       const durationMs = Date.now() - running.startedAt;
       setRunning(null);
-      void onRecordAttempt(task.id, durationMs);
+      onRecordAttempt(task.id, durationMs).then(({ isNewRecord }) => {
+        if (isNewRecord) {
+          setFlashingId(task.id);
+          window.setTimeout(() => setFlashingId(null), FLASH_MS);
+        }
+      }).catch(console.error);
       return;
     }
     setRunning({ id: task.id, startedAt: Date.now() });
@@ -42,28 +61,50 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
         {timedTasks.map((task) => {
           const isRunning = running?.id === task.id;
           const elapsed = isRunning ? timerNow - running.startedAt : null;
+          const hasRecord = task.bestDurationMs !== null;
+          const isExpanded = expandedId === task.id;
 
           return (
-            <div className="child-timed-tasks__card" key={task.id}>
-              <span className="child-timed-tasks__symbol">{task.symbol ?? "🏃"}</span>
-              <div className="child-timed-tasks__info">
-                <strong>{task.title}</strong>
-                <small>
-                  {isRunning
-                    ? fmtDuration(elapsed ?? 0)
-                    : task.bestDurationMs !== null
-                      ? `Bästa: ${fmtDuration(task.bestDurationMs)}`
-                      : "Inget rekord än"}
-                </small>
+            <div key={task.id}>
+              <div className={`child-timed-tasks__card${flashingId === task.id ? " child-timed-tasks__card--flash" : ""}`}>
+                <span className="child-timed-tasks__symbol">{task.symbol ?? "🏃"}</span>
+                <div className="child-timed-tasks__info">
+                  <strong>{task.title}</strong>
+                  <small>
+                    {isRunning
+                      ? fmtDuration(elapsed ?? 0)
+                      : hasRecord
+                        ? `Bästa: ${fmtDuration(task.bestDurationMs!)}`
+                        : "Inget rekord än"}
+                  </small>
+                </div>
+                {hasRecord && !isRunning && (
+                  <button
+                    className="child-timed-tasks__medal"
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : task.id)}
+                    aria-label={`Visa rekorddetaljer för ${task.title}`}
+                    aria-expanded={isExpanded}
+                  >
+                    <Trophy size={20} />
+                  </button>
+                )}
+                <button
+                  className={`child-timed-tasks__btn${isRunning ? " child-timed-tasks__btn--stop" : ""}`}
+                  type="button"
+                  onClick={() => toggle(task)}
+                  aria-label={isRunning ? `Stoppa tidtagning för ${task.title}` : `Starta tidtagning för ${task.title}`}
+                >
+                  {isRunning ? <Square size={20} /> : <Play size={20} />}
+                </button>
               </div>
-              <button
-                className={`child-timed-tasks__btn${isRunning ? " child-timed-tasks__btn--stop" : ""}`}
-                type="button"
-                onClick={() => toggle(task)}
-                aria-label={isRunning ? `Stoppa tidtagning för ${task.title}` : `Starta tidtagning för ${task.title}`}
-              >
-                {isRunning ? <Square size={20} /> : <Play size={20} />}
-              </button>
+              {isExpanded && hasRecord && (
+                <div className="child-timed-tasks__detail">
+                  <span>🗓 Rekord satt: {fmtDate(task.bestAchievedAt!)}</span>
+                  <span>⏱ Tid: {fmtDuration(task.bestDurationMs!)}</span>
+                  <span>🔁 Antal försök: {task.attemptCount}</span>
+                </div>
+              )}
             </div>
           );
         })}
