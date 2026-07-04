@@ -10,8 +10,8 @@ export const rewardShopRouter = Router();
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
 
-rewardShopRouter.get("/", requireAuth, async (req, res) => {
-  res.json(await shop.getShop(req.memberId!, req.userId!));
+rewardShopRouter.get("/", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await shop.getShop(req.accountId!));
 });
 
 rewardShopRouter.get("/events", requireAuth, async (_req, res) => {
@@ -23,23 +23,23 @@ rewardShopRouter.get("/events", requireAuth, async (_req, res) => {
   addRewardShopEventsClient(res);
 });
 
-rewardShopRouter.patch("/settings", requireAuth, async (req, res) => {
-  await shop.updateSettings(req.memberId!, req.userId!, req.body);
+rewardShopRouter.patch("/settings", requireAuth, attachAccountId, async (req, res) => {
+  await shop.updateSettings(req.accountId!, req.body);
   res.json({ ok: true });
 });
 
-rewardShopRouter.post("/items", requireAuth, async (req, res) => {
-  await shop.addItem(req.memberId!, req.userId!, req.body);
+rewardShopRouter.post("/items", requireAuth, attachAccountId, async (req, res) => {
+  await shop.addItem(req.accountId!, req.body);
   res.status(201).json({ ok: true });
 });
 
-rewardShopRouter.patch("/items/:itemId", requireAuth, async (req, res) => {
-  await shop.updateItem(req.memberId!, req.userId!, req.params.itemId, req.body);
+rewardShopRouter.patch("/items/:itemId", requireAuth, attachAccountId, async (req, res) => {
+  await shop.updateItem(req.accountId!, req.params.itemId, req.body);
   res.json({ ok: true });
 });
 
-rewardShopRouter.delete("/items/:itemId", requireAuth, async (req, res) => {
-  await shop.removeItem(req.memberId!, req.userId!, req.params.itemId);
+rewardShopRouter.delete("/items/:itemId", requireAuth, attachAccountId, async (req, res) => {
+  await shop.removeItem(req.accountId!, req.params.itemId, req.memberId!);
   res.json({ ok: true });
 });
 

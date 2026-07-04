@@ -5,11 +5,9 @@ import { TodoModel } from "../db/models/Todo.js";
 import type { RewardShopItem } from "../../../shared/types.js";
 import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
-import { accountIdOf } from "../utils/memberUtils.js";
 import { broadcastRewardShopChanged } from "../realtime/rewardShopEvents.js";
 
-export async function getShop(memberId: string, userId: string) {
-  const accountId = await accountIdOf(memberId, userId);
+export async function getShop(accountId: string) {
   const shop = await RewardShopModel.findOne({ accountId });
   const items = (shop?.items.filter((i) => i.deletedAt === null) ?? []).map((i) => ({
     id: i.id,
@@ -25,16 +23,14 @@ export async function getShop(memberId: string, userId: string) {
   return { items, requireApprovalForCategories: shop?.requireApprovalForCategories ?? false };
 }
 
-export async function updateSettings(memberId: string, userId: string, patch: { requireApprovalForCategories?: boolean }) {
-  const accountId = await accountIdOf(memberId, userId);
+export async function updateSettings(accountId: string, patch: { requireApprovalForCategories?: boolean }) {
   const update: Record<string, unknown> = {};
   if (patch.requireApprovalForCategories !== undefined) update.requireApprovalForCategories = patch.requireApprovalForCategories;
   if (Object.keys(update).length === 0) return;
   await RewardShopModel.updateOne({ accountId }, { $set: update }, { upsert: true });
 }
 
-export async function addItem(memberId: string, userId: string, item: RewardShopItem) {
-  const accountId = await accountIdOf(memberId, userId);
+export async function addItem(accountId: string, item: RewardShopItem) {
   await RewardShopModel.findOneAndUpdate(
     { accountId },
     { $push: { items: item } },
@@ -42,8 +38,7 @@ export async function addItem(memberId: string, userId: string, item: RewardShop
   );
 }
 
-export async function updateItem(memberId: string, userId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) {
-  const accountId = await accountIdOf(memberId, userId);
+export async function updateItem(accountId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) {
   const update: Record<string, unknown> = {};
   if (patch.title !== undefined) update["items.$.title"] = patch.title;
   if (patch.symbol !== undefined) update["items.$.symbol"] = patch.symbol;
@@ -54,8 +49,7 @@ export async function updateItem(memberId: string, userId: string, itemId: strin
   await RewardShopModel.updateOne({ accountId, "items.id": itemId }, { $set: update });
 }
 
-export async function removeItem(memberId: string, userId: string, itemId: string) {
-  const accountId = await accountIdOf(memberId, userId);
+export async function removeItem(accountId: string, itemId: string, memberId: string) {
   await RewardShopModel.updateOne(
     { accountId, "items.id": itemId },
     { $set: { "items.$.deletedAt": new Date().toISOString(), "items.$.deletedBy": memberId } }
