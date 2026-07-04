@@ -3,11 +3,11 @@
  *
  * Kör: tsx backend/scripts/migrateFieldEncryption.ts
  *
- * Varför: fält-kryptering (calendarsService.ts, todosService.ts, rewardsService.ts)
- * krypterar bara vid skrivning från och med commit f37dd40 — data skriven innan
- * dess ligger fortfarande i klartext i MongoDB. Det här skriptet krypterar all
- * befintlig data en gång: kalenderhändelsers title/notes, todos title/rejectedReason,
- * rewards title.
+ * Varför: fält-kryptering (calendarsService.ts, todosService.ts, rewardsService.ts,
+ * calendarSubscriptionsService.ts) krypterar bara vid skrivning från och med commit
+ * f37dd40 — data skriven innan dess ligger fortfarande i klartext i MongoDB. Det här
+ * skriptet krypterar all befintlig data en gång: kalenderhändelsers title/notes,
+ * kalenderprenumerationers url, todos title/rejectedReason, rewards title.
  *
  * Säkert att köra flera gånger: decryptField/encryptField-mönstret använder ett
  * "v1:"-prefix för krypterad data — fält som redan har prefixet hoppas över.
@@ -31,6 +31,7 @@ async function migrateCalendars() {
   const calendars = await CalendarModel.find({ accountId: { $ne: null } });
   let updatedCalendars = 0;
   let updatedEvents = 0;
+  let updatedSubscriptions = 0;
   let skippedNoAccount = 0;
 
   const withoutAccount = await CalendarModel.countDocuments({ accountId: null });
@@ -50,14 +51,23 @@ async function migrateCalendars() {
         updatedEvents++;
       }
     }
+    for (const sub of calendar.subscriptions ?? []) {
+      if (needsEncryption(sub.url)) {
+        sub.url = encryptField(calendar.accountId!, sub.url);
+        changed = true;
+        updatedSubscriptions++;
+      }
+    }
     if (changed) {
+      calendar.markModified("events");
+      calendar.markModified("subscriptions");
       await calendar.save();
       updatedCalendars++;
     }
   }
 
   console.log(
-    `Kalendrar: ${updatedCalendars} kalendrar uppdaterade, ${updatedEvents} händelsefält krypterade, ${skippedNoAccount} kalendrar utan accountId hoppade över.`
+    `Kalendrar: ${updatedCalendars} kalendrar uppdaterade, ${updatedEvents} händelsefält krypterade, ${updatedSubscriptions} prenumerations-url:er krypterade, ${skippedNoAccount} kalendrar utan accountId hoppade över.`
   );
 }
 

@@ -3,6 +3,7 @@ import type { IcsSubscription } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import { validateAndNormalizeIcsUrl } from "../utils/icsUrl.js";
+import { decryptField, encryptField } from "../utils/fieldEncryption.js";
 
 // ── ICS-parsning (privat) ─────────────────────────────────────────────────────
 
@@ -91,7 +92,7 @@ export async function createSubscription(calendarId: string, accountId: string, 
   const sub: IcsSubscription = {
     id: `sub-${crypto.randomUUID()}`,
     calendarId,
-    url: validateAndNormalizeIcsUrl(b.url),
+    url: encryptField(accountId, validateAndNormalizeIcsUrl(b.url)),
     includeWords: b.includeWords ?? [],
     excludeWords: b.excludeWords ?? [],
     dateFrom: b.dateFrom ?? null,
@@ -102,8 +103,8 @@ export async function createSubscription(calendarId: string, accountId: string, 
   calendar.subscriptions.push(sub as any);
   calendar.markModified("subscriptions");
   await calendar.save();
-  syncSubscription(calendarId, sub).catch((e) => logger.error(e));
-  return sub;
+  syncSubscription(calendarId, accountId, sub).catch((e) => logger.error(e));
+  return { ...sub, url: decryptField(accountId, sub.url) };
 }
 
 export async function updateSubscription(calendarId: string, accountId: string, subId: string, patch: unknown) {
@@ -150,7 +151,7 @@ export async function syncSubscriptionById(calendarId: string, accountId: string
   const sub = calendar.subscriptions.find((s) => s.id === subId);
   if (!sub) throw new AppError(404, "Prenumeration hittades inte");
 
-  await syncSubscription(calendarId, sub as unknown as IcsSubscription);
+  await syncSubscription(calendarId, accountId, sub as unknown as IcsSubscription);
 }
 
 export async function fetchIcs(url: unknown): Promise<string> {
@@ -269,11 +270,11 @@ function pruneOldEvents(calendar: any, cutoffSub: string, cutoffAll: string): bo
   return calendar.events.length !== beforeCount;
 }
 
-export async function syncSubscription(calendarId: string, sub: IcsSubscription) {
+export async function syncSubscription(calendarId: string, accountId: string, sub: IcsSubscription) {
   const calendar = await CalendarModel.findOne({ id: calendarId });
   if (!calendar) return;
 
-  const icsText = await fetchIcsTextOrNull(sub.url);
+  const icsText = await fetchIcsTextOrNull(decryptField(accountId, sub.url));
   if (icsText === null) return;
 
   const nowStr = new Date().toISOString();

@@ -11,10 +11,10 @@ import { logger } from "./utils/logger.js";
 const PORT = process.env.PORT ?? 3000;
 
 async function syncAllSubscriptions() {
-  const calendars = await CalendarModel.find({ deletedAt: null });
+  const calendars = await CalendarModel.find({ deletedAt: null, accountId: { $ne: null } });
   for (const cal of calendars) {
     for (const sub of cal.subscriptions ?? []) {
-      await syncSubscription(cal.id, sub as any).catch((e) => logger.error(e));
+      await syncSubscription(cal.id, cal.accountId!, sub as any).catch((e) => logger.error(e));
     }
   }
 }
