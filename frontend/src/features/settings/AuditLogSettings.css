@@ -1,0 +1,57 @@
+.audit-log-settings__filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.audit-log-settings__filter select {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  background: var(--card);
+  font: inherit;
+}
+
+.audit-log-settings__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 2px;
+  list-style: none;
+  margin: 0;
+}
+
+.audit-log-settings__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  background: var(--card);
+}
+
+.audit-log-settings__summary {
+  font-weight: 600;
+}
+
+.audit-log-settings__meta {
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+}
+
+.audit-log-settings__load-more {
+  margin-top: 10px;
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-weight: 700;
+}

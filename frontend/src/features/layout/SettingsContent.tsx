@@ -33,6 +33,9 @@ const ShoppingListsPanel = lazy(() =>
 const TrashView = lazy(() =>
   import("../trash/TrashView").then((m) => ({ default: m.TrashView }))
 );
+const AuditLogSettings = lazy(() =>
+  import("../settings/AuditLogSettings").then((m) => ({ default: m.AuditLogSettings }))
+);
 
 type ShellState = ReturnType<typeof useShellState>;
 
@@ -217,6 +220,12 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
             onCreateRole={settingsProps.onCreateRole}
             onTogglePermission={settingsProps.onTogglePermission}
           />
+        </SettingsSection>
+      )}
+
+      {canManageMembers && (
+        <SettingsSection title="🗂 Aktivitetslogg">
+          <AuditLogSettings enabled={canManageMembers} />
         </SettingsSection>
       )}
 
