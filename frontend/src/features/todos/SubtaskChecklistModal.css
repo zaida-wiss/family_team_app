@@ -1,0 +1,107 @@
+.subtask-checklist-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.subtask-checklist-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.subtask-checklist-modal__hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.subtask-checklist-modal__assignee {
+  display: block;
+  font-weight: 600;
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+}
+
+.subtask-checklist-modal__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 0;
+}
+
+.subtask-checklist-modal__progress-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.subtask-checklist-modal__progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.2s ease;
+}
+
+.subtask-checklist-modal__progress-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+  white-space: nowrap;
+}
+
+.subtask-checklist-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 18px 18px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtask-checklist-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.subtask-checklist-modal__item input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.subtask-checklist-modal__item-title--done {
+  text-decoration: line-through;
+  color: var(--muted-fg);
+}
+
+@media (max-width: 480px) {
+  .subtask-checklist-overlay {
+    padding: 16px 12px 100px;
+    align-items: flex-start;
+  }
+}

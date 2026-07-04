@@ -2,10 +2,12 @@ import "./ParentTodoThreadView.css";
 import { useState } from "react";
 import { ROUTINE_CATEGORIES } from "@shared/types";
 import type { Id, Member, Todo } from "@shared/types";
+import { SubtaskChecklistModal } from "./SubtaskChecklistModal";
 
 type Props = {
   todos: Todo[];
   members: Member[];
+  onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
 };
 
 const UNCATEGORIZED = "Övrigt";
@@ -17,6 +19,10 @@ function computeProgress(todo: Todo): number | null {
   return Math.round((done / todo.subtasks.length) * 100);
 }
 
+function assigneeNameFor(todo: Todo, members: Member[]): string {
+  return members.find((m) => m.id === todo.assignedTo)?.name ?? "Okänt barn";
+}
+
 function groupByCategory(todos: Todo[]): Map<string, Todo[]> {
   const groups = new Map<string, Todo[]>(THREAD_ORDER.map((c) => [c, []]));
   for (const todo of todos) {
@@ -26,15 +32,15 @@ function groupByCategory(todos: Todo[]): Map<string, Todo[]> {
   return groups;
 }
 
-// Föräldravyn med delmoment (Sprint 6 S2) — bollar hängande i en tråd per
+// Föräldravyn med delmoment (Sprint 6 S2+S3) — bollar hängande i en tråd per
 // kategori. Tråden töms när uppgifterna görs, tvärtom mot en vanlig lista
 // (se discussions/2026-07-04-designspike-medaljer-och-foraldravy.md). Kort
-// tryck expanderar delmomenten (läsvänligt än så länge — S3 gör detta till en
-// riktig, avbockningsbar checklista-modal). Långt tryck-avklarmarkering (S4)
-// är inte kopplad än.
-export function ParentTodoThreadView({ todos, members }: Props) {
-  const [expandedId, setExpandedId] = useState<Id | null>(null);
+// tryck öppnar en avbockningsbar checklista-modal (bara för todos som har
+// delmoment). Långt tryck-avklarmarkering (S4) är inte kopplad än.
+export function ParentTodoThreadView({ todos, members, onToggleSubtask }: Props) {
+  const [checklistTodoId, setChecklistTodoId] = useState<Id | null>(null);
   const groups = groupByCategory(todos.filter((t) => t.status === "pending"));
+  const checklistTodo = todos.find((t) => t.id === checklistTodoId) ?? null;
 
   return (
     <div className="todo-thread-view">
@@ -49,15 +55,15 @@ export function ParentTodoThreadView({ todos, members }: Props) {
               <ul className="todo-thread__list">
                 {categoryTodos.map((todo) => {
                   const progress = computeProgress(todo);
-                  const assignee = members.find((m) => m.id === todo.assignedTo)?.name ?? "Okänt barn";
-                  const isExpanded = expandedId === todo.id;
+                  const assignee = assigneeNameFor(todo, members);
+                  const hasSubtasks = (todo.subtasks?.length ?? 0) > 0;
                   return (
                     <li key={todo.id} className="todo-thread__item">
                       <button
                         type="button"
                         className="todo-thread__ball"
-                        onClick={() => setExpandedId(isExpanded ? null : todo.id)}
-                        aria-expanded={isExpanded}
+                        disabled={!hasSubtasks}
+                        onClick={() => setChecklistTodoId(todo.id)}
                         aria-label={
                           `${todo.title}, tilldelad ${assignee}` +
                           (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "")
@@ -74,18 +80,6 @@ export function ParentTodoThreadView({ todos, members }: Props) {
                           </span>
                         )}
                       </button>
-                      {isExpanded && todo.subtasks && todo.subtasks.length > 0 && (
-                        <ul className="todo-thread__subtasks" aria-label={`Delmoment för ${todo.title}`}>
-                          {todo.subtasks.map((subtask) => (
-                            <li
-                              key={subtask.id}
-                              className={`todo-thread__subtask${subtask.done ? " todo-thread__subtask--done" : ""}`}
-                            >
-                              {subtask.title}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                     </li>
                   );
                 })}
@@ -94,6 +88,15 @@ export function ParentTodoThreadView({ todos, members }: Props) {
           </section>
         );
       })}
+
+      {checklistTodo && (
+        <SubtaskChecklistModal
+          todo={checklistTodo}
+          assigneeName={assigneeNameFor(checklistTodo, members)}
+          onToggleSubtask={onToggleSubtask}
+          onClose={() => setChecklistTodoId(null)}
+        />
+      )}
     </div>
   );
 }

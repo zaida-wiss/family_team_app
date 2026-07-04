@@ -112,6 +112,24 @@ export function useTodosState() {
     );
   }
 
+  // Föräldravyn med delmoment (Sprint 6 S3) — bockar av/på ett enskilt delmoment,
+  // oberoende av övriga delmoment och av complete/approve/reject-flödet.
+  function toggleSubtask(todoId: Id, subtaskId: Id) {
+    todosApi.toggleSubtask(todoId, subtaskId).catch(console.error);
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id !== todoId
+          ? todo
+          : {
+              ...todo,
+              subtasks: todo.subtasks?.map((s) =>
+                s.id === subtaskId ? { ...s, done: !s.done } : s
+              )
+            }
+      )
+    );
+  }
+
   function completeTodo(member: Member, todoId: Id, roles: Role[]) {
     const todoToComplete = todos.find((todo) => todo.id === todoId);
     if (!todoToComplete || !canCompleteTodo(member, roles, todoToComplete)) {
@@ -358,6 +376,7 @@ export function useTodosState() {
     setEditingTodoTitle,
     createTodo,
     updateTodo,
+    toggleSubtask,
     completeTodo,
     startEditingTodo,
     saveTodoTitle,

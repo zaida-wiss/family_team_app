@@ -28,7 +28,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
   const { todos, editingTodoId, editingTodoTitle, setEditingTodoTitle,
     createTodo, completeTodo, startEditingTodo, saveTodoTitle,
     cancelEditingTodo, softDeleteTodo, restoreTodo, approveTodo, rejectTodo,
-    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, refreshRoutineOccurrence } = todosState;
+    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, refreshRoutineOccurrence } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, addCalendarEvent, updateCalendarEvent,
     deleteCalendarEvent, deleteCalendar, rsvpCalendarEvent, importCalendarEvents,
@@ -123,6 +123,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onSaveTodoTitle: (todoId: string) => saveTodoTitle(todoId, currentMember, roles),
     onCancelEditingTodo: cancelEditingTodo,
     onCreateTodo: createTodo,
+    onToggleSubtask: toggleSubtask,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),

@@ -27,6 +27,11 @@ export const todosApi = {
     }),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}`), { method: "DELETE" }),
+  toggleSubtask: (id: string, subtaskId: string) =>
+    request<{ done: boolean }>(api(`todos/${id}/subtasks/${subtaskId}`), {
+      method: "PATCH",
+      body: JSON.stringify({})
+    }),
   restore: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}/restore`), {
       method: "PATCH",
