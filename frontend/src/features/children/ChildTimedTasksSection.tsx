@@ -2,6 +2,7 @@ import "./ChildTimedTasksSection.css";
 import { useState } from "react";
 import { Play, Square, Trophy } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
+import { useWakeLock } from "../../hooks/useWakeLock";
 
 type Props = {
   timedTasks: TimedTaskWithBest[];
@@ -36,6 +37,8 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
   const [running, setRunning] = useState<{ id: Id; startedAt: number } | null>(null);
   const [flashingId, setFlashingId] = useState<Id | null>(null);
   const [expandedId, setExpandedId] = useState<Id | null>(null);
+
+  useWakeLock(running !== null);
 
   if (timedTasks.length === 0) return null;
 

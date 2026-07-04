@@ -95,6 +95,54 @@ test("Barnets Rekord-vy: start/stopp spelar in ett försök", async ({ page }) =
   expect(recordedDurationMs).toBeLessThan(5000);
 });
 
+test("Barnets Rekord-vy: begär skärm-wake-lock medan tidtagning pågår, släpper vid stopp", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TIMED_TASK] });
+    if (route.request().method() === "POST") {
+      return route.fulfill({
+        status: 201,
+        json: { id: "ta-1", durationMs: 1000, achievedAt: new Date().toISOString(), isNewRecord: true },
+      });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await page.addInitScript(() => {
+    (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls = [];
+    // navigator.wakeLock är en getter-only-egenskap i riktiga webbläsare — en
+    // vanlig tilldelning no-opar tyst. Object.defineProperty krävs för att
+    // faktiskt ersätta den med en spionerbar stubb.
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: {
+        request: async (type: string) => {
+          (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls.push(`request:${type}`);
+          return {
+            released: false,
+            release: async () => {
+              (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls.push("release");
+            },
+          };
+        },
+      },
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
+
+  await expect.poll(() =>
+    page.evaluate(() => (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls)
+  ).toEqual(["request:screen"]);
+
+  await page.getByRole("button", { name: "Stoppa tidtagning för Springa ett varv" }).click();
+
+  await expect.poll(() =>
+    page.evaluate(() => (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls)
+  ).toContain("release");
+});
+
 test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/timed-tasks", (route) => {
