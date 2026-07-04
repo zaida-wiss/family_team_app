@@ -161,6 +161,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
 
   const completedTodos = todos.filter(
     (t) =>
+      t.assignedTo === child.id &&
       (t.status === "done" || t.status === "approved") &&
       t.completedAt !== null &&
       toLocalDateStr(new Date(t.completedAt)) === selectedDayStr &&
