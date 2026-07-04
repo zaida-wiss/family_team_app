@@ -2,20 +2,9 @@ import { z } from "zod";
 
 export const IdSchema = z.string();
 
-export const AccountTypeSchema = z.enum(["family"]);
-
-export const AccountSchema = z.object({
-  id: IdSchema,
-  name: z.string().min(1, "Kontonamn krävs"),
-  type: AccountTypeSchema,
-  createdBy: IdSchema
-});
-
 export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "members", "settings"]);
 
 export const CalendarViewModeSchema = z.enum(["month", "week", "list", "timeline"]);
-
-export const CalendarFilterKeySchema = z.enum(["home", "calendar"]);
 
 // Partial<Record<CalendarFilterKey, ...>> — z.record().partial() finns inte i denna
 // zod-version (ZodRecord saknar .partial(), bara ZodObject har den), och CalendarFilterKey
@@ -97,32 +86,6 @@ export const CreateMemberBodySchema = MemberSchema.pick({
   dashboardTheme: true
 });
 
-export const PermissionKeySchema = z.enum([
-  "canManageMembers",
-  "canManageRoles",
-  "canSeeAllTodos",
-  "canSeeOwnTodos",
-  "canCreateTodos",
-  "canScheduleRecurringTodos",
-  "canCompleteAssignedTodos",
-  "canEditAnyTodos",
-  "canDeleteAnyTodos",
-  "canApproveTodos",
-  "canSeeAllCalendar",
-  "canSeeOwnCalendar",
-  "canCreateCalendar",
-  "canEditCalendar",
-  "canImportCalendar",
-  "canExportCalendar",
-  "canSeeShoppingLists",
-  "canCreateShoppingLists",
-  "canEditShoppingLists",
-  "canViewTrash",
-  "canRestoreFromTrash",
-  "canCreateChildAccounts",
-  "canManageChildTodos"
-]);
-
 export const PermissionsSchema = z.object({
   canManageMembers: z.boolean(),
   canManageRoles: z.boolean(),
@@ -157,20 +120,6 @@ export const RoleSchema = z.object({
 });
 
 export const PermissionsPatchSchema = PermissionsSchema.partial();
-
-export const AccessLevelSchema = z.enum(["view", "edit"]);
-
-export const ResourceShareSchema = z.object({
-  memberId: IdSchema,
-  access: AccessLevelSchema
-});
-
-export const OwnedSharedResourceSchema = z.object({
-  ownerId: IdSchema,
-  sharedWith: z.array(ResourceShareSchema),
-  deletedAt: z.string().nullable(),
-  deletedBy: IdSchema.nullable()
-});
 
 export const EventRecurrenceSchema = z.object({
   type: z.enum(["none", "daily", "weekly", "monthly", "yearly"]),
@@ -220,14 +169,6 @@ export const ImportedCalendarSourceSchema = z.object({
   importedAt: z.string()
 });
 
-export const CalendarSchema = OwnedSharedResourceSchema.extend({
-  id: IdSchema,
-  name: z.string().min(1, "Kalendernamn krävs"),
-  color: z.string(),
-  events: z.array(CalendarEventSchema),
-  importedSources: z.array(ImportedCalendarSourceSchema)
-});
-
 export const ShoppingItemSchema = z.object({
   id: IdSchema,
   title: z.string().min(1, "Varunamn krävs"),
@@ -235,14 +176,6 @@ export const ShoppingItemSchema = z.object({
   done: z.boolean(),
   deletedAt: z.string().nullable(),
   deletedBy: IdSchema.nullable()
-});
-
-export const ShoppingListSchema = OwnedSharedResourceSchema.extend({
-  id: IdSchema,
-  name: z.string().min(1, "Listnamn krävs"),
-  color: z.string(),
-  icon: z.string().nullable(),
-  items: z.array(ShoppingItemSchema)
 });
 
 export const TodoStatusSchema = z.enum([
@@ -335,60 +268,6 @@ export const TodoPatchSchema = TodoSchema.pick({
 
 export const RejectTodoBodySchema = z.object({
   reason: z.string().trim().min(1).max(200).nullable().optional()
-});
-
-export const RewardStatusSchema = z.enum([
-  "suggested",
-  "active",
-  "unlocked",
-  "redeemed",
-  "rejected"
-]);
-
-export const RewardSchema = z.object({
-  id: IdSchema,
-  title: z.string().min(1, "Belöningsnamn krävs"),
-  wishedBy: IdSchema,
-  starsNeeded: z.number().int().min(1),
-  status: RewardStatusSchema,
-  approvedBy: IdSchema.nullable(),
-  approvedAt: z.string().nullable(),
-  redeemedAt: z.string().nullable(),
-  deletedAt: z.string().nullable(),
-  deletedBy: IdSchema.nullable()
-});
-
-
-export const CreateMemberInputSchema = MemberSchema.omit({ id: true, deletedAt: true, deletedBy: true });
-export const CreateTodoInputSchema = TodoSchema.omit({
-  id: true,
-  status: true,
-  recurringSourceId: true,
-  occurrenceDate: true,
-  completedAt: true,
-  approvedBy: true,
-  approvedAt: true,
-  rejectedBy: true,
-  rejectedAt: true,
-  rejectedReason: true,
-  deletedAt: true,
-  deletedBy: true
-});
-export const CreateCalendarInputSchema = z.object({
-  name: z.string().min(1, "Kalendernamn krävs"),
-  color: z.string().optional()
-});
-export const CreateShoppingListInputSchema = z.object({
-  name: z.string().min(1, "Listnamn krävs")
-});
-export const CreateRewardInputSchema = RewardSchema.omit({
-  id: true,
-  status: true,
-  approvedBy: true,
-  approvedAt: true,
-  redeemedAt: true,
-  deletedAt: true,
-  deletedBy: true
 });
 
 // Flyttade hit från route-filerna (Sprint 3 S6) — låg tidigare som tre separata
