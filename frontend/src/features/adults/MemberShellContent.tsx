@@ -1,6 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import type { CalendarFilter } from "../calendars/CalendarView";
+import type { AddEventInput } from "../calendars/useCalendarsState";
+import type { CalendarPanel } from "../calendars/CalendarPanel";
 
 const ChildDashboard = lazy(() =>
   import("../children/ChildDashboard").then((m) => ({ default: m.ChildDashboard }))
@@ -19,7 +21,7 @@ import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TimedTaskWithBest } from "@shared/types";
 
-type DashboardProps = ComponentProps<(typeof import("./Dashboard"))["Dashboard"]>;
+type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
 type Props = {
   activePanel: ShellPanel;
@@ -57,20 +59,20 @@ type Props = {
   onApproveWish: (rewardId: string) => void;
   onRejectWish: (rewardId: string) => void;
   onSetWishStars: (rewardId: string, stars: number) => void;
-  onAddCalendarEvent: DashboardProps["onAddCalendarEvent"];
+  onAddCalendarEvent: (calendarId: Id, event: AddEventInput) => void;
   onUpdateCalendarEvent: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteCalendarEvent: (calendarId: string, eventId: string) => void;
   onRsvpCalendarEvent: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
-  onCreateCalendar: DashboardProps["onCreateCalendar"];
+  onCreateCalendar: (name: string, color: string) => void;
   onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: string[]) => void;
   onUpdateCalendarView: (view: CalendarViewMode) => void;
-  onImportCalendar: DashboardProps["onImportCalendar"];
-  onShareCalendar: DashboardProps["onShareCalendar"];
+  onImportCalendar: CalendarPanelProps["onImportCalendar"];
+  onShareCalendar: (calendarId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
   onAddShoppingItem: (listId: string, title: string) => void;
   onCreateShoppingList: (name: string) => void;
   onDeleteShoppingList: (listId: string) => void;
-  onShareShoppingList: DashboardProps["onShareShoppingList"];
+  onShareShoppingList: (listId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
   onToggleShoppingItem: (listId: string, itemId: string) => void;
   calendarSettings?: CalendarSettings;
@@ -80,7 +82,7 @@ type Props = {
   onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded?: number, title?: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
-  onUpdateCalendarKeepAllHistory?: DashboardProps["onUpdateCalendarKeepAllHistory"];
+  onUpdateCalendarKeepAllHistory?: CalendarPanelProps["onUpdateCalendarKeepAllHistory"];
 };
 
 function isTodoVisibleNow(

@@ -91,37 +91,6 @@
   --sidebar: color-mix(in oklch, #578749 18%, oklch(0.96 0.018 78));
 }
 
-.dashboard.theme-clear {
-  background: linear-gradient(180deg, var(--background) 0%, var(--muted) 100%);
-}
-
-.dashboard.theme-focus {
-  background: linear-gradient(180deg, #eef4ff 0%, #d6e5ff 72%);
-}
-
-.dashboard.theme-warm {
-  background: linear-gradient(180deg, #fff4e6 0%, #fde2c6 72%);
-}
-
-.dashboard.theme-dark {
-  background: linear-gradient(180deg, #24312f 0%, #41514d 100%);
-  color: #f4faf7;
-}
-
-.dashboard.theme-dark .eyebrow,
-.dashboard.theme-dark .dashboard-row {
-  color: #f4faf7;
-}
-
-.dashboard.theme-dark .dashboard-row {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.dashboard.theme-nature {
-  background: linear-gradient(180deg, #193c04 0%, #77c24b 74%);
-}
-
 /* =========================================================
    CHILD THEME TOKENS
    8 colors + white/black + contrast text colors
