@@ -15,6 +15,12 @@ export function useTodosState() {
   // hinna komma in efter ett nyare och skriva över ett nyss godkänt uppdrag tillbaka
   // till sitt gamla, inaktuella tillstånd — "hoppar tillbaka till listan".
   const refreshTokenRef = useRef(0);
+  // Skydd mot en ANNAN variant av samma symptom: en oberoende bakgrundsrefresh
+  // (inte den som själva mutationen triggar) kan hinna svara med en server-
+  // snapshot från INNAN godkänn/neka-anropet hann landa, och skriver då över den
+  // optimistiska uppdateringen. Todo-id:n med en pågående mutation skyddas här
+  // tills mutationen själv bekräftat resultatet.
+  const pendingMutationIds = useRef<Set<Id>>(new Set());
 
   useEffect(() => {
     refreshTodos().catch(console.error);
@@ -55,7 +61,15 @@ export function useTodosState() {
       return;
     }
     todosRef.current = loadedTodos;
-    setTodos(expirePendingTodos(loadedTodos, Date.now()));
+    setTodos((current) => {
+      const fresh = expirePendingTodos(loadedTodos, Date.now());
+      if (pendingMutationIds.current.size === 0) return fresh;
+      return fresh.map((todo) =>
+        pendingMutationIds.current.has(todo.id)
+          ? current.find((t) => t.id === todo.id) ?? todo
+          : todo
+      );
+    });
     await syncScheduledTodos(loadedTodos);
   }
 
@@ -201,6 +215,7 @@ export function useTodosState() {
     );
     if (!eligible) return;
 
+    pendingMutationIds.current.add(todoId);
     trackEvent("todo-approved");
 
     try {
@@ -218,6 +233,8 @@ export function useTodosState() {
             : todo
         )
       );
+    } finally {
+      pendingMutationIds.current.delete(todoId);
     }
   }
 
@@ -250,6 +267,7 @@ export function useTodosState() {
     );
     if (!previous) return;
     const previousTodo = previous;
+    pendingMutationIds.current.add(todoId);
 
     try {
       await todosApi.reject(todoId, reason);
@@ -259,6 +277,8 @@ export function useTodosState() {
       setTodos((current) =>
         current.map((todo) => (todo.id === todoId ? previousTodo : todo))
       );
+    } finally {
+      pendingMutationIds.current.delete(todoId);
     }
   }
 
