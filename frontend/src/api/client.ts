@@ -63,12 +63,19 @@ export async function request<T>(
   return performRequest<T>(path, options, skipUnauthorizedHandler);
 }
 
+const SSE_BASE_DELAY_MS = 3000;
+const SSE_MAX_DELAY_MS = 60_000;
+
 export function subscribeToServerEvents(
   path: string,
   onEvent: (eventName: string) => void
 ) {
   let cancelled = false;
   let abortController: AbortController | null = null;
+  // Exponentiell backoff — utan den hamrar en trasig anslutning (t.ex. ihållande
+  // 401/429) servern var 3:e sekund i all evighet, vilket i sig triggar rate
+  // limiten och håller den låst även efter att grundorsaken är åtgärdad.
+  let failureCount = 0;
 
   async function attemptConnection() {
     abortController = new AbortController();
@@ -78,6 +85,7 @@ export function subscribeToServerEvents(
       throw new Error(`Eventströmmen svarade med HTTP ${response.status}`);
     }
 
+    failureCount = 0;
     await readEventStream(response.body, onEvent, () => cancelled);
   }
 
@@ -88,11 +96,16 @@ export function subscribeToServerEvents(
       } catch (error) {
         if (!cancelled) {
           console.error(error);
+          failureCount++;
         }
       }
 
       if (!cancelled) {
-        await delay(3000);
+        const delayMs = Math.min(
+          SSE_BASE_DELAY_MS * 2 ** Math.max(0, failureCount - 1),
+          SSE_MAX_DELAY_MS
+        );
+        await delay(delayMs);
       }
     }
   }
