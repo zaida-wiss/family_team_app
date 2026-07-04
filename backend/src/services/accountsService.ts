@@ -65,12 +65,14 @@ export async function setupAccount(userId: string, data: unknown) {
   await Promise.all([
     new RoleModel({
       id: förälderRoleId,
+      accountId,
       name: "Förälder",
       isChildRole: false,
       permissions: makePermissions(PARENT_PERMISSIONS)
     }).save(),
     new RoleModel({
       id: barnRoleId,
+      accountId,
       name: "Barn",
       isChildRole: true,
       permissions: makePermissions(CHILD_PERMISSIONS)

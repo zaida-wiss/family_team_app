@@ -43,6 +43,7 @@ await AccountModel.create({
 await RoleModel.create([
   {
     id: "role-foralder",
+    accountId: "account-family-1",
     name: "Förälder",
     isChildRole: false,
     permissions: makePermissions([
@@ -57,6 +58,7 @@ await RoleModel.create([
   },
   {
     id: "role-barn",
+    accountId: "account-family-1",
     name: "Barn",
     isChildRole: true,
     permissions: makePermissions(["canSeeOwnTodos", "canCompleteAssignedTodos", "canSeeOwnCalendar"])

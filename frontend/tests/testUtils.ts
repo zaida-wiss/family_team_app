@@ -36,6 +36,7 @@ export function createRole(
 ): Role {
   return {
     id,
+    accountId: "account-family",
     name: id,
     isChildRole: false,
     permissions: createPermissionMap(permissions)

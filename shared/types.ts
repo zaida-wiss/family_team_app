@@ -229,6 +229,7 @@ export type PermissionKey =
 
 export type Role = {
   id: Id;
+  accountId: Id;
   name: string;
   isChildRole: boolean;
   permissions: Record<PermissionKey, boolean>;

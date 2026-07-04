@@ -28,7 +28,7 @@ rolesRouter.get("/", async (req, res) => {
 
 rolesRouter.post("/", async (req, res) => {
   await requireCanManageRoles(req.memberId, req.accountId!);
-  res.status(201).json(await roles.createRole(req.body));
+  res.status(201).json(await roles.createRole(req.accountId!, req.body));
 });
 
 rolesRouter.patch("/:id/permissions", async (req, res) => {

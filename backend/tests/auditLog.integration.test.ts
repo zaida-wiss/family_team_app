@@ -12,7 +12,6 @@ import request from "supertest";
 import mongoose from "mongoose";
 import { app } from "../src/app.js";
 import { connectDB } from "../src/db/connection.js";
-import { RoleModel } from "../src/db/models/Role.js";
 
 const uri = process.env.MONGODB_URI ?? "";
 const RUN = uri.startsWith("mongodb://");
@@ -48,11 +47,11 @@ describe.skipIf(!RUN)("Audit-logg", () => {
     const body = setup.body as { membership: { member: { id: string } } };
     parentMemberId = body.membership.member.id;
 
-    // GET /api/roles filtrerar till roller som redan används av en medlem i kontot
-    // (se rolesService.getAllRoles) — "Barn"-rollen syns därför inte där förrän ett
-    // barn faktiskt finns. Hämtar roll-id:t direkt via modellen istället för att gå
-    // via API:et, som en riktig förälder skulle behöva göra vid sitt allra första barn.
-    const childRole = await RoleModel.findOne({ isChildRole: true }).sort({ _id: -1 });
+    const roles = await request(app)
+      .get("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId);
+    const childRole = (roles.body as Array<{ id: string; isChildRole: boolean }>).find((r) => r.isChildRole);
     roleId = childRole!.id;
 
     const createChild = await request(app)

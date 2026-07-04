@@ -9,9 +9,12 @@ export function useRolesState() {
     rolesApi.getAll().then(setRoles).catch(console.error);
   }, []);
 
-  function createRole(role: Role) {
+  // accountId sätts alltid server-side (aldrig litat på klienten) — den optimistiska
+  // lokala uppdateringen behöver ändå ett värde för typens skull tills nästa hämtning
+  // ersätter den med den riktiga posten. Ingen vy läser role.accountId.
+  function createRole(role: Omit<Role, "accountId">) {
     rolesApi.create(role).catch(console.error);
-    setRoles((current) => [...current, role]);
+    setRoles((current) => [...current, { ...role, accountId: "" }]);
   }
 
   function toggleRolePermission(roleId: Id, permission: PermissionKey) {

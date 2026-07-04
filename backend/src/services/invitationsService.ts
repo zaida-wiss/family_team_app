@@ -19,7 +19,7 @@ export async function invite(accountId: string, memberId: string | null | undefi
     throw new AppError(403, "Du tillhör inte detta konto");
   }
 
-  const role = await RoleModel.findOne({ id: roleId });
+  const role = await RoleModel.findOne({ id: roleId, accountId });
   if (!role) {
     throw new AppError(404, "Rollen hittades inte");
   }

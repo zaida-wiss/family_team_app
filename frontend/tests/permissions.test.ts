@@ -16,6 +16,7 @@ import { createMember, createTodo } from "./testUtils";
 
 const parentRole: Role = {
   id: "role-parent",
+  accountId: "account-family",
   name: "Förälder",
   isChildRole: false,
   permissions: createPermissionMap([
@@ -29,6 +30,7 @@ const parentRole: Role = {
 
 const childRole: Role = {
   id: "role-child",
+  accountId: "account-family",
   name: "Barn",
   isChildRole: true,
   permissions: createPermissionMap(["canCompleteAssignedTodos"])
@@ -36,6 +38,7 @@ const childRole: Role = {
 
 const viewerRole: Role = {
   id: "role-viewer",
+  accountId: "account-family",
   name: "Läsare",
   isChildRole: false,
   permissions: createPermissionMap([])

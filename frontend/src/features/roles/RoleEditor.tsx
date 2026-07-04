@@ -12,7 +12,7 @@ import type { Id, Member, PermissionKey, Role } from "@shared/types";
 type RoleEditorProps = {
   roles: Role[];
   members: Member[];
-  onCreateRole: (role: Role) => void;
+  onCreateRole: (role: Omit<Role, "accountId">) => void;
   onTogglePermission: (roleId: Id, permission: PermissionKey) => void;
   onAssignRole: (memberId: Id, roleId: Id) => void;
 };
