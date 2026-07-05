@@ -147,3 +147,55 @@ test("Godkänd todo förblir godkänd även om den egna mutationens refresh för
 
   await expect(approvalPanel.getByText("Duka bordet")).toHaveCount(0);
 });
+
+// Zaida rapporterade 2026-07-05: godkänner man flera todos i rad hinner bara den
+// FÖRSTA faktiskt sparas på servern (stjärnor/pengar delas ut för den) — men
+// resten försvinner ändå visuellt ur listan (utan att någonsin sparas), och
+// ligger kvar som "väntar på godkännande" efter en sidomladdning. Grundorsak:
+// approveTodo/rejectTodo avgjorde om mutationen fick fortsätta ("eligible")
+// genom att mutera en yttre variabel INIFRÅN setTodos-uppdateraren och sedan
+// läsa tillbaka den direkt efter — men React 18 garanterar inte att en
+// funktionell setState-uppdaterare körs synkront. Vid snabbt upprepade klick
+// (innan föregående uppdaterare hunnit köras) var den yttre flaggan fortfarande
+// sitt ursprungsvärde (false) när koden kollade den, så resten av funktionen
+// (det faktiska API-anropet) hoppades felaktigt över — trots att den
+// optimistiska UI-uppdateringen senare ändå slog igenom asynkront. Fixat genom
+// att avgöra eligibilitet mot todosRef.current (en vanlig ref, alltid synkront
+// läsbar) INNAN setTodos anropas, istället för att läsa tillbaka ett värde som
+// muterats inuti uppdateraren.
+test("Godkänner man flera todos i snabb följd sparas ALLA på servern, inte bara den första", async ({ page }) => {
+  const todos = [
+    { id: "todo-a", title: "Ett" },
+    { id: "todo-b", title: "Två" },
+    { id: "todo-c", title: "Tre" }
+  ].map((t) => ({ ...DONE_TODO, ...t }));
+  const approvedIds: string[] = [];
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        json: todos.map((t) => ({ ...t, status: approvedIds.includes(t.id) ? "approved" : "done" }))
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route(/\/api\/todos\/(todo-[abc])\/approve/, (route) => {
+    const id = route.request().url().match(/todos\/(todo-[abc])\/approve/)![1];
+    approvedIds.push(id);
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos" }).click();
+
+  const approvalPanel = page.getByRole("region", { name: "Uppgifter att godkänna" });
+  await expect(approvalPanel.getByText("Ett")).toBeVisible();
+
+  for (const title of ["Ett", "Två", "Tre"]) {
+    await approvalPanel.locator(".approval-row", { hasText: title }).getByTitle("Godkänn").click();
+    await page.waitForTimeout(400);
+  }
+
+  await expect.poll(() => approvedIds.sort()).toEqual(["todo-a", "todo-b", "todo-c"]);
+});

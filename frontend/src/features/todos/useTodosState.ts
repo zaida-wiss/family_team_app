@@ -231,20 +231,32 @@ export function useTodosState() {
   }
 
   async function approveTodo(todoId: Id, approverId: Id) {
-    let eligible = false;
+    // Eligibiliteten avgörs mot todosRef.current (en vanlig ref, alltid synkront
+    // läsbar) — INTE genom att läsa tillbaka en yttre variabel som muterats inuti
+    // setTodos-uppdateraren. React 18 garanterar inte att en funktionell
+    // setState-uppdaterare körs synkront: vid snabbt upprepade godkännanden i rad
+    // hann uppdateraren för klick nummer två (och senare) INTE köras än när koden
+    // direkt efter setTodos() kollade den yttre "eligible"-flaggan — den var
+    // fortfarande sitt ursprungsvärde false, så resten av funktionen (API-anropet)
+    // hoppades felaktigt över, trots att den optimistiska uppdateringen senare
+    // ändå slog igenom (uppgiften försvann visuellt utan att någonsin sparas på
+    // servern) — upptäckt 2026-07-05, Zaida rapporterade att stjärnor/pengar
+    // delades ut men uppgifterna låg kvar att godkänna efter en sidomladdning.
+    const target = todosRef.current.find((t) => t.id === todoId);
+    if (!target || target.status !== "done") return;
+
     setTodos((current) =>
-      current.map((todo) => {
-        if (todo.id !== todoId || todo.status !== "done") return todo;
-        eligible = true;
-        return {
-          ...todo,
-          status: "approved" as const,
-          approvedBy: approverId,
-          approvedAt: new Date().toISOString()
-        };
-      })
+      current.map((todo) =>
+        todo.id === todoId
+          ? {
+              ...todo,
+              status: "approved" as const,
+              approvedBy: approverId,
+              approvedAt: new Date().toISOString()
+            }
+          : todo
+      )
     );
-    if (!eligible) return;
 
     pendingMutationIds.current.add(todoId);
     trackEvent("todo-approved");
@@ -271,11 +283,16 @@ export function useTodosState() {
   }
 
   async function rejectTodo(todoId: Id, rejecterId: Id, reason: string | null) {
-    let previous: Todo | null = null;
+    // Se motsvarande kommentar i approveTodo — eligibilitet och rollback-värdet
+    // avgörs mot todosRef.current innan setTodos anropas, inte genom att läsa
+    // tillbaka en yttre variabel muterad inuti uppdateraren (osäkert vid snabbt
+    // upprepade anrop, uppdateraren garanteras inte köras synkront).
+    const previousTodo = todosRef.current.find((t) => t.id === todoId);
+    if (!previousTodo || previousTodo.status !== "done") return;
+
     setTodos((current) =>
       current.map((todo) => {
-        if (todo.id !== todoId || todo.status !== "done") return todo;
-        previous = todo;
+        if (todo.id !== todoId) return todo;
         if (canRetryRejectedTodo(todo)) {
           return {
             ...todo,
@@ -297,8 +314,6 @@ export function useTodosState() {
         };
       })
     );
-    if (!previous) return;
-    const previousTodo = previous;
     pendingMutationIds.current.add(todoId);
 
     try {
