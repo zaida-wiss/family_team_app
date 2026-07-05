@@ -176,22 +176,20 @@
   border: 1px solid color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--border))) 80%, transparent);
   border-radius: 50%;
   padding: 4px;
-  /* Fyllningen växlar genom flera av temats EGNA färger (2026-07-05, Zaidas
-     begäran) — samma --c0…--c4-variabler man väljer i temainställningarna,
-     inte en enda kulör per kategori. En konisk regnbågston under de vanliga
-     glansrundlarna, likt en riktig såpbubblas skiftande sken. */
+  /* Fyllningen blandar flera av temats EGNA färger (2026-07-06, Zaidas
+     mockup) — samma --c0…--c4-variabler man väljer i temainställningarna,
+     inte hårdkodade kulörer. Fyra mjuka färgfläckar i hörnen blandas ihop
+     till ett pastelligt svirl istället för ett hårt konisk-regnbågsband, plus
+     en stor mjuk diffus glans uppe till vänster och en liten skarp blank
+     prick nere till höger — som en riktig såpbubblas skiftande, glasiga sken. */
   background:
-    radial-gradient(circle at 74% 74%, color-mix(in srgb, white 90%, transparent) 0%, transparent 8%),
-    radial-gradient(circle at 30% 26%, color-mix(in srgb, white 60%, transparent) 0%, transparent 30%),
-    conic-gradient(
-      from 180deg,
-      color-mix(in srgb, var(--c0) 95%, transparent),
-      color-mix(in srgb, var(--c1) 95%, transparent),
-      color-mix(in srgb, var(--c2) 95%, transparent),
-      color-mix(in srgb, var(--c3) 95%, transparent),
-      color-mix(in srgb, var(--c4) 95%, transparent),
-      color-mix(in srgb, var(--c0) 95%, transparent)
-    );
+    radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
+    radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--c0) 92%, transparent) 0%, transparent 62%),
+    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--c1) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--c2) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--c3) 88%, transparent) 0%, transparent 66%),
+    var(--c4);
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--primary))) 25%, transparent),
     0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 35%, transparent),
