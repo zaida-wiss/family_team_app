@@ -37,6 +37,7 @@ function buildTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | nul
     rejectedReason: null,
     deletedAt: null,
     deletedBy: null,
+    routineCategory: row.routineCategory,
     personalCategoryId: categoryId,
     subtasks: row.subtasks.length > 0 ? row.subtasks : undefined,
     notes: row.notes

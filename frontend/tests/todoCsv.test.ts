@@ -27,7 +27,8 @@ describe("todoCsv", () => {
     expect(table.length).toBe(3);
     expect(table[1][0]).toBe("Handla mat");
     expect(table[2][0]).toBe("Borsta tänderna");
-    expect(table[2][6]).toBe("Dag");
+    expect(table[2][3]).toBe("Hälsa");
+    expect(table[2][7]).toBe("Dag");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -226,6 +227,36 @@ describe("todoCsv", () => {
     // Nya id:n genereras vid import, avklarad-status återställs inte — en
     // import skapar en FRISK uppgift, inte en historik-kopia.
     expect(rows[0].subtasks.every((s) => s.done === false)).toBe(true);
+  });
+
+  test("todosToCsv → parseTodoCsv tur och retur bevarar rutinkategori (Hälsa/Trivsel/Pengar)", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const original = createTodo({
+      id: "t1",
+      title: "Borsta tänderna",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      routineCategory: "Hälsa"
+    });
+
+    const csv = todosToCsv([original], members, "mem-1");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+
+    expect(errors).toEqual([]);
+    expect(rows[0].routineCategory).toBe("Hälsa");
+  });
+
+  test("parseTodoCsv: okänt värde i Rutinkategori ger ett fel och ignoreras", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Tilldelad,Rutinkategori",
+      "Läxor,Mig själv,Skola"
+    ].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(rows[0].routineCategory).toBeNull();
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("Rutinkategori");
   });
 
   test("parseTodoCsv: Vecka utan giltiga veckodagar ger ett fel och behandlas som engångsuppgift", () => {

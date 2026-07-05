@@ -1,4 +1,5 @@
 import type { Id, Member, RecurrenceRule, RecurrenceUnit, Todo, TodoCategory, TodoSubtask, Weekday } from "@shared/types";
+import { ROUTINE_CATEGORIES } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { generateId } from "../../utils/uuid";
 
@@ -12,6 +13,7 @@ export const TODO_CSV_HEADERS = [
   "Titel",
   "Tilldelad",
   "Kategori",
+  "Rutinkategori",
   "Stjärnor",
   "Startdatum",
   "Slutdatum",
@@ -37,6 +39,12 @@ const NONE_LABEL = "Nej";
 const WEEKDAY_SHORT_TO_KEY = new Map<string, Weekday>(
   (Object.entries(WEEKDAY_SHORT) as Array<[Weekday, string]>).map(([weekday, short]) => [short.toLowerCase(), weekday])
 );
+
+// Rutinkategori (Hälsa/Trivsel/Pengar) — barnens fasta rutinkategorier, styr
+// belöningsbutikens kategori-spärr. Helt separat från "Kategori"-kolumnen
+// (personlig, självägd), men Zaida ville att den också ska rundtrippa via
+// kalkylarket (2026-07-05).
+const ROUTINE_CATEGORY_LOOKUP = new Map(ROUTINE_CATEGORIES.map((c) => [c.toLowerCase(), c]));
 
 // Minimal RFC4180-liknande CSV — undviker ett nytt beroende (CLAUDE.md-regel:
 // nya beroenden kräver motivering) för ett format enkelt nog att skriva själv.
@@ -124,8 +132,8 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const oneOff = ["Handla mat", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
-  const recurring = ["Borsta tänderna", SELF_LABEL, "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
+  const oneOff = ["Handla mat", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
+  const recurring = ["Borsta tänderna", SELF_LABEL, "", "Hälsa", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
   return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
 }
 
@@ -203,6 +211,7 @@ export function todosToCsv(
       "", // Kategorinamnet slås inte upp här — kategorierna är memberId-scopade
           // och kräver att man matchar rätt ägares kategorilista; hoppas över
           // vid export för att undvika att peka på fel medlems kategori.
+      todo.routineCategory ?? "",
       todo.starValue > 0 ? String(todo.starValue) : "",
       // Lokala Date-getters (inte en rå ISO-sträng-slice, som läser UTC och
       // kan hamna en dag fel beroende på tidszon) — inkluderar nu klockslag,
@@ -225,6 +234,7 @@ export type ParsedTodoRow = {
   assignedTo: Id;
   personalCategoryId: Id | null;
   newCategoryName: string | null;
+  routineCategory: string | null;
   starValue: number;
   visibleFrom: string | null;
   expiresAt: string | null;
@@ -263,6 +273,7 @@ export function parseTodoCsv(
 
   const assignedCol = col("Tilldelad");
   const categoryCol = col("Kategori");
+  const routineCategoryCol = col("Rutinkategori");
   const starsCol = col("Stjärnor");
   const startCol = col("Startdatum");
   const endCol = col("Slutdatum");
@@ -311,6 +322,19 @@ export function parseTodoCsv(
         personalCategoryId = existing.id;
       } else {
         newCategoryName = categoryLabel;
+      }
+    }
+
+    const routineCategoryRaw = (routineCategoryCol !== undefined ? cells[routineCategoryCol] : "")?.trim() ?? "";
+    let routineCategory: string | null = null;
+    if (routineCategoryRaw) {
+      const matched = ROUTINE_CATEGORY_LOOKUP.get(routineCategoryRaw.toLowerCase());
+      if (matched) {
+        routineCategory = matched;
+      } else {
+        errors.push(
+          `Rad ${rowNumber} ("${title}"): okänt värde "${routineCategoryRaw}" i Rutinkategori (vänta ${ROUTINE_CATEGORIES.join("/")} eller tomt), ignoreras.`
+        );
       }
     }
 
@@ -376,6 +400,7 @@ export function parseTodoCsv(
       assignedTo,
       personalCategoryId,
       newCategoryName,
+      routineCategory,
       starValue: isSelf ? 0 : starValue,
       visibleFrom,
       expiresAt,
