@@ -22,10 +22,17 @@
   filter: brightness(1.08);
 }
 
+/* Pokal-knappen till höger om plånboken (2026-07-06) — öppnar Rekord-sidan. */
+.child-records-button {
+  background: #ffb000;
+  color: #7a4a00;
+  border-color: color-mix(in srgb, #7a4a00 40%, transparent);
+}
+
 .child-stars-panel {
   position: relative;
   display: grid;
-  grid-template-columns: clamp(34px, 5vmin, 46px) minmax(60px, 1fr) minmax(60px, 1fr) clamp(40px, 6vw, 84px) clamp(60px, 10vw, 128px);
+  grid-template-columns: clamp(34px, 5vmin, 46px) minmax(60px, 1fr) minmax(60px, 1fr) clamp(40px, 6vw, 84px) clamp(60px, 10vw, 128px) clamp(34px, 5vmin, 46px);
   grid-template-rows: 1fr;
   align-items: center;
   gap: clamp(4px, 1.2vw, 18px);

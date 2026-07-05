@@ -136,7 +136,6 @@ export function ChildDashboard({
             childName={child.name}
             avatarUrl={child.avatarUrl}
             today={today}
-            onOpenRecords={onOpenRecords}
           />
 
           <ChildTasksSection
@@ -161,6 +160,7 @@ export function ChildDashboard({
               totalApprovedStars={availableStars}
               onOpenShop={() => setIsShopOpen(true)}
               onThemePickerOpen={() => onThemePickerOpen(child.id)}
+              onOpenRecords={onOpenRecords}
               onCreateWish={onCreateWish}
             />
           </div>

@@ -1,4 +1,4 @@
-import { Banknote, Palette, ShoppingBag, Star } from "lucide-react";
+import { Banknote, Palette, ShoppingBag, Star, Trophy } from "lucide-react";
 import { useState } from "react";
 import type { Id } from "@shared/types";
 import { ChildBanknotesModal } from "./ChildBanknotesModal";
@@ -10,6 +10,7 @@ type Props = {
   totalApprovedStars: number;
   onOpenShop: () => void;
   onThemePickerOpen: () => void;
+  onOpenRecords: () => void;
   onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
 };
 
@@ -19,6 +20,7 @@ export function ChildStarsPanel({
   totalApprovedStars,
   onOpenShop,
   onThemePickerOpen,
+  onOpenRecords,
   onCreateWish,
 }: Props) {
   const [showBanknotes, setShowBanknotes] = useState(false);
@@ -75,6 +77,19 @@ export function ChildStarsPanel({
             onCreateWish={onCreateWish}
           />
         )}
+
+        {/* Pokal-knappen till höger om plånboken (2026-07-06, Zaidas beslut,
+            efter att en placering bredvid profilbilden klippte av avataren) —
+            öppnar Rekord-sidan (ChildRecordsPage). */}
+        <button
+          className="child-theme-button child-records-button"
+          type="button"
+          onClick={onOpenRecords}
+          aria-label="Rekord"
+          title="Rekord"
+        >
+          <Trophy size={18} />
+        </button>
 
         <small className="child-stars-footnote">1 stjärna = 1 kr</small>
       </div>
