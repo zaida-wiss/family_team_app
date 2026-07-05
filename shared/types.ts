@@ -343,10 +343,16 @@ export type Weekday =
   | "saturday"
   | "sunday";
 
+export type RecurrenceUnit = "day" | "week" | "month";
+
+// Ersätter (2026-07-05, ADR) de tidigare separata "weekly"/"interval"-formerna
+// med en enda kombinerad form — enhet + intervall (varannan/var tredje osv)
+// + valfria veckodagar, likt Google Kalenders återkommelse-modell. daysOfWeek
+// är satt (icke-tom) endast när unit === "week", annars alltid null — se
+// RecurrenceRuleSchema i schemas.ts för valideringen av detta samband.
 export type RecurrenceRule =
   | { type: "none" }
-  | { type: "weekly"; daysOfWeek: Weekday[] }
-  | { type: "interval"; every: number; unit: "day" | "week" };
+  | { type: "recurring"; unit: RecurrenceUnit; every: number; daysOfWeek: Weekday[] | null };
 
 export type TodoVisual = {
   type: "lucide-icon" | "image";

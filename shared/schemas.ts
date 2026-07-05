@@ -196,15 +196,25 @@ export const WeekdaySchema = z.enum([
   "sunday"
 ]);
 
-export const RecurrenceRuleSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("none") }),
-  z.object({ type: z.literal("weekly"), daysOfWeek: z.array(WeekdaySchema) }),
-  z.object({
-    type: z.literal("interval"),
-    every: z.number().int().min(1),
-    unit: z.enum(["day", "week"])
-  })
-]);
+export const RecurrenceUnitSchema = z.enum(["day", "week", "month"]);
+
+// Kombinerad enhet+intervall+veckodagar-modell (2026-07-05, ADR) — ersätter
+// tidigare separata "weekly"/"interval". daysOfWeek krävs (icke-tom) exakt
+// när unit är "week", annars måste den vara null — se shared/types.ts.
+export const RecurrenceRuleSchema = z
+  .discriminatedUnion("type", [
+    z.object({ type: z.literal("none") }),
+    z.object({
+      type: z.literal("recurring"),
+      unit: RecurrenceUnitSchema,
+      every: z.number().int().min(1),
+      daysOfWeek: z.array(WeekdaySchema).min(1).nullable()
+    })
+  ])
+  .refine(
+    (rule) => rule.type === "none" || (rule.unit === "week") === (rule.daysOfWeek !== null),
+    { message: "daysOfWeek krävs och tillåts bara när unit är week" }
+  );
 
 export const TodoVisualSchema = z.object({
   type: z.enum(["lucide-icon", "image"]),
