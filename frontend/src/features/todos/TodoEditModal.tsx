@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
+import { TimeWindowsPicker } from "./TimeWindowsPicker";
+import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
 import { generateId } from "../../utils/uuid";
-import type { Id, RecurrenceRule, Todo, TodoCategory, TodoSubtask } from "@shared/types";
+import type { Id, RecurrenceRule, Todo, TodoCategory, TodoSubtask, TodoTimeWindow } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
@@ -49,6 +51,12 @@ export function TodoEditModal({
   const [recurrence, setRecurrence] = useState<RecurrenceRule>(todo.recurrence);
   const [visibleFrom, setVisibleFrom] = useState(isoToDateTimeLocal(todo.visibleFrom));
   const [expiresAt, setExpiresAt] = useState(isoToDateTimeLocal(todo.expiresAt));
+  const [startDate, setStartDate] = useState(isoToDateOnly(todo.visibleFrom));
+  const [timeWindows, setTimeWindows] = useState<TodoTimeWindow[]>(
+    todo.timeWindows && todo.timeWindows.length > 0
+      ? todo.timeWindows
+      : [{ visibleFrom: todo.visibleFrom, expiresAt: todo.expiresAt }]
+  );
   const [notes, setNotes] = useState(todo.notes ?? "");
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>(todo.subtasks ?? []);
   const [saving, setSaving] = useState(false);
@@ -82,12 +90,19 @@ export function TodoEditModal({
         categoryId = category.id;
       }
 
+      const isRecurring = recurrence.type !== "none";
       onUpdateTodo(todo.id, {
         title: trimmedTitle,
         personalCategoryId: categoryId,
         recurrence,
-        visibleFrom: dateTimeLocalToISO(visibleFrom),
-        expiresAt: dateTimeLocalToISO(expiresAt),
+        // Återkommande: visibleFrom är bara ankardatumet för förfallo-
+        // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
+        // timeWindows. Engångsuppgift: visibleFrom/expiresAt är en fullständig
+        // datum+tid som tidigare, timeWindows nollställs (annars kvarstår den
+        // dött om uppgiften senare blir återkommande igen utan att fyllas i).
+        visibleFrom: isRecurring ? dateOnlyToISO(startDate) : dateTimeLocalToISO(visibleFrom),
+        expiresAt: isRecurring ? todo.expiresAt : dateTimeLocalToISO(expiresAt),
+        timeWindows: isRecurring ? timeWindows : [],
         notes: notes.trim() || null,
         subtasks: subtasks
           .map((s) => ({ ...s, title: s.title.trim() }))
@@ -154,25 +169,43 @@ export function TodoEditModal({
 
           <RecurrencePicker onChange={setRecurrence} value={recurrence} />
 
-          <label className="field-label">
-            Syns från
-            <input
-              className="text-input"
-              onChange={(e) => setVisibleFrom(e.target.value)}
-              type="datetime-local"
-              value={visibleFrom}
-            />
-          </label>
+          {recurrence.type === "none" ? (
+            <>
+              <label className="field-label">
+                Syns från
+                <input
+                  className="text-input"
+                  onChange={(e) => setVisibleFrom(e.target.value)}
+                  type="datetime-local"
+                  value={visibleFrom}
+                />
+              </label>
 
-          <label className="field-label">
-            Försvinner
-            <input
-              className="text-input"
-              onChange={(e) => setExpiresAt(e.target.value)}
-              type="datetime-local"
-              value={expiresAt}
-            />
-          </label>
+              <label className="field-label">
+                Försvinner
+                <input
+                  className="text-input"
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  type="datetime-local"
+                  value={expiresAt}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="field-label">
+                Startdatum
+                <input
+                  className="text-input"
+                  onChange={(e) => setStartDate(e.target.value)}
+                  type="date"
+                  value={startDate}
+                />
+              </label>
+
+              <TimeWindowsPicker onChange={setTimeWindows} windows={timeWindows} />
+            </>
+          )}
 
           <label className="field-label">
             Anteckningar

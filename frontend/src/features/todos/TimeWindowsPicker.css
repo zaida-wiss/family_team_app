@@ -1,0 +1,19 @@
+.time-windows-picker__list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.time-windows-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-windows-picker__row .text-input {
+  flex: 1;
+  min-width: 0;
+}

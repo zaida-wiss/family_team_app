@@ -135,4 +135,66 @@ describe("recurringTodos", () => {
   test("date keys use the local calendar day", () => {
     expect(getDateKey(new Date(2026, 5, 8, 0, 30, 0, 0))).toBe("2026-06-08");
   });
+
+  // Flera tidsintervall per dag (2026-07-05, Zaidas önskemål) — en mall med
+  // timeWindows genererar EN occurrence PER fönster PER förfallodag.
+  test("a template with multiple timeWindows creates one occurrence per window, same day", () => {
+    const template = createTodo({
+      id: "todo-brush-teeth",
+      title: "Borsta tänderna",
+      recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+      visibleFrom: "2026-06-01T07:00:00.000Z",
+      timeWindows: [
+        { visibleFrom: new Date(2000, 0, 1, 7, 0).toISOString(), expiresAt: new Date(2000, 0, 1, 7, 15).toISOString() },
+        { visibleFrom: new Date(2000, 0, 1, 19, 0).toISOString(), expiresAt: new Date(2000, 0, 1, 19, 15).toISOString() }
+      ]
+    });
+
+    const occurrences = getDueRecurringTodoOccurrences([template], monday);
+    expect(occurrences.length).toBe(2);
+    expect(occurrences.map((o) => o.id).sort()).toEqual([
+      "todo-brush-teeth-occurrence-2026-06-08-0",
+      "todo-brush-teeth-occurrence-2026-06-08-1"
+    ]);
+    const morning = occurrences.find((o) => o.id.endsWith("-0"));
+    const evening = occurrences.find((o) => o.id.endsWith("-1"));
+    expect(new Date(morning!.visibleFrom!).getHours()).toBe(7);
+    expect(new Date(evening!.visibleFrom!).getHours()).toBe(19);
+    // Varje occurrence är sin egen fristående todo — ingen delad recurrence.
+    expect(morning!.recurrence.type).toBe("none");
+    expect(morning!.recurringSourceId).toBe("todo-brush-teeth");
+  });
+
+  test("a template with multiple timeWindows does not duplicate an already-created window's occurrence", () => {
+    const template = createTodo({
+      id: "todo-brush-teeth",
+      recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+      visibleFrom: "2026-06-01T07:00:00.000Z",
+      timeWindows: [
+        { visibleFrom: null, expiresAt: null },
+        { visibleFrom: null, expiresAt: null }
+      ]
+    });
+    const existingMorningOccurrence = createTodo({
+      id: "todo-brush-teeth-occurrence-2026-06-08-0",
+      recurrence: { type: "none" },
+      recurringSourceId: template.id,
+      occurrenceDate: "2026-06-08"
+    });
+
+    const occurrences = getDueRecurringTodoOccurrences([template, existingMorningOccurrence], monday);
+    expect(occurrences.length).toBe(1);
+    expect(occurrences[0]?.id).toBe("todo-brush-teeth-occurrence-2026-06-08-1");
+  });
+
+  test("a template without timeWindows behaves exactly as before (single implicit window)", () => {
+    const template = createTodo({
+      id: "todo-single",
+      recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+      visibleFrom: "2026-06-01T07:00:00.000Z"
+    });
+    const occurrences = getDueRecurringTodoOccurrences([template], monday);
+    expect(occurrences.length).toBe(1);
+    expect(occurrences[0]?.id).toBe("todo-single-occurrence-2026-06-08");
+  });
 });

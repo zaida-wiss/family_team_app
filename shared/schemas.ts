@@ -227,6 +227,13 @@ export const TodoSubtaskSchema = z.object({
   done: z.boolean()
 });
 
+// Flera tidsintervall per dag på samma återkommande mall (2026-07-05) — se
+// Todo.timeWindows i shared/types.ts.
+export const TodoTimeWindowSchema = z.object({
+  visibleFrom: z.string().nullable(),
+  expiresAt: z.string().nullable()
+});
+
 export const TodoSchema = z.object({
   id: IdSchema,
   accountId: IdSchema.optional(),
@@ -253,7 +260,8 @@ export const TodoSchema = z.object({
   routineCategory: z.string().nullable().optional(),
   personalCategoryId: IdSchema.nullable().optional(),
   notes: z.string().nullable().optional(),
-  subtasks: z.array(TodoSubtaskSchema).optional()
+  subtasks: z.array(TodoSubtaskSchema).optional(),
+  timeWindows: z.array(TodoTimeWindowSchema).optional()
 });
 
 // Fält en klient får patcha på en befintlig todo (titelredigering, rutinredigering via
@@ -276,7 +284,8 @@ export const TodoPatchSchema = TodoSchema.pick({
   routineCategory: true,
   personalCategoryId: true,
   notes: true,
-  subtasks: true
+  subtasks: true,
+  timeWindows: true
 }).partial().extend({
   status: z.literal("pending").optional(),
   completedAt: z.null().optional(),

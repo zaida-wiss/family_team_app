@@ -4,7 +4,9 @@ import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
-import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory } from "@shared/types";
+import { TimeWindowsPicker } from "./TimeWindowsPicker";
+import { dateOnlyToISO } from "./recurringTodos";
+import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoTimeWindow } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
@@ -60,6 +62,10 @@ export function TodoCreatorModal({
   const [recurrence, setRecurrence] = useState<RecurrenceRule>({ type: "none" });
   const [visibleFrom, setVisibleFrom] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [timeWindows, setTimeWindows] = useState<TodoTimeWindow[]>([
+    { visibleFrom: null, expiresAt: null }
+  ]);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -81,6 +87,7 @@ export function TodoCreatorModal({
         categoryId = category.id;
       }
 
+      const isRecurring = recurrence.type !== "none";
       onCreateTodo({
         id: `todo-${generateId()}`,
         title: trimmedTitle,
@@ -93,8 +100,11 @@ export function TodoCreatorModal({
         recurrence,
         recurringSourceId: null,
         occurrenceDate: null,
-        visibleFrom: toDateTimeString(visibleFrom),
-        expiresAt: toDateTimeString(expiresAt),
+        // Återkommande: visibleFrom är bara ankardatumet för förfallo-
+        // beräkningen, de faktiska klockslagen kommer från timeWindows.
+        visibleFrom: isRecurring ? dateOnlyToISO(startDate) : toDateTimeString(visibleFrom),
+        expiresAt: isRecurring ? null : toDateTimeString(expiresAt),
+        timeWindows: isRecurring ? timeWindows : undefined,
         completedAt: null,
         approvedBy: null,
         approvedAt: null,
@@ -203,25 +213,43 @@ export function TodoCreatorModal({
 
           <RecurrencePicker onChange={setRecurrence} value={recurrence} />
 
-          <label className="field-label">
-            Syns från
-            <input
-              className="text-input"
-              onChange={(e) => setVisibleFrom(e.target.value)}
-              type="datetime-local"
-              value={visibleFrom}
-            />
-          </label>
+          {recurrence.type === "none" ? (
+            <>
+              <label className="field-label">
+                Syns från
+                <input
+                  className="text-input"
+                  onChange={(e) => setVisibleFrom(e.target.value)}
+                  type="datetime-local"
+                  value={visibleFrom}
+                />
+              </label>
 
-          <label className="field-label">
-            Försvinner
-            <input
-              className="text-input"
-              onChange={(e) => setExpiresAt(e.target.value)}
-              type="datetime-local"
-              value={expiresAt}
-            />
-          </label>
+              <label className="field-label">
+                Försvinner
+                <input
+                  className="text-input"
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  type="datetime-local"
+                  value={expiresAt}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="field-label">
+                Startdatum
+                <input
+                  className="text-input"
+                  onChange={(e) => setStartDate(e.target.value)}
+                  type="date"
+                  value={startDate}
+                />
+              </label>
+
+              <TimeWindowsPicker onChange={setTimeWindows} windows={timeWindows} />
+            </>
+          )}
 
           <label className="field-label">
             Anteckningar

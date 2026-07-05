@@ -43,6 +43,18 @@ const todoSchema = new Schema<Todo>({
       }
     ],
     default: undefined
+  },
+  // Flera tidsintervall per dag på samma återkommande mall (2026-07-05) —
+  // valfritt, bakåtkompatibelt (recurringTodos.ts faller tillbaka på
+  // visibleFrom/expiresAt direkt när fältet saknas).
+  timeWindows: {
+    type: [
+      {
+        visibleFrom: { type: String, default: null },
+        expiresAt: { type: String, default: null }
+      }
+    ],
+    default: undefined
   }
 });
 

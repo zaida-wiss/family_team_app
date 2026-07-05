@@ -394,6 +394,20 @@ export type Todo = {
   // Fritextanteckningar (2026-07-05), redigerbara via TodoDetailModal. Krypterat
   // (ADR-0014), samma mönster som title/rejectedReason.
   notes?: string | null;
+  // Flera tidsintervall per dag på samma återkommande uppgift (2026-07-05,
+  // Zaidas önskemål, t.ex. "borsta tänder" morgon OCH kväll som EN mall).
+  // Valfritt och bakåtkompatibelt — saknas fältet (eller är tomt) genererar
+  // recurringTodos.ts precis som tidigare EN occurrence/dag från
+  // visibleFrom/expiresAt direkt på mallen. Är fältet satt med flera poster
+  // genererar en mall en occurrence PER tidsintervall PER förfallodag,
+  // oberoende av varandras avklarmarkering. Bara meningsfullt på en
+  // återkommande MALL (recurringSourceId === null) — ignoreras på occurrences.
+  timeWindows?: TodoTimeWindow[];
+};
+
+export type TodoTimeWindow = {
+  visibleFrom: string | null;
+  expiresAt: string | null;
 };
 
 export type TodoSubtask = {

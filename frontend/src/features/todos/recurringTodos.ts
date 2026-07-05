@@ -1,4 +1,4 @@
-import type { RecurrenceRule, Todo, Weekday } from "@shared/types";
+import type { RecurrenceRule, Todo, TodoTimeWindow, Weekday } from "@shared/types";
 
 const weekdays: Weekday[] = [
   "sunday",
@@ -22,17 +22,68 @@ export const WEEKDAY_SHORT: Record<Weekday, string> = {
   sunday: "sön"
 };
 
+// Tid-input-hjälpare, delade mellan TimeWindowsPicker och skapa/redigera-
+// modalerna. Samma mönster som routineHelpers.ts (barnens rutinskapare)
+// använder, men duplicerad hellre än att skapa ett cross-feature-beroende
+// (children/routineHelpers.ts importerar redan FRÅN todos/recurringTodos.ts).
+export function timeToAnchorISO(hhmm: string): string | null {
+  if (!hhmm) return null;
+  return new Date(`2000-01-01T${hhmm}:00`).toISOString();
+}
+
+export function isoToTimeInput(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+export function dateOnlyToISO(yyyyMmDd: string): string | null {
+  if (!yyyyMmDd) return null;
+  return new Date(`${yyyyMmDd}T00:00:00`).toISOString();
+}
+
+export function isoToDateOnly(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// Flera tidsintervall per dag på samma mall (2026-07-05, Zaidas önskemål, t.ex.
+// "borsta tänder" morgon OCH kväll) — en mall med timeWindows genererar EN
+// occurrence PER tidsfönster PER förfallodag istället för bara en. Helt
+// bakåtkompatibelt: saknas timeWindows (eller är tom) faller det tillbaka på
+// mallens egna visibleFrom/expiresAt som ett enda implicit fönster, precis
+// som innan detta fältet fanns.
 export function getDueRecurringTodoOccurrences(
   todos: Todo[],
   now = new Date()
 ): Todo[] {
   const dateKey = getDateKey(now);
-
-  return todos
+  const dueTemplates = todos
     .filter((todo) => isRecurringTemplate(todo))
-    .filter((todo) => isRecurrenceDue(todo.recurrence, todo.visibleFrom, now))
-    .filter((todo) => !hasOccurrenceForDate(todos, todo.id, dateKey))
-    .map((todo) => createOccurrence(todo, dateKey));
+    .filter((todo) => isRecurrenceDue(todo.recurrence, todo.visibleFrom, now));
+
+  const occurrences: Todo[] = [];
+  for (const template of dueTemplates) {
+    const windows: TodoTimeWindow[] =
+      template.timeWindows && template.timeWindows.length > 0
+        ? template.timeWindows
+        : [{ visibleFrom: template.visibleFrom, expiresAt: template.expiresAt }];
+
+    windows.forEach((window, index) => {
+      const id = occurrenceId(template.id, dateKey, windows.length > 1 ? index : null);
+      if (todos.some((t) => t.id === id)) return;
+      occurrences.push(createOccurrence(template, dateKey, window, id));
+    });
+  }
+  return occurrences;
+}
+
+function occurrenceId(templateId: string, dateKey: string, windowIndex: number | null): string {
+  return windowIndex === null
+    ? `${templateId}-occurrence-${dateKey}`
+    : `${templateId}-occurrence-${dateKey}-${windowIndex}`;
 }
 
 export function isRecurringTemplate(todo: Todo): boolean {
@@ -105,28 +156,23 @@ function startOfWeek(date: Date): Date {
   return day;
 }
 
-function hasOccurrenceForDate(todos: Todo[], sourceId: string, dateKey: string) {
-  return todos.some((todo) => {
-    return todo.recurringSourceId === sourceId && todo.occurrenceDate === dateKey;
-  });
-}
-
-function createOccurrence(template: Todo, dateKey: string): Todo {
-  const visibleFrom = withOccurrenceDate(template.visibleFrom, dateKey);
+function createOccurrence(template: Todo, dateKey: string, window: TodoTimeWindow, id: string): Todo {
+  const visibleFrom = withOccurrenceDate(window.visibleFrom, dateKey);
   const expiresAt = createOccurrenceExpiresAt(
-    template.visibleFrom,
-    template.expiresAt,
+    window.visibleFrom,
+    window.expiresAt,
     visibleFrom,
     dateKey
   );
 
   return {
     ...template,
-    id: `${template.id}-occurrence-${dateKey}`,
+    id,
     status: "pending",
     recurrence: { type: "none" },
     recurringSourceId: template.id,
     occurrenceDate: dateKey,
+    timeWindows: undefined,
     visibleFrom,
     expiresAt,
     completedAt: null,

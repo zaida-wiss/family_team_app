@@ -417,6 +417,47 @@ test("Ny uppgift-modalen: skapar en återkommande uppgift med veckodagar och int
   });
 });
 
+// Flera tidsintervall per dag på samma återkommande uppgift (2026-07-05,
+// Zaidas önskemål, t.ex. "borsta tänder" morgon OCH kväll som EN mall).
+test("Ny uppgift-modalen: en återkommande uppgift kan få flera tidsintervall samma dag", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Titel").fill("Borsta tänderna");
+  await dialog.getByLabel("Återkommer").selectOption("recurring");
+  await dialog.getByLabel("Enhet för återkommelse").selectOption("day");
+
+  const timeRows = dialog.locator(".time-windows-picker__row");
+  await expect(timeRows).toHaveCount(1);
+  await timeRows.nth(0).getByLabel("Från kl.").fill("07:00");
+  await timeRows.nth(0).getByLabel("Till kl.").fill("07:15");
+
+  await dialog.getByRole("button", { name: "Lägg till tid" }).click();
+  await expect(timeRows).toHaveCount(2);
+  await timeRows.nth(1).getByLabel("Från kl.").fill("19:00");
+  await timeRows.nth(1).getByLabel("Till kl.").fill("19:15");
+
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Borsta tänderna");
+  const windows = createdTodo?.timeWindows as Array<{ visibleFrom: string; expiresAt: string }>;
+  expect(windows).toHaveLength(2);
+  expect(new Date(windows[0].visibleFrom).getHours()).toBe(7);
+  expect(new Date(windows[1].visibleFrom).getHours()).toBe(19);
+});
+
 test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för mig själv", async ({ page }) => {
   let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
