@@ -129,15 +129,14 @@
   gap: 4px;
 }
 
-/* Glansig "bubbla" (2026-07-05, Zaidas beslut, justerad samma dag efter
-   feedback — den första versionen blandade basfärgen mot transparent så
-   mycket att texten blev oläslig). Basfärgen behöver tillräckligt med egen
-   färg/opacitet för att bära texten, men blandas ändå mot transparent (inte
-   --card) så det fortfarande skymtar lite bakgrund igenom kanterna — en
-   kompromiss mellan såpbubble-utseendet och läsbarhet. Plus två ljusa
-   rundlar (stor mjuk glans uppe till vänster, liten blank prick nere till
-   höger). Fungerar korrekt i alla fem teman eftersom accentfärgen
-   (--thread-accent) redan är tema-kopplad. */
+/* Glansig "bubbla" (2026-07-05, Zaidas beslut, efter en mockup av det
+   önskade utseendet) — riktigt rund (fast bredd=höjd, inte längre en avlång
+   pelare för långa titlar), mer mättad/regnbågsaktig basfärg per kategori.
+   Kanten är nu medlemmens egen färg (--assignee-color) istället för
+   kategorins — kanten visar VEM uppgiften tillhör, basfärgen visar VILKEN
+   kategori. Två ljusa rundlar (stor mjuk glans uppe till vänster, liten
+   blank prick nere till höger) ovanpå. Fungerar korrekt i alla fem teman
+   eftersom accentfärgen (--thread-accent) redan är tema-kopplad. */
 .todo-thread__ball {
   position: relative;
   z-index: 1;
@@ -146,33 +145,27 @@
   align-items: center;
   justify-content: center;
   gap: 1px;
-  /* 48px — minsta tillåtna touch-mål (44px) plus liten marginal, se
-     touch-first-principen i CLAUDE.md. Bara ett MINIMUM (inte fast storlek,
-     2026-07-05 rättelse) — bollen växer på både bredd och höjd för längre
-     titlar istället för att klippa texten, se .todo-thread__ball-title
-     nedan. max-width håller den inom tråd-kolumnens 100px. */
-  width: auto;
-  min-width: 48px;
-  max-width: 88px;
-  min-height: 48px;
-  height: auto;
+  /* 56px — minsta tillåtna touch-mål (44px) plus marginal, se
+     touch-first-principen i CLAUDE.md. Fast bredd=höjd — riktigt rund. */
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
-  border: 1.5px solid color-mix(in srgb, var(--thread-accent, var(--border)) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--border))) 80%, transparent);
   border-radius: 50%;
-  padding: 6px 3px;
+  padding: 4px;
   background:
     radial-gradient(circle at 74% 74%, color-mix(in srgb, white 95%, transparent) 0%, transparent 10%),
     radial-gradient(circle at 30% 26%, color-mix(in srgb, white 85%, transparent) 0%, transparent 42%),
     radial-gradient(
       circle at 50% 60%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 60%, transparent) 0%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 80%, transparent) 100%
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 70%, transparent) 0%,
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 92%, transparent) 100%
     );
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--thread-accent, var(--primary)) 22%, transparent),
-    0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 30%, transparent),
-    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 24%, transparent);
-  color: var(--foreground);
+    0 0 0 2px color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--primary))) 25%, transparent),
+    0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 35%, transparent),
+    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 28%, transparent);
+  color: #000;
   text-align: center;
   cursor: pointer;
   overflow: hidden;
@@ -222,20 +215,23 @@
   font-weight: 700;
   font-size: 0.56rem;
   line-height: 1.05;
-  /* Ingen line-clamp/kapning längre (2026-07-05 rättelse) — bollen växer på
-     höjden istället (se .todo-thread__ball) så hela titeln alltid ryms. */
+  /* Bollen är nu en fast rund cirkel (se .todo-thread__ball) — långa titlar
+     kapas med ellips istället för att göra bollen avlång (2026-07-05
+     rättelse, efter mockup). */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   overflow-wrap: break-word;
-  color: var(--assignee-color, inherit);
-  /* Bubblan är nu genomskinlig (se .todo-thread__ball ovan) — en mjuk skugga
-     mot --card håller texten läsbar oavsett vad som skymtar igenom bakom. */
-  text-shadow: 0 1px 3px color-mix(in srgb, var(--card) 70%, transparent);
+  /* Alltid svart (2026-07-05 rättelse) — läsbart oavsett bubblans
+     bakgrundsfärg. Kanten (border), inte texten, visar medlemsfärgen. */
+  color: #000;
 }
 
 .todo-thread__ball-progress {
   font-size: 0.52rem;
   font-weight: 700;
-  color: var(--primary);
-  text-shadow: 0 1px 3px color-mix(in srgb, var(--card) 70%, transparent);
+  color: #000;
 }
 
 /* Lite större bollar på mobilen (2026-07-05, Zaidas begäran) — gott om
@@ -248,9 +244,8 @@
   }
 
   .todo-thread__ball {
-    min-width: 56px;
-    max-width: 98px;
-    min-height: 56px;
+    width: 64px;
+    height: 64px;
   }
 
   .todo-thread__ball-title {
