@@ -148,9 +148,12 @@
   gap: 1px;
   /* 48px — minsta tillåtna touch-mål (44px) plus liten marginal, se
      touch-first-principen i CLAUDE.md. Bara ett MINIMUM (inte fast storlek,
-     2026-07-05 rättelse) — bollen växer på höjden för längre titlar istället
-     för att klippa texten, se .todo-thread__ball-title nedan. */
-  width: 48px;
+     2026-07-05 rättelse) — bollen växer på både bredd och höjd för längre
+     titlar istället för att klippa texten, se .todo-thread__ball-title
+     nedan. max-width håller den inom tråd-kolumnens 100px. */
+  width: auto;
+  min-width: 48px;
+  max-width: 88px;
   min-height: 48px;
   height: auto;
   flex-shrink: 0;
@@ -233,4 +236,24 @@
   font-weight: 700;
   color: var(--primary);
   text-shadow: 0 1px 3px color-mix(in srgb, var(--card) 70%, transparent);
+}
+
+/* Lite större bollar på mobilen (2026-07-05, Zaidas begäran) — gott om
+   utrymme på höjden där (trådarna skrollar horisontellt ändå på smala
+   skärmar), touch-målet får bara bättre marginal av det. */
+@media (max-width: 480px) {
+  .todo-thread {
+    flex: 0 0 112px;
+    width: 112px;
+  }
+
+  .todo-thread__ball {
+    min-width: 56px;
+    max-width: 98px;
+    min-height: 56px;
+  }
+
+  .todo-thread__ball-title {
+    font-size: 0.62rem;
+  }
 }

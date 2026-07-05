@@ -228,6 +228,34 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
   await expect(editDialog).toHaveCount(0);
 });
 
+// Radera-knappen fanns bara i list-vyns rader — försvann ur räckhåll helt när
+// tråd-vyn blev default (ingen väg dit i visa/redigera-modalerna), upptäckt
+// och fixat 2026-07-05 vid Zaidas fråga om varför hon inte längre kunde
+// radera en todo.
+test("Redigera uppgift: raderar uppgiften via papperskorgs-knappen", async ({ page }) => {
+  let deletedId: string | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2", (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedId = "todo-2";
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Löpning/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+  await page.getByRole("dialog", { name: "Redigera uppgift" }).getByRole("button", { name: "Radera" }).click();
+
+  await expect.poll(() => deletedId).toBe("todo-2");
+});
+
 // Subtasks-datamodellen fanns sedan Sprint 6, men saknade helt en UI för att
 // skapa/ta bort delmoment (bara toggle av redan existerande fanns) — upptäckt
 // och fixat 2026-07-05 vid Zaidas önskemål om en egen checklista i anteckningarna.

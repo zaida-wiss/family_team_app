@@ -185,6 +185,7 @@ export function TodosView({
             onCreateCategory={onCreateCategory}
             onRenameCategory={onRenameCategory}
             onRemoveCategory={onRemoveCategory}
+            onDeleteTodo={onSoftDeleteTodo}
           />
         )}
 

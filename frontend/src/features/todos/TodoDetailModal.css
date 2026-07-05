@@ -123,6 +123,18 @@
   line-height: 1.5;
 }
 
+/* Radera-knappen bredvid Spara i redigera-modalen (2026-07-05) — samma
+   layout som kalenderns cal-form-actions. */
+.todo-edit-modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.todo-edit-modal__actions .primary-button {
+  flex: 1;
+}
+
 /* Delmoment-hantering i redigera-modalen (2026-07-05) — egen checklista man
    själv skapar/tar bort rader i, bredvid anteckningsfältet. */
 .todo-edit-modal__subtasks {

@@ -16,6 +16,7 @@ type Props = {
   categories: TodoCategory[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
+  onDeleteTodo: (todoId: Id) => void;
   onClose: () => void;
 };
 
@@ -39,9 +40,15 @@ export function TodoEditModal({
   categories,
   onUpdateTodo,
   onCreateCategory,
+  onDeleteTodo,
   onClose
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+
+  function handleDelete() {
+    onDeleteTodo(todo.id);
+    onClose();
+  }
 
   const [title, setTitle] = useState(todo.title);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
@@ -247,9 +254,15 @@ export function TodoEditModal({
             </button>
           </div>
 
-          <button className="primary-button" disabled={saving || isRecurrenceIncomplete(recurrence)} type="submit">
-            Spara
-          </button>
+          <div className="todo-edit-modal__actions">
+            <button className="danger-button" onClick={handleDelete} type="button">
+              <Trash2 size={15} />
+              Radera
+            </button>
+            <button className="primary-button" disabled={saving || isRecurrenceIncomplete(recurrence)} type="submit">
+              Spara
+            </button>
+          </div>
         </form>
       </div>
     </div>

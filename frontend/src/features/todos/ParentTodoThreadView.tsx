@@ -24,6 +24,7 @@ type Props = {
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
+  onDeleteTodo: (todoId: Id) => void;
 };
 
 type Thread = {
@@ -121,7 +122,8 @@ export function ParentTodoThreadView({
   onCompleteTodo,
   onCreateCategory,
   onRenameCategory,
-  onRemoveCategory
+  onRemoveCategory,
+  onDeleteTodo
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -356,6 +358,7 @@ export function ParentTodoThreadView({
           categories={categories}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
+          onDeleteTodo={onDeleteTodo}
           onClose={() => setEditTodoId(null)}
         />
       )}
