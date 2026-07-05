@@ -129,11 +129,12 @@
   gap: 4px;
 }
 
-/* Glansiga "bubblor" (2026-07-05, Zaidas beslut, efter mockup) — en bas-
-   färgton från kategorins tema-accent, plus två ljusa rundlar (stor mjuk
-   glans uppe till vänster, liten blank prick nere till höger) för att likna
-   en tvålbubbla. Blandas mot --card (inte hårdkodad vitt) så det fungerar
-   korrekt i alla fem teman, inklusive mörkt. */
+/* Såpbubble-effekt (2026-07-05, Zaidas beslut, efter mockup) — riktig alfa-
+   transparens i baständningen (mot transparent, inte mot --card) så tråden
+   och det som ligger bakom skymtar svagt igenom, precis som en äkta
+   såpbubbla. Plus två ljusa rundlar (stor mjuk glans uppe till vänster,
+   liten blank prick nere till höger). Fungerar korrekt i alla fem teman
+   eftersom accentfärgen (--thread-accent) redan är tema-kopplad. */
 .todo-thread__ball {
   position: relative;
   z-index: 1;
@@ -147,20 +148,21 @@
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--thread-accent, var(--border)) 45%, var(--card));
+  border: 1.5px solid color-mix(in srgb, var(--thread-accent, var(--border)) 55%, transparent);
   border-radius: 50%;
   padding: 3px;
   background:
-    radial-gradient(circle at 74% 74%, color-mix(in srgb, white 92%, transparent) 0%, transparent 9%),
-    radial-gradient(circle at 30% 26%, color-mix(in srgb, white 75%, transparent) 0%, transparent 38%),
+    radial-gradient(circle at 74% 74%, color-mix(in srgb, white 95%, transparent) 0%, transparent 10%),
+    radial-gradient(circle at 30% 26%, color-mix(in srgb, white 85%, transparent) 0%, transparent 42%),
     radial-gradient(
       circle at 50% 60%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 30%, var(--card)) 0%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 55%, var(--card)) 100%
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 30%, transparent) 0%,
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 45%, transparent) 100%
     );
   box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--thread-accent, var(--primary)) 18%, transparent),
     0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 25%, transparent),
-    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 18%, transparent);
+    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 20%, transparent);
   color: var(--foreground);
   text-align: center;
   cursor: pointer;
@@ -168,7 +170,10 @@
 }
 
 .todo-thread__item-assignee {
-  color: var(--muted-fg);
+  /* Medlemmens egen färg (Member.color, satt i Inställningar) om den finns —
+     annars vanlig dämpad text. Samma mönster som kategorins --thread-accent
+     ovan (ingen kontrastklämning idag, känt fynd i sprintbackloggen). */
+  color: var(--assignee-color, var(--muted-fg));
   font-size: 0.62rem;
   max-width: 100%;
   overflow: hidden;
@@ -220,10 +225,15 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  color: var(--assignee-color, inherit);
+  /* Bubblan är nu genomskinlig (se .todo-thread__ball ovan) — en mjuk skugga
+     mot --card håller texten läsbar oavsett vad som skymtar igenom bakom. */
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--card) 70%, transparent);
 }
 
 .todo-thread__ball-progress {
   font-size: 0.52rem;
   font-weight: 700;
   color: var(--primary);
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--card) 70%, transparent);
 }

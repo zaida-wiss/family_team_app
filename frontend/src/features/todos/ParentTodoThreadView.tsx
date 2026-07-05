@@ -1,7 +1,8 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
-import { TodoDetailModal } from "./TodoDetailModal";
+import { TodoDetailView } from "./TodoDetailView";
+import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 
 const HOLD_DURATION_MS = 2000;
@@ -53,6 +54,13 @@ function assigneeNameFor(todo: Todo, members: Member[]): string {
   return members.find((m) => m.id === todo.assignedTo)?.name ?? "Okänt barn";
 }
 
+// Medlemmens egen färg (satt i Inställningar, Member.color) särskiljer vems
+// uppgift det är på en blick — särskilt värdefullt i den gemensamma
+// Barn-tråden där flera barns uppgifter blandas (Zaidas beslut 2026-07-05).
+function assigneeColorFor(todo: Todo, members: Member[]): string | undefined {
+  return members.find((m) => m.id === todo.assignedTo)?.color ?? undefined;
+}
+
 function isChildMember(member: Member | undefined, roles: Role[]): boolean {
   if (!member) return false;
   if (member.isChild) return true;
@@ -96,9 +104,10 @@ function isDueToday(todo: Todo, today: Date): boolean {
 // visar todos tilldelade ELLER skapade av den inloggade vuxna. Helt separat
 // från routineCategory/ROUTINE_CATEGORIES, som fortsatt driver
 // belöningsbutikens kategori-spärr och barnens rutinskapare oförändrat. Kort
-// tryck öppnar en uppgifts-detalj-modal (TodoDetailModal) på VILKEN boll som
-// helst — anteckningar, redigera titel/kategori/schema/återkommande, och
-// delmomentens checklista om uppgiften har några. Långt tryck (2s, useHoldToConfirm — samma mekanism som barnens
+// tryck öppnar en läsbar uppgifts-visa-vy (TodoDetailView, 2026-07-05) på
+// VILKEN boll som helst — anteckningar, delmomentens checklista om uppgiften
+// har några, och en pennikon som öppnar TodoEditModal för att redigera titel/
+// kategori/schema/återkommande. Långt tryck (2s, useHoldToConfirm — samma mekanism som barnens
 // egen avklarmarkering) markerar hela uppgiften klar oavsett delmoment-status —
 // bollen "går upp i rök" (tonas/skalas bort) istället för att bara försvinna direkt.
 export function ParentTodoThreadView({
@@ -115,6 +124,7 @@ export function ParentTodoThreadView({
   onRemoveCategory
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
+  const [editTodoId, setEditTodoId] = useState<Id | null>(null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
   // Ett lyckat långtryck triggar annars även webbläsarens vanliga click-event
   // vid pointerUp (samma nedtryck+släpp-par som click bygger på) — det skulle
@@ -177,6 +187,7 @@ export function ParentTodoThreadView({
   }, [visibleTodos, members, roles, categories, currentMember.id]);
 
   const detailTodo = todos.find((t) => t.id === detailTodoId) ?? null;
+  const editTodo = todos.find((t) => t.id === editTodoId) ?? null;
 
   function handleBallClick(todo: Todo) {
     if (suppressClickRef.current) {
@@ -283,9 +294,14 @@ export function ParentTodoThreadView({
               {thread.todos.map((todo) => {
                 const progress = computeProgress(todo);
                 const assignee = assigneeNameFor(todo, members);
+                const assigneeColor = assigneeColorFor(todo, members);
                 const isDissolving = dissolving.has(todo.id);
                 return (
-                  <li key={todo.id} className="todo-thread__item">
+                  <li
+                    key={todo.id}
+                    className="todo-thread__item"
+                    style={assigneeColor ? ({ "--assignee-color": assigneeColor } as React.CSSProperties) : undefined}
+                  >
                     <button
                       type="button"
                       className={
@@ -323,14 +339,27 @@ export function ParentTodoThreadView({
       ))}
 
       {detailTodo && (
-        <TodoDetailModal
+        <TodoDetailView
           todo={detailTodo}
           assigneeName={assigneeNameFor(detailTodo, members)}
-          categories={categories}
+          assigneeColor={assigneeColorFor(detailTodo, members)}
+          categoryName={categories.find((c) => c.id === detailTodo.personalCategoryId)?.name ?? null}
           onToggleSubtask={onToggleSubtask}
+          onClose={() => setDetailTodoId(null)}
+          onEdit={() => {
+            setEditTodoId(detailTodo.id);
+            setDetailTodoId(null);
+          }}
+        />
+      )}
+
+      {editTodo && (
+        <TodoEditModal
+          todo={editTodo}
+          categories={categories}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
-          onClose={() => setDetailTodoId(null)}
+          onClose={() => setEditTodoId(null)}
         />
       )}
     </div>
