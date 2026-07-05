@@ -221,6 +221,12 @@ export const TodoVisualSchema = z.object({
   value: z.string()
 });
 
+export const TodoSubtaskSchema = z.object({
+  id: IdSchema,
+  title: z.string().min(1, "Delmomentets titel krävs"),
+  done: z.boolean()
+});
+
 export const TodoSchema = z.object({
   id: IdSchema,
   accountId: IdSchema.optional(),
@@ -246,7 +252,8 @@ export const TodoSchema = z.object({
   deletedBy: IdSchema.nullable(),
   routineCategory: z.string().nullable().optional(),
   personalCategoryId: IdSchema.nullable().optional(),
-  notes: z.string().nullable().optional()
+  notes: z.string().nullable().optional(),
+  subtasks: z.array(TodoSubtaskSchema).optional()
 });
 
 // Fält en klient får patcha på en befintlig todo (titelredigering, rutinredigering via
@@ -268,7 +275,8 @@ export const TodoPatchSchema = TodoSchema.pick({
   expiresAt: true,
   routineCategory: true,
   personalCategoryId: true,
-  notes: true
+  notes: true,
+  subtasks: true
 }).partial().extend({
   status: z.literal("pending").optional(),
   completedAt: z.null().optional(),

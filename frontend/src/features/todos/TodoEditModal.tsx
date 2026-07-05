@@ -1,9 +1,10 @@
 import "./TodoDetailModal.css";
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
-import type { Id, RecurrenceRule, Todo, TodoCategory } from "@shared/types";
+import { generateId } from "../../utils/uuid";
+import type { Id, RecurrenceRule, Todo, TodoCategory, TodoSubtask } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
@@ -49,7 +50,20 @@ export function TodoEditModal({
   const [visibleFrom, setVisibleFrom] = useState(isoToDateTimeLocal(todo.visibleFrom));
   const [expiresAt, setExpiresAt] = useState(isoToDateTimeLocal(todo.expiresAt));
   const [notes, setNotes] = useState(todo.notes ?? "");
+  const [subtasks, setSubtasks] = useState<TodoSubtask[]>(todo.subtasks ?? []);
   const [saving, setSaving] = useState(false);
+
+  function addSubtask() {
+    setSubtasks((prev) => [...prev, { id: generateId(), title: "", done: false }]);
+  }
+
+  function updateSubtaskTitle(id: Id, title: string) {
+    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
+  }
+
+  function removeSubtask(id: Id) {
+    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+  }
 
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
 
@@ -74,7 +88,10 @@ export function TodoEditModal({
         recurrence,
         visibleFrom: dateTimeLocalToISO(visibleFrom),
         expiresAt: dateTimeLocalToISO(expiresAt),
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        subtasks: subtasks
+          .map((s) => ({ ...s, title: s.title.trim() }))
+          .filter((s) => s.title.length > 0)
       });
       onClose();
     } finally {
@@ -167,6 +184,35 @@ export function TodoEditModal({
               value={notes}
             />
           </label>
+
+          <div className="field-label">
+            <span>Delmoment (egen checklista)</span>
+            <ul className="todo-edit-modal__subtasks">
+              {subtasks.map((subtask) => (
+                <li key={subtask.id} className="todo-edit-modal__subtask-row">
+                  <input
+                    aria-label="Delmomentets titel"
+                    className="text-input"
+                    onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
+                    placeholder="Till exempel Uppvärmning"
+                    value={subtask.title}
+                  />
+                  <button
+                    aria-label="Ta bort delmoment"
+                    className="icon-button"
+                    onClick={() => removeSubtask(subtask.id)}
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button className="secondary-button" onClick={addSubtask} type="button">
+              <Plus size={14} />
+              Lägg till delmoment
+            </button>
+          </div>
 
           <button className="primary-button" disabled={saving || isRecurrenceIncomplete(recurrence)} type="submit">
             Spara

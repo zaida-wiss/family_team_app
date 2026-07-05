@@ -123,6 +123,27 @@
   line-height: 1.5;
 }
 
+/* Delmoment-hantering i redigera-modalen (2026-07-05) — egen checklista man
+   själv skapar/tar bort rader i, bredvid anteckningsfältet. */
+.todo-edit-modal__subtasks {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.todo-edit-modal__subtask-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-edit-modal__subtask-row .text-input {
+  flex: 1;
+}
+
 .todo-detail-modal__notes {
   margin: 0;
   font-size: 0.9rem;

@@ -228,6 +228,39 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
   await expect(editDialog).toHaveCount(0);
 });
 
+// Subtasks-datamodellen fanns sedan Sprint 6, men saknade helt en UI för att
+// skapa/ta bort delmoment (bara toggle av redan existerande fanns) — upptäckt
+// och fixat 2026-07-05 vid Zaidas önskemål om en egen checklista i anteckningarna.
+test("Redigera uppgift: lägger till ett delmoment via den nya checklista-hanteraren", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2", (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Löpning/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  await editDialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+  await editDialog.getByLabel("Delmomentets titel").fill("Dammsuga");
+  await editDialog.getByRole("button", { name: "Spara" }).click();
+
+  await expect.poll(() => updatedPatch?.subtasks).toEqual([
+    { id: expect.any(String), title: "Dammsuga", done: false }
+  ]);
+});
+
 test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar och visar en bortdöende-animation innan den lämnar tråden", async ({ page }) => {
   let completed = false;
   await mockAuthAndData(page);
