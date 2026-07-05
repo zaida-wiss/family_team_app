@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
+import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
@@ -18,16 +19,6 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onClose: () => void;
 };
-
-function createRecurrence(type: RecurrenceRule["type"]): RecurrenceRule {
-  if (type === "weekly") {
-    return { type: "weekly", daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"] };
-  }
-  if (type === "interval") {
-    return { type: "interval", every: 1, unit: "week" };
-  }
-  return { type: "none" };
-}
 
 function toDateTimeString(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
@@ -66,7 +57,7 @@ export function TodoCreatorModal({
   );
   const [newCategoryName, setNewCategoryName] = useState("");
   const [starValue, setStarValue] = useState(1);
-  const [recurrenceType, setRecurrenceType] = useState<RecurrenceRule["type"]>("none");
+  const [recurrence, setRecurrence] = useState<RecurrenceRule>({ type: "none" });
   const [visibleFrom, setVisibleFrom] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [notes, setNotes] = useState("");
@@ -78,7 +69,7 @@ export function TodoCreatorModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || submitting) return;
+    if (!trimmedTitle || submitting || isRecurrenceIncomplete(recurrence)) return;
 
     setSubmitting(true);
     try {
@@ -99,7 +90,7 @@ export function TodoCreatorModal({
         status: "pending",
         starValue: isForChild ? starValue : 0,
         visual: { type: "lucide-icon", value: "Star" },
-        recurrence: createRecurrence(recurrenceType),
+        recurrence,
         recurringSourceId: null,
         occurrenceDate: null,
         visibleFrom: toDateTimeString(visibleFrom),
@@ -210,18 +201,7 @@ export function TodoCreatorModal({
             </label>
           )}
 
-          <label className="field-label">
-            Återkommer
-            <select
-              className="text-input"
-              onChange={(e) => setRecurrenceType(e.target.value as RecurrenceRule["type"])}
-              value={recurrenceType}
-            >
-              <option value="none">Inte återkommande</option>
-              <option value="weekly">Veckovis vardagar</option>
-              <option value="interval">Varje vecka</option>
-            </select>
-          </label>
+          <RecurrencePicker onChange={setRecurrence} value={recurrence} />
 
           <label className="field-label">
             Syns från
@@ -254,7 +234,7 @@ export function TodoCreatorModal({
             />
           </label>
 
-          <button className="primary-button" disabled={submitting} type="submit">
+          <button className="primary-button" disabled={submitting || isRecurrenceIncomplete(recurrence)} type="submit">
             Skapa
           </button>
         </form>

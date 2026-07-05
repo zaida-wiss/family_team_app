@@ -1,0 +1,59 @@
+.recurrence-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recurrence-picker__interval-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.recurrence-picker__interval {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.recurrence-picker__interval select {
+  flex: 1;
+  min-width: 0;
+}
+
+.recurrence-picker__every {
+  width: 52px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.recurrence-picker__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recurrence-picker__day {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.recurrence-picker__day--on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.recurrence-picker__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted-fg);
+}
