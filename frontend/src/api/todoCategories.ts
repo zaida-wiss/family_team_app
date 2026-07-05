@@ -14,5 +14,10 @@ export const todoCategoriesApi = {
       body: JSON.stringify({ name })
     }),
   remove: (id: Id) =>
-    request<{ ok: boolean }>(api(`todo-categories/${id}`), { method: "DELETE" })
+    request<{ ok: boolean }>(api(`todo-categories/${id}`), { method: "DELETE" }),
+  setHidden: (id: Id, hidden: boolean) =>
+    request<{ ok: boolean }>(api(`todo-categories/${id}/hidden`), {
+      method: "PATCH",
+      body: JSON.stringify({ hidden })
+    })
 };

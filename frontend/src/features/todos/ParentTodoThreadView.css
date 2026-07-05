@@ -34,9 +34,10 @@
   margin-bottom: 4px;
 }
 
-/* Kategorinamnets meny (2026-07-05, Zaidas beslut) — "Byt namn" eller
-   "Lägg till uppgift" (förvald till just den kategorin). Håll intryckt (2s)
-   tar fortfarande bort kategorin direkt, oförändrat. */
+/* Kategorinamnets meny (2026-07-05, Zaidas beslut, utökad senare samma dag)
+   — "Byt namn", "Lägg till uppgift", "Ladda ner" (CSV av kategorins
+   uppgifter), "Göm" eller "Radera". Ersätter den tidigare håll-intryckt (2s)
+   -mekanismen för radering helt — nu en explicit menyknapp istället. */
 .todo-thread__category-menu {
   position: absolute;
   top: 100%;
@@ -68,6 +69,10 @@
   background: var(--muted);
 }
 
+.todo-thread__category-menu-danger {
+  color: #e74c3c;
+}
+
 .todo-thread__category {
   margin: 0;
   font-size: 0.78rem;
@@ -95,29 +100,6 @@
   white-space: nowrap;
   cursor: pointer;
   text-align: left;
-}
-
-/* Långt tryck (2s) tar bort kategorin (2026-07-05, Zaidas beslut) — ersätter
-   den tidigare alltid synliga papperskorgs-knappen. Samma fyllnadsprincip som
-   bollarnas håll-in-avklarmarkering, fast som en bottenlinje under texten. */
-.todo-thread__category-button::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 0;
-  height: 2px;
-  background: var(--primary);
-  transform: scaleX(0);
-  transform-origin: left;
-  will-change: transform;
-}
-
-.todo-thread__category-button--holding::after {
-  animation: todo-thread-category-hold-progress 2s linear forwards;
-}
-
-@keyframes todo-thread-category-hold-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
 }
 
 .todo-thread__category-input {

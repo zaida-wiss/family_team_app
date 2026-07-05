@@ -584,15 +584,65 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   const renamedThread = page.getByRole("region", { name: "Tråd: Gym" });
   await expect(renamedThread).toBeVisible();
 
-  // Håll intryckt i två sekunder (2026-07-05, Zaidas beslut) tar bort
-  // kategorin — ersätter den tidigare alltid synliga papperskorgs-knappen.
-  // dispatchEvent direkt på elementet istället för page.mouse (som hit-testar
-  // en OS-markörposition mot sidans layout — se motiveringen i övriga
-  // långtryck-test i den här filen).
-  const categoryButton = renamedThread.getByRole("button", { name: /Gym/ });
-  await categoryButton.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  // "Radera" i menyn tar bort kategorin (2026-07-05, Zaidas beslut, utökad
+  // senare samma dag) — ersätter den tidigare håll-intryckt (2s)-mekanismen
+  // helt med en explicit menyknapp.
+  await renamedThread.getByRole("button", { name: /Gym/ }).click();
+  await renamedThread.getByRole("button", { name: "Radera" }).click();
   await expect.poll(() => deletedId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
+});
+
+test("Bollar i tråd: 'Ladda ner' i kategorimenyn exporterar bara den kategorins uppgifter som CSV", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] })
+  );
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await thread.getByRole("button", { name: /Träning/ }).click();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    thread.getByRole("button", { name: "Ladda ner" }).click()
+  ]);
+
+  expect(download.suggestedFilename()).toBe("todos-Träning.csv");
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
+  expect(text).toContain("Styrketräning");
+});
+
+test("Bollar i tråd: 'Göm' i kategorimenyn döljer tråden, 'Visa igen' i Inställningar visar den igen", async ({ page }) => {
+  let hiddenValue: boolean | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todo-categories/cat-1/hidden", (route) => {
+    hiddenValue = (route.request().postDataJSON() as { hidden: boolean }).hidden;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await thread.getByRole("button", { name: "Göm" }).click();
+
+  await expect.poll(() => hiddenValue).toBe(true);
+  await expect(page.getByRole("region", { name: "Tråd: Träning" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "🙈 Gömda kategorier" }).click();
+  await expect(page.getByText("Träning")).toBeVisible();
+  await page.getByRole("button", { name: "Visa igen" }).click();
+
+  await expect.poll(() => hiddenValue).toBe(false);
+  await page.getByRole("button", { name: "Todos" }).click();
+  await expect(page.getByRole("region", { name: "Tråd: Träning" })).toBeVisible();
 });
 
 test("Bollar i tråd: 'Lägg till uppgift' i kategorimenyn öppnar skapa-modalen med kategorin förvald", async ({ page }) => {

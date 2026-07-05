@@ -79,8 +79,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onUpdateTodoViewMode,
     personalCategories,
     onCreateCategory,
+    onSetCategoryHidden,
     onCreateTodo,
   } = settingsProps;
+
+  const hiddenCategories = personalCategories.filter((c) => c.hidden);
 
   return (
     <div className="settings-accordion">
@@ -177,6 +180,25 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onCreateCategory={onCreateCategory}
         />
       </SettingsSection>
+
+      {hiddenCategories.length > 0 && (
+        <SettingsSection title="🙈 Gömda kategorier">
+          <ul className="settings-hidden-categories">
+            {hiddenCategories.map((category) => (
+              <li className="settings-hidden-categories__row" key={category.id}>
+                <span>{category.name}</span>
+                <button
+                  className="secondary-button"
+                  onClick={() => onSetCategoryHidden(category.id, false)}
+                  type="button"
+                >
+                  Visa igen
+                </button>
+              </li>
+            ))}
+          </ul>
+        </SettingsSection>
+      )}
 
       <SettingsSection title="Barn">
         <ChildSettings

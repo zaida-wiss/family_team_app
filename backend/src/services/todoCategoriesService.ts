@@ -46,6 +46,15 @@ export async function renameCategory(id: string, accountId: string, memberId: st
   return { ok: true };
 }
 
+// Gömd (2026-07-05) — skiljer sig från deleteCategory: kategorin syns inte i
+// tråd-vyn men finns kvar oförändrad, kan visas igen via setCategoryHidden(false).
+export async function setCategoryHidden(id: string, accountId: string, memberId: string, hidden: boolean) {
+  const category = await findOwnCategory(id, accountId, memberId);
+  category.hidden = hidden;
+  await category.save();
+  return { ok: true };
+}
+
 export async function deleteCategory(id: string, accountId: string, memberId: string) {
   const category = await findOwnCategory(id, accountId, memberId);
   category.deletedAt = new Date().toISOString();

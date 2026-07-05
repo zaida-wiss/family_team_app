@@ -4,6 +4,7 @@ import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { downloadCsv, todosToCsv } from "./todoCsv";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -24,6 +25,7 @@ type Props = {
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
+  onSetCategoryHidden: (id: Id, hidden: boolean) => void;
   onDeleteTodo: (todoId: Id) => void;
   onAddTodoToCategory: (categoryId: Id) => void;
 };
@@ -124,6 +126,7 @@ export function ParentTodoThreadView({
   onCreateCategory,
   onRenameCategory,
   onRemoveCategory,
+  onSetCategoryHidden,
   onDeleteTodo,
   onAddTodoToCategory
 }: Props) {
@@ -141,17 +144,12 @@ export function ParentTodoThreadView({
   const dissolveTimersRef = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
   const [editingCategoryId, setEditingCategoryId] = useState<Id | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
-  // Klick på kategorinamnet öppnar en liten meny (2026-07-05, Zaidas beslut)
-  // — "Byt namn" eller "Lägg till uppgift" (då förvald till just den
-  // kategorin i skapa-modalen, fortsatt ändringsbar där).
+  // Klick på kategorinamnet öppnar en liten meny (2026-07-05, Zaidas beslut,
+  // utökad senare samma dag) — "Lägg till uppgift", "Radera", "Ladda ner"
+  // (exporterar bara den kategorins uppgifter som CSV) eller "Göm" (kategorin
+  // döljs ur tråd-vyn men finns kvar, visas igen via Inställningar).
   const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  // Långt tryck (2s) på kategorinamnet tar bort kategorin (2026-07-05, Zaidas
-  // beslut) — ersätter den tidigare alltid synliga papperskorgs-knappen. Samma
-  // mekanism/suppress-click-mönster som bollarnas egen håll-in-avklarmarkering.
-  const { heldId: heldCategoryId, startHold: startCategoryHold, clearHold: clearCategoryHold } =
-    useHoldToConfirm(HOLD_DURATION_MS);
-  const suppressCategoryClickRef = useRef(false);
 
   useEffect(
     () => () => {
@@ -187,7 +185,7 @@ export function ParentTodoThreadView({
       )
     };
 
-    const categoryThreads: Thread[] = categories.map((category, index) => ({
+    const categoryThreads: Thread[] = categories.filter((c) => !c.hidden).map((category, index) => ({
       id: category.id,
       label: category.name,
       deletable: true,
@@ -246,16 +244,7 @@ export function ParentTodoThreadView({
   }
 
   function handleCategoryClick(thread: Thread) {
-    if (suppressCategoryClickRef.current) {
-      suppressCategoryClickRef.current = false;
-      return;
-    }
     setMenuCategoryId((current) => (current === thread.id ? null : thread.id));
-  }
-
-  function handleConfirmDeleteCategory(categoryId: Id) {
-    suppressCategoryClickRef.current = true;
-    onRemoveCategory(categoryId);
   }
 
   function handleRenameFromMenu(categoryId: Id) {
@@ -267,6 +256,26 @@ export function ParentTodoThreadView({
   function handleAddTodoFromMenu(categoryId: Id) {
     setMenuCategoryId(null);
     onAddTodoToCategory(categoryId);
+  }
+
+  function handleDeleteFromMenu(categoryId: Id) {
+    setMenuCategoryId(null);
+    onRemoveCategory(categoryId);
+  }
+
+  function handleDownloadFromMenu(categoryId: Id) {
+    setMenuCategoryId(null);
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) return;
+    const categoryTodos = todos.filter((t) => t.personalCategoryId === categoryId);
+    const csv = todosToCsv(categoryTodos, members, currentMember.id);
+    const safeName = category.name.trim().replace(/[^\p{L}\p{N}]+/gu, "-") || "kategori";
+    downloadCsv(`todos-${safeName}.csv`, csv);
+  }
+
+  function handleHideFromMenu(categoryId: Id) {
+    setMenuCategoryId(null);
+    onSetCategoryHidden(categoryId, true);
   }
 
   return (
@@ -296,17 +305,10 @@ export function ParentTodoThreadView({
                 {thread.deletable ? (
                   <button
                     type="button"
-                    className={
-                      "todo-thread__category-button" +
-                      (heldCategoryId === thread.id ? " todo-thread__category-button--holding" : "")
-                    }
+                    className="todo-thread__category-button"
                     aria-expanded={menuCategoryId === thread.id}
-                    aria-label={`${thread.label}. Klicka för fler val. Håll intryckt i två sekunder för att ta bort kategorin.`}
+                    aria-label={`${thread.label}. Klicka för fler val.`}
                     onClick={() => handleCategoryClick(thread)}
-                    onPointerDown={() => startCategoryHold(thread.id, () => handleConfirmDeleteCategory(thread.id))}
-                    onPointerUp={clearCategoryHold}
-                    onPointerLeave={clearCategoryHold}
-                    onPointerCancel={clearCategoryHold}
                   >
                     {thread.label}
                   </button>
@@ -323,6 +325,19 @@ export function ParentTodoThreadView({
                 </button>
                 <button onClick={() => handleAddTodoFromMenu(thread.id)} type="button">
                   Lägg till uppgift
+                </button>
+                <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
+                  Ladda ner
+                </button>
+                <button onClick={() => handleHideFromMenu(thread.id)} type="button">
+                  Göm
+                </button>
+                <button
+                  className="todo-thread__category-menu-danger"
+                  onClick={() => handleDeleteFromMenu(thread.id)}
+                  type="button"
+                >
+                  Radera
                 </button>
               </div>
             )}

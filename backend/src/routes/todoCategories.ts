@@ -37,3 +37,8 @@ todoCategoriesRouter.delete("/:id", async (req, res) => {
   const memberId = requireMemberId(req.memberId);
   res.json(await todoCategories.deleteCategory(req.params.id, req.accountId!, memberId));
 });
+
+todoCategoriesRouter.patch("/:id/hidden", async (req, res) => {
+  const memberId = requireMemberId(req.memberId);
+  res.json(await todoCategories.setCategoryHidden(req.params.id, req.accountId!, memberId, Boolean(req.body?.hidden)));
+});

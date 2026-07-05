@@ -34,6 +34,7 @@ type Props = {
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
+  onSetCategoryHidden: (id: Id, hidden: boolean) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
@@ -71,6 +72,7 @@ export function TodosView({
   onCreateCategory,
   onRenameCategory,
   onRemoveCategory,
+  onSetCategoryHidden,
   onSoftDeleteTodo,
   onApproveWish,
   onRejectWish,
@@ -160,6 +162,7 @@ export function TodosView({
             onCreateCategory={onCreateCategory}
             onRenameCategory={onRenameCategory}
             onRemoveCategory={onRemoveCategory}
+            onSetCategoryHidden={onSetCategoryHidden}
             onDeleteTodo={onSoftDeleteTodo}
             onAddTodoToCategory={openCreateModalForCategory}
           />

@@ -10,6 +10,7 @@ const todoCategorySchema = new Schema<TodoCategory>({
   memberId: { type: String, required: true },
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
+  hidden: { type: Boolean, default: false },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });

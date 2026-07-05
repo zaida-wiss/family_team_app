@@ -28,5 +28,10 @@ export function useTodoCategoriesState() {
     setCategories((current) => current.filter((c) => c.id !== id));
   }
 
-  return { categories, createCategory, renameCategory, removeCategory };
+  function setCategoryHidden(id: Id, hidden: boolean) {
+    todoCategoriesApi.setHidden(id, hidden).catch(console.error);
+    setCategories((current) => current.map((c) => (c.id === id ? { ...c, hidden } : c)));
+  }
+
+  return { categories, createCategory, renameCategory, removeCategory, setCategoryHidden };
 }

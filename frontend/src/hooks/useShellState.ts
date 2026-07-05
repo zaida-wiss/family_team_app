@@ -67,7 +67,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     categories: personalTodoCategories,
     createCategory: createTodoCategory,
     renameCategory: renameTodoCategory,
-    removeCategory: removeTodoCategory
+    removeCategory: removeTodoCategory,
+    setCategoryHidden: setTodoCategoryHidden
   } = useTodoCategoriesState();
 
   const permissions = useShellPermissions(currentMember, roles);
@@ -137,6 +138,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onCreateCategory: createTodoCategory,
     onRenameCategory: renameTodoCategory,
     onRemoveCategory: removeTodoCategory,
+    onSetCategoryHidden: setTodoCategoryHidden,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
     // Todos-panelens visningsläge väljs i Inställningar, ingen egen växlare
     // i panelen (2026-07-05, Zaidas beslut) — se settingsProps nedan.
@@ -239,6 +241,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles),
     personalCategories: personalTodoCategories,
     onCreateCategory: createTodoCategory,
+    onSetCategoryHidden: setTodoCategoryHidden,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => {

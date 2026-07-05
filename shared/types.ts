@@ -432,6 +432,11 @@ export type TodoCategory = {
   memberId: Id;
   name: string;
   createdAt: string;
+  // Gömd (2026-07-05) — skiljer sig från deletedAt/radering: en gömd kategori
+  // syns inte i tråd-vyn men finns kvar oförändrad, kan visas igen när som
+  // helst via Inställningar. Valfritt/saknas = inte gömd (bakåtkompatibelt,
+  // ingen migrering av befintliga kategorier behövs).
+  hidden?: boolean;
   deletedAt: string | null;
   deletedBy: Id | null;
 };
