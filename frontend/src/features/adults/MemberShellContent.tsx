@@ -19,7 +19,7 @@ const TodosView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -54,6 +54,10 @@ type Props = {
   onCancelEditingTodo: () => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  personalCategories: TodoCategory[];
+  onCreateCategory: (name: string) => void;
+  onRenameCategory: (id: Id, name: string) => void;
+  onRemoveCategory: (id: Id) => void;
   onSoftDeleteTodo: (todoId: string) => void;
   onApproveTodo: (todoId: string) => void;
   onRejectTodo: (todoId: string, reason: string | null) => void;
@@ -104,6 +108,7 @@ export function MemberShellContent({
   editingTodoId, editingTodoTitle, wishStars, wishTitle,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
   onCancelEditingTodo, onCreateTodo, onToggleSubtask, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
+  personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
@@ -246,6 +251,10 @@ export function MemberShellContent({
             const assignee = todo && members.find((m) => m.id === todo.assignedTo);
             if (assignee) onCompleteTodo(assignee, todoId, roles);
           }}
+          personalCategories={personalCategories}
+          onCreateCategory={onCreateCategory}
+          onRenameCategory={onRenameCategory}
+          onRemoveCategory={onRemoveCategory}
           onSoftDeleteTodo={onSoftDeleteTodo}
           onApproveTodo={onApproveTodo}
           onRejectTodo={onRejectTodo}

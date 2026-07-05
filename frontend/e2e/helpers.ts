@@ -45,6 +45,9 @@ export async function mockDataAPIs(page: Page) {
   // SSE-strömmen för todo-ändringar — utan denna faller den igenom till en riktig
   // backend och 401:ar (ofarligt i sig, men brusigt och kan racea med riktiga tester).
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
+  // Vuxenvyns personliga kategori-trådar (2026-07-05) — hämtas globalt av
+  // useShellState oavsett aktiv panel, precis som timed-tasks/reward-shop.
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));

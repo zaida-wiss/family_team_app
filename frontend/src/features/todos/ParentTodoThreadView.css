@@ -1,19 +1,65 @@
+/* Trådar sida vid sida (2026-07-05, Zaidas beslut) — så nästa grej att göra
+   alltid syns i synfältet, ingen scroll krävs för att se alla kategorier på en
+   gång. Skrollbar horisontellt om de inte får plats. */
 .todo-thread-view {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 
 .todo-thread {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 0 0 180px;
+  width: 180px;
+}
+
+.todo-thread__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin-bottom: 4px;
 }
 
 .todo-thread__category {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 0.95rem;
-  align-self: flex-start;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-thread__category-button {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  text-align: left;
+}
+
+.todo-thread__delete-category {
+  flex-shrink: 0;
+}
+
+.todo-thread__category-input {
+  width: 100%;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 2px 4px;
 }
 
 .todo-thread__empty {
@@ -139,4 +185,29 @@
   font-size: 0.68rem;
   font-weight: 700;
   color: var(--primary);
+}
+
+.todo-thread__add-todo {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.todo-thread__add-todo-button {
+  width: 100%;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.todo-thread--new-category {
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.todo-thread__new-category-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  color: var(--muted-fg);
 }

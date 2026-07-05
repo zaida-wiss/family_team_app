@@ -28,6 +28,10 @@ const todoSchema = new Schema<Todo>({
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null },
   routineCategory: { type: String, default: null },
+  // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — helt separat från
+  // routineCategory/ROUTINE_CATEGORIES ovan, som fortsatt driver belöningsbutikens
+  // kategori-spärr och barnens rutinskapare oförändrat.
+  personalCategoryId: { type: String, default: null },
   subtasks: {
     type: [
       {

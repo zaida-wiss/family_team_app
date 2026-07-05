@@ -381,12 +381,30 @@ export type Todo = {
   // / totalt). Påverkar inte befintlig todo-logik (listning, godkännande, historik)
   // när det saknas, se discussions/2026-07-04-designspike-medaljer-och-foraldravy.md.
   subtasks?: TodoSubtask[];
+  // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — helt separat från
+  // routineCategory ovan. Refererar en TodoCategory som ägs av den medlem som
+  // skapade/tilldelades todon, inte delad med resten av kontot.
+  personalCategoryId?: Id | null;
 };
 
 export type TodoSubtask = {
   id: Id;
   title: string;
   done: boolean;
+};
+
+// Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — en medlem kan skapa
+// sina egna kategorier för att organisera sina egna todos i sida-vid-sida-trådar,
+// oberoende av routineCategory (som driver belöningsbutikens kategori-spärr och
+// barnens rutiner, oförändrat).
+export type TodoCategory = {
+  id: Id;
+  accountId: Id;
+  memberId: Id;
+  name: string;
+  createdAt: string;
+  deletedAt: string | null;
+  deletedBy: Id | null;
 };
 
 export type Reward = {

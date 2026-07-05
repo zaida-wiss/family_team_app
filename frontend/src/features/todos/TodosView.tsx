@@ -1,7 +1,7 @@
 import "./TodosView.css";
 import { CheckCircle2, List, Pencil, PlusCircle, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
 import { useState } from "react";
-import type { Id, Member, Reward, Role, Todo } from "@shared/types";
+import type { Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
@@ -26,6 +26,10 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
+  personalCategories: TodoCategory[];
+  onCreateCategory: (name: string) => void;
+  onRenameCategory: (id: Id, name: string) => void;
+  onRemoveCategory: (id: Id) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveTodo: (todoId: Id) => void;
   onRejectTodo: (todoId: Id, reason: string | null) => void;
@@ -59,6 +63,10 @@ export function TodosView({
   onCreateTodo,
   onToggleSubtask,
   onCompleteTodo,
+  personalCategories,
+  onCreateCategory,
+  onRenameCategory,
+  onRemoveCategory,
   onSoftDeleteTodo,
   onApproveTodo,
   onRejectTodo,
@@ -127,7 +135,7 @@ export function TodosView({
           />
         )}
 
-        {canSeeTodos && visibleTodos.length > 0 && (
+        {canSeeTodos && (
           <div className="todo-view-toggle" role="group" aria-label="Visningsläge för todos">
             <button
               type="button"
@@ -150,12 +158,19 @@ export function TodosView({
           </div>
         )}
 
-        {viewMode === "thread" && canSeeTodos && visibleTodos.length > 0 && (
+        {viewMode === "thread" && canSeeTodos && (
           <ParentTodoThreadView
             todos={visibleTodos}
             members={allMembers}
+            roles={roles}
+            currentMember={currentMember}
+            categories={personalCategories}
             onToggleSubtask={onToggleSubtask}
             onCompleteTodo={onCompleteTodo}
+            onCreateTodo={onCreateTodo}
+            onCreateCategory={onCreateCategory}
+            onRenameCategory={onRenameCategory}
+            onRemoveCategory={onRemoveCategory}
           />
         )}
 

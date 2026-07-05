@@ -3,6 +3,7 @@ import { useAppState } from "./useAppState";
 import { useShellPermissions } from "./useShellPermissions";
 import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
+import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState";
 import { useAppFont } from "../components/FontPicker";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership } from "@shared/types";
 
@@ -61,6 +62,13 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
   } = useRewardShopState();
 
   const { timedTasks, createTimedTask, removeTimedTask, recordAttempt } = useTimedTasksState();
+
+  const {
+    categories: personalTodoCategories,
+    createCategory: createTodoCategory,
+    renameCategory: renameTodoCategory,
+    removeCategory: removeTodoCategory
+  } = useTodoCategoriesState();
 
   const permissions = useShellPermissions(currentMember, roles);
 
@@ -124,6 +132,10 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onCancelEditingTodo: cancelEditingTodo,
     onCreateTodo: createTodo,
     onToggleSubtask: toggleSubtask,
+    personalCategories: personalTodoCategories,
+    onCreateCategory: createTodoCategory,
+    onRenameCategory: renameTodoCategory,
+    onRemoveCategory: removeTodoCategory,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
