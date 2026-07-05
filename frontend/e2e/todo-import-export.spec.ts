@@ -8,7 +8,7 @@ import { mockAuthAndData } from "./helpers";
 async function openImportExportSettings(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "📥 Importera/exportera todos" }).click();
+  await page.getByRole("button", { name: "📥 Importera/exportera uppgifter" }).click();
 }
 
 test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page }) => {
@@ -65,8 +65,10 @@ test("Todos-import/export: importerar en CSV-fil och skapar todos, inklusive en 
 
   // setInputFiles funkar direkt på det dolda <input type=file>-elementet —
   // ingen anledning att klicka den synliga knappen och hantera en riktig
-  // filechooser-dialog i testmiljön.
-  await page.locator('input[type="file"]').setInputFiles({
+  // filechooser-dialog i testmiljön. Ett generiskt input[type=file]-val
+  // krockar med avatar-uppladdarens fil-input i samma Inställningar-panel,
+  // därför getByLabel på den egna aria-label:en istället.
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
     name: "todos.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv, "utf-8")

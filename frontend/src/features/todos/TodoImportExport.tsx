@@ -129,6 +129,7 @@ export function TodoImportExport({
         </button>
         <input
           accept=".csv,text/csv"
+          aria-label="Importera CSV-fil"
           hidden
           onChange={(e) => {
             void handleImportFile(e.target.files?.[0] ?? null);

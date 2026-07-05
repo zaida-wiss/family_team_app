@@ -167,7 +167,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         />
       </SettingsSection>
 
-      <SettingsSection title="📥 Importera/exportera todos">
+      <SettingsSection title="📥 Importera/exportera uppgifter">
         <TodoImportExport
           currentMember={currentMember}
           members={members}
