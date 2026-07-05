@@ -74,6 +74,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     timedTasks,
     onCreateTimedTask,
     onRemoveTimedTask,
+    todoViewMode,
+    onUpdateTodoViewMode,
   } = settingsProps;
 
   return (
@@ -86,6 +88,17 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           fontId={fontId}
           onSelectFont={setFontId}
         />
+        <label className="field-label settings-todo-view-mode">
+          Todos-vy
+          <select
+            className="text-input"
+            onChange={(e) => onUpdateTodoViewMode(e.target.value as "list" | "thread")}
+            value={todoViewMode}
+          >
+            <option value="thread">Bollar i tråd</option>
+            <option value="list">Lista</option>
+          </select>
+        </label>
       </SettingsSection>
 
       <SettingsSection title="🏪 Belöningsbutiken" defaultOpen>

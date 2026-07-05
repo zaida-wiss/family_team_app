@@ -6,6 +6,11 @@ export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "
 
 export const CalendarViewModeSchema = z.enum(["month", "week", "list", "timeline"]);
 
+// Vuxenvyns Todos-panel visar bara bollar/kategori/+-knappen på skärmen —
+// visningsläget (lista/tråd) väljs i Inställningar, ingen egen växlare i
+// panelen (2026-07-05, Zaidas beslut).
+export const TodoViewModeSchema = z.enum(["list", "thread"]);
+
 // Partial<Record<CalendarFilterKey, ...>> — z.record().partial() finns inte i denna
 // zod-version (ZodRecord saknar .partial(), bara ZodObject har den), och CalendarFilterKey
 // har bara två kända nycklar, så ett explicit objekt uttrycker exakt samma typ.
@@ -51,6 +56,7 @@ export const MemberSchema = z.object({
   lastActivePanel: AppPanelSchema.optional(),
   lastSelectedDashboardMemberId: IdSchema.nullable().optional(),
   calendarView: CalendarViewModeSchema.optional(),
+  todoViewMode: TodoViewModeSchema.optional(),
   spentStars: z.number().int().min(0),
   approvedStars: z.number().int().min(0),
   deletedAt: z.string().nullable(),
@@ -71,6 +77,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   lastActivePanel: true,
   lastSelectedDashboardMemberId: true,
   calendarView: true,
+  todoViewMode: true,
   spentStars: true
 }).partial();
 

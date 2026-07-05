@@ -1,7 +1,7 @@
 import "./TodosView.css";
-import { CheckCircle2, List, Pencil, Plus, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Save, Send, Trash2, X, XCircle } from "lucide-react";
 import { useState } from "react";
-import type { Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
+import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
@@ -19,6 +19,9 @@ type Props = {
   canApproveTodos: boolean;
   canSeeTodos: boolean;
   wishStars: Record<Id, number>;
+  // Visningsläget (lista/tråd) väljs i Inställningar (2026-07-05, Zaidas
+  // beslut) — ingen egen växlare i panelen, bara kategori/+-knappen/todos syns.
+  todoViewMode: TodoViewMode;
   onSetEditingTodoTitle: (t: string) => void;
   onStartEditingTodo: (todo: Todo) => void;
   onSaveTodoTitle: (todoId: Id) => void;
@@ -57,6 +60,7 @@ export function TodosView({
   canApproveTodos,
   canSeeTodos,
   wishStars,
+  todoViewMode,
   onSetEditingTodoTitle,
   onStartEditingTodo,
   onSaveTodoTitle,
@@ -88,9 +92,6 @@ export function TodosView({
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  // Bubbelvyn (tråd-läget) är default (Zaidas beslut 2026-07-05) — listläget
-  // finns kvar som alternativ via vy-växlaren.
-  const [viewMode, setViewMode] = useState<"list" | "thread">("thread");
 
   function startRejecting(todoId: Id) {
     setRejectingTodoId(todoId);
@@ -111,7 +112,7 @@ export function TodosView({
   return (
     <article className="dashboard">
       <header className="section-header">
-        {viewMode === "thread" ? (
+        {todoViewMode === "thread" ? (
           <div className="todos-bubble-header">
             <h2 className="todos-bubble-header__title">Bubbelsysslor ✨</h2>
             <p className="todos-bubble-header__subtitle">
@@ -127,36 +128,19 @@ export function TodosView({
       </header>
 
       <div className="dashboard-list">
-        {canSeeTodos && (
-          <div className="todo-view-toggle" role="group" aria-label="Visningsläge för todos">
+        {/* Visningsläget (lista/tråd) väljs i Inställningar, ingen egen
+            växlare här (2026-07-05, Zaidas beslut) — panelen visar bara
+            kategori/+-knappen/todouppgifterna. */}
+        {canSeeTodos && canCreate && (
+          <div className="todo-view-toggle" role="group" aria-label="Todos-åtgärder">
             <button
               type="button"
-              className={`icon-button${viewMode === "list" ? " active" : ""}`}
-              aria-pressed={viewMode === "list"}
-              onClick={() => setViewMode("list")}
-              title="Lista"
+              className="icon-button"
+              onClick={() => setIsCreateModalOpen(true)}
+              title="Ny uppgift"
             >
-              <List size={16} /> Lista
+              <Plus size={16} />
             </button>
-            <button
-              type="button"
-              className={`icon-button${viewMode === "thread" ? " active" : ""}`}
-              aria-pressed={viewMode === "thread"}
-              onClick={() => setViewMode("thread")}
-              title="Bollar i tråd"
-            >
-              <Waypoints size={16} /> Bollar i tråd
-            </button>
-            {canCreate && (
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setIsCreateModalOpen(true)}
-                title="Ny uppgift"
-              >
-                <Plus size={16} />
-              </button>
-            )}
           </div>
         )}
 
@@ -172,7 +156,7 @@ export function TodosView({
           />
         )}
 
-        {viewMode === "thread" && canSeeTodos && (
+        {todoViewMode === "thread" && canSeeTodos && (
           <ParentTodoThreadView
             todos={visibleTodos}
             members={allMembers}
@@ -189,7 +173,7 @@ export function TodosView({
           />
         )}
 
-        {viewMode === "list" && visibleTodos.map((todo) => {
+        {todoViewMode === "list" && visibleTodos.map((todo) => {
           const isEditing = editingTodoId === todo.id;
           return (
             <div className="dashboard-row todo-dashboard-row" key={todo.id}>

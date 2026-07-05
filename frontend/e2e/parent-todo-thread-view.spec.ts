@@ -57,10 +57,18 @@ const PERSONAL_TODO_NO_SUBTASKS = {
   routineCategory: null, personalCategoryId: "cat-1"
 };
 
+// Tråd-vyn (bubbelvyn) är den enda vyn i panelen sedan 2026-07-05 (Zaidas
+// beslut) — ingen egen växlare där längre, bara kategori/+-knappen/todos.
+// Listläget väljs numera i Inställningar, se växlaTillListlage() nedan.
 async function openThreadView(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Todos" }).click();
-  await page.getByRole("button", { name: "Bollar i tråd" }).click();
+}
+
+async function switchToListViewInSettings(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByLabel("Todos-vy").selectOption("list");
+  await page.getByRole("button", { name: "Todos" }).click();
 }
 
 test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-tråd visar bara mina egna", async ({ page }) => {
@@ -600,15 +608,19 @@ test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ p
   expect(categoryBox!.x).toBeGreaterThan(childBox!.x + childBox!.width - 5);
 });
 
-test("Bollar i tråd: växlar tillbaka till listan", async ({ page }) => {
+// Listläget väljs i Inställningar (2026-07-05, Zaidas beslut) — panelen har
+// ingen egen växlare längre, bara kategori/+-knappen/todouppgifterna.
+test("Todos-vy: byter till listläge via Inställningar, ingen tråd-växlare i panelen", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] }));
 
   await openThreadView(page);
   await expect(page.getByRole("region", { name: "Tråd: Träning" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Lista" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Bollar i tråd" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Lista" }).click();
+  await switchToListViewInSettings(page);
   await expect(page.getByRole("region", { name: "Tråd: Träning" })).toHaveCount(0);
   await expect(page.getByText("Styrketräning")).toBeVisible();
 });
@@ -618,16 +630,13 @@ test("Bollar i tråd: visar Bubbelsysslor-rubriken bara i tråd-läget, inte i l
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
-  // Tråd-läget (bubbelvyn) är default sedan 2026-07-05 (Zaidas beslut) —
-  // väljer listläget explicit för att verifiera att rubriken bara syns i tråd-läget.
-  await page.getByRole("button", { name: "Lista" }).click();
-  await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Todos" })).toBeVisible();
-
-  await page.getByRole("button", { name: "Bollar i tråd" }).click();
+  await openThreadView(page);
+  // Tråd-läget (bubbelvyn) är default sedan 2026-07-05 (Zaidas beslut).
   await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toBeVisible();
   await expect(page.getByText("Dagens familjebubblor")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Todos" })).toHaveCount(0);
+
+  await switchToListViewInSettings(page);
+  await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Todos" })).toBeVisible();
 });

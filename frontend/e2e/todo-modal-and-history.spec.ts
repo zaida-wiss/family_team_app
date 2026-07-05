@@ -77,10 +77,12 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     );
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Todos" }).click();
-    // Tråd-läget (bubbelvyn) är default sedan 2026-07-05 — den här testen
+    // Tråd-läget (bubbelvyn) är default sedan 2026-07-05, listläget väljs i
+    // Inställningar (ingen egen växlare i panelen) — den här testen
     // kontrollerar listlägets aktiva/historik-filtrering, växlar dit explicit.
-    await page.getByRole("button", { name: "Lista" }).click();
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByLabel("Todos-vy").selectOption("list");
+    await page.getByRole("button", { name: "Todos" }).click();
 
     await expect(page.getByText("Dammsuga")).toBeVisible();
     await expect(page.getByText("Diska")).toHaveCount(0);

@@ -29,6 +29,8 @@ export type AppPanel =
 
 export type CalendarViewMode = "month" | "week" | "list" | "timeline";
 
+export type TodoViewMode = "list" | "thread";
+
 export type CalendarFilterKey = "home" | "calendar";
 
 export type CalendarFilterSettings = Partial<Record<CalendarFilterKey, {
@@ -98,6 +100,10 @@ export type Member = {
   lastActivePanel?: AppPanel;
   lastSelectedDashboardMemberId?: Id | null;
   calendarView?: CalendarViewMode;
+  // Todos-panelens visningsläge (lista/tråd) — väljs i Inställningar, ingen
+  // egen växlare i panelen (2026-07-05, Zaidas beslut: panelen ska bara visa
+  // kategori/+-knappen/todouppgifterna). Standard "thread" om osatt.
+  todoViewMode?: TodoViewMode;
   spentStars: number;
   approvedStars: number;
   deletedAt: string | null;

@@ -5,7 +5,7 @@ import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
 import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState";
 import { useAppFont } from "../components/FontPicker";
-import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership } from "@shared/types";
+import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TodoViewMode } from "@shared/types";
 
 export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
   // En enda instans delad mellan flytande temaväljaren (Shell) och Inställningar-panelen
@@ -138,6 +138,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRenameCategory: renameTodoCategory,
     onRemoveCategory: removeTodoCategory,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
+    // Todos-panelens visningsläge väljs i Inställningar, ingen egen växlare
+    // i panelen (2026-07-05, Zaidas beslut) — se settingsProps nedan.
+    todoViewMode: currentMember.todoViewMode ?? "thread",
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
@@ -217,6 +220,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
       updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
     onUpdateCalendarView: (view: CalendarViewMode) =>
       updateMemberNavigation(currentMember.id, { calendarView: view }),
+    todoViewMode: currentMember.todoViewMode ?? "thread",
+    onUpdateTodoViewMode: (mode: TodoViewMode) =>
+      updateMemberNavigation(currentMember.id, { todoViewMode: mode }),
     onUpdateChildTimelineSettings: updateChildTimelineSettings,
     onAssignRole: assignRole,
     onCreateRole: createRole,

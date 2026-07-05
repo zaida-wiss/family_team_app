@@ -7,7 +7,8 @@ import type {
   ChildTimelineSettings,
   DashboardThemeId,
   Id,
-  Member
+  Member,
+  TodoViewMode
 } from "@shared/types";
 
 export function useMembersState() {
@@ -139,6 +140,7 @@ export function useMembersState() {
       lastActivePanel?: AppPanel;
       lastSelectedDashboardMemberId?: Id | null;
       calendarView?: CalendarViewMode;
+      todoViewMode?: TodoViewMode;
     }
   ) {
     setMembers((current) =>

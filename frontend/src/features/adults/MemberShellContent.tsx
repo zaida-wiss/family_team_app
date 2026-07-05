@@ -19,7 +19,7 @@ const TodosView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -45,6 +45,7 @@ type Props = {
   editingTodoId: string | null;
   editingTodoTitle: string;
   wishStars: Record<string, number>;
+  todoViewMode: TodoViewMode;
   wishTitle: string;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
@@ -106,7 +107,7 @@ export function MemberShellContent({
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
-  editingTodoId, editingTodoTitle, wishStars, wishTitle,
+  editingTodoId, editingTodoTitle, wishStars, wishTitle, todoViewMode,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
   onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory,
@@ -237,6 +238,7 @@ export function MemberShellContent({
           canApproveTodos={canApproveTodos}
           canSeeTodos={canSeeTodos}
           wishStars={wishStars}
+          todoViewMode={todoViewMode}
           onSetEditingTodoTitle={onSetEditingTodoTitle}
           onStartEditingTodo={onStartEditingTodo}
           onSaveTodoTitle={onSaveTodoTitle}
