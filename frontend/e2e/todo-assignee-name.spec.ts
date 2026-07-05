@@ -54,6 +54,9 @@ test("Todos: uppgift som tillhör ett borttaget barn visar barnets namn, inte Ok
 
   await page.goto("/");
   await page.getByRole("button", { name: "Todos" }).click();
+  // Tråd-läget (bubbelvyn) är default sedan 2026-07-05 — den här testen
+  // kontrollerar listlägets assignee-namn, växlar dit explicit.
+  await page.getByRole("button", { name: "Lista" }).click();
 
   await expect(page.getByText("Läxor")).toBeVisible();
   await expect(page.getByText("Astrid")).toBeVisible();

@@ -88,7 +88,9 @@ export function TodosView({
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "thread">("list");
+  // Bubbelvyn (tråd-läget) är default (Zaidas beslut 2026-07-05) — listläget
+  // finns kvar som alternativ via vy-växlaren.
+  const [viewMode, setViewMode] = useState<"list" | "thread">("thread");
 
   function startRejecting(todoId: Id) {
     setRejectingTodoId(todoId);

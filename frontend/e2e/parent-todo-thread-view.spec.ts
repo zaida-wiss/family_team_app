@@ -518,6 +518,9 @@ test("Bollar i tråd: visar Bubbelsysslor-rubriken bara i tråd-läget, inte i l
 
   await page.goto("/");
   await page.getByRole("button", { name: "Todos" }).click();
+  // Tråd-läget (bubbelvyn) är default sedan 2026-07-05 (Zaidas beslut) —
+  // väljer listläget explicit för att verifiera att rubriken bara syns i tråd-läget.
+  await page.getByRole("button", { name: "Lista" }).click();
   await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Todos" })).toBeVisible();
 
