@@ -17,6 +17,9 @@ type Props = {
   members: Member[];
   roles: Role[];
   categories: TodoCategory[];
+  // Förvald kategori (2026-07-05) — satt när modalen öppnas via "Lägg till
+  // uppgift" i en kategoris meny i tråd-vyn, fortsatt ändringsbar här.
+  defaultCategoryId?: Id | null;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onCreateTodo: (todo: Todo) => void;
   onClose: () => void;
@@ -39,6 +42,7 @@ export function TodoCreatorModal({
   members,
   roles,
   categories,
+  defaultCategoryId,
   onCreateCategory,
   onCreateTodo,
   onClose
@@ -55,7 +59,7 @@ export function TodoCreatorModal({
   const [assigneeId, setAssigneeId] = useState<string>(SELF_VALUE);
   const [title, setTitle] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
-    categories[0]?.id ?? NO_CATEGORY_VALUE
+    defaultCategoryId ?? categories[0]?.id ?? NO_CATEGORY_VALUE
   );
   const [newCategoryName, setNewCategoryName] = useState("");
   const [starValue, setStarValue] = useState(1);

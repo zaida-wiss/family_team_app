@@ -25,6 +25,7 @@ type Props = {
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onDeleteTodo: (todoId: Id) => void;
+  onAddTodoToCategory: (categoryId: Id) => void;
 };
 
 type Thread = {
@@ -123,7 +124,8 @@ export function ParentTodoThreadView({
   onCreateCategory,
   onRenameCategory,
   onRemoveCategory,
-  onDeleteTodo
+  onDeleteTodo,
+  onAddTodoToCategory
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -139,6 +141,11 @@ export function ParentTodoThreadView({
   const dissolveTimersRef = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
   const [editingCategoryId, setEditingCategoryId] = useState<Id | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  // Klick på kategorinamnet öppnar en liten meny (2026-07-05, Zaidas beslut)
+  // — "Byt namn" eller "Lägg till uppgift" (då förvald till just den
+  // kategorin i skapa-modalen, fortsatt ändringsbar där).
+  const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   // Långt tryck (2s) på kategorinamnet tar bort kategorin (2026-07-05, Zaidas
   // beslut) — ersätter den tidigare alltid synliga papperskorgs-knappen. Samma
   // mekanism/suppress-click-mönster som bollarnas egen håll-in-avklarmarkering.
@@ -152,6 +159,16 @@ export function ParentTodoThreadView({
     },
     []
   );
+
+  useEffect(() => {
+    if (!menuCategoryId) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setMenuCategoryId(null);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [menuCategoryId]);
 
   const today = new Date();
   const pendingTodos = todos.filter((t) => t.status === "pending" && isDueToday(t, today));
@@ -233,13 +250,23 @@ export function ParentTodoThreadView({
       suppressCategoryClickRef.current = false;
       return;
     }
-    const category = categories.find((c) => c.id === thread.id);
-    if (category) startEditingCategory(category);
+    setMenuCategoryId((current) => (current === thread.id ? null : thread.id));
   }
 
   function handleConfirmDeleteCategory(categoryId: Id) {
     suppressCategoryClickRef.current = true;
     onRemoveCategory(categoryId);
+  }
+
+  function handleRenameFromMenu(categoryId: Id) {
+    const category = categories.find((c) => c.id === categoryId);
+    setMenuCategoryId(null);
+    if (category) startEditingCategory(category);
+  }
+
+  function handleAddTodoFromMenu(categoryId: Id) {
+    setMenuCategoryId(null);
+    onAddTodoToCategory(categoryId);
   }
 
   return (
@@ -273,7 +300,8 @@ export function ParentTodoThreadView({
                       "todo-thread__category-button" +
                       (heldCategoryId === thread.id ? " todo-thread__category-button--holding" : "")
                     }
-                    aria-label={`${thread.label}. Klicka för att döpa om. Håll intryckt i två sekunder för att ta bort kategorin.`}
+                    aria-expanded={menuCategoryId === thread.id}
+                    aria-label={`${thread.label}. Klicka för fler val. Håll intryckt i två sekunder för att ta bort kategorin.`}
                     onClick={() => handleCategoryClick(thread)}
                     onPointerDown={() => startCategoryHold(thread.id, () => handleConfirmDeleteCategory(thread.id))}
                     onPointerUp={clearCategoryHold}
@@ -286,6 +314,17 @@ export function ParentTodoThreadView({
                   thread.label
                 )}
               </h3>
+            )}
+
+            {menuCategoryId === thread.id && (
+              <div className="todo-thread__category-menu" ref={menuRef}>
+                <button onClick={() => handleRenameFromMenu(thread.id)} type="button">
+                  Byt namn
+                </button>
+                <button onClick={() => handleAddTodoFromMenu(thread.id)} type="button">
+                  Lägg till uppgift
+                </button>
+              </div>
             )}
           </div>
 

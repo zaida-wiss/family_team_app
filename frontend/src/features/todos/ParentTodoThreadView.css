@@ -8,6 +8,10 @@
   gap: 14px;
   overflow-x: auto;
   padding-bottom: 8px;
+  /* Fyller kvarvarande yta ovanför bottenmenyn (2026-07-05, Zaidas begäran,
+     efter att godkännande-sektionen togs bort ur panelen) — bara den här
+     sektionen berörs, ingen annan panel delar klassen. */
+  min-height: 60vh;
 }
 
 /* Bollarna hålls medvetet små (2026-07-05, Zaidas beslut) — så fler
@@ -22,11 +26,46 @@
 }
 
 .todo-thread__header {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
   width: 100%;
   margin-bottom: 4px;
+}
+
+/* Kategorinamnets meny (2026-07-05, Zaidas beslut) — "Byt namn" eller
+   "Lägg till uppgift" (förvald till just den kategorin). Håll intryckt (2s)
+   tar fortfarande bort kategorin direkt, oförändrat. */
+.todo-thread__category-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px color-mix(in oklch, var(--foreground) 18%, transparent);
+  overflow: hidden;
+}
+
+.todo-thread__category-menu button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+.todo-thread__category-menu button:hover {
+  background: var(--muted);
 }
 
 .todo-thread__category {
@@ -153,13 +192,21 @@
   border: 1px solid color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--border))) 80%, transparent);
   border-radius: 50%;
   padding: 4px;
+  /* Fyllningen växlar genom flera av temats EGNA färger (2026-07-05, Zaidas
+     begäran) — samma --c0…--c4-variabler man väljer i temainställningarna,
+     inte en enda kulör per kategori. En konisk regnbågston under de vanliga
+     glansrundlarna, likt en riktig såpbubblas skiftande sken. */
   background:
-    radial-gradient(circle at 74% 74%, color-mix(in srgb, white 95%, transparent) 0%, transparent 10%),
-    radial-gradient(circle at 30% 26%, color-mix(in srgb, white 85%, transparent) 0%, transparent 42%),
-    radial-gradient(
-      circle at 50% 60%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 70%, transparent) 0%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 92%, transparent) 100%
+    radial-gradient(circle at 74% 74%, color-mix(in srgb, white 90%, transparent) 0%, transparent 8%),
+    radial-gradient(circle at 30% 26%, color-mix(in srgb, white 60%, transparent) 0%, transparent 30%),
+    conic-gradient(
+      from 180deg,
+      color-mix(in srgb, var(--c0) 95%, transparent),
+      color-mix(in srgb, var(--c1) 95%, transparent),
+      color-mix(in srgb, var(--c2) 95%, transparent),
+      color-mix(in srgb, var(--c3) 95%, transparent),
+      color-mix(in srgb, var(--c4) 95%, transparent),
+      color-mix(in srgb, var(--c0) 95%, transparent)
     );
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--primary))) 25%, transparent),

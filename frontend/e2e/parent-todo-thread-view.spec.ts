@@ -574,7 +574,10 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
   await expect(thread).toBeVisible();
 
+  // Klick öppnar en liten meny (2026-07-05, Zaidas beslut) — "Byt namn"
+  // eller "Lägg till uppgift" — istället för att direkt öppna redigering.
   await thread.getByRole("button", { name: /Träning/ }).click();
+  await thread.getByRole("button", { name: "Byt namn" }).click();
   await thread.getByRole("textbox").fill("Gym");
   await page.keyboard.press("Enter");
   await expect.poll(() => renamedTo).toBe("Gym");
@@ -590,6 +593,35 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   await categoryButton.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
   await expect.poll(() => deletedId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
+});
+
+test("Bollar i tråd: 'Lägg till uppgift' i kategorimenyn öppnar skapa-modalen med kategorin förvald", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await thread.getByRole("button", { name: "Lägg till uppgift" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Ny uppgift" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("combobox", { name: "Kategori" })).toHaveValue("cat-1");
+
+  await dialog.getByLabel("Titel").fill("Styrketräning");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Styrketräning");
+  expect(createdTodo?.personalCategoryId).toBe("cat-1");
 });
 
 test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ page }) => {
