@@ -16,3 +16,22 @@
   background: var(--primary);
   color: var(--primary-fg);
 }
+
+/* "Bubbelsysslor" — rubrik för tråd-vyn (2026-07-05, Zaidas beslut, efter
+   mockup). Gradient-text via två av temats accentfärger, samma --c0/--c1 som
+   redan cyklas för kategori-bubblorna, så rubriken alltid matchar aktivt tema. */
+.todos-bubble-header__title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--c0), var(--c1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.todos-bubble-header__subtitle {
+  margin: 4px 0 0;
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+}

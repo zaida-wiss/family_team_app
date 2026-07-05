@@ -43,12 +43,13 @@
 }
 
 .todo-thread__category-button {
+  position: relative;
   font: inherit;
   font-weight: 700;
   color: inherit;
   background: none;
   border: none;
-  padding: 0;
+  padding: 0 0 3px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -57,8 +58,27 @@
   text-align: left;
 }
 
-.todo-thread__delete-category {
-  flex-shrink: 0;
+/* Långt tryck (2s) tar bort kategorin (2026-07-05, Zaidas beslut) — ersätter
+   den tidigare alltid synliga papperskorgs-knappen. Samma fyllnadsprincip som
+   bollarnas håll-in-avklarmarkering, fast som en bottenlinje under texten. */
+.todo-thread__category-button::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
+}
+
+.todo-thread__category-button--holding::after {
+  animation: todo-thread-category-hold-progress 2s linear forwards;
+}
+
+@keyframes todo-thread-category-hold-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .todo-thread__category-input {
@@ -109,6 +129,11 @@
   gap: 4px;
 }
 
+/* Glansiga "bubblor" (2026-07-05, Zaidas beslut, efter mockup) — en bas-
+   färgton från kategorins tema-accent, plus två ljusa rundlar (stor mjuk
+   glans uppe till vänster, liten blank prick nere till höger) för att likna
+   en tvålbubbla. Blandas mot --card (inte hårdkodad vitt) så det fungerar
+   korrekt i alla fem teman, inklusive mörkt. */
 .todo-thread__ball {
   position: relative;
   z-index: 1;
@@ -122,10 +147,21 @@
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-  border: 2px solid var(--thread-accent, var(--border));
+  border: 1px solid color-mix(in srgb, var(--thread-accent, var(--border)) 45%, var(--card));
   border-radius: 50%;
   padding: 3px;
-  background: color-mix(in srgb, var(--thread-accent, var(--card)) 14%, var(--card));
+  background:
+    radial-gradient(circle at 74% 74%, color-mix(in srgb, white 92%, transparent) 0%, transparent 9%),
+    radial-gradient(circle at 30% 26%, color-mix(in srgb, white 75%, transparent) 0%, transparent 38%),
+    radial-gradient(
+      circle at 50% 60%,
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 30%, var(--card)) 0%,
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 55%, var(--card)) 100%
+    );
+  box-shadow:
+    0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 25%, transparent),
+    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 18%, transparent);
+  color: var(--foreground);
   text-align: center;
   cursor: pointer;
   overflow: hidden;

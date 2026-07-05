@@ -1,6 +1,5 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
 import { TodoDetailModal } from "./TodoDetailModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
@@ -75,6 +74,18 @@ function sortByEndThenStartTime(todos: Todo[]): Todo[] {
   });
 }
 
+// Visar bara dagens todos (2026-07-05, Zaidas beslut) — en todo räknas som
+// "idag" om dess synlighetsfönster (visibleFrom–expiresAt) övertäcker någon
+// del av dygnet, eller om den saknar schema helt (då är den inte knuten till
+// en viss dag och ska alltid synas).
+function isDueToday(todo: Todo, today: Date): boolean {
+  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
+  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+  return from < dayEnd && until > dayStart;
+}
+
 // Vuxenvyn med delmoment (Sprint 6 S2–S4, ombyggd 2026-07-05 på Zaidas beslut) —
 // trådar sida vid sida istället för staplade sektioner, bollarna hålls medvetet
 // små så flera kategorier får plats i synfältet samtidigt utan att scrolla.
@@ -116,6 +127,12 @@ export function ParentTodoThreadView({
   const dissolveTimersRef = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
   const [editingCategoryId, setEditingCategoryId] = useState<Id | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  // Långt tryck (2s) på kategorinamnet tar bort kategorin (2026-07-05, Zaidas
+  // beslut) — ersätter den tidigare alltid synliga papperskorgs-knappen. Samma
+  // mekanism/suppress-click-mönster som bollarnas egen håll-in-avklarmarkering.
+  const { heldId: heldCategoryId, startHold: startCategoryHold, clearHold: clearCategoryHold } =
+    useHoldToConfirm(HOLD_DURATION_MS);
+  const suppressCategoryClickRef = useRef(false);
 
   useEffect(
     () => () => {
@@ -124,7 +141,8 @@ export function ParentTodoThreadView({
     []
   );
 
-  const pendingTodos = todos.filter((t) => t.status === "pending");
+  const today = new Date();
+  const pendingTodos = todos.filter((t) => t.status === "pending" && isDueToday(t, today));
   const visibleTodos = [
     ...pendingTodos,
     ...[...dissolving.values()].filter((t) => !pendingTodos.some((p) => p.id === t.id))
@@ -197,6 +215,20 @@ export function ParentTodoThreadView({
     setEditingCategoryName("");
   }
 
+  function handleCategoryClick(thread: Thread) {
+    if (suppressCategoryClickRef.current) {
+      suppressCategoryClickRef.current = false;
+      return;
+    }
+    const category = categories.find((c) => c.id === thread.id);
+    if (category) startEditingCategory(category);
+  }
+
+  function handleConfirmDeleteCategory(categoryId: Id) {
+    suppressCategoryClickRef.current = true;
+    onRemoveCategory(categoryId);
+  }
+
   return (
     <div className="todo-thread-view">
       {threads.map((thread) => (
@@ -224,12 +256,16 @@ export function ParentTodoThreadView({
                 {thread.deletable ? (
                   <button
                     type="button"
-                    className="todo-thread__category-button"
-                    title="Döp om kategori"
-                    onClick={() => {
-                      const category = categories.find((c) => c.id === thread.id);
-                      if (category) startEditingCategory(category);
-                    }}
+                    className={
+                      "todo-thread__category-button" +
+                      (heldCategoryId === thread.id ? " todo-thread__category-button--holding" : "")
+                    }
+                    aria-label={`${thread.label}. Klicka för att döpa om. Håll intryckt i två sekunder för att ta bort kategorin.`}
+                    onClick={() => handleCategoryClick(thread)}
+                    onPointerDown={() => startCategoryHold(thread.id, () => handleConfirmDeleteCategory(thread.id))}
+                    onPointerUp={clearCategoryHold}
+                    onPointerLeave={clearCategoryHold}
+                    onPointerCancel={clearCategoryHold}
                   >
                     {thread.label}
                   </button>
@@ -237,16 +273,6 @@ export function ParentTodoThreadView({
                   thread.label
                 )}
               </h3>
-            )}
-            {thread.deletable && (
-              <button
-                type="button"
-                className="icon-button todo-thread__delete-category"
-                title="Ta bort kategori"
-                onClick={() => onRemoveCategory(thread.id)}
-              >
-                <Trash2 size={12} />
-              </button>
             )}
           </div>
 

@@ -109,10 +109,19 @@ export function TodosView({
   return (
     <article className="dashboard">
       <header className="section-header">
-        <div>
-          <p className="eyebrow">Uppgifter</p>
-          <h2>Todos</h2>
-        </div>
+        {viewMode === "thread" ? (
+          <div className="todos-bubble-header">
+            <h2 className="todos-bubble-header__title">Bubbelsysslor ✨</h2>
+            <p className="todos-bubble-header__subtitle">
+              Dagens familjebubblor – pilla på en när den är klar!
+            </p>
+          </div>
+        ) : (
+          <div>
+            <p className="eyebrow">Uppgifter</p>
+            <h2>Todos</h2>
+          </div>
+        )}
       </header>
 
       <div className="dashboard-list">

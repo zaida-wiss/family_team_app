@@ -80,6 +80,47 @@ test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-t
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Läxor")).toHaveCount(0);
 });
 
+test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns eller redan gått ut", async ({ page }) => {
+  const todoToday = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-today", title: "Idag" };
+  const todoNoSchedule = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-no-schedule",
+    title: "Utan schema",
+    visibleFrom: null,
+    expiresAt: null
+  };
+  // Syns först om fem dagar — ska INTE visas idag.
+  const todoFuture = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-future",
+    title: "Om fem dagar",
+    visibleFrom: "2026-07-10T00:00:00.000Z",
+    expiresAt: null
+  };
+  // Gick ut för fyra dagar sedan — ska INTE visas idag.
+  const todoExpired = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-expired",
+    title: "För fyra dagar sedan",
+    visibleFrom: null,
+    expiresAt: "2026-07-01T00:00:00.000Z"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [todoToday, todoNoSchedule, todoFuture, todoExpired] })
+  );
+
+  await openThreadView(page);
+
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await expect(thread.getByText("Idag")).toBeVisible();
+  await expect(thread.getByText("Utan schema")).toBeVisible();
+  await expect(thread.getByText("Om fem dagar")).toHaveCount(0);
+  await expect(thread.getByText("För fyra dagar sedan")).toHaveCount(0);
+});
+
 test("Bollar i tråd: sorterar på sluttid, tidigast sluttid överst", async ({ page }) => {
   const todoLate = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-late", title: "Sent pass", expiresAt: "2026-07-10T18:00:00.000Z" };
   const todoEarly = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-early", title: "Tidigt pass", expiresAt: "2026-07-08T08:00:00.000Z" };
@@ -361,13 +402,20 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
   await expect(thread).toBeVisible();
 
-  await thread.getByRole("button", { name: "Träning" }).click();
+  await thread.getByRole("button", { name: /Träning/ }).click();
   await thread.getByRole("textbox").fill("Gym");
   await page.keyboard.press("Enter");
   await expect.poll(() => renamedTo).toBe("Gym");
-  await expect(page.getByRole("region", { name: "Tråd: Gym" })).toBeVisible();
+  const renamedThread = page.getByRole("region", { name: "Tråd: Gym" });
+  await expect(renamedThread).toBeVisible();
 
-  await page.getByRole("region", { name: "Tråd: Gym" }).getByTitle("Ta bort kategori").click();
+  // Håll intryckt i två sekunder (2026-07-05, Zaidas beslut) tar bort
+  // kategorin — ersätter den tidigare alltid synliga papperskorgs-knappen.
+  // dispatchEvent direkt på elementet istället för page.mouse (som hit-testar
+  // en OS-markörposition mot sidans layout — se motiveringen i övriga
+  // långtryck-test i den här filen).
+  const categoryButton = renamedThread.getByRole("button", { name: /Gym/ });
+  await categoryButton.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
   await expect.poll(() => deletedId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
 });
@@ -399,4 +447,20 @@ test("Bollar i tråd: växlar tillbaka till listan", async ({ page }) => {
   await page.getByRole("button", { name: "Lista" }).click();
   await expect(page.getByRole("region", { name: "Tråd: Träning" })).toHaveCount(0);
   await expect(page.getByText("Styrketräning")).toBeVisible();
+});
+
+test("Bollar i tråd: visar Bubbelsysslor-rubriken bara i tråd-läget, inte i listläget", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos" }).click();
+  await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Todos" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Bollar i tråd" }).click();
+  await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toBeVisible();
+  await expect(page.getByText("Dagens familjebubblor")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Todos" })).toHaveCount(0);
 });
