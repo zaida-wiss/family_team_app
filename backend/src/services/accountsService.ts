@@ -10,6 +10,10 @@ import { AnalyticsEventModel } from "../db/models/AnalyticsEvent.js";
 import { RoleModel } from "../db/models/Role.js";
 import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { TodoModel } from "../db/models/Todo.js";
+import { TodoCategoryModel } from "../db/models/TodoCategory.js";
+import { TimedTaskModel } from "../db/models/TimedTask.js";
+import { TimedAttemptModel } from "../db/models/TimedAttempt.js";
+import { AuditLogModel } from "../db/models/AuditLog.js";
 import { UserModel } from "../db/models/User.js";
 import { validate } from "../utils/validate.js";
 import { AppError } from "../utils/errors.js";
@@ -125,29 +129,63 @@ export async function exportAccount(accountId: string, memberId: string | null |
     throw new AppError(403, "Åtkomst nekad");
   }
 
-  const [account, members, , todos, calendars, shoppingLists, rewards] = await Promise.all([
+  const [
+    account, members, , todos, todoCategories, calendars, shoppingLists,
+    rewards, rewardShop, purchasedRewards, timedTasks, auditLog, invitations
+  ] = await Promise.all([
     AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 }),
     MemberModel.find({ accountId }, { _id: 0, __v: 0 }),
     RoleModel.find({ id: { $in: [] } }, { _id: 0, __v: 0 }), // populated below
     TodoModel.find({ accountId }, { _id: 0, __v: 0 }),
+    TodoCategoryModel.find({ accountId }, { _id: 0, __v: 0 }),
     CalendarModel.find({ accountId }, { _id: 0, __v: 0 }),
     ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 }),
-    RewardModel.find({ accountId }, { _id: 0, __v: 0 })
+    RewardModel.find({ accountId }, { _id: 0, __v: 0 }),
+    RewardShopModel.findOne({ accountId }, { _id: 0, __v: 0 }),
+    PurchasedRewardModel.find({ accountId }, { _id: 0, __v: 0 }),
+    TimedTaskModel.find({ accountId }, { _id: 0, __v: 0 }),
+    AuditLogModel.find({ accountId }, { _id: 0, __v: 0 }),
+    // token exkluderas — en läckt export ska inte kunna användas för att
+    // godkänna en väntande inbjudan å någon annans vägnar.
+    InvitationModel.find({ accountId }, { _id: 0, __v: 0, token: 0 })
   ]);
 
   const roleIds = (members as Array<{ roleId: string }>).map((m) => m.roleId);
   const populatedRoles = await RoleModel.find({ id: { $in: roleIds } }, { _id: 0, __v: 0 });
 
+  const timedTaskIds = (timedTasks as Array<{ id: string }>).map((t) => t.id);
+  const timedAttempts = await TimedAttemptModel.find(
+    { timedTaskId: { $in: timedTaskIds } },
+    { _id: 0, __v: 0 }
+  );
+
+  // Alla konto-medlemmars User-profiler (inte bara den exporterande själv) —
+  // samma princip som members-listan redan är kontobred. Bara ofarliga fält:
+  // aldrig lösenordshash, tokenVersion eller återställningstoken.
+  const userIds = [...new Set((members as Array<{ userId: string | null }>).map((m) => m.userId).filter((id): id is string => id !== null))];
+  const users = await UserModel.find(
+    { id: { $in: userIds } },
+    { _id: 0, id: 1, email: 1, name: 1, createdAt: 1 }
+  );
+
   return {
     exportedAt: new Date().toISOString(),
     gdprNote: "Exporterad enligt GDPR Art. 20 – rätten till dataportabilitet.",
     account,
+    users,
     members,
     roles: populatedRoles,
     todos,
+    todoCategories,
     calendars,
     shoppingLists,
-    rewards
+    rewards,
+    rewardShop,
+    purchasedRewards,
+    timedTasks,
+    timedAttempts,
+    auditLog,
+    invitations
   };
 }
 
