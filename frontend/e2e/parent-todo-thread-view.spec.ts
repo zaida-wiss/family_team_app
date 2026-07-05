@@ -29,6 +29,74 @@ const TODO_NO_SUBTASKS = {
   routineCategory: null
 };
 
+// Sprint 6 S2-visualisering förfinad 2026-07-05 (Zaidas beslut): runda bollar
+// på en tråd som hänger rakt ner från kategorirubriken, sorterade på sluttid
+// (expiresAt) och sedan starttid (visibleFrom). En avklarad boll "går upp i
+// rök" (tonar/skalar bort) istället för att bara försvinna direkt.
+const TODO_LATER_DEADLINE = {
+  id: "todo-3", accountId: "acc-1", title: "Diska sent", createdBy: "mem-1",
+  assignedTo: "mem-1", isShared: false, status: "pending", starValue: 2,
+  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: "2026-07-10T18:00:00.000Z",
+  deletedAt: null, deletedBy: null, routineCategory: null
+};
+
+const TODO_EARLIER_DEADLINE = {
+  id: "todo-4", accountId: "acc-1", title: "Diska tidigt", createdBy: "mem-1",
+  assignedTo: "mem-1", isShared: false, status: "pending", starValue: 2,
+  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: "2026-07-08T08:00:00.000Z",
+  deletedAt: null, deletedBy: null, routineCategory: null
+};
+
+test("Bollar i tråd: sorterar på sluttid, tidigast sluttid överst", async ({ page }) => {
+  await mockAuthAndData(page);
+  // Skickas medvetet i "fel" ordning (sen sluttid först) — testet ska bevisa
+  // att komponenten sorterar om, inte bara återger API-ordningen.
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [TODO_LATER_DEADLINE, TODO_EARLIER_DEADLINE] })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Bollar i tråd" }).click();
+
+  const thread = page.getByRole("region", { name: "Tråd: Övrigt" });
+  const balls = thread.getByRole("button");
+  await expect(balls).toHaveCount(2);
+  await expect(balls.nth(0)).toHaveAccessibleName(/Diska tidigt/);
+  await expect(balls.nth(1)).toHaveAccessibleName(/Diska sent/);
+});
+
+test("Bollar i tråd: långt tryck visar en bortdöende-animation innan bollen faktiskt lämnar tråden", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TODO_NO_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2/complete", (route) => route.fulfill({ json: { ok: true } }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Bollar i tråd" }).click();
+
+  const ball = page.getByRole("button", { name: /Diska/ });
+  await ball.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+
+  // Direkt efter det bekräftade långtrycket ska bollen fortfarande finnas kvar
+  // i DOM:en (inte försvunnit direkt), men markerad som bortdöende och
+  // inaktiverad för vidare interaktion medan animationen spelas upp.
+  await expect(ball).toHaveClass(/todo-thread__ball--dissolving/);
+  await expect(ball).toBeDisabled();
+
+  // Efter bortdöende-animationen (500ms) ska bollen faktiskt vara borta.
+  await expect(ball).toHaveCount(0);
+});
+
 test("Bollar i tråd: grupperar på kategori och visar progression", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO_WITH_SUBTASKS, TODO_NO_SUBTASKS] }));

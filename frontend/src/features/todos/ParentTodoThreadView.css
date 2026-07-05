@@ -4,67 +4,75 @@
   gap: 20px;
 }
 
+.todo-thread {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .todo-thread__category {
-  margin: 0 0 10px;
+  margin: 0 0 4px;
   font-size: 0.95rem;
+  align-self: flex-start;
 }
 
 .todo-thread__empty {
   color: var(--muted-fg);
   font-size: 0.85rem;
   margin: 0;
+  align-self: flex-start;
 }
 
 .todo-thread__list {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 28px;
   list-style: none;
   margin: 0;
-  padding: 0 0 0 20px;
+  padding: 20px 0 6px;
+  width: 100%;
 }
 
-/* Den vertikala "tråden" bollarna hänger i */
+/* Tråden hänger rakt ner från kategorirubriken, genom mitten av varje boll. */
 .todo-thread__list::before {
   content: "";
   position: absolute;
-  left: 8px;
-  top: 4px;
-  bottom: 4px;
+  left: 50%;
+  top: 0;
+  bottom: 0;
   width: 2px;
   background: var(--border);
+  transform: translateX(-50%);
+  z-index: 0;
 }
 
 .todo-thread__item {
   position: relative;
-}
-
-.todo-thread__item::before {
-  content: "";
-  position: absolute;
-  left: -16px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--primary);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .todo-thread__ball {
   position: relative;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: 100%;
-  min-height: 44px;
+  justify-content: center;
+  gap: 2px;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
+  border-radius: 50%;
+  padding: 6px;
   background: var(--card);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   overflow: hidden;
 }
@@ -76,17 +84,23 @@
   opacity: 0.7;
 }
 
+.todo-thread__item-assignee {
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+}
+
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
-   fyllnadsanimation som barnens egen avklarmarkering (ChildTasks.css). */
+   fyllnadsanimation som barnens egen avklarmarkering (ChildTasks.css), fast
+   som en ring runt den runda bollen istället för en bottenlinje. */
 .todo-thread__ball::after {
   content: "";
   position: absolute;
-  inset: auto 0 0;
-  height: 4px;
-  background: var(--primary);
-  transform: scaleX(0);
-  transform-origin: left;
-  will-change: transform;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--primary);
+  opacity: 0;
+  transform: scale(0.85);
+  will-change: transform, opacity;
 }
 
 .todo-thread__ball--holding::after {
@@ -94,22 +108,35 @@
 }
 
 @keyframes todo-thread-hold-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Bollen "går upp i rök" — tonar bort och sväller ut, inte bara transform/
+   opacity (inga paint-tunga filter/blur, per animationsprincipen i CLAUDE.md). */
+.todo-thread__ball--dissolving {
+  cursor: default;
+  animation: todo-thread-dissolve 500ms ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes todo-thread-dissolve {
+  0% { transform: scale(1) translateY(0); opacity: 1; }
+  100% { transform: scale(1.6) translateY(-14px); opacity: 0; }
 }
 
 .todo-thread__ball-title {
   font-weight: 700;
-}
-
-.todo-thread__ball-assignee {
-  color: var(--muted-fg);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .todo-thread__ball-progress {
-  margin-left: auto;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--primary);
 }
