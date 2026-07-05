@@ -173,6 +173,10 @@
   text-align: center;
   cursor: pointer;
   overflow: hidden;
+  /* Snabbtryck (öppnar visa-vyn) och långtryck (håll-in-avklarmarkering,
+     2s) ska inte råka markera titeltexten som vanlig text-selektion. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
