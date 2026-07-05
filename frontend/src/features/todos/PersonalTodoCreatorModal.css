@@ -1,0 +1,46 @@
+.personal-todo-creator-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.personal-todo-creator-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.personal-todo-creator-modal__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.personal-todo-creator-modal__body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .personal-todo-creator-overlay {
+    padding: 16px 12px 100px;
+    align-items: flex-start;
+  }
+}

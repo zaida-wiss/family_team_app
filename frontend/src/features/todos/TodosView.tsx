@@ -1,9 +1,10 @@
 import "./TodosView.css";
-import { CheckCircle2, List, Pencil, PlusCircle, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
+import { CheckCircle2, List, Pencil, Plus, PlusCircle, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
+import { PersonalTodoCreatorModal } from "./PersonalTodoCreatorModal";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { hasPermission } from "../../utils/permissions";
 
@@ -27,7 +28,7 @@ type Props = {
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
   personalCategories: TodoCategory[];
-  onCreateCategory: (name: string) => void;
+  onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
@@ -86,6 +87,7 @@ export function TodosView({
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPersonalCreateModalOpen, setIsPersonalCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "thread">("list");
 
   function startRejecting(todoId: Id) {
@@ -155,7 +157,27 @@ export function TodosView({
             >
               <Waypoints size={16} /> Bollar i tråd
             </button>
+            {viewMode === "thread" && (
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setIsPersonalCreateModalOpen(true)}
+                title="Ny egen uppgift"
+              >
+                <Plus size={16} />
+              </button>
+            )}
           </div>
+        )}
+
+        {isPersonalCreateModalOpen && (
+          <PersonalTodoCreatorModal
+            categories={personalCategories}
+            currentMemberId={currentMember.id}
+            onCreateCategory={onCreateCategory}
+            onCreateTodo={onCreateTodo}
+            onClose={() => setIsPersonalCreateModalOpen(false)}
+          />
         )}
 
         {viewMode === "thread" && canSeeTodos && (
@@ -167,8 +189,6 @@ export function TodosView({
             categories={personalCategories}
             onToggleSubtask={onToggleSubtask}
             onCompleteTodo={onCompleteTodo}
-            onCreateTodo={onCreateTodo}
-            onCreateCategory={onCreateCategory}
             onRenameCategory={onRenameCategory}
             onRemoveCategory={onRemoveCategory}
           />

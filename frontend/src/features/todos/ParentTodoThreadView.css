@@ -5,17 +5,20 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 24px;
+  gap: 14px;
   overflow-x: auto;
   padding-bottom: 8px;
 }
 
+/* Bollarna hålls medvetet små (2026-07-05, Zaidas beslut) — så fler
+   kategori-trådar får plats sida vid sida på skärmen samtidigt, för
+   överblick över allt som ska göras utan att scrolla. */
 .todo-thread {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 0 0 180px;
-  width: 180px;
+  flex: 0 0 100px;
+  width: 100px;
 }
 
 .todo-thread__header {
@@ -28,7 +31,7 @@
 
 .todo-thread__category {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -57,7 +60,7 @@
 
 .todo-thread__category-input {
   width: 100%;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 700;
   padding: 2px 4px;
 }
@@ -74,10 +77,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 16px;
   list-style: none;
   margin: 0;
-  padding: 20px 0 6px;
+  padding: 14px 0 6px;
   width: 100%;
 }
 
@@ -110,13 +113,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: 76px;
-  height: 76px;
+  gap: 1px;
+  /* 48px — minsta tillåtna touch-mål (44px) plus liten marginal, se
+     touch-first-principen i CLAUDE.md. */
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   border: 1px solid var(--border);
   border-radius: 50%;
-  padding: 6px;
+  padding: 3px;
   background: var(--card);
   text-align: center;
   cursor: pointer;
@@ -132,7 +137,11 @@
 
 .todo-thread__item-assignee {
   color: var(--muted-fg);
-  font-size: 0.78rem;
+  font-size: 0.62rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
@@ -173,41 +182,16 @@
 
 .todo-thread__ball-title {
   font-weight: 700;
-  font-size: 0.72rem;
-  line-height: 1.15;
+  font-size: 0.56rem;
+  line-height: 1.05;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .todo-thread__ball-progress {
-  font-size: 0.68rem;
+  font-size: 0.52rem;
   font-weight: 700;
   color: var(--primary);
-}
-
-.todo-thread__add-todo {
-  width: 100%;
-  margin-top: 12px;
-}
-
-.todo-thread__add-todo-button {
-  width: 100%;
-  justify-content: center;
-  gap: 4px;
-  font-size: 0.78rem;
-}
-
-.todo-thread--new-category {
-  justify-content: flex-start;
-  padding-top: 4px;
-}
-
-.todo-thread__new-category-button {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  color: var(--muted-fg);
 }

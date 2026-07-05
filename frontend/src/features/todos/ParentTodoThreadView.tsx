@@ -1,10 +1,9 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
 import { SubtaskChecklistModal } from "./SubtaskChecklistModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
-import { generateId } from "../../utils/uuid";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -21,8 +20,6 @@ type Props = {
   categories: TodoCategory[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
-  onCreateTodo: (todo: Todo) => void;
-  onCreateCategory: (name: string) => void;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
 };
@@ -66,15 +63,16 @@ function sortByEndThenStartTime(todos: Todo[]): Todo[] {
 }
 
 // Vuxenvyn med delmoment (Sprint 6 S2–S4, ombyggd 2026-07-05 på Zaidas beslut) —
-// trådar sida vid sida istället för staplade sektioner, så nästa grej att göra
-// alltid syns utan att scrolla. Längst till vänster: en gemensam tråd med ALLA
-// barns väntande uppgifter (oavsett barn/kategori) — så den vuxna har koll på
-// läget för barnen också. Därefter: den vuxnas egna, personliga kategori-trådar
-// (skapas/döps om/tas bort av den inloggade medlemmen själv, delas inte med
-// resten av kontot) — visar todos tilldelade ELLER skapade av den inloggade
-// vuxna. Helt separat från routineCategory/ROUTINE_CATEGORIES, som fortsatt
-// driver belöningsbutikens kategori-spärr och barnens rutinskapare oförändrat.
-// Kort tryck öppnar en avbockningsbar checklista-modal (bara för todos som har
+// trådar sida vid sida istället för staplade sektioner, bollarna hålls medvetet
+// små så flera kategorier får plats i synfältet samtidigt utan att scrolla.
+// Längst till vänster: en gemensam tråd med ALLA barns väntande uppgifter
+// (oavsett barn/kategori) — så den vuxna har koll på läget för barnen också.
+// Därefter: den vuxnas egna, personliga kategori-trådar (skapas i en separat
+// modal från Todos-panelen, döps om/tas bort direkt i tråd-huvudet här) —
+// visar todos tilldelade ELLER skapade av den inloggade vuxna. Helt separat
+// från routineCategory/ROUTINE_CATEGORIES, som fortsatt driver
+// belöningsbutikens kategori-spärr och barnens rutinskapare oförändrat. Kort
+// tryck öppnar en avbockningsbar checklista-modal (bara för todos som har
 // delmoment). Långt tryck (2s, useHoldToConfirm — samma mekanism som barnens
 // egen avklarmarkering) markerar hela uppgiften klar oavsett delmoment-status —
 // bollen "går upp i rök" (tonas/skalas bort) istället för att bara försvinna direkt.
@@ -86,8 +84,6 @@ export function ParentTodoThreadView({
   categories,
   onToggleSubtask,
   onCompleteTodo,
-  onCreateTodo,
-  onCreateCategory,
   onRenameCategory,
   onRemoveCategory
 }: Props) {
@@ -104,9 +100,6 @@ export function ParentTodoThreadView({
   const dissolveTimersRef = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
   const [editingCategoryId, setEditingCategoryId] = useState<Id | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
-  const [newCategoryName, setNewCategoryName] = useState<string | null>(null);
-  const [addingTodoInThread, setAddingTodoInThread] = useState<Id | null>(null);
-  const [newTodoTitle, setNewTodoTitle] = useState("");
 
   useEffect(
     () => () => {
@@ -187,44 +180,6 @@ export function ParentTodoThreadView({
     setEditingCategoryName("");
   }
 
-  function submitNewCategory() {
-    const trimmed = (newCategoryName ?? "").trim();
-    if (trimmed) onCreateCategory(trimmed);
-    setNewCategoryName(null);
-  }
-
-  function submitNewTodo(categoryId: Id) {
-    const trimmed = newTodoTitle.trim();
-    if (trimmed) {
-      onCreateTodo({
-        id: `todo-${generateId()}`,
-        title: trimmed,
-        createdBy: currentMember.id,
-        assignedTo: currentMember.id,
-        isShared: false,
-        status: "pending",
-        starValue: 0,
-        visual: { type: "lucide-icon", value: "Star" },
-        recurrence: { type: "none" },
-        recurringSourceId: null,
-        occurrenceDate: null,
-        visibleFrom: null,
-        expiresAt: null,
-        completedAt: null,
-        approvedBy: null,
-        approvedAt: null,
-        rejectedBy: null,
-        rejectedAt: null,
-        rejectedReason: null,
-        deletedAt: null,
-        deletedBy: null,
-        personalCategoryId: categoryId
-      });
-    }
-    setAddingTodoInThread(null);
-    setNewTodoTitle("");
-  }
-
   return (
     <div className="todo-thread-view">
       {threads.map((thread) => (
@@ -268,7 +223,7 @@ export function ParentTodoThreadView({
                 title="Ta bort kategori"
                 onClick={() => onRemoveCategory(thread.id)}
               >
-                <Trash2 size={14} />
+                <Trash2 size={12} />
               </button>
             )}
           </div>
@@ -298,6 +253,7 @@ export function ParentTodoThreadView({
                       onPointerUp={clearHold}
                       onPointerLeave={clearHold}
                       onPointerCancel={clearHold}
+                      title={todo.title}
                       aria-label={
                         `${todo.title}, tilldelad ${assignee}` +
                         (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
@@ -317,63 +273,8 @@ export function ParentTodoThreadView({
               })}
             </ul>
           )}
-
-          {thread.deletable && (
-            <div className="todo-thread__add-todo">
-              {addingTodoInThread === thread.id ? (
-                <input
-                  autoFocus
-                  className="todo-thread__category-input"
-                  placeholder="Ny uppgift…"
-                  value={newTodoTitle}
-                  onChange={(e) => setNewTodoTitle(e.target.value)}
-                  onBlur={() => submitNewTodo(thread.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") submitNewTodo(thread.id);
-                    if (e.key === "Escape") {
-                      setAddingTodoInThread(null);
-                      setNewTodoTitle("");
-                    }
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className="icon-button todo-thread__add-todo-button"
-                  onClick={() => setAddingTodoInThread(thread.id)}
-                >
-                  <Plus size={14} /> Lägg till
-                </button>
-              )}
-            </div>
-          )}
         </section>
       ))}
-
-      <section className="todo-thread todo-thread--new-category" aria-label="Ny kategori">
-        {newCategoryName !== null ? (
-          <input
-            autoFocus
-            className="todo-thread__category-input"
-            placeholder="Kategorinamn…"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            onBlur={submitNewCategory}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitNewCategory();
-              if (e.key === "Escape") setNewCategoryName(null);
-            }}
-          />
-        ) : (
-          <button
-            type="button"
-            className="icon-button todo-thread__new-category-button"
-            onClick={() => setNewCategoryName("")}
-          >
-            <Plus size={16} /> Ny kategori
-          </button>
-        )}
-      </section>
 
       {checklistTodo && (
         <SubtaskChecklistModal

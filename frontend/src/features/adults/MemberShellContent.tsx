@@ -55,7 +55,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   personalCategories: TodoCategory[];
-  onCreateCategory: (name: string) => void;
+  onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSoftDeleteTodo: (todoId: string) => void;

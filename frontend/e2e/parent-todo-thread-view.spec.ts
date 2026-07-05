@@ -184,17 +184,91 @@ test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar och visar e
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("Bollar i tråd: skapar en ny personlig kategori", async ({ page }) => {
-  let createdName: string | null = null;
+// Konsoliderat till en enda liten plus-ikon + modal (2026-07-05, Zaidas beslut)
+// — ersätter de tidigare spridda inline-affordanserna (en "Lägg till"-knapp
+// per tråd + en egen "Ny kategori"-kolumn) för ett mer platsbesparande flöde.
+test("Ny egen uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när inga kategorier finns än", async ({ page }) => {
+  let createdCategoryName: string | null = null;
+  let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [] });
     if (route.request().method() === "POST") {
-      const body = route.request().postDataJSON() as { name: string };
-      createdName = body.name;
+      createdCategoryName = (route.request().postDataJSON() as { name: string }).name;
       return route.fulfill({
         status: 201,
-        json: { id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: body.name, createdAt: new Date().toISOString(), deletedAt: null, deletedBy: null }
+        json: { id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: createdCategoryName, createdAt: new Date().toISOString(), deletedAt: null, deletedBy: null }
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await expect(page.getByRole("region", { name: "Tråd: Barn" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Ny egen uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  // Ingen kategori finns än — väljaren ska inte visas, bara ett textfält för
+  // det nya kategorinamnet direkt (platsbesparande, inget onödigt extra val).
+  await expect(dialog.getByRole("combobox")).toHaveCount(0);
+
+  await dialog.getByLabel("Titel").fill("Handla mat");
+  await dialog.getByLabel("Kategorinamn").fill("Hushåll");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdCategoryName).toBe("Hushåll");
+  await expect.poll(() => createdTodo?.title).toBe("Handla mat");
+  expect(createdTodo?.assignedTo).toBe("mem-1");
+  expect(createdTodo?.createdBy).toBe("mem-1");
+  expect(createdTodo?.personalCategoryId).toBe("cat-new");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Tråd: Hushåll" }).getByText("Handla mat")).toBeVisible();
+});
+
+test("Ny egen uppgift-modalen: lägger till en uppgift i en befintlig kategori via väljaren", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: "Ny egen uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Titel").fill("Yoga");
+  // Standardvalet i väljaren är redan den enda befintliga kategorin (Träning).
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Yoga");
+  expect(createdTodo?.personalCategoryId).toBe("cat-1");
+  await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Yoga")).toBeVisible();
+});
+
+test("Ny egen uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när kategorier redan finns", async ({ page }) => {
+  let createdCategoryName: string | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [CATEGORY] });
+    if (route.request().method() === "POST") {
+      createdCategoryName = (route.request().postDataJSON() as { name: string }).name;
+      return route.fulfill({
+        status: 201,
+        json: { id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: createdCategoryName, createdAt: new Date().toISOString(), deletedAt: null, deletedBy: null }
       });
     }
     return route.fulfill({ json: {} });
@@ -202,14 +276,15 @@ test("Bollar i tråd: skapar en ny personlig kategori", async ({ page }) => {
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
 
   await openThreadView(page);
-  await expect(page.getByRole("region", { name: "Tråd: Barn" })).toBeVisible();
+  await page.getByRole("button", { name: "Ny egen uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Titel").fill("Städa garaget");
+  await dialog.getByRole("combobox").selectOption({ label: "+ Ny kategori…" });
+  await dialog.getByLabel("Namn på ny kategori").fill("Hushåll");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
 
-  await page.getByRole("button", { name: "Ny kategori" }).click();
-  await page.getByPlaceholder("Kategorinamn…").fill("Hushåll");
-  await page.keyboard.press("Enter");
-
-  await expect.poll(() => createdName).toBe("Hushåll");
-  await expect(page.getByRole("region", { name: "Tråd: Hushåll" })).toBeVisible();
+  await expect.poll(() => createdCategoryName).toBe("Hushåll");
+  await expect(page.getByRole("region", { name: "Tråd: Hushåll" }).getByText("Städa garaget")).toBeVisible();
 });
 
 test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ page }) => {
@@ -243,31 +318,6 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   await page.getByRole("region", { name: "Tråd: Gym" }).getByTitle("Ta bort kategori").click();
   await expect.poll(() => deletedId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
-});
-
-test("Bollar i tråd: lägger till en ny uppgift direkt i en personlig kategori-tråd", async ({ page }) => {
-  let createdTodo: Record<string, unknown> | null = null;
-  await mockAuthAndData(page);
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
-  await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
-    if (route.request().method() === "POST") {
-      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
-      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
-    }
-    return route.fulfill({ json: {} });
-  });
-
-  await openThreadView(page);
-  const thread = page.getByRole("region", { name: "Tråd: Träning" });
-  await thread.getByRole("button", { name: "Lägg till" }).click();
-  await page.getByPlaceholder("Ny uppgift…").fill("Yoga");
-  await page.keyboard.press("Enter");
-
-  await expect.poll(() => createdTodo?.title).toBe("Yoga");
-  expect(createdTodo?.assignedTo).toBe("mem-1");
-  expect(createdTodo?.createdBy).toBe("mem-1");
-  expect(createdTodo?.personalCategoryId).toBe("cat-1");
 });
 
 test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ page }) => {
