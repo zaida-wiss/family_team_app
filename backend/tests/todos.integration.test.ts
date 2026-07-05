@@ -4,6 +4,12 @@
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI
  * där GitHub Actions startar en MongoDB-service. Hoppas över lokalt om
  * MONGODB_URI saknas eller pekar mot Atlas.
+ *
+ * 2026-07-05 (Zaidas rättelse): bara BARNENS uppgifter ska behöva ett separat
+ * godkännande-steg — en vuxens egen personliga uppgift går direkt till
+ * "approved" vid complete (ingen förälder-över-föräldern att godkänna åt).
+ * Barn-flödet testas mot en riktig medlem med "Barn"-rollen nedan; ett eget
+ * test verifierar auto-godkännandet för en vuxens egen uppgift.
  */
 
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
@@ -27,6 +33,7 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
 
   let accessToken: string;
   let memberId: string;
+  let childId: string;
   let todoId: string;
 
   it("registrerar användare", async () => {
@@ -48,7 +55,26 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
     expect(memberId).toBeDefined();
   });
 
-  it("skapar ett todo", async () => {
+  it("skapar ett barn", async () => {
+    const roles = await request(app)
+      .get("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const childRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>)
+      .find((r) => r.isChildRole)?.id;
+    expect(childRoleId).toBeDefined();
+
+    const res = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Barnet", roleId: childRoleId, isChild: true });
+    expect(res.status).toBe(201);
+    childId = (res.body as { id: string }).id;
+    expect(childId).toBeDefined();
+  });
+
+  it("skapar ett todo åt barnet", async () => {
     todoId = `todo-int-${crypto.randomUUID()}`;
     const res = await request(app)
       .post("/api/todos")
@@ -58,7 +84,7 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
         id: todoId,
         title: "Integrationstask",
         createdBy: memberId,
-        assignedTo: memberId,
+        assignedTo: childId,
         isShared: false,
         status: "pending",
         starValue: 5,
@@ -77,17 +103,17 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
     expect(res.status).toBe(201);
   });
 
-  it("slutför todo:t (status → done)", async () => {
+  it("slutför barnets todo (status → done, väntar på godkännande)", async () => {
     const res = await request(app)
       .patch(`/api/todos/${todoId}/complete`)
       .set("Authorization", `Bearer ${accessToken}`)
-      .set("x-member-id", memberId)
+      .set("x-member-id", childId)
       .send({});
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
   });
 
-  it("godkänner todo:t (status → approved)", async () => {
+  it("godkänner barnets todo (status → approved)", async () => {
     const res = await request(app)
       .patch(`/api/todos/${todoId}/approve`)
       .set("Authorization", `Bearer ${accessToken}`)
@@ -97,14 +123,59 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
     expect(res.body).toEqual({ ok: true });
   });
 
-  it("verifierar att member.approvedStars ökade med 5", async () => {
+  it("verifierar att barnets approvedStars ökade med 5", async () => {
     const res = await request(app)
       .get("/api/members")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
     expect(res.status).toBe(200);
-    const member = (res.body as Array<{ id: string; approvedStars?: number }>)
-      .find((m) => m.id === memberId);
-    expect(member?.approvedStars).toBe(5);
+    const child = (res.body as Array<{ id: string; approvedStars?: number }>)
+      .find((m) => m.id === childId);
+    expect(child?.approvedStars).toBe(5);
+  });
+
+  it("en vuxens egen personliga uppgift går direkt till approved vid complete, inget separat godkännande behövs", async () => {
+    const personalTodoId = `todo-int-personal-${crypto.randomUUID()}`;
+    const create = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: personalTodoId,
+        title: "Handla mat",
+        createdBy: memberId,
+        assignedTo: memberId,
+        isShared: false,
+        status: "pending",
+        starValue: 0,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+      });
+    expect(create.status).toBe(201);
+
+    const complete = await request(app)
+      .patch(`/api/todos/${personalTodoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(complete.status).toBe(200);
+
+    // Ett separat godkännande ska inte behövas — och ska inte längre gå att
+    // göra (todon är redan "approved", inte "done").
+    const approveAttempt = await request(app)
+      .patch(`/api/todos/${personalTodoId}/approve`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(approveAttempt.status).toBe(404);
   });
 });

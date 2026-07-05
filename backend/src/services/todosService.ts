@@ -1,5 +1,6 @@
 import { TodoModel } from "../db/models/Todo.js";
 import { MemberModel } from "../db/models/Member.js";
+import { RoleModel } from "../db/models/Role.js";
 import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { AppError } from "../utils/errors.js";
 import { TodoPatchSchema } from "../../../shared/schemas.js";
@@ -88,13 +89,38 @@ function isDuplicateKeyError(error: unknown) {
   );
 }
 
+// Det är bara BARNENS uppgifter som ska behöva ett separat godkännande-steg
+// (Zaidas rättelse 2026-07-05) — en vuxens egen personliga uppgift har ingen
+// förälder-över-föräldern som ska godkänna den, så den går direkt till
+// "approved" istället för att fastna i "done" och dyka upp i godkänna-listan.
+async function assignedMemberNeedsApproval(assignedTo: string | null): Promise<boolean> {
+  if (!assignedTo) return false;
+  const member = await MemberModel.findOne({ id: assignedTo });
+  if (!member) return false;
+  if (member.isChild) return true;
+  const role = await RoleModel.findOne({ id: member.roleId });
+  return role?.isChildRole === true;
+}
+
 export async function completeTodo(id: string, accountId: string, memberId: string | null) {
   const todo = await TodoModel.findOne({ id, accountId });
   if (!todo || todo.status !== "pending") {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
-  todo.status = "done";
+
   todo.completedAt = new Date().toISOString();
+
+  if (await assignedMemberNeedsApproval(todo.assignedTo)) {
+    todo.status = "done";
+  } else {
+    todo.status = "approved";
+    todo.approvedBy = memberId;
+    todo.approvedAt = todo.completedAt;
+    if (todo.assignedTo && todo.starValue) {
+      await MemberModel.updateOne({ id: todo.assignedTo }, { $inc: { approvedStars: todo.starValue } });
+    }
+  }
+
   await todo.save();
   broadcastTodosChanged();
 }

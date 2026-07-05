@@ -6,6 +6,12 @@
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
+ *
+ * 2026-07-05: todot tilldelas ett BARN (inte den registrerande vuxna) —
+ * sedan Zaidas rättelse samma dag går en vuxens egen uppgift direkt till
+ * "approved" vid complete och kan då inte längre nekas (kräver status "done"),
+ * så neka-flödet (som denna fil också täcker kryptering för) måste testas
+ * mot en riktig barn-tilldelad uppgift.
  */
 
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
@@ -31,6 +37,7 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till�
 
   let accessToken: string;
   let memberId: string;
+  let childId: string;
   let todoId: string;
   let rewardId: string;
 
@@ -53,6 +60,23 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till�
     memberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
   });
 
+  it("skapar ett barn", async () => {
+    const roles = await request(app)
+      .get("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const childRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>)
+      .find((r) => r.isChildRole)?.id;
+
+    const res = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Barnet", roleId: childRoleId, isChild: true });
+    expect(res.status).toBe(201);
+    childId = (res.body as { id: string }).id;
+  });
+
   it("skapar ett todo med en känslig titel", async () => {
     todoId = `todo-crypt-${crypto.randomUUID()}`;
     const res = await request(app)
@@ -63,7 +87,7 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till�
         id: todoId,
         title: SECRET_TODO_TITLE,
         createdBy: memberId,
-        assignedTo: memberId,
+        assignedTo: childId,
         isShared: false,
         status: "pending",
         starValue: 5,
@@ -102,7 +126,7 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till�
     await request(app)
       .patch(`/api/todos/${todoId}/complete`)
       .set("Authorization", `Bearer ${accessToken}`)
-      .set("x-member-id", memberId)
+      .set("x-member-id", childId)
       .send({});
     const reject = await request(app)
       .patch(`/api/todos/${todoId}/reject`)
