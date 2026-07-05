@@ -385,6 +385,9 @@ export type Todo = {
   // routineCategory ovan. Refererar en TodoCategory som ägs av den medlem som
   // skapade/tilldelades todon, inte delad med resten av kontot.
   personalCategoryId?: Id | null;
+  // Fritextanteckningar (2026-07-05), redigerbara via TodoDetailModal. Krypterat
+  // (ADR-0014), samma mönster som title/rejectedReason.
+  notes?: string | null;
 };
 
 export type TodoSubtask = {

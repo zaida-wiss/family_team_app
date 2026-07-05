@@ -234,7 +234,9 @@ export const TodoSchema = z.object({
   rejectedReason: z.string().nullable(),
   deletedAt: z.string().nullable(),
   deletedBy: IdSchema.nullable(),
-  routineCategory: z.string().nullable().optional()
+  routineCategory: z.string().nullable().optional(),
+  personalCategoryId: IdSchema.nullable().optional(),
+  notes: z.string().nullable().optional()
 });
 
 // Fält en klient får patcha på en befintlig todo (titelredigering, rutinredigering via
@@ -254,7 +256,9 @@ export const TodoPatchSchema = TodoSchema.pick({
   occurrenceDate: true,
   visibleFrom: true,
   expiresAt: true,
-  routineCategory: true
+  routineCategory: true,
+  personalCategoryId: true,
+  notes: true
 }).partial().extend({
   status: z.literal("pending").optional(),
   completedAt: z.null().optional(),

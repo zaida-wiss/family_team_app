@@ -31,7 +31,8 @@ export async function getAllTodos(accountId: string) {
   return todos.map((todo) => ({
     ...todo,
     title: decryptField(accountId, todo.title),
-    rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null
+    rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null,
+    notes: decryptNullable(accountId, todo.notes) ?? null
   }));
 }
 
@@ -48,7 +49,8 @@ export async function createTodo(data: unknown) {
   const encrypted = {
     ...input,
     title: encryptField(input.accountId, input.title),
-    rejectedReason: encryptNullable(input.accountId, input.rejectedReason) ?? null
+    rejectedReason: encryptNullable(input.accountId, input.rejectedReason) ?? null,
+    notes: encryptNullable(input.accountId, input.notes) ?? null
   };
 
   const todo = new TodoModel(encrypted);
@@ -105,6 +107,7 @@ export async function updateTodo(id: string, accountId: string, data: unknown) {
   }
 
   if (patch.title !== undefined) patch.title = encryptField(accountId, patch.title);
+  if (patch.notes !== undefined) patch.notes = encryptNullable(accountId, patch.notes) ?? null;
 
   Object.assign(todo, patch);
   await todo.save();

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockAuthAndData } from "./helpers";
+import { mockAuthAndData, MEMBER } from "./helpers";
 
 // Sprint 6 S2-S4 + ombyggnad 2026-07-05 (Zaidas beslut): vuxenvyns tråd-vy visar
 // trådar sida vid sida. Längst till vänster: en gemensam "Barn"-tråd med ALLA
@@ -131,20 +131,40 @@ test("Bollar i tråd: kort tryck öppnar checklista-modal, avbockning anropar AP
   await expect(dialog).toHaveCount(0);
 });
 
-test("Bollar i tråd: en boll utan delmoment går inte att öppna som checklista (men förblir klickbar för långtryck)", async ({ page }) => {
+test("Bollar i tråd: en boll utan delmoment öppnar ändå uppgifts-detalj-modalen (utan checklista-sektion), och kan redigeras", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2", (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
 
   await openThreadView(page);
 
   const ball = page.getByRole("button", { name: /Löpning/ });
   // Bollen är inte disabled — det skulle blockera pointer-eventen som
-  // långtryck-avklarmarkeringen (S4) behöver — men ett kort klick ska inte
-  // öppna en checklista-modal när det inte finns några delmoment att kryssa av.
+  // långtryck-avklarmarkeringen (S4) behöver.
   await expect(ball).toBeEnabled();
   await ball.click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  // Ingen checklista att kryssa av — sektionen ska inte visas alls.
+  await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+
+  await dialog.getByLabel("Anteckningar").fill("Kom ihåg skorna");
+  await dialog.getByRole("button", { name: "Spara" }).click();
+
+  await expect.poll(() => updatedPatch?.notes).toBe("Kom ihåg skorna");
+  await expect(dialog).toHaveCount(0);
 });
 
 test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar och visar en bortdöende-animation innan den lämnar tråden", async ({ page }) => {
@@ -187,7 +207,7 @@ test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar och visar e
 // Konsoliderat till en enda liten plus-ikon + modal (2026-07-05, Zaidas beslut)
 // — ersätter de tidigare spridda inline-affordanserna (en "Lägg till"-knapp
 // per tråd + en egen "Ny kategori"-kolumn) för ett mer platsbesparande flöde.
-test("Ny egen uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när inga kategorier finns än", async ({ page }) => {
+test("Ny uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när inga kategorier finns än", async ({ page }) => {
   let createdCategoryName: string | null = null;
   let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
@@ -214,15 +234,17 @@ test("Ny egen uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när 
   await openThreadView(page);
   await expect(page.getByRole("region", { name: "Tråd: Barn" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Ny egen uppgift" }).click();
+  await page.getByRole("button", { name: "Ny uppgift" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  // Ingen kategori finns än — väljaren ska inte visas, bara ett textfält för
-  // det nya kategorinamnet direkt (platsbesparande, inget onödigt extra val).
-  await expect(dialog.getByRole("combobox")).toHaveCount(0);
+  // Ingen kategori finns än — väljaren visar ändå "Ingen kategori" som förval
+  // (tvingar inte fram en kategori), men "+ Ny kategori…" går att välja direkt.
+  const categorySelect = dialog.getByRole("combobox", { name: "Kategori" });
+  await expect(categorySelect).toHaveValue("__none__");
 
   await dialog.getByLabel("Titel").fill("Handla mat");
-  await dialog.getByLabel("Kategorinamn").fill("Hushåll");
+  await categorySelect.selectOption({ label: "+ Ny kategori…" });
+  await dialog.getByLabel("Namn på ny kategori").fill("Hushåll");
   await dialog.getByRole("button", { name: "Skapa" }).click();
 
   await expect.poll(() => createdCategoryName).toBe("Hushåll");
@@ -234,7 +256,7 @@ test("Ny egen uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när 
   await expect(page.getByRole("region", { name: "Tråd: Hushåll" }).getByText("Handla mat")).toBeVisible();
 });
 
-test("Ny egen uppgift-modalen: lägger till en uppgift i en befintlig kategori via väljaren", async ({ page }) => {
+test("Ny uppgift-modalen: lägger till en uppgift i en befintlig kategori via väljaren", async ({ page }) => {
   let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
@@ -248,7 +270,7 @@ test("Ny egen uppgift-modalen: lägger till en uppgift i en befintlig kategori v
   });
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny egen uppgift" }).click();
+  await page.getByRole("button", { name: "Ny uppgift" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel").fill("Yoga");
   // Standardvalet i väljaren är redan den enda befintliga kategorin (Träning).
@@ -259,7 +281,37 @@ test("Ny egen uppgift-modalen: lägger till en uppgift i en befintlig kategori v
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Yoga")).toBeVisible();
 });
 
-test("Ny egen uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när kategorier redan finns", async ({ page }) => {
+test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för mig själv", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+
+  await dialog.getByLabel("Åt vem?").selectOption({ label: "Lilla Barnet" });
+  await dialog.getByLabel("Titel").fill("Plocka undan leksaker");
+  await dialog.getByLabel("Stjärnor").fill("3");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Plocka undan leksaker");
+  expect(createdTodo?.assignedTo).toBe("mem-child-1");
+  expect(createdTodo?.createdBy).toBe("mem-1");
+  expect(createdTodo?.starValue).toBe(3);
+  await expect(page.getByRole("region", { name: "Tråd: Barn" }).getByText("Plocka undan leksaker")).toBeVisible();
+});
+
+test("Ny uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när kategorier redan finns", async ({ page }) => {
   let createdCategoryName: string | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => {
@@ -276,10 +328,10 @@ test("Ny egen uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny egen uppgift" }).click();
+  await page.getByRole("button", { name: "Ny uppgift" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel").fill("Städa garaget");
-  await dialog.getByRole("combobox").selectOption({ label: "+ Ny kategori…" });
+  await dialog.getByRole("combobox", { name: "Kategori" }).selectOption({ label: "+ Ny kategori…" });
   await dialog.getByLabel("Namn på ny kategori").fill("Hushåll");
   await dialog.getByRole("button", { name: "Skapa" }).click();
 

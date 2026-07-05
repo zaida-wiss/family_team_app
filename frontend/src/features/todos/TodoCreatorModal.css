@@ -14,7 +14,7 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
   width: 100%;
-  max-width: 480px;
+  max-width: 360px;
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -34,9 +34,15 @@
 
 .todo-creator-modal__body {
   padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   overflow-y: auto;
-  flex: 1;
-  min-height: 0;
+}
+
+.todo-creator-modal__body textarea.text-input {
+  resize: vertical;
+  font-family: inherit;
 }
 
 @media (max-width: 480px) {

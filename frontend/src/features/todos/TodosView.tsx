@@ -1,10 +1,9 @@
 import "./TodosView.css";
-import { CheckCircle2, List, Pencil, Plus, PlusCircle, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
+import { CheckCircle2, List, Pencil, Plus, Save, Send, Trash2, Waypoints, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
-import { PersonalTodoCreatorModal } from "./PersonalTodoCreatorModal";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { hasPermission } from "../../utils/permissions";
 
@@ -26,6 +25,7 @@ type Props = {
   onCancelEditingTodo: () => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCompleteTodo: (todoId: Id) => void;
   personalCategories: TodoCategory[];
   onCreateCategory: (name: string) => Promise<TodoCategory>;
@@ -63,6 +63,7 @@ export function TodosView({
   onCancelEditingTodo,
   onCreateTodo,
   onToggleSubtask,
+  onUpdateTodo,
   onCompleteTodo,
   personalCategories,
   onCreateCategory,
@@ -87,7 +88,6 @@ export function TodosView({
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isPersonalCreateModalOpen, setIsPersonalCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "thread">("list");
 
   function startRejecting(todoId: Id) {
@@ -116,27 +116,6 @@ export function TodosView({
       </header>
 
       <div className="dashboard-list">
-        {canCreate && (
-          <button
-            className="primary-button"
-            onClick={() => setIsCreateModalOpen(true)}
-            type="button"
-          >
-            <PlusCircle size={18} />
-            Skapa todo
-          </button>
-        )}
-
-        {isCreateModalOpen && (
-          <TodoCreatorModal
-            currentMember={currentMember}
-            members={members}
-            roles={roles}
-            onCreateTodo={onCreateTodo}
-            onClose={() => setIsCreateModalOpen(false)}
-          />
-        )}
-
         {canSeeTodos && (
           <div className="todo-view-toggle" role="group" aria-label="Visningsläge för todos">
             <button
@@ -157,12 +136,12 @@ export function TodosView({
             >
               <Waypoints size={16} /> Bollar i tråd
             </button>
-            {viewMode === "thread" && (
+            {canCreate && (
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => setIsPersonalCreateModalOpen(true)}
-                title="Ny egen uppgift"
+                onClick={() => setIsCreateModalOpen(true)}
+                title="Ny uppgift"
               >
                 <Plus size={16} />
               </button>
@@ -170,13 +149,15 @@ export function TodosView({
           </div>
         )}
 
-        {isPersonalCreateModalOpen && (
-          <PersonalTodoCreatorModal
+        {isCreateModalOpen && (
+          <TodoCreatorModal
+            currentMember={currentMember}
+            members={members}
+            roles={roles}
             categories={personalCategories}
-            currentMemberId={currentMember.id}
             onCreateCategory={onCreateCategory}
             onCreateTodo={onCreateTodo}
-            onClose={() => setIsPersonalCreateModalOpen(false)}
+            onClose={() => setIsCreateModalOpen(false)}
           />
         )}
 
@@ -188,7 +169,9 @@ export function TodosView({
             currentMember={currentMember}
             categories={personalCategories}
             onToggleSubtask={onToggleSubtask}
+            onUpdateTodo={onUpdateTodo}
             onCompleteTodo={onCompleteTodo}
+            onCreateCategory={onCreateCategory}
             onRenameCategory={onRenameCategory}
             onRemoveCategory={onRemoveCategory}
           />

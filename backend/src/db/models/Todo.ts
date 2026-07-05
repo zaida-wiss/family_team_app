@@ -25,6 +25,8 @@ const todoSchema = new Schema<Todo>({
   rejectedBy: { type: String, default: null },
   rejectedAt: { type: String, default: null },
   rejectedReason: { type: String, default: null },
+  // Fritextanteckningar (2026-07-05) — krypterat som title/rejectedReason (ADR-0014).
+  notes: { type: String, default: null },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null },
   routineCategory: { type: String, default: null },

@@ -55,7 +55,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await mockAuthAndData(page);
   });
 
-  test("Skapa todo öppnas som modal, inte inline-formulär", async ({ page }) => {
+  test("Ny uppgift öppnas som modal, inte inline-formulär", async ({ page }) => {
     await page.route("**/api/todos", (route) =>
       route.fulfill({ json: route.request().method() === "GET" ? [] : {} })
     );
@@ -63,12 +63,12 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Todos" }).click();
 
-    await expect(page.getByRole("dialog", { name: "Skapa todo" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Skapa todo" }).click();
-    await expect(page.getByRole("dialog", { name: "Skapa todo" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Ny uppgift" }).click();
+    await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toBeVisible();
 
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Skapa todo" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toHaveCount(0);
   });
 
   test("Godkänd och utgången uppgift visas inte i aktiva Todos-listan, men syns i Inställningars historik", async ({ page }) => {

@@ -1,4 +1,4 @@
-.subtask-checklist-overlay {
+.todo-detail-overlay {
   position: fixed;
   inset: 0;
   background: color-mix(in oklch, var(--foreground) 28%, transparent);
@@ -9,7 +9,7 @@
   padding: 20px;
 }
 
-.subtask-checklist-modal {
+.todo-detail-modal {
   background: var(--card);
   border-radius: var(--radius-lg);
   box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
@@ -21,7 +21,7 @@
   overflow: hidden;
 }
 
-.subtask-checklist-modal__hdr {
+.todo-detail-modal__hdr {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -32,21 +32,22 @@
   flex-shrink: 0;
 }
 
-.subtask-checklist-modal__assignee {
+.todo-detail-modal__assignee {
   display: block;
   font-weight: 600;
   color: var(--muted-fg);
   font-size: 0.8rem;
 }
 
-.subtask-checklist-modal__progress {
+.todo-detail-modal__progress {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 18px 0;
+  flex-shrink: 0;
 }
 
-.subtask-checklist-modal__progress-bar {
+.todo-detail-modal__progress-bar {
   flex: 1;
   height: 8px;
   border-radius: 999px;
@@ -54,32 +55,29 @@
   overflow: hidden;
 }
 
-.subtask-checklist-modal__progress-fill {
+.todo-detail-modal__progress-fill {
   height: 100%;
   background: var(--primary);
   transition: width 0.2s ease;
 }
 
-.subtask-checklist-modal__progress-label {
+.todo-detail-modal__progress-label {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--muted-fg);
   white-space: nowrap;
 }
 
-.subtask-checklist-modal__list {
+.todo-detail-modal__checklist {
   list-style: none;
   margin: 0;
-  padding: 12px 18px 18px;
+  padding: 8px 18px 4px;
+  flex-shrink: 0;
+  max-height: 160px;
   overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
-.subtask-checklist-modal__item {
+.todo-detail-modal__checklist-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -88,19 +86,34 @@
   cursor: pointer;
 }
 
-.subtask-checklist-modal__item input[type="checkbox"] {
+.todo-detail-modal__checklist-item input[type="checkbox"] {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
 }
 
-.subtask-checklist-modal__item-title--done {
+.todo-detail-modal__checklist-item-title--done {
   text-decoration: line-through;
   color: var(--muted-fg);
 }
 
+.todo-detail-modal__body {
+  padding: 12px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
+
+.todo-detail-modal__body textarea.text-input {
+  resize: vertical;
+  font-family: inherit;
+}
+
 @media (max-width: 480px) {
-  .subtask-checklist-overlay {
+  .todo-detail-overlay {
     padding: 16px 12px 100px;
     align-items: flex-start;
   }

@@ -2,7 +2,7 @@ import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
-import { SubtaskChecklistModal } from "./SubtaskChecklistModal";
+import { TodoDetailModal } from "./TodoDetailModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 
 const HOLD_DURATION_MS = 2000;
@@ -19,7 +19,9 @@ type Props = {
   currentMember: Member;
   categories: TodoCategory[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCompleteTodo: (todoId: Id) => void;
+  onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
 };
@@ -29,7 +31,18 @@ type Thread = {
   label: string;
   todos: Todo[];
   deletable: boolean;
+  accentColor?: string;
 };
+
+// Varje personlig kategori får en egen accentfärg, kopplad till det AKTIVA
+// TEMAT (2026-07-05, Zaidas beslut) — cyklar genom temats åtta redan
+// definierade accentvariabler (--c0…--c7, se themes.css) istället för att
+// hårdkoda egna hex-färger. Byter man tema byts kategorifärgerna med.
+const THEME_ACCENT_COUNT = 8;
+
+function accentColorForIndex(index: number): string {
+  return `var(--c${index % THEME_ACCENT_COUNT})`;
+}
 
 function computeProgress(todo: Todo): number | null {
   if (!todo.subtasks || todo.subtasks.length === 0) return null;
@@ -72,8 +85,9 @@ function sortByEndThenStartTime(todos: Todo[]): Todo[] {
 // visar todos tilldelade ELLER skapade av den inloggade vuxna. Helt separat
 // från routineCategory/ROUTINE_CATEGORIES, som fortsatt driver
 // belöningsbutikens kategori-spärr och barnens rutinskapare oförändrat. Kort
-// tryck öppnar en avbockningsbar checklista-modal (bara för todos som har
-// delmoment). Långt tryck (2s, useHoldToConfirm — samma mekanism som barnens
+// tryck öppnar en uppgifts-detalj-modal (TodoDetailModal) på VILKEN boll som
+// helst — anteckningar, redigera titel/kategori/schema/återkommande, och
+// delmomentens checklista om uppgiften har några. Långt tryck (2s, useHoldToConfirm — samma mekanism som barnens
 // egen avklarmarkering) markerar hela uppgiften klar oavsett delmoment-status —
 // bollen "går upp i rök" (tonas/skalas bort) istället för att bara försvinna direkt.
 export function ParentTodoThreadView({
@@ -83,11 +97,13 @@ export function ParentTodoThreadView({
   currentMember,
   categories,
   onToggleSubtask,
+  onUpdateTodo,
   onCompleteTodo,
+  onCreateCategory,
   onRenameCategory,
   onRemoveCategory
 }: Props) {
-  const [checklistTodoId, setChecklistTodoId] = useState<Id | null>(null);
+  const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
   // Ett lyckat långtryck triggar annars även webbläsarens vanliga click-event
   // vid pointerUp (samma nedtryck+släpp-par som click bygger på) — det skulle
@@ -124,10 +140,11 @@ export function ParentTodoThreadView({
       )
     };
 
-    const categoryThreads: Thread[] = categories.map((category) => ({
+    const categoryThreads: Thread[] = categories.map((category, index) => ({
       id: category.id,
       label: category.name,
       deletable: true,
+      accentColor: accentColorForIndex(index),
       todos: sortByEndThenStartTime(
         visibleTodos.filter(
           (t) =>
@@ -141,14 +158,14 @@ export function ParentTodoThreadView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTodos, members, roles, categories, currentMember.id]);
 
-  const checklistTodo = todos.find((t) => t.id === checklistTodoId) ?? null;
+  const detailTodo = todos.find((t) => t.id === detailTodoId) ?? null;
 
-  function handleBallClick(todo: Todo, hasSubtasks: boolean) {
+  function handleBallClick(todo: Todo) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
     }
-    if (hasSubtasks) setChecklistTodoId(todo.id);
+    setDetailTodoId(todo.id);
   }
 
   function handleConfirmComplete(todo: Todo) {
@@ -183,7 +200,12 @@ export function ParentTodoThreadView({
   return (
     <div className="todo-thread-view">
       {threads.map((thread) => (
-        <section key={thread.id} className="todo-thread" aria-label={`Tråd: ${thread.label}`}>
+        <section
+          key={thread.id}
+          className="todo-thread"
+          aria-label={`Tråd: ${thread.label}`}
+          style={thread.accentColor ? ({ "--thread-accent": thread.accentColor } as React.CSSProperties) : undefined}
+        >
           <div className="todo-thread__header">
             {editingCategoryId === thread.id ? (
               <input
@@ -235,7 +257,6 @@ export function ParentTodoThreadView({
               {thread.todos.map((todo) => {
                 const progress = computeProgress(todo);
                 const assignee = assigneeNameFor(todo, members);
-                const hasSubtasks = (todo.subtasks?.length ?? 0) > 0;
                 const isDissolving = dissolving.has(todo.id);
                 return (
                   <li key={todo.id} className="todo-thread__item">
@@ -243,12 +264,11 @@ export function ParentTodoThreadView({
                       type="button"
                       className={
                         "todo-thread__ball" +
-                        (hasSubtasks ? "" : " todo-thread__ball--no-subtasks") +
                         (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                         (isDissolving ? " todo-thread__ball--dissolving" : "")
                       }
                       disabled={isDissolving}
-                      onClick={() => handleBallClick(todo, hasSubtasks)}
+                      onClick={() => handleBallClick(todo)}
                       onPointerDown={() => startHold(todo.id, () => handleConfirmComplete(todo))}
                       onPointerUp={clearHold}
                       onPointerLeave={clearHold}
@@ -276,12 +296,15 @@ export function ParentTodoThreadView({
         </section>
       ))}
 
-      {checklistTodo && (
-        <SubtaskChecklistModal
-          todo={checklistTodo}
-          assigneeName={assigneeNameFor(checklistTodo, members)}
+      {detailTodo && (
+        <TodoDetailModal
+          todo={detailTodo}
+          assigneeName={assigneeNameFor(detailTodo, members)}
+          categories={categories}
           onToggleSubtask={onToggleSubtask}
-          onClose={() => setChecklistTodoId(null)}
+          onUpdateTodo={onUpdateTodo}
+          onCreateCategory={onCreateCategory}
+          onClose={() => setDetailTodoId(null)}
         />
       )}
     </div>

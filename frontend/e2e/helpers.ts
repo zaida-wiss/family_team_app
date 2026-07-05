@@ -17,7 +17,7 @@ const ROLE = {
     canCreateChildAccounts: true, canManageChildTodos: true,
   },
 };
-const MEMBER = {
+export const MEMBER = {
   id: "mem-1", accountId: "acc-1", userId: "user-1",
   name: "Testförälder", roleId: "role-1", isChild: false,
   avatarUrl: null, color: null, dashboardTheme: null,

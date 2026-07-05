@@ -1,19 +1,125 @@
 import "./TodoCreatorModal.css";
+import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
-import { TodoCreator } from "./TodoCreator";
-import type { Member, Role, Todo } from "@shared/types";
+import { generateId } from "../../utils/uuid";
+import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory } from "@shared/types";
+
+const NEW_CATEGORY_VALUE = "__new__";
+const NO_CATEGORY_VALUE = "__none__";
+const SELF_VALUE = "__self__";
 
 type Props = {
   currentMember: Member;
   members: Member[];
   roles: Role[];
+  categories: TodoCategory[];
+  onCreateCategory: (name: string) => Promise<TodoCategory>;
   onCreateTodo: (todo: Todo) => void;
   onClose: () => void;
 };
 
-export function TodoCreatorModal({ currentMember, members, roles, onCreateTodo, onClose }: Props) {
+function createRecurrence(type: RecurrenceRule["type"]): RecurrenceRule {
+  if (type === "weekly") {
+    return { type: "weekly", daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"] };
+  }
+  if (type === "interval") {
+    return { type: "interval", every: 1, unit: "week" };
+  }
+  return { type: "none" };
+}
+
+function toDateTimeString(value: string): string | null {
+  return value ? new Date(value).toISOString() : null;
+}
+
+// Enad skapa-modal (2026-07-05, Zaidas beslut) — en enda liten plus-ikon
+// ersätter både den gamla "Skapa todo"-knappen (barn-tilldelning) och den
+// tidigare separata personliga skapa-modalen. Ett val högst upp ("Åt vem?")
+// avgör om uppgiften blir personlig (tilldelas den inloggade vuxna, med en
+// egen kategori) eller tilldelas ett barn — schema/återkommande/anteckningar
+// är gemensamma fält oavsett vem uppgiften är för. Platsbesparande: fält som
+// bara är relevanta för ett av valen (stjärnor, kategori-namn) visas bara när
+// de faktiskt behövs.
+export function TodoCreatorModal({
+  currentMember,
+  members,
+  roles,
+  categories,
+  onCreateCategory,
+  onCreateTodo,
+  onClose
+}: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+
+  const assignableChildren = useMemo(() => {
+    const childRoleIds = new Set(roles.filter((r) => r.isChildRole).map((r) => r.id));
+    return members.filter(
+      (m) => m.deletedAt === null && (m.isChild || childRoleIds.has(m.roleId))
+    );
+  }, [members, roles]);
+
+  const [assigneeId, setAssigneeId] = useState<string>(SELF_VALUE);
+  const [title, setTitle] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    categories[0]?.id ?? NO_CATEGORY_VALUE
+  );
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [starValue, setStarValue] = useState(1);
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceRule["type"]>("none");
+  const [visibleFrom, setVisibleFrom] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const isForChild = assigneeId !== SELF_VALUE;
+  const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || submitting) return;
+
+    setSubmitting(true);
+    try {
+      let categoryId: Id | null = selectedCategoryId === NO_CATEGORY_VALUE ? null : selectedCategoryId;
+      if (isCreatingCategory) {
+        const trimmedName = newCategoryName.trim();
+        if (!trimmedName) return;
+        const category = await onCreateCategory(trimmedName);
+        categoryId = category.id;
+      }
+
+      onCreateTodo({
+        id: `todo-${generateId()}`,
+        title: trimmedTitle,
+        createdBy: currentMember.id,
+        assignedTo: isForChild ? assigneeId : currentMember.id,
+        isShared: false,
+        status: "pending",
+        starValue: isForChild ? starValue : 0,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: createRecurrence(recurrenceType),
+        recurringSourceId: null,
+        occurrenceDate: null,
+        visibleFrom: toDateTimeString(visibleFrom),
+        expiresAt: toDateTimeString(expiresAt),
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        rejectedReason: null,
+        deletedAt: null,
+        deletedBy: null,
+        personalCategoryId: categoryId,
+        notes: notes.trim() || null
+      });
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="todo-creator-overlay" onClick={onClose}>
@@ -26,20 +132,132 @@ export function TodoCreatorModal({ currentMember, members, roles, onCreateTodo, 
         role="dialog"
       >
         <div className="todo-creator-modal__hdr">
-          <span id="todo-creator-title">Skapa todo</span>
+          <span id="todo-creator-title">Ny uppgift</span>
           <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button">
             <X size={18} />
           </button>
         </div>
-        <div className="todo-creator-modal__body">
-          <TodoCreator
-            currentMember={currentMember}
-            members={members}
-            roles={roles}
-            onCreateTodo={onCreateTodo}
-            onSubmitted={onClose}
-          />
-        </div>
+        <form className="todo-creator-modal__body" onSubmit={handleSubmit}>
+          {assignableChildren.length > 0 && (
+            <label className="field-label">
+              Åt vem?
+              <select
+                className="text-input"
+                onChange={(e) => setAssigneeId(e.target.value)}
+                value={assigneeId}
+              >
+                <option value={SELF_VALUE}>Mig själv</option>
+                {assignableChildren.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="field-label">
+            Titel
+            <input
+              autoFocus
+              className="text-input"
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Till exempel Handla mat"
+              value={title}
+            />
+          </label>
+
+          <label className="field-label">
+            Kategori
+            <select
+              className="text-input"
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              value={selectedCategoryId}
+            >
+              <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+              <option value={NEW_CATEGORY_VALUE}>+ Ny kategori…</option>
+            </select>
+          </label>
+
+          {isCreatingCategory && (
+            <label className="field-label">
+              Namn på ny kategori
+              <input
+                autoFocus
+                className="text-input"
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Till exempel Träning"
+                value={newCategoryName}
+              />
+            </label>
+          )}
+
+          {isForChild && (
+            <label className="field-label">
+              Stjärnor
+              <input
+                className="text-input"
+                min={0}
+                onChange={(e) => setStarValue(Number(e.target.value))}
+                type="number"
+                value={starValue}
+              />
+            </label>
+          )}
+
+          <label className="field-label">
+            Återkommer
+            <select
+              className="text-input"
+              onChange={(e) => setRecurrenceType(e.target.value as RecurrenceRule["type"])}
+              value={recurrenceType}
+            >
+              <option value="none">Inte återkommande</option>
+              <option value="weekly">Veckovis vardagar</option>
+              <option value="interval">Varje vecka</option>
+            </select>
+          </label>
+
+          <label className="field-label">
+            Syns från
+            <input
+              className="text-input"
+              onChange={(e) => setVisibleFrom(e.target.value)}
+              type="datetime-local"
+              value={visibleFrom}
+            />
+          </label>
+
+          <label className="field-label">
+            Försvinner
+            <input
+              className="text-input"
+              onChange={(e) => setExpiresAt(e.target.value)}
+              type="datetime-local"
+              value={expiresAt}
+            />
+          </label>
+
+          <label className="field-label">
+            Anteckningar
+            <textarea
+              className="text-input"
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Valfritt"
+              rows={2}
+              value={notes}
+            />
+          </label>
+
+          <button className="primary-button" disabled={submitting} type="submit">
+            Skapa
+          </button>
+        </form>
       </div>
     </div>
   );

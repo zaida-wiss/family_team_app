@@ -54,6 +54,7 @@ type Props = {
   onCancelEditingTodo: () => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   personalCategories: TodoCategory[];
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
@@ -107,7 +108,7 @@ export function MemberShellContent({
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   editingTodoId, editingTodoTitle, wishStars, wishTitle,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
-  onCancelEditingTodo, onCreateTodo, onToggleSubtask, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
+  onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
@@ -242,6 +243,7 @@ export function MemberShellContent({
           onCancelEditingTodo={onCancelEditingTodo}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
+          onUpdateTodo={onUpdateTodo}
           onCompleteTodo={(todoId) => {
             // Långtryck i "bollar i tråd" (Sprint 6 S4) markerar en todo klar på ett
             // barns vägnar. Samma etablerade mönster som ChildDashboards onCompleteTodo

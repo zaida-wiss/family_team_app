@@ -1,7 +1,8 @@
 /**
  * Integrationstest (ADR-0014 tillägg, utökning till todos/rewards): verifierar
- * att Todo.title/rejectedReason och Reward.title faktiskt ligger krypterade i
- * MongoDB, och att API:et transparent dekrypterar tillbaka till klartext.
+ * att Todo.title/rejectedReason/notes och Reward.title faktiskt ligger
+ * krypterade i MongoDB, och att API:et transparent dekrypterar tillbaka till
+ * klartext.
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -120,6 +121,27 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till�
       .set("x-member-id", memberId);
     const todo = (res.body as Array<{ id: string; rejectedReason: string | null }>).find((t) => t.id === todoId);
     expect(todo?.rejectedReason).toBe(SECRET_REJECT_REASON);
+  });
+
+  it("sparar anteckningar via PATCH — krypteras i databasen, dekrypteras i API-svaret", async () => {
+    const SECRET_NOTES = "Kom ihåg att fråga om ledighet från jobbet";
+    const patch = await request(app)
+      .patch(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ notes: SECRET_NOTES });
+    expect(patch.status).toBe(200);
+
+    const doc = await TodoModel.findOne({ id: todoId }).lean();
+    expect(doc?.notes).not.toBe(SECRET_NOTES);
+    expect(doc?.notes?.startsWith("v1:")).toBe(true);
+
+    const res = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (res.body as Array<{ id: string; notes: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.notes).toBe(SECRET_NOTES);
   });
 
   it("skapar en belöning med en känslig titel", async () => {
