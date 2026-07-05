@@ -237,6 +237,15 @@ export function MemberShellContent({
           onCancelEditingTodo={onCancelEditingTodo}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
+          onCompleteTodo={(todoId) => {
+            // Långtryck i "bollar i tråd" (Sprint 6 S4) markerar en todo klar på ett
+            // barns vägnar. Samma etablerade mönster som ChildDashboards onCompleteTodo
+            // nedan: skickar med den TILLDELADE medlemmen (inte den inloggade föräldern)
+            // som canCompleteTodo/completeTodo kontrollerar behörighet mot.
+            const todo = todos.find((t) => t.id === todoId);
+            const assignee = todo && members.find((m) => m.id === todo.assignedTo);
+            if (assignee) onCompleteTodo(assignee, todoId, roles);
+          }}
           onSoftDeleteTodo={onSoftDeleteTodo}
           onApproveTodo={onApproveTodo}
           onRejectTodo={onRejectTodo}

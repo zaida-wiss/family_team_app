@@ -1,13 +1,17 @@
 import "./ParentTodoThreadView.css";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ROUTINE_CATEGORIES } from "@shared/types";
 import type { Id, Member, Todo } from "@shared/types";
 import { SubtaskChecklistModal } from "./SubtaskChecklistModal";
+import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+
+const HOLD_DURATION_MS = 2000;
 
 type Props = {
   todos: Todo[];
   members: Member[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onCompleteTodo: (todoId: Id) => void;
 };
 
 const UNCATEGORIZED = "Övrigt";
@@ -32,15 +36,30 @@ function groupByCategory(todos: Todo[]): Map<string, Todo[]> {
   return groups;
 }
 
-// Föräldravyn med delmoment (Sprint 6 S2+S3) — bollar hängande i en tråd per
+// Föräldravyn med delmoment (Sprint 6 S2–S4) — bollar hängande i en tråd per
 // kategori. Tråden töms när uppgifterna görs, tvärtom mot en vanlig lista
 // (se discussions/2026-07-04-designspike-medaljer-och-foraldravy.md). Kort
 // tryck öppnar en avbockningsbar checklista-modal (bara för todos som har
-// delmoment). Långt tryck-avklarmarkering (S4) är inte kopplad än.
-export function ParentTodoThreadView({ todos, members, onToggleSubtask }: Props) {
+// delmoment). Långt tryck (2s, useHoldToConfirm — samma mekanism som barnens
+// egen avklarmarkering, se ADR-diskussion 2026-07-05) markerar hela uppgiften
+// klar oavsett delmoment-status, därför är bollen aldrig disabled längre.
+export function ParentTodoThreadView({ todos, members, onToggleSubtask, onCompleteTodo }: Props) {
   const [checklistTodoId, setChecklistTodoId] = useState<Id | null>(null);
+  const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
+  // Ett lyckat långtryck triggar annars även webbläsarens vanliga click-event
+  // vid pointerUp (samma nedtryck+släpp-par som click bygger på) — det skulle
+  // öppna checklista-modalen direkt efter att uppgiften redan markerats klar.
+  const suppressClickRef = useRef(false);
   const groups = groupByCategory(todos.filter((t) => t.status === "pending"));
   const checklistTodo = todos.find((t) => t.id === checklistTodoId) ?? null;
+
+  function handleBallClick(todo: Todo, hasSubtasks: boolean) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (hasSubtasks) setChecklistTodoId(todo.id);
+  }
 
   return (
     <div className="todo-thread-view">
@@ -61,12 +80,25 @@ export function ParentTodoThreadView({ todos, members, onToggleSubtask }: Props)
                     <li key={todo.id} className="todo-thread__item">
                       <button
                         type="button"
-                        className="todo-thread__ball"
-                        disabled={!hasSubtasks}
-                        onClick={() => setChecklistTodoId(todo.id)}
+                        className={
+                          "todo-thread__ball" +
+                          (hasSubtasks ? "" : " todo-thread__ball--no-subtasks") +
+                          (heldId === todo.id ? " todo-thread__ball--holding" : "")
+                        }
+                        onClick={() => handleBallClick(todo, hasSubtasks)}
+                        onPointerDown={() =>
+                          startHold(todo.id, () => {
+                            suppressClickRef.current = true;
+                            onCompleteTodo(todo.id);
+                          })
+                        }
+                        onPointerUp={clearHold}
+                        onPointerLeave={clearHold}
+                        onPointerCancel={clearHold}
                         aria-label={
                           `${todo.title}, tilldelad ${assignee}` +
-                          (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "")
+                          (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
+                          ". Håll intryckt i två sekunder för att markera hela uppgiften klar."
                         }
                       >
                         <span className="todo-thread__ball-title">{todo.title}</span>

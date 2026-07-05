@@ -25,6 +25,7 @@ type Props = {
   onCancelEditingTodo: () => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onCompleteTodo: (todoId: Id) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveTodo: (todoId: Id) => void;
   onRejectTodo: (todoId: Id, reason: string | null) => void;
@@ -57,6 +58,7 @@ export function TodosView({
   onCancelEditingTodo,
   onCreateTodo,
   onToggleSubtask,
+  onCompleteTodo,
   onSoftDeleteTodo,
   onApproveTodo,
   onRejectTodo,
@@ -149,7 +151,12 @@ export function TodosView({
         )}
 
         {viewMode === "thread" && canSeeTodos && visibleTodos.length > 0 && (
-          <ParentTodoThreadView todos={visibleTodos} members={allMembers} onToggleSubtask={onToggleSubtask} />
+          <ParentTodoThreadView
+            todos={visibleTodos}
+            members={allMembers}
+            onToggleSubtask={onToggleSubtask}
+            onCompleteTodo={onCompleteTodo}
+          />
         )}
 
         {viewMode === "list" && visibleTodos.map((todo) => {

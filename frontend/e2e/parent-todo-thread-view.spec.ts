@@ -76,7 +76,7 @@ test("Bollar i tråd: kort tryck öppnar checklista-modal, avbockning anropar AP
   await expect(dialog).toHaveCount(0);
 });
 
-test("Bollar i tråd: en boll utan delmoment går inte att öppna", async ({ page }) => {
+test("Bollar i tråd: en boll utan delmoment går inte att öppna som checklista (men förblir klickbar för långtryck)", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO_NO_SUBTASKS] }));
 
@@ -85,7 +85,47 @@ test("Bollar i tråd: en boll utan delmoment går inte att öppna", async ({ pag
   await page.getByRole("button", { name: "Bollar i tråd" }).click();
 
   const ball = page.getByRole("button", { name: /Diska/ });
-  await expect(ball).toBeDisabled();
+  // Bollen är inte disabled — det skulle blockera pointer-eventen som
+  // långtryck-avklarmarkeringen (S4) behöver — men ett kort klick ska inte
+  // öppna en checklista-modal när det inte finns några delmoment att kryssa av.
+  await expect(ball).toBeEnabled();
+  await ball.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar, oavsett delmoment-status", async ({ page }) => {
+  let completed = false;
+  await mockAuthAndData(page);
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: completed ? [] : [TODO_NO_SUBTASKS] });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2/complete", (route) => {
+    completed = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Bollar i tråd" }).click();
+
+  const ball = page.getByRole("button", { name: /Diska/ });
+  await expect(ball).toBeVisible();
+  // Simulerar ett 2+ sekunders håll genom att dispatcha pointer-event direkt på
+  // elementet, istället för page.mouse (som hit-testar en OS-markörposition mot
+  // sidans layout — ett litet layoutskifte, t.ex. typsnittsinladdning, mitt i de
+  // 2 sekunderna räcker för att en riktig markörposition ska hamna utanför
+  // knappen och trigga pointerleave i förtid; inte relaterat till själva
+  // håll-logiken, bara ett testmiljö-artefakt).
+  await ball.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await expect.poll(() => completed).toBe(true);
+  // Bollen lämnar tråden direkt (optimistisk uppdatering) — inget pointerup
+  // att dispatcha mot, precis som ett riktigt fingersläpp mot tomma luften.
+  // Webbläsarens vanliga click-event vid pointerUp (samma nedtryck/släpp-par
+  // som click bygger på) ska ha undertryckts — ingen checklista-modal öppnas.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("Bollar i tråd: växlar tillbaka till listan", async ({ page }) => {

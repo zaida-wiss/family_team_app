@@ -53,6 +53,7 @@
 }
 
 .todo-thread__ball {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -65,11 +66,36 @@
   background: var(--card);
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 
-.todo-thread__ball:disabled {
-  cursor: default;
+/* Ingen delmoment att kryssa av i — bollen förblir klickbar (långtryck ska
+   fortfarande fungera), bara den visuella affordansen för "öppna checklista"
+   tonas ned. */
+.todo-thread__ball--no-subtasks {
   opacity: 0.7;
+}
+
+/* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
+   fyllnadsanimation som barnens egen avklarmarkering (ChildTasks.css). */
+.todo-thread__ball::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
+}
+
+.todo-thread__ball--holding::after {
+  animation: todo-thread-hold-progress 2s linear forwards;
+}
+
+@keyframes todo-thread-hold-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .todo-thread__ball-title {
