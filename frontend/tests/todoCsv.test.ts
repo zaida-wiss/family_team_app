@@ -157,6 +157,77 @@ describe("todoCsv", () => {
     });
   });
 
+  // Zaida hittade "Intervall: undefined" + tom "Återkommer" i en riktig export
+  // 2026-07-05 — grundorsaken var ännu omigrerad produktionsdata i den GAMLA
+  // "weekly"-formen (bara daysOfWeek, inget unit/every), se ADR-0015.
+  test("todosToCsv hanterar ännu omigrerad 'weekly'-produktionsdata (ADR-0015) utan 'undefined'", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const legacyTodo = createTodo({
+      id: "t1",
+      title: "Duka undan",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      // any: simulerar en riktig, ännu omigrerad Mongoose-dokument-form som
+      // TS-typen inte längre tillåter men databasen ändå kan innehålla.
+      recurrence: { type: "weekly", daysOfWeek: ["monday", "tuesday"] } as never
+    });
+
+    const csv = todosToCsv([legacyTodo], members, "mem-1");
+    const table = parseCsvText(csv);
+    const row = table[1];
+    const recurrenceCol = table[0].indexOf("Återkommer");
+    const intervalCol = table[0].indexOf("Intervall");
+    const weekdaysCol = table[0].indexOf("Veckodagar");
+
+    expect(row[recurrenceCol]).toBe("Vecka");
+    expect(row[intervalCol]).toBe("1");
+    expect(row[weekdaysCol]).toBe("mån,tis");
+  });
+
+  test("todosToCsv → parseTodoCsv tur och retur bevarar klockslag, inte bara datum", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const original = createTodo({
+      id: "t1",
+      title: "Tandläkarbesök",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      visibleFrom: new Date(2026, 6, 10, 14, 30, 0).toISOString(),
+      expiresAt: new Date(2026, 6, 10, 15, 0, 0).toISOString()
+    });
+
+    const csv = todosToCsv([original], members, "mem-1");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+
+    expect(errors).toEqual([]);
+    const visibleFrom = new Date(rows[0].visibleFrom!);
+    const expiresAt = new Date(rows[0].expiresAt!);
+    expect([visibleFrom.getHours(), visibleFrom.getMinutes()]).toEqual([14, 30]);
+    expect([expiresAt.getHours(), expiresAt.getMinutes()]).toEqual([15, 0]);
+  });
+
+  test("todosToCsv → parseTodoCsv tur och retur bevarar delmoment", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const original = createTodo({
+      id: "t1",
+      title: "Städa rummet",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      subtasks: [
+        { id: "s1", title: "Dammsuga", done: true },
+        { id: "s2", title: "Vika tvätt", done: false }
+      ]
+    });
+
+    const csv = todosToCsv([original], members, "mem-1");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+
+    expect(errors).toEqual([]);
+    expect(rows[0].subtasks.map((s) => s.title)).toEqual(["Dammsuga", "Vika tvätt"]);
+    // Nya id:n genereras vid import, avklarad-status återställs inte — en
+    // import skapar en FRISK uppgift, inte en historik-kopia.
+    expect(rows[0].subtasks.every((s) => s.done === false)).toBe(true);
+  });
+
   test("parseTodoCsv: Vecka utan giltiga veckodagar ger ett fel och behandlas som engångsuppgift", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [

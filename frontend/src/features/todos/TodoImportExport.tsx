@@ -38,6 +38,7 @@ function buildTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | nul
     deletedAt: null,
     deletedBy: null,
     personalCategoryId: categoryId,
+    subtasks: row.subtasks.length > 0 ? row.subtasks : undefined,
     notes: row.notes
   };
 }
