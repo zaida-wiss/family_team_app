@@ -15,11 +15,6 @@
   padding: 8px 10px;
 }
 
-.recurring-todos-settings__emoji {
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-
 .recurring-todos-settings__info {
   display: grid;
   gap: 2px;

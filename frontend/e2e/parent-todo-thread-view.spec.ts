@@ -740,8 +740,11 @@ test("Bollar i tråd: visar Bubbelsysslor-rubriken bara i tråd-läget, inte i l
 
 // Zaida: "Vi har ingen emoji i todon. Det måste vi ha." (2026-07-06) — en
 // emoji-väljare (samma EmojiPickerPortal som belöningsbutiken/Medaljer/barnens
-// rutinskapare redan använder) lades till i både skapa- och redigera-modalen.
-test("Ny uppgift-modalen: väljer en emoji som sedan visas på bollen", async ({ page }) => {
+// rutinskapare redan använder) lades till i skapa- och redigera-modalen, som
+// sätter Todo.visual.value. Samma dag, uppföljning: emojin ska INTE visas i
+// vuxenvyn (bollen/visa-vyn/Inställningar), bara i barnvyn — testet
+// verifierar därför bara att valet sparas i payloaden, inte att den syns här.
+test("Ny uppgift-modalen: väljer en emoji som sparas på uppgiften", async ({ page }) => {
   let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));

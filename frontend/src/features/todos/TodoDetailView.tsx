@@ -77,9 +77,6 @@ export function TodoDetailView({
         role="dialog"
       >
         <div className="todo-detail-modal__hdr">
-          <span className="todo-detail-modal__emoji" aria-hidden="true">
-            {todo.visual.value}
-          </span>
           <div>
             <span id="todo-detail-title">{todo.title}</span>
             <small className="todo-detail-modal__assignee" style={assigneeColor ? { color: assigneeColor } : undefined}>

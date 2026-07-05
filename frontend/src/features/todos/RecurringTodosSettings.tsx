@@ -61,9 +61,6 @@ export function RecurringTodosSettings({
       <ul className="recurring-todos-settings__list">
         {templates.map((todo) => (
           <li className="recurring-todos-settings__row" key={todo.id}>
-            <span className="recurring-todos-settings__emoji" aria-hidden="true">
-              {todo.visual.value}
-            </span>
             <div className="recurring-todos-settings__info">
               <strong>{todo.title}</strong>
               <small>{describeRecurrence(todo)}</small>

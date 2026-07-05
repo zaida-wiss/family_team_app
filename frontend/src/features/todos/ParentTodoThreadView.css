@@ -242,11 +242,6 @@
   100% { transform: scale(1.6) translateY(-14px); opacity: 0; }
 }
 
-.todo-thread__ball-emoji {
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
 .todo-thread__ball-title {
   font-weight: 700;
   font-size: 0.56rem;

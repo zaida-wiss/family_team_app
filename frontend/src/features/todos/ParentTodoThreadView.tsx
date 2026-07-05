@@ -397,7 +397,6 @@ export function ParentTodoThreadView({
                         ". Håll intryckt i två sekunder för att markera hela uppgiften klar."
                       }
                     >
-                      <span className="todo-thread__ball-emoji" aria-hidden="true">{todo.visual.value}</span>
                       <span className="todo-thread__ball-title">{todo.title}</span>
                       {progress !== null && (
                         <span className="todo-thread__ball-progress">{progress}%</span>

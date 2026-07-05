@@ -186,11 +186,6 @@
   white-space: pre-wrap;
 }
 
-.todo-detail-modal__emoji {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-
 .todo-emoji-title-row {
   display: flex;
   align-items: flex-end;
