@@ -5,6 +5,7 @@ import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { downloadCsv, todosToCsv } from "./todoCsv";
+import { isRecurringTemplate } from "./recurringTodos";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -27,7 +28,7 @@ type Props = {
   onRemoveCategory: (id: Id) => void;
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
   onDeleteTodo: (todoId: Id) => void;
-  onAddTodoToCategory: (categoryId: Id) => void;
+  onAddTodoToCategory: (categoryId: Id | null) => void;
 };
 
 type Thread = {
@@ -169,7 +170,16 @@ export function ParentTodoThreadView({
   }, [menuCategoryId]);
 
   const today = new Date();
-  const pendingTodos = todos.filter((t) => t.status === "pending" && isDueToday(t, today));
+  // Återkommande MALLAR (recurringSourceId===null, recurrence!=="none") ska
+  // aldrig visas som en egen boll — bara deras dagliga OCCURRENCE (frusen
+  // kopia, recurrence:"none") gör det. Utan detta blev mallen synlig som en
+  // andra, till synes duplicerad boll bredvid sin egen occurrence (upptäckt
+  // 2026-07-06 av Zaida — mallen saknar riktiga tider (bara ankardatumet),
+  // occurrensen har de faktiska tiderna från timeWindows, vilket gjorde
+  // dubbletten synlig först efter att flera tidsintervall infördes).
+  const pendingTodos = todos.filter(
+    (t) => t.status === "pending" && !isRecurringTemplate(t) && isDueToday(t, today)
+  );
   const visibleTodos = [
     ...pendingTodos,
     ...[...dissolving.values()].filter((t) => !pendingTodos.some((p) => p.id === t.id))
@@ -253,7 +263,7 @@ export function ParentTodoThreadView({
     if (category) startEditingCategory(category);
   }
 
-  function handleAddTodoFromMenu(categoryId: Id) {
+  function handleAddTodoFromMenu(categoryId: Id | null) {
     setMenuCategoryId(null);
     onAddTodoToCategory(categoryId);
   }
@@ -302,43 +312,52 @@ export function ParentTodoThreadView({
               />
             ) : (
               <h3 className="todo-thread__category">
-                {thread.deletable ? (
-                  <button
-                    type="button"
-                    className="todo-thread__category-button"
-                    aria-expanded={menuCategoryId === thread.id}
-                    aria-label={`${thread.label}. Klicka för fler val.`}
-                    onClick={() => handleCategoryClick(thread)}
-                  >
-                    {thread.label}
-                  </button>
-                ) : (
-                  thread.label
-                )}
+                <button
+                  type="button"
+                  className="todo-thread__category-button"
+                  aria-expanded={menuCategoryId === thread.id}
+                  aria-label={`${thread.label}. Klicka för fler val.`}
+                  onClick={() => handleCategoryClick(thread)}
+                >
+                  {thread.label}
+                </button>
               </h3>
             )}
 
+            {/* Den gemensamma Barn-tråden är varken döpbar/raderbar/nedladdningsbar
+                (ingen riktig TodoCategory-post) — bara "Lägg till uppgift" (utan
+                förvald kategori), ersätter 2026-07-06 den borttagna fristående
+                +-knappen som fallback när inga personliga kategorier finns än. */}
             {menuCategoryId === thread.id && (
               <div className="todo-thread__category-menu" ref={menuRef}>
-                <button onClick={() => handleRenameFromMenu(thread.id)} type="button">
-                  Byt namn
-                </button>
-                <button onClick={() => handleAddTodoFromMenu(thread.id)} type="button">
-                  Lägg till uppgift
-                </button>
-                <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
-                  Ladda ner
-                </button>
-                <button onClick={() => handleHideFromMenu(thread.id)} type="button">
-                  Göm
-                </button>
+                {thread.deletable && (
+                  <button onClick={() => handleRenameFromMenu(thread.id)} type="button">
+                    Byt namn
+                  </button>
+                )}
                 <button
-                  className="todo-thread__category-menu-danger"
-                  onClick={() => handleDeleteFromMenu(thread.id)}
+                  onClick={() => handleAddTodoFromMenu(thread.deletable ? thread.id : null)}
                   type="button"
                 >
-                  Radera
+                  Lägg till uppgift
                 </button>
+                {thread.deletable && (
+                  <>
+                    <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
+                      Ladda ner
+                    </button>
+                    <button onClick={() => handleHideFromMenu(thread.id)} type="button">
+                      Göm
+                    </button>
+                    <button
+                      className="todo-thread__category-menu-danger"
+                      onClick={() => handleDeleteFromMenu(thread.id)}
+                      type="button"
+                    >
+                      Radera
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -378,6 +397,7 @@ export function ParentTodoThreadView({
                         ". Håll intryckt i två sekunder för att markera hela uppgiften klar."
                       }
                     >
+                      <span className="todo-thread__ball-emoji" aria-hidden="true">{todo.visual.value}</span>
                       <span className="todo-thread__ball-title">{todo.title}</span>
                       {progress !== null && (
                         <span className="todo-thread__ball-progress">{progress}%</span>

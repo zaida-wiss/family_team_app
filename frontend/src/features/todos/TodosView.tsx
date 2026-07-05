@@ -1,10 +1,11 @@
 import "./TodosView.css";
-import { CheckCircle2, Pencil, Plus, Save, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Save, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
+import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
 
 type Props = {
@@ -78,8 +79,12 @@ export function TodosView({
   onRejectWish,
   onSetWishStars
 }: Props) {
+  // Återkommande MALLAR ska aldrig visas som en egen rad/boll — bara deras
+  // dagliga occurrence gör det (samma exkludering som barnens egen dashboard,
+  // se ChildShellContent.tsx). Utan detta syntes mallen som en till synes
+  // duplicerad todo bredvid sin egen occurrence (Zaida, 2026-07-06).
   const visibleTodos = canSeeTodos
-    ? getVisibleTodos(currentMember, roles, todos).filter((t) => !isTodoHistory(t))
+    ? getVisibleTodos(currentMember, roles, todos).filter((t) => !isTodoHistory(t) && !isRecurringTemplate(t))
     : [];
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
   const suggestedRewards = canApproveTodos
@@ -91,7 +96,7 @@ export function TodosView({
   // förvalt i skapa-modalen, fortsatt ändringsbart där.
   const [createDefaultCategoryId, setCreateDefaultCategoryId] = useState<Id | null>(null);
 
-  function openCreateModalForCategory(categoryId: Id) {
+  function openCreateModalForCategory(categoryId: Id | null) {
     setCreateDefaultCategoryId(categoryId);
     setIsCreateModalOpen(true);
   }
@@ -122,20 +127,10 @@ export function TodosView({
       <div className="dashboard-list">
         {/* Visningsläget (lista/tråd) väljs i Inställningar, ingen egen
             växlare här (2026-07-05, Zaidas beslut) — panelen visar bara
-            kategori/+-knappen/todouppgifterna. */}
-        {canSeeTodos && canCreate && (
-          <div className="todo-view-toggle" role="group" aria-label="Todos-åtgärder">
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => setIsCreateModalOpen(true)}
-              title="Ny uppgift"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-        )}
-
+            kategori/todouppgifterna. Den fristående +-knappen togs bort
+            2026-07-06 (Zaidas beslut) — nya uppgifter/kategorier skapas nu
+            enbart via en trådens egen "Lägg till uppgift"-menyval istället
+            (kategorierna eller den gemensamma Barn-tråden). */}
         {isCreateModalOpen && (
           <TodoCreatorModal
             currentMember={currentMember}

@@ -7,6 +7,7 @@ import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import { TodoHistory } from "../todos/TodoHistory";
 import { TodoImportExport } from "../todos/TodoImportExport";
+import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
@@ -81,6 +82,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onCreateCategory,
     onSetCategoryHidden,
     onCreateTodo,
+    onUpdateTodo,
+    onDeleteTodo,
   } = settingsProps;
 
   const hiddenCategories = personalCategories.filter((c) => c.hidden);
@@ -167,6 +170,18 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           roles={roles}
           todos={todos}
           allMembers={members}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="🔁 Återkommande uppgifter">
+        <RecurringTodosSettings
+          currentMember={currentMember}
+          roles={roles}
+          todos={todos}
+          categories={personalCategories}
+          onUpdateTodo={onUpdateTodo}
+          onCreateCategory={onCreateCategory}
+          onDeleteTodo={onDeleteTodo}
         />
       </SettingsSection>
 
