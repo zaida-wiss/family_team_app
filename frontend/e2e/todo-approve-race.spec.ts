@@ -9,13 +9,26 @@ import { mockAuthAndData } from "./helpers";
 // tills nästa refresh rättar till det igen. Redan diagnostiserad i backloggen (S7),
 // fixad här: todo-id med en pågående mutation skyddas mot att skrivas över av en
 // ANNAN, oberoende refresh tills mutationen själv bekräftat resultatet.
+//
+// 2026-07-05: godkännande flyttat från Todos-panelen till Inställningar → Barn
+// (samtidigt som en vuxens EGNA uppgifter slutade behöva godkännande alls) —
+// todos här tilldelas nu ett riktigt barn, testerna navigerar dit istället.
+// Race-logiken som testas (todosRef.current, pendingMutationIds) är oförändrad —
+// det är bara den synliga ytan som flyttat.
+
+const CHILD_MEMBER = {
+  id: "mem-child-1", accountId: "acc-1", userId: null,
+  name: "Barnet", roleId: "role-child", isChild: true,
+  avatarUrl: null, color: null, dashboardTheme: null,
+  spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null
+};
 
 const DONE_TODO = {
   id: "todo-1",
   accountId: "acc-1",
   title: "Duka bordet",
   createdBy: "mem-1",
-  assignedTo: "mem-1",
+  assignedTo: "mem-child-1",
   isShared: false,
   starValue: 5,
   visual: { type: "lucide-icon", value: "Star" },
@@ -33,10 +46,17 @@ const DONE_TODO = {
   deletedBy: null,
 };
 
+async function openChildApproval(page: import("@playwright/test").Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Barn", exact: true }).click();
+}
+
 test("Godkänd todo förblir godkänd även om en oberoende bakgrundsrefresh svarar med gammal data mitt i", async ({ page }) => {
   let approvedOnServer = false;
 
   await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") {
       return route.fulfill({
@@ -53,10 +73,9 @@ test("Godkänd todo förblir godkänd även om en oberoende bakgrundsrefresh sva
     return route.fulfill({ json: { ok: true } });
   });
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await openChildApproval(page);
 
-  const approvalPanel = page.getByRole("region", { name: "Uppgifter att godkänna" });
+  const approvalPanel = page.getByRole("region", { name: "Barnens godkännanden" });
   await expect(approvalPanel.getByText("Duka bordet")).toBeVisible();
 
   await approvalPanel.getByTitle("Godkänn").click();
@@ -101,6 +120,7 @@ test("Godkänd todo förblir godkänd även om den egna mutationens refresh för
   const getDelays = [0, 400, 50, 50];
 
   await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") {
       const delay = getDelays[Math.min(getCallCount, getDelays.length - 1)];
@@ -119,10 +139,9 @@ test("Godkänd todo förblir godkänd även om den egna mutationens refresh för
     return route.fulfill({ json: { ok: true } });
   });
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await openChildApproval(page);
 
-  const approvalPanel = page.getByRole("region", { name: "Uppgifter att godkänna" });
+  const approvalPanel = page.getByRole("region", { name: "Barnens godkännanden" });
   await expect(approvalPanel.getByText("Duka bordet")).toBeVisible();
 
   await approvalPanel.getByTitle("Godkänn").click();
@@ -172,6 +191,7 @@ test("Godkänner man flera todos i snabb följd sparas ALLA på servern, inte ba
   const approvedIds: string[] = [];
 
   await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") {
       return route.fulfill({
@@ -186,10 +206,9 @@ test("Godkänner man flera todos i snabb följd sparas ALLA på servern, inte ba
     return route.fulfill({ json: { ok: true } });
   });
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await openChildApproval(page);
 
-  const approvalPanel = page.getByRole("region", { name: "Uppgifter att godkänna" });
+  const approvalPanel = page.getByRole("region", { name: "Barnens godkännanden" });
   await expect(approvalPanel.getByText("Ett")).toBeVisible();
 
   for (const title of ["Ett", "Två", "Tre"]) {

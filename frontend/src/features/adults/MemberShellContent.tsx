@@ -61,8 +61,6 @@ type Props = {
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSoftDeleteTodo: (todoId: string) => void;
-  onApproveTodo: (todoId: string) => void;
-  onRejectTodo: (todoId: string, reason: string | null) => void;
   onApproveWish: (rewardId: string) => void;
   onRejectWish: (rewardId: string) => void;
   onSetWishStars: (rewardId: string, stars: number) => void;
@@ -109,7 +107,7 @@ export function MemberShellContent({
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   editingTodoId, editingTodoTitle, wishStars, wishTitle, todoViewMode,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
-  onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo, onApproveTodo, onRejectTodo,
+  onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
@@ -260,8 +258,6 @@ export function MemberShellContent({
           onRenameCategory={onRenameCategory}
           onRemoveCategory={onRemoveCategory}
           onSoftDeleteTodo={onSoftDeleteTodo}
-          onApproveTodo={onApproveTodo}
-          onRejectTodo={onRejectTodo}
           onApproveWish={onApproveWish}
           onRejectWish={onRejectWish}
           onSetWishStars={onSetWishStars}

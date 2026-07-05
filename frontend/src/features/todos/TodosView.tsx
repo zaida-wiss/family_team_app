@@ -1,5 +1,5 @@
 import "./TodosView.css";
-import { CheckCircle2, Pencil, Plus, Save, Send, Trash2, X, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Save, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
@@ -35,8 +35,6 @@ type Props = {
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSoftDeleteTodo: (todoId: Id) => void;
-  onApproveTodo: (todoId: Id) => void;
-  onRejectTodo: (todoId: Id, reason: string | null) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
   onSetWishStars: (rewardId: Id, stars: number) => void;
@@ -74,8 +72,6 @@ export function TodosView({
   onRenameCategory,
   onRemoveCategory,
   onSoftDeleteTodo,
-  onApproveTodo,
-  onRejectTodo,
   onApproveWish,
   onRejectWish,
   onSetWishStars
@@ -84,29 +80,23 @@ export function TodosView({
     ? getVisibleTodos(currentMember, roles, todos).filter((t) => !isTodoHistory(t))
     : [];
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
-  const approvalTodos = canApproveTodos ? todos.filter((t) => t.status === "done") : [];
   const suggestedRewards = canApproveTodos
     ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null)
     : [];
 
-  const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Sätts när "Lägg till uppgift" väljs från en kategoris meny (2026-07-05) —
+  // förvalt i skapa-modalen, fortsatt ändringsbart där.
+  const [createDefaultCategoryId, setCreateDefaultCategoryId] = useState<Id | null>(null);
 
-  function startRejecting(todoId: Id) {
-    setRejectingTodoId(todoId);
-    setRejectionReason("");
+  function openCreateModalForCategory(categoryId: Id) {
+    setCreateDefaultCategoryId(categoryId);
+    setIsCreateModalOpen(true);
   }
 
-  function cancelRejecting() {
-    setRejectingTodoId(null);
-    setRejectionReason("");
-  }
-
-  function confirmRejecting(todoId: Id) {
-    onRejectTodo(todoId, rejectionReason.trim() || null);
-    setRejectingTodoId(null);
-    setRejectionReason("");
+  function closeCreateModal() {
+    setIsCreateModalOpen(false);
+    setCreateDefaultCategoryId(null);
   }
 
   return (
@@ -150,9 +140,10 @@ export function TodosView({
             members={members}
             roles={roles}
             categories={personalCategories}
+            defaultCategoryId={createDefaultCategoryId}
             onCreateCategory={onCreateCategory}
             onCreateTodo={onCreateTodo}
-            onClose={() => setIsCreateModalOpen(false)}
+            onClose={closeCreateModal}
           />
         )}
 
@@ -170,6 +161,7 @@ export function TodosView({
             onRenameCategory={onRenameCategory}
             onRemoveCategory={onRemoveCategory}
             onDeleteTodo={onSoftDeleteTodo}
+            onAddTodoToCategory={openCreateModalForCategory}
           />
         )}
 
@@ -222,55 +214,6 @@ export function TodosView({
 
         {visibleTodos.length === 0 && !canCreate && (
           <p className="empty-note">Inga todos att visa.</p>
-        )}
-
-        {approvalTodos.length > 0 && (
-          <section className="approval-panel" aria-label="Uppgifter att godkänna">
-            <div className="approval-header">
-              <strong>Väntar på godkännande</strong>
-              <span>{approvalTodos.length}</span>
-            </div>
-            {approvalTodos.map((todo) => (
-              <div className="approval-row" key={todo.id}>
-                <div>
-                  <strong>{todo.title}</strong>
-                  <small>
-                    {getAssigneeName(todo, allMembers)} · {todo.starValue} stjärnor om den godkänns
-                  </small>
-                </div>
-                {rejectingTodoId === todo.id ? (
-                  <div className="approval-reject-form">
-                    <input
-                      autoFocus
-                      className="text-input"
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmRejecting(todo.id);
-                        if (e.key === "Escape") cancelRejecting();
-                      }}
-                      placeholder="Varför? (valfritt)"
-                      value={rejectionReason}
-                    />
-                    <button className="icon-button danger" onClick={() => confirmRejecting(todo.id)} title="Skicka" type="button">
-                      <Send size={16} />
-                    </button>
-                    <button className="icon-button" onClick={cancelRejecting} title="Avbryt" type="button">
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="approval-actions">
-                    <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">
-                      <CheckCircle2 size={16} />
-                    </button>
-                    <button className="icon-button danger" onClick={() => startRejecting(todo.id)} title="Neka" type="button">
-                      <XCircle size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </section>
         )}
 
         {suggestedRewards.length > 0 && (
