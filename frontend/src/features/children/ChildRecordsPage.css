@@ -1,0 +1,40 @@
+.child-records-page {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4vw, 18px);
+  padding: clamp(8px, 1.6vw, 20px);
+  overflow-y: auto;
+}
+
+.child-records-page__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.child-records-page__header .section-title {
+  margin: 0;
+  color: var(--on-c4, var(--foreground));
+}
+
+.child-records-page__back {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--on-c4, #fff) 16%, transparent);
+  color: var(--on-c4, var(--foreground));
+  cursor: pointer;
+}
+
+.child-records-page__back:hover {
+  background: color-mix(in srgb, var(--on-c4, #fff) 26%, transparent);
+}
+
+.child-records-page__body {
+  max-width: 560px;
+  width: 100%;
+}

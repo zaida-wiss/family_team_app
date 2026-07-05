@@ -5,11 +5,6 @@
   margin: 8px 0;
 }
 
-.child-timed-tasks__heading {
-  margin: 0;
-  font-size: 1rem;
-}
-
 .child-timed-tasks__list {
   display: flex;
   flex-direction: column;

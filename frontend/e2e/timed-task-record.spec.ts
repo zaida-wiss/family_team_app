@@ -69,6 +69,25 @@ async function mockChildSession(page: Page) {
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 }
 
+// Rekord flyttades 2026-07-06 (Zaidas beslut) från en alltid synlig sektion
+// längst ner i dashboarden till en egen sida — en pokal-knapp till vänster om
+// profilbilden öppnar den, en tillbaka-pil (vänsterpekande) stänger den igen.
+test("Barnets Rekord-vy: pokal-knappen öppnar en egen sida, tillbaka-pilen stänger den", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [TIMED_TASK] }));
+
+  await page.goto("/");
+  await expect(page.getByText("Springa ett varv")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Rekord" }).click();
+  await expect(page.getByRole("heading", { name: "🏆 Rekord" })).toBeVisible();
+  await expect(page.getByText("Springa ett varv")).toBeVisible();
+
+  await page.getByRole("button", { name: "Tillbaka" }).click();
+  await expect(page.getByRole("heading", { name: "🏆 Rekord" })).toHaveCount(0);
+  await expect(page.getByText("Springa ett varv")).toHaveCount(0);
+});
+
 test("Barnets Rekord-vy: start/stopp spelar in ett försök", async ({ page }) => {
   let recordedDurationMs: number | null = null;
   await mockChildSession(page);
@@ -83,6 +102,9 @@ test("Barnets Rekord-vy: start/stopp spelar in ett försök", async ({ page }) =
   });
 
   await page.goto("/");
+  // Rekord flyttades 2026-07-06 (Zaidas beslut) till en egen sida, nås via
+  // pokal-knappen till vänster om profilbilden — inte längre alltid synlig.
+  await page.getByRole("button", { name: "Rekord" }).click();
   await expect(page.getByText("Springa ett varv")).toBeVisible();
   await expect(page.getByText("Inget rekord än")).toBeVisible();
 
@@ -130,6 +152,7 @@ test("Barnets Rekord-vy: begär skärm-wake-lock medan tidtagning pågår, släp
   });
 
   await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
   await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
 
   await expect.poll(() =>
@@ -159,6 +182,7 @@ test("Barnets Rekord-vy: skickar timed-task-started/completed till analytics", a
     return route.fulfill({ json: { ok: true } });
   });
   await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
   await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
   await expect.poll(() => trackedEvents).toContain("timed-task-started");
 
@@ -183,6 +207,7 @@ test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", a
   });
 
   await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
   const medalBtn = page.getByRole("button", { name: "Visa rekorddetaljer för Springa ett varv" });
   await expect(medalBtn).toBeVisible();
 

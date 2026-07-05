@@ -32,8 +32,8 @@ function fmtDate(iso: string): string {
 
 // Start/stopp-tryck, inte håll-in (Zaidas beslut, S9-spiken) — många tidtagna
 // uppgifter (t.ex. "spring ett varv") går inte att göra samtidigt som man håller
-// i skärmen. timerNow kommer från ChildDashboard:s redan tickande 1s-intervall,
-// ingen egen duplicerad interval här.
+// i skärmen. Flyttad till en egen sida (ChildRecordsPage, 2026-07-06, Zaidas
+// beslut) — timerNow kommer därför från den sidans egna tickande 1s-intervall.
 export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }: Props) {
   const [running, setRunning] = useState<{ id: Id; startedAt: number } | null>(null);
   const [flashingId, setFlashingId] = useState<Id | null>(null);
@@ -41,7 +41,9 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
 
   useWakeLock(running !== null);
 
-  if (timedTasks.length === 0) return null;
+  if (timedTasks.length === 0) {
+    return <p className="empty-note">Inga rekorduppgifter ännu.</p>;
+  }
 
   function toggle(task: TimedTaskWithBest) {
     if (running?.id === task.id) {
@@ -61,7 +63,6 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
 
   return (
     <section className="child-timed-tasks" aria-label="Rekord">
-      <h3 className="child-timed-tasks__heading">🏆 Rekord</h3>
       <div className="child-timed-tasks__list">
         {timedTasks.map((task) => {
           const isRunning = running?.id === task.id;

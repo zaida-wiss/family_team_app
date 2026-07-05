@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { ChildDashboard } from "./ChildDashboard";
+import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Reward, Role, Todo, TimedTaskWithBest } from "@shared/types";
 
 type Props = {
@@ -65,6 +67,21 @@ export function ChildShellContent({
       t.deletedAt === null
   );
 
+  // Egen sida för Medaljer/Rekord (2026-07-06, Zaidas beslut) — nås via en
+  // pokal-knapp i ChildHero istället för att alltid ligga synlig i dashboarden.
+  const [view, setView] = useState<"dashboard" | "records">("dashboard");
+
+  if (view === "records") {
+    return (
+      <ChildRecordsPage
+        themeName={currentMember.dashboardTheme ?? "space"}
+        timedTasks={childTimedTasks}
+        onRecordAttempt={onRecordTimedAttempt}
+        onBack={() => setView("dashboard")}
+      />
+    );
+  }
+
   return (
     <ChildDashboard
       child={currentMember}
@@ -74,8 +91,7 @@ export function ChildShellContent({
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}
-      timedTasks={childTimedTasks}
-      onRecordTimedAttempt={onRecordTimedAttempt}
+      onOpenRecords={() => setView("records")}
       wishTitle={wishTitle}
       onSetWishTitle={onSetWishTitle}
       onCreateWish={onCreateWish}

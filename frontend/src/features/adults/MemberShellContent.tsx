@@ -7,6 +7,9 @@ import type { CalendarPanel } from "../calendars/CalendarPanel";
 const ChildDashboard = lazy(() =>
   import("../children/ChildDashboard").then((m) => ({ default: m.ChildDashboard }))
 );
+const ChildRecordsPage = lazy(() =>
+  import("../children/ChildRecordsPage").then((m) => ({ default: m.ChildRecordsPage }))
+);
 const CalendarPage = lazy(() =>
   import("../../pages/CalendarPage").then((m) => ({ default: m.CalendarPage }))
 );
@@ -118,6 +121,9 @@ export function MemberShellContent({
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
+  // Egen sida för Medaljer/Rekord (2026-07-06) — samma pokal-knapp/sida som
+  // barnets egen vy, men här när en vuxen tittar på ett barns dashboard.
+  const [showChildRecords, setShowChildRecords] = useState(false);
 
   const canSeeAllCalendars = hasPermission(currentMember, roles, "canSeeAllCalendar");
   const canSeeOwnCalendars = hasPermission(currentMember, roles, "canSeeOwnCalendar");
@@ -297,6 +303,19 @@ export function MemberShellContent({
         t.deletedAt === null
     );
 
+    if (showChildRecords) {
+      return (
+        <Suspense fallback={null}>
+          <ChildRecordsPage
+            themeName={selectedDashboardMember.dashboardTheme ?? "space"}
+            timedTasks={timedTasks.filter((t) => t.assignedTo === selectedDashboardMember.id)}
+            onRecordAttempt={onRecordTimedAttempt}
+            onBack={() => setShowChildRecords(false)}
+          />
+        </Suspense>
+      );
+    }
+
     return (
       <Suspense fallback={null}>
         <ChildDashboard
@@ -307,8 +326,7 @@ export function MemberShellContent({
           timelineTodos={todos}
           activeChildTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}
-          timedTasks={timedTasks.filter((t) => t.assignedTo === selectedDashboardMember.id)}
-          onRecordTimedAttempt={onRecordTimedAttempt}
+          onOpenRecords={() => setShowChildRecords(true)}
           wishTitle={wishTitle}
           onSetWishTitle={onSetWishTitle}
           onCreateWish={onCreateWish}
