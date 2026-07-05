@@ -10,6 +10,18 @@ const weekdays: Weekday[] = [
   "saturday"
 ];
 
+// Korta svenska veckodagsetiketter — delad mellan visa-vyn (TodoDetailView)
+// och återkommande-väljaren (RecurrencePicker), båda i todos-featuren.
+export const WEEKDAY_SHORT: Record<Weekday, string> = {
+  monday: "mån",
+  tuesday: "tis",
+  wednesday: "ons",
+  thursday: "tors",
+  friday: "fre",
+  saturday: "lör",
+  sunday: "sön"
+};
+
 export function getDueRecurringTodoOccurrences(
   todos: Todo[],
   now = new Date()
@@ -39,6 +51,11 @@ export function getDateKey(date: Date): string {
   ].join("-");
 }
 
+// Förfallologik för den kombinerade enhet+intervall+veckodagar-modellen
+// (ADR-0015). "week" kräver att dagens veckodag finns i daysOfWeek OCH att
+// antalet hela veckor sedan startveckan är delbart med every (t.ex. "var 3:e
+// vecka på måndag+onsdag"). "month" kräver samma dag-i-månaden som startDate.
+// "day" är ett enkelt dagsintervall, som tidigare.
 function isRecurrenceDue(
   recurrence: RecurrenceRule,
   visibleFrom: string | null,
@@ -50,22 +67,42 @@ function isRecurrenceDue(
 
   const startDate = visibleFrom ? new Date(visibleFrom) : now;
 
-  if (startDate.getTime() > now.getTime()) {
+  if (startOfLocalDay(startDate).getTime() > startOfLocalDay(now).getTime()) {
     return false;
   }
 
-  if (recurrence.type === "weekly") {
-    return recurrence.daysOfWeek.includes(weekdays[now.getDay()]);
+  if (recurrence.unit === "week") {
+    if (!recurrence.daysOfWeek?.includes(weekdays[now.getDay()])) {
+      return false;
+    }
+    const weeksElapsed = Math.floor(
+      (startOfWeek(now).getTime() - startOfWeek(startDate).getTime()) / (7 * 86_400_000)
+    );
+    return weeksElapsed >= 0 && weeksElapsed % recurrence.every === 0;
+  }
+
+  if (recurrence.unit === "month") {
+    if (now.getDate() !== startDate.getDate()) {
+      return false;
+    }
+    const monthsElapsed =
+      (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+    return monthsElapsed >= 0 && monthsElapsed % recurrence.every === 0;
   }
 
   const elapsedDays = Math.floor(
     (startOfLocalDay(now).getTime() - startOfLocalDay(startDate).getTime()) /
       86_400_000
   );
-  const intervalDays =
-    recurrence.unit === "week" ? recurrence.every * 7 : recurrence.every;
+  return elapsedDays >= 0 && elapsedDays % recurrence.every === 0;
+}
 
-  return elapsedDays >= 0 && elapsedDays % intervalDays === 0;
+// Måndagsankrad vecka (svensk kalenderkonvention) — getDay(): 0=söndag.
+function startOfWeek(date: Date): Date {
+  const day = startOfLocalDay(date);
+  const diffToMonday = (day.getDay() + 6) % 7;
+  day.setDate(day.getDate() - diffToMonday);
+  return day;
 }
 
 function hasOccurrenceForDate(todos: Todo[], sourceId: string, dateKey: string) {

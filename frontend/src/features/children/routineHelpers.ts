@@ -24,11 +24,9 @@ export function isoToTimeInput(iso: string | null) {
 }
 
 function recurrenceKey(todo: Todo): string {
-  if (todo.recurrence.type === "weekly") {
-    return `weekly:${[...todo.recurrence.daysOfWeek].sort().join(",")}`;
-  }
-  if (todo.recurrence.type === "interval") {
-    return `interval:${todo.recurrence.every}:${todo.recurrence.unit}`;
+  if (todo.recurrence.type === "recurring") {
+    const days = todo.recurrence.daysOfWeek ? [...todo.recurrence.daysOfWeek].sort().join(",") : "";
+    return `recurring:${todo.recurrence.unit}:${todo.recurrence.every}:${days}`;
   }
   return "none";
 }
@@ -53,7 +51,7 @@ export function getStartSortValue(todo: Todo): number {
 }
 
 export function getRoutineDays(todo: Todo): Weekday[] {
-  return todo.recurrence.type === "weekly" ? todo.recurrence.daysOfWeek : [];
+  return todo.recurrence.type === "recurring" ? todo.recurrence.daysOfWeek ?? [] : [];
 }
 
 export type RoutineGroup = {

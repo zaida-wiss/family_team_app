@@ -118,7 +118,7 @@ export function ChildRoutineCreator({
       status: "pending",
       starValue: stars,
       visual: { type: "lucide-icon", value: emoji },
-      recurrence: { type: "weekly", daysOfWeek: days },
+      recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: days },
       recurringSourceId: null,
       occurrenceDate: null,
       visibleFrom: timeToAnchorISO(startTime),
@@ -159,7 +159,7 @@ export function ChildRoutineCreator({
       };
       const patch: Partial<Todo> = {
         ...templateFields,
-        recurrence: { type: "weekly", daysOfWeek: days },
+        recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: days },
       };
       const todayKey = getDateKey(new Date());
 
@@ -212,7 +212,7 @@ export function ChildRoutineCreator({
     setSelectedChildIds(group.children.map((child) => child.id));
     setStartTime(isoToTimeInput(todo.visibleFrom));
     setEndTime(isoToTimeInput(todo.expiresAt));
-    setDays(todo.recurrence.type === "weekly" ? todo.recurrence.daysOfWeek : []);
+    setDays(todo.recurrence.type === "recurring" ? todo.recurrence.daysOfWeek ?? [] : []);
   }
 
   // ── child label ──────────────────────────────────────────────
