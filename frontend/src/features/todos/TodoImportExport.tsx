@@ -24,7 +24,7 @@ function buildTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | nul
     status: "pending",
     starValue: row.starValue,
     visual: { type: "lucide-icon", value: "Star" },
-    recurrence: { type: "none" },
+    recurrence: row.recurrence,
     recurringSourceId: null,
     occurrenceDate: null,
     visibleFrom: row.visibleFrom,

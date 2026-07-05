@@ -25,7 +25,9 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
-  expect(text.split(/\r?\n/)[0]).toBe("Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar");
+  expect(text.split(/\r?\n/)[0]).toBe(
+    "Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Anteckningar"
+  );
 });
 
 test("Todos-import/export: importerar en CSV-fil och skapar todos, inklusive en ny kategori", async ({ page }) => {
@@ -110,5 +112,61 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   const lines = text.split(/\r?\n/);
-  expect(lines[1]).toBe("Min uppgift,Mig själv,,,,,");
+  expect(lines[1]).toBe("Min uppgift,Mig själv,,,,,,,,");
+});
+
+// Zaida upptäckte 2026-07-05 att återkommande uppgifter tystnade helt ur
+// exporten (todosToCsv exkluderade dem) — och bad om att återkommelse
+// (enhet/intervall/veckodagar) ska rundtrippa via kalkylarket.
+test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons) rundtrippar via export och import", async ({ page }) => {
+  const RECURRING_TODO = {
+    id: "todo-1", accountId: "acc-1", title: "Träna", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "week", every: 2, daysOfWeek: ["monday", "wednesday"] },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-06T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null, notes: null
+  };
+  let createdTodo: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [RECURRING_TODO] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Exportera mina uppgifter (CSV)" }).click()
+  ]);
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  const exportedCsv = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
+  // Veckodagar-fältet innehåller själv ett kommatecken ("mån,ons") och blir
+  // därför citerat av CSV-serialiseraren.
+  expect(exportedCsv.split(/\r?\n/)[1]).toBe('Träna,Mig själv,,,2026-07-06,,Vecka,2,"mån,ons",');
+
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(exportedCsv, "utf-8")
+  });
+
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  await expect.poll(() => createdTodo?.title).toBe("Träna");
+  expect(createdTodo?.recurrence).toEqual({
+    type: "recurring",
+    unit: "week",
+    every: 2,
+    daysOfWeek: ["monday", "wednesday"]
+  });
 });

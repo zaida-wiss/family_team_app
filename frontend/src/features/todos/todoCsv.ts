@@ -1,10 +1,12 @@
-import type { Id, Member, Todo, TodoCategory } from "@shared/types";
-import { isoToDateOnly } from "./recurringTodos";
+import type { Id, Member, RecurrenceRule, RecurrenceUnit, Todo, TodoCategory, Weekday } from "@shared/types";
+import { isoToDateOnly, WEEKDAY_SHORT } from "./recurringTodos";
 
-// Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål). Bara
-// engångsuppgifter (ingen återkommelse) — recurrence/veckodagar/intervall är
-// för komplext att uttrycka i en enda kalkylarksrad, och täcks redan av
-// RecurrencePicker i skapa/redigera-modalerna. En rad = en uppgift.
+// Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål, utökad
+// samma dag till att även täcka återkommelse — Zaida upptäckte att
+// återkommande uppgifter tystnade helt ur exporten). En rad = en mall (för
+// återkommande) eller en engångsuppgift. Flera tidsintervall per dag
+// (Todo.timeWindows) täcks INTE — för komplext för en enda kalkylarksrad,
+// måste läggas till separat via RecurrencePicker/TimeWindowsPicker efteråt.
 export const TODO_CSV_HEADERS = [
   "Titel",
   "Tilldelad",
@@ -12,10 +14,27 @@ export const TODO_CSV_HEADERS = [
   "Stjärnor",
   "Startdatum",
   "Slutdatum",
+  "Återkommer",
+  "Intervall",
+  "Veckodagar",
   "Anteckningar"
 ] as const;
 
 const SELF_LABEL = "Mig själv";
+
+const RECURRENCE_UNIT_LABEL: Record<RecurrenceUnit, string> = {
+  day: "Dag",
+  week: "Vecka",
+  month: "Månad"
+};
+const RECURRENCE_LABEL_TO_UNIT = new Map<string, RecurrenceUnit>(
+  Object.entries(RECURRENCE_UNIT_LABEL).map(([unit, label]) => [label.toLowerCase(), unit as RecurrenceUnit])
+);
+const NONE_LABEL = "Nej";
+
+const WEEKDAY_SHORT_TO_KEY = new Map<string, Weekday>(
+  (Object.entries(WEEKDAY_SHORT) as Array<[Weekday, string]>).map(([weekday, short]) => [short.toLowerCase(), weekday])
+);
 
 // Minimal RFC4180-liknande CSV — undviker ett nytt beroende (CLAUDE.md-regel:
 // nya beroenden kräver motivering) för ett format enkelt nog att skriva själv.
@@ -103,16 +122,20 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const example = [
-    "Handla mat",
-    SELF_LABEL,
-    "Hushåll",
-    "",
-    "",
-    "",
-    "Mjölk, bröd, ägg"
-  ];
-  return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(example)].join("\r\n");
+  const oneOff = ["Handla mat", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
+  const recurring = ["Borsta tänderna", SELF_LABEL, "", "", "2026-07-06", "", "Dag", "1", "", ""];
+  return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
+}
+
+function formatRecurrenceForCsv(recurrence: RecurrenceRule): { unit: string; every: string; days: string } {
+  if (recurrence.type === "none") {
+    return { unit: "", every: "", days: "" };
+  }
+  return {
+    unit: RECURRENCE_UNIT_LABEL[recurrence.unit],
+    every: String(recurrence.every),
+    days: recurrence.daysOfWeek ? recurrence.daysOfWeek.map((d) => WEEKDAY_SHORT[d]).join(",") : ""
+  };
 }
 
 function dateOnlyToStartOfDayISO(value: string): string | null {
@@ -132,17 +155,20 @@ export function todosToCsv(
   members: Member[],
   currentMemberId: Id
 ): string {
+  // Återkommande MALLAR exporteras (recurringSourceId === null) — dagens
+  // redan genererade occurrences (recurringSourceId satt) exporteras inte,
+  // de är bara en frusen daglig kopia av mallen, inte något att importera.
   const exportable = todos.filter(
     (t) =>
       t.deletedAt === null &&
       t.recurringSourceId === null &&
-      t.recurrence.type === "none" &&
       (t.assignedTo === currentMemberId || t.createdBy === currentMemberId)
   );
 
   const rows = exportable.map((todo) => {
     const assignee = members.find((m) => m.id === todo.assignedTo);
     const assigneeLabel = todo.assignedTo === currentMemberId ? SELF_LABEL : assignee?.name ?? "";
+    const { unit, every, days } = formatRecurrenceForCsv(todo.recurrence);
     return toCsvRow([
       todo.title,
       assigneeLabel,
@@ -155,6 +181,9 @@ export function todosToCsv(
       // UTC-datumet och kunna hamna en dag fel beroende på tidszon.
       isoToDateOnly(todo.visibleFrom),
       isoToDateOnly(todo.expiresAt),
+      unit,
+      every,
+      days,
       todo.notes ?? ""
     ]);
   });
@@ -170,6 +199,7 @@ export type ParsedTodoRow = {
   starValue: number;
   visibleFrom: string | null;
   expiresAt: string | null;
+  recurrence: RecurrenceRule;
   notes: string | null;
 };
 
@@ -206,6 +236,9 @@ export function parseTodoCsv(
   const starsCol = col("Stjärnor");
   const startCol = col("Startdatum");
   const endCol = col("Slutdatum");
+  const recurrenceCol = col("Återkommer");
+  const intervalCol = col("Intervall");
+  const weekdaysCol = col("Veckodagar");
   const notesCol = col("Anteckningar");
 
   const rows: ParsedTodoRow[] = [];
@@ -264,6 +297,40 @@ export function parseTodoCsv(
       errors.push(`Rad ${rowNumber} ("${title}"): ogiltigt slutdatum "${endRaw}" (vänta ÅÅÅÅ-MM-DD), ignoreras.`);
     }
 
+    const recurrenceLabel = (recurrenceCol !== undefined ? cells[recurrenceCol] : "")?.trim() ?? "";
+    let recurrence: RecurrenceRule = { type: "none" };
+    if (recurrenceLabel && recurrenceLabel.toLowerCase() !== NONE_LABEL.toLowerCase()) {
+      const unit = RECURRENCE_LABEL_TO_UNIT.get(recurrenceLabel.toLowerCase());
+      if (!unit) {
+        errors.push(
+          `Rad ${rowNumber} ("${title}"): okänt värde "${recurrenceLabel}" i Återkommer (vänta Dag/Vecka/Månad/Nej), behandlas som engångsuppgift.`
+        );
+      } else {
+        const intervalRaw = (intervalCol !== undefined ? cells[intervalCol] : "")?.trim() ?? "";
+        const every = intervalRaw ? Math.max(1, parseInt(intervalRaw, 10) || 1) : 1;
+
+        let daysOfWeek: Weekday[] | null = null;
+        if (unit === "week") {
+          const weekdaysRaw = (weekdaysCol !== undefined ? cells[weekdaysCol] : "")?.trim() ?? "";
+          const labels = weekdaysRaw.split(",").map((s) => s.trim()).filter(Boolean);
+          const parsedDays = labels
+            .map((label) => WEEKDAY_SHORT_TO_KEY.get(label.toLowerCase()))
+            .filter((d): d is Weekday => d !== undefined);
+          if (parsedDays.length === 0) {
+            errors.push(
+              `Rad ${rowNumber} ("${title}"): återkommelse "Vecka" kräver minst en giltig veckodag i Veckodagar (mån,tis,ons,tors,fre,lör,sön), behandlas som engångsuppgift.`
+            );
+          } else {
+            daysOfWeek = parsedDays;
+          }
+        }
+
+        if (unit !== "week" || daysOfWeek) {
+          recurrence = { type: "recurring", unit, every, daysOfWeek };
+        }
+      }
+    }
+
     const notes = (notesCol !== undefined ? cells[notesCol] : "")?.trim() || null;
 
     rows.push({
@@ -274,6 +341,7 @@ export function parseTodoCsv(
       starValue: isSelf ? 0 : starValue,
       visibleFrom,
       expiresAt,
+      recurrence,
       notes
     });
   });

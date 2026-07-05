@@ -20,12 +20,14 @@ describe("todoCsv", () => {
     ]);
   });
 
-  test("buildTemplateCsv innehåller alla rubriker plus ett exempel", () => {
+  test("buildTemplateCsv innehåller alla rubriker plus exempel för både engångs- och återkommande uppgift", () => {
     const csv = buildTemplateCsv();
     const table = parseCsvText(csv);
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
-    expect(table.length).toBe(2);
+    expect(table.length).toBe(3);
     expect(table[1][0]).toBe("Handla mat");
+    expect(table[2][0]).toBe("Borsta tänderna");
+    expect(table[2][6]).toBe("Dag");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -117,7 +119,7 @@ describe("todoCsv", () => {
     expect(new Date(rows[0].expiresAt!).getDate()).toBe(11);
   });
 
-  test("todosToCsv exporterar bara egna, icke-återkommande, icke-raderade todos", () => {
+  test("todosToCsv exporterar egna todos INKLUSIVE återkommande mallar, men inte occurrences/andras/raderade", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const todos = [
       createTodo({ id: "t1", title: "Min uppgift", createdBy: "mem-1", assignedTo: "mem-1", starValue: 0, notes: "Anteckning" }),
@@ -130,6 +132,41 @@ describe("todoCsv", () => {
     const csv = todosToCsv(todos, members, "mem-1");
     const table = parseCsvText(csv);
     const titles = table.slice(1).map((row) => row[0]);
-    expect(titles).toEqual(["Min uppgift"]);
+    expect(titles).toEqual(["Min uppgift", "Återkommande mall"]);
+  });
+
+  test("todosToCsv → parseTodoCsv tur och retur bevarar återkommelse (enhet, intervall, veckodagar)", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const original = createTodo({
+      id: "t1",
+      title: "Träna",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      recurrence: { type: "recurring", unit: "week", every: 2, daysOfWeek: ["monday", "wednesday"] }
+    });
+
+    const csv = todosToCsv([original], members, "mem-1");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+
+    expect(errors).toEqual([]);
+    expect(rows[0].recurrence).toEqual({
+      type: "recurring",
+      unit: "week",
+      every: 2,
+      daysOfWeek: ["monday", "wednesday"]
+    });
+  });
+
+  test("parseTodoCsv: Vecka utan giltiga veckodagar ger ett fel och behandlas som engångsuppgift", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Anteckningar",
+      "Träna,Mig själv,,,,,Vecka,1,,"
+    ].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(rows[0].recurrence).toEqual({ type: "none" });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("Veckodagar");
   });
 });
