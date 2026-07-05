@@ -2,6 +2,7 @@ import "./TodoDetailModal.css";
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import type { Id, RecurrenceRule, Todo, TodoCategory } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
@@ -9,9 +10,7 @@ const NO_CATEGORY_VALUE = "__none__";
 
 type Props = {
   todo: Todo;
-  assigneeName: string;
   categories: TodoCategory[];
-  onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onClose: () => void;
@@ -28,41 +27,25 @@ function dateTimeLocalToISO(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
 
-function createRecurrence(type: RecurrenceRule["type"]): RecurrenceRule {
-  if (type === "weekly") {
-    return { type: "weekly", daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"] };
-  }
-  if (type === "interval") {
-    return { type: "interval", every: 1, unit: "week" };
-  }
-  return { type: "none" };
-}
-
-// Uppgifts-detalj-modal (2026-07-05, Zaidas beslut) — ersätter den tidigare
-// separata SubtaskChecklistModal helt. Öppnas vid kort tryck på VILKEN boll
-// som helst (inte bara de med delmoment): anteckningar, redigera titel/
-// kategori/schema/återkommande, och delmomentens avbockningsbara checklista
-// visas också här om uppgiften har några.
-export function TodoDetailModal({
+// Uppgifts-redigera-modal (2026-07-05, Zaidas beslut) — utbruten ur den
+// tidigare kombinerade TodoDetailModal. Öppnas via pennikonen i
+// TodoDetailView, inte direkt vid klick på bollen (samma mönster som
+// kalenderns CalendarEventDetail → CalendarEventModal).
+export function TodoEditModal({
   todo,
-  assigneeName,
   categories,
-  onToggleSubtask,
   onUpdateTodo,
   onCreateCategory,
   onClose
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
-  const subtasks = todo.subtasks ?? [];
-  const doneCount = subtasks.filter((s) => s.done).length;
-  const progress = subtasks.length > 0 ? Math.round((doneCount / subtasks.length) * 100) : 0;
 
   const [title, setTitle] = useState(todo.title);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     todo.personalCategoryId ?? NO_CATEGORY_VALUE
   );
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [recurrenceType, setRecurrenceType] = useState<RecurrenceRule["type"]>(todo.recurrence.type);
+  const [recurrence, setRecurrence] = useState<RecurrenceRule>(todo.recurrence);
   const [visibleFrom, setVisibleFrom] = useState(isoToDateTimeLocal(todo.visibleFrom));
   const [expiresAt, setExpiresAt] = useState(isoToDateTimeLocal(todo.expiresAt));
   const [notes, setNotes] = useState(todo.notes ?? "");
@@ -73,7 +56,7 @@ export function TodoDetailModal({
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || saving) return;
+    if (!trimmedTitle || saving || isRecurrenceIncomplete(recurrence)) return;
 
     setSaving(true);
     try {
@@ -88,7 +71,7 @@ export function TodoDetailModal({
       onUpdateTodo(todo.id, {
         title: trimmedTitle,
         personalCategoryId: categoryId,
-        recurrence: recurrenceType === todo.recurrence.type ? todo.recurrence : createRecurrence(recurrenceType),
+        recurrence,
         visibleFrom: dateTimeLocalToISO(visibleFrom),
         expiresAt: dateTimeLocalToISO(expiresAt),
         notes: notes.trim() || null
@@ -102,7 +85,7 @@ export function TodoDetailModal({
   return (
     <div className="todo-detail-overlay" onClick={onClose}>
       <div
-        aria-labelledby="todo-detail-title"
+        aria-labelledby="todo-edit-title"
         aria-modal="true"
         className="todo-detail-modal"
         onClick={(e) => e.stopPropagation()}
@@ -110,49 +93,11 @@ export function TodoDetailModal({
         role="dialog"
       >
         <div className="todo-detail-modal__hdr">
-          <div>
-            <span id="todo-detail-title">{todo.title}</span>
-            <small className="todo-detail-modal__assignee">{assigneeName}</small>
-          </div>
+          <span id="todo-edit-title">Redigera uppgift</span>
           <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button">
             <X size={18} />
           </button>
         </div>
-
-        {subtasks.length > 0 && (
-          <>
-            <div className="todo-detail-modal__progress">
-              <div
-                className="todo-detail-modal__progress-bar"
-                role="progressbar"
-                aria-valuenow={progress}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Andel avklarade delmoment"
-              >
-                <div className="todo-detail-modal__progress-fill" style={{ width: `${progress}%` }} />
-              </div>
-              <span className="todo-detail-modal__progress-label">{progress}% klart</span>
-            </div>
-
-            <ul className="todo-detail-modal__checklist">
-              {subtasks.map((subtask) => (
-                <li key={subtask.id}>
-                  <label className="todo-detail-modal__checklist-item">
-                    <input
-                      checked={subtask.done}
-                      onChange={() => onToggleSubtask(todo.id, subtask.id)}
-                      type="checkbox"
-                    />
-                    <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
-                      {subtask.title}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
 
         <form className="todo-detail-modal__body" onSubmit={handleSave}>
           <label className="field-label">
@@ -190,18 +135,7 @@ export function TodoDetailModal({
             </label>
           )}
 
-          <label className="field-label">
-            Återkommer
-            <select
-              className="text-input"
-              onChange={(e) => setRecurrenceType(e.target.value as RecurrenceRule["type"])}
-              value={recurrenceType}
-            >
-              <option value="none">Inte återkommande</option>
-              <option value="weekly">Veckovis vardagar</option>
-              <option value="interval">Varje vecka</option>
-            </select>
-          </label>
+          <RecurrencePicker onChange={setRecurrence} value={recurrence} />
 
           <label className="field-label">
             Syns från
@@ -234,7 +168,7 @@ export function TodoDetailModal({
             />
           </label>
 
-          <button className="primary-button" disabled={saving} type="submit">
+          <button className="primary-button" disabled={saving || isRecurrenceIncomplete(recurrence)} type="submit">
             Spara
           </button>
         </form>

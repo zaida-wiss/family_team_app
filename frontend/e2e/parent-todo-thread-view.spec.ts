@@ -140,7 +140,7 @@ test("Bollar i tråd: sorterar på sluttid, tidigast sluttid överst", async ({ 
   await expect(balls.nth(1)).toHaveAccessibleName(/Sent pass/);
 });
 
-test("Bollar i tråd: kort tryck öppnar checklista-modal, avbockning anropar API:et", async ({ page }) => {
+test("Bollar i tråd: kort tryck öppnar visa-vyn med checklista, avbockning anropar API:et", async ({ page }) => {
   let toggledSubtaskId: string | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
@@ -172,7 +172,31 @@ test("Bollar i tråd: kort tryck öppnar checklista-modal, avbockning anropar AP
   await expect(dialog).toHaveCount(0);
 });
 
-test("Bollar i tråd: en boll utan delmoment öppnar ändå uppgifts-detalj-modalen (utan checklista-sektion), och kan redigeras", async ({ page }) => {
+test("Bollar i tråd: kort tryck öppnar en läsbar visa-vy (utan redigerbara fält), inte redigeraformuläret direkt", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
+
+  await openThreadView(page);
+
+  const ball = page.getByRole("button", { name: /Löpning/ });
+  // Bollen är inte disabled — det skulle blockera pointer-eventen som
+  // långtryck-avklarmarkeringen (S4) behöver.
+  await expect(ball).toBeEnabled();
+  await ball.click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Löpning")).toBeVisible();
+  // Läsbar visa-vy (TodoDetailView, 2026-07-05) — inga redigerbara fält och
+  // ingen Spara-knapp här, bara en pennikon till redigeringen.
+  await expect(dialog.getByLabel("Anteckningar")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Spara" })).toHaveCount(0);
+  await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Redigera uppgift" })).toBeVisible();
+});
+
+test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och sparar ändringen", async ({ page }) => {
   let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
@@ -189,23 +213,19 @@ test("Bollar i tråd: en boll utan delmoment öppnar ändå uppgifts-detalj-moda
   });
 
   await openThreadView(page);
+  await page.getByRole("button", { name: /Löpning/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
 
-  const ball = page.getByRole("button", { name: /Löpning/ });
-  // Bollen är inte disabled — det skulle blockera pointer-eventen som
-  // långtryck-avklarmarkeringen (S4) behöver.
-  await expect(ball).toBeEnabled();
-  await ball.click();
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  await expect(editDialog).toBeVisible();
+  // Ingen checklista att kryssa av — sektionen finns bara i visa-vyn.
+  await expect(editDialog.getByRole("checkbox")).toHaveCount(0);
 
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  // Ingen checklista att kryssa av — sektionen ska inte visas alls.
-  await expect(dialog.getByRole("checkbox")).toHaveCount(0);
-
-  await dialog.getByLabel("Anteckningar").fill("Kom ihåg skorna");
-  await dialog.getByRole("button", { name: "Spara" }).click();
+  await editDialog.getByLabel("Anteckningar").fill("Kom ihåg skorna");
+  await editDialog.getByRole("button", { name: "Spara" }).click();
 
   await expect.poll(() => updatedPatch?.notes).toBe("Kom ihåg skorna");
-  await expect(dialog).toHaveCount(0);
+  await expect(editDialog).toHaveCount(0);
 });
 
 test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar och visar en bortdöende-animation innan den lämnar tråden", async ({ page }) => {
@@ -320,6 +340,48 @@ test("Ny uppgift-modalen: lägger till en uppgift i en befintlig kategori via v�
   await expect.poll(() => createdTodo?.title).toBe("Yoga");
   expect(createdTodo?.personalCategoryId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Yoga")).toBeVisible();
+});
+
+// Kombinerad enhet+intervall+veckodagar-modell (2026-07-05, ADR-0015).
+test("Ny uppgift-modalen: skapar en återkommande uppgift med veckodagar och intervall", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Titel").fill("Vattna blommorna");
+
+  await dialog.getByLabel("Återkommer").selectOption("recurring");
+  await dialog.getByLabel("Intervall").fill("3");
+  await dialog.getByLabel("Enhet för återkommelse").selectOption("week");
+  // Veckodagarna startar tomma som default (Zaidas beslut 2026-07-05) —
+  // Skapa-knappen är avstängd tills minst en dag väljs.
+  const createButton = dialog.getByRole("button", { name: "Skapa" });
+  await expect(dialog.getByText("Välj minst en veckodag.")).toBeVisible();
+  await expect(createButton).toBeDisabled();
+
+  await dialog.getByRole("group", { name: "Veckodagar" }).getByRole("button", { name: "mån" }).click();
+  await dialog.getByRole("group", { name: "Veckodagar" }).getByRole("button", { name: "ons" }).click();
+  await expect(createButton).toBeEnabled();
+  await createButton.click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Vattna blommorna");
+  expect(createdTodo?.recurrence).toEqual({
+    type: "recurring",
+    unit: "week",
+    every: 3,
+    daysOfWeek: ["monday", "wednesday"]
+  });
 });
 
 test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för mig själv", async ({ page }) => {
