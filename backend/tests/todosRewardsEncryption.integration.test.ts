@@ -72,7 +72,7 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till√
       .post("/api/members")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
-      .send({ name: "Barnet", roleId: childRoleId, isChild: true });
+      .send({ name: "Barnet", roleId: childRoleId, isChild: true, avatarUrl: null, color: null, dashboardTheme: null });
     expect(res.status).toBe(201);
     childId = (res.body as { id: string }).id;
   });

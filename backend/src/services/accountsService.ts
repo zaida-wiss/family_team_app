@@ -131,35 +131,41 @@ export async function exportAccount(accountId: string, memberId: string | null |
     throw new AppError(403, "Åtkomst nekad");
   }
 
+  // .lean() genomgående (2026-07-05, CI-fynd) — todos/calendars/rewards
+  // dekrypteras nedan via {...doc, title: decryptField(...)}. Spreadar man en
+  // FULL Mongoose-dokumentinstans (inte .lean():ad) ger det ett trasigt/tomt
+  // objekt istället för fälten, eftersom skildhetens paths ligger bakom
+  // getters på prototypen, inte som egna uppräkningsbara properties. Samma
+  // .lean()-mönster som redan används i rewardsService.ts/todosService.ts.
   const [
     account, members, , todos, todoCategories, calendars, shoppingLists,
     rewards, rewardShop, purchasedRewards, timedTasks, auditLog, invitations
   ] = await Promise.all([
-    AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 }),
-    MemberModel.find({ accountId }, { _id: 0, __v: 0 }),
-    RoleModel.find({ id: { $in: [] } }, { _id: 0, __v: 0 }), // populated below
-    TodoModel.find({ accountId }, { _id: 0, __v: 0 }),
-    TodoCategoryModel.find({ accountId }, { _id: 0, __v: 0 }),
-    CalendarModel.find({ accountId }, { _id: 0, __v: 0 }),
-    ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 }),
-    RewardModel.find({ accountId }, { _id: 0, __v: 0 }),
-    RewardShopModel.findOne({ accountId }, { _id: 0, __v: 0 }),
-    PurchasedRewardModel.find({ accountId }, { _id: 0, __v: 0 }),
-    TimedTaskModel.find({ accountId }, { _id: 0, __v: 0 }),
-    AuditLogModel.find({ accountId }, { _id: 0, __v: 0 }),
+    AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 }).lean(),
+    MemberModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    RoleModel.find({ id: { $in: [] } }, { _id: 0, __v: 0 }).lean(), // populated below
+    TodoModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    TodoCategoryModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    CalendarModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    RewardModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    RewardShopModel.findOne({ accountId }, { _id: 0, __v: 0 }).lean(),
+    PurchasedRewardModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    TimedTaskModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
+    AuditLogModel.find({ accountId }, { _id: 0, __v: 0 }).lean(),
     // token exkluderas — en läckt export ska inte kunna användas för att
     // godkänna en väntande inbjudan å någon annans vägnar.
-    InvitationModel.find({ accountId }, { _id: 0, __v: 0, token: 0 })
+    InvitationModel.find({ accountId }, { _id: 0, __v: 0, token: 0 }).lean()
   ]);
 
   const roleIds = (members as Array<{ roleId: string }>).map((m) => m.roleId);
-  const populatedRoles = await RoleModel.find({ id: { $in: roleIds } }, { _id: 0, __v: 0 });
+  const populatedRoles = await RoleModel.find({ id: { $in: roleIds } }, { _id: 0, __v: 0 }).lean();
 
   const timedTaskIds = (timedTasks as Array<{ id: string }>).map((t) => t.id);
   const timedAttempts = await TimedAttemptModel.find(
     { timedTaskId: { $in: timedTaskIds } },
     { _id: 0, __v: 0 }
-  );
+  ).lean();
 
   // Alla konto-medlemmars User-profiler (inte bara den exporterande själv) —
   // samma princip som members-listan redan är kontobred. Bara ofarliga fält:
@@ -168,7 +174,7 @@ export async function exportAccount(accountId: string, memberId: string | null |
   const users = await UserModel.find(
     { id: { $in: userIds } },
     { _id: 0, id: 1, email: 1, name: 1, createdAt: 1 }
-  );
+  ).lean();
 
   // Fält-krypterade värden (ADR-0014) dekrypteras innan exporten skickas —
   // annars innehåller GDPR-exporten bara oläslig chiffertext (v1:<iv>:<tag>:…)
