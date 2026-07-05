@@ -77,6 +77,9 @@ export function TodoDetailView({
         role="dialog"
       >
         <div className="todo-detail-modal__hdr">
+          <span className="todo-detail-modal__emoji" aria-hidden="true">
+            {todo.visual.value}
+          </span>
           <div>
             <span id="todo-detail-title">{todo.title}</span>
             <small className="todo-detail-modal__assignee" style={assigneeColor ? { color: assigneeColor } : undefined}>
@@ -88,40 +91,45 @@ export function TodoDetailView({
           </button>
         </div>
 
-        {subtasks.length > 0 && (
-          <>
-            <div className="todo-detail-modal__progress">
-              <div
-                className="todo-detail-modal__progress-bar"
-                role="progressbar"
-                aria-valuenow={progress}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Andel avklarade delmoment"
-              >
-                <div className="todo-detail-modal__progress-fill" style={{ width: `${progress}%` }} />
+        <div className="todo-detail-modal__section">
+          <h4 className="todo-detail-modal__section-title">Delmoment</h4>
+          {subtasks.length > 0 ? (
+            <>
+              <div className="todo-detail-modal__progress">
+                <div
+                  className="todo-detail-modal__progress-bar"
+                  role="progressbar"
+                  aria-valuenow={progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Andel avklarade delmoment"
+                >
+                  <div className="todo-detail-modal__progress-fill" style={{ width: `${progress}%` }} />
+                </div>
+                <span className="todo-detail-modal__progress-label">{progress}% klart</span>
               </div>
-              <span className="todo-detail-modal__progress-label">{progress}% klart</span>
-            </div>
 
-            <ul className="todo-detail-modal__checklist">
-              {subtasks.map((subtask) => (
-                <li key={subtask.id}>
-                  <label className="todo-detail-modal__checklist-item">
-                    <input
-                      checked={subtask.done}
-                      onChange={() => onToggleSubtask(todo.id, subtask.id)}
-                      type="checkbox"
-                    />
-                    <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
-                      {subtask.title}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+              <ul className="todo-detail-modal__checklist">
+                {subtasks.map((subtask) => (
+                  <li key={subtask.id}>
+                    <label className="todo-detail-modal__checklist-item">
+                      <input
+                        checked={subtask.done}
+                        onChange={() => onToggleSubtask(todo.id, subtask.id)}
+                        type="checkbox"
+                      />
+                      <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
+                        {subtask.title}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="todo-detail-modal__empty-hint">Inga delmoment ännu.</p>
+          )}
+        </div>
 
         <div className="todo-detail-modal__body todo-detail-modal__body--view">
           {(categoryName || schedule || recurrence) && (
@@ -135,7 +143,14 @@ export function TodoDetailView({
             </p>
           )}
 
-          {todo.notes && <p className="todo-detail-modal__notes">{todo.notes}</p>}
+          <div className="todo-detail-modal__section">
+            <h4 className="todo-detail-modal__section-title">Anteckningar</h4>
+            {todo.notes ? (
+              <p className="todo-detail-modal__notes">{todo.notes}</p>
+            ) : (
+              <p className="todo-detail-modal__empty-hint">Inga anteckningar ännu.</p>
+            )}
+          </div>
 
           <button className="primary-button" onClick={onEdit} type="button">
             <Pencil size={16} />

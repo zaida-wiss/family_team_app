@@ -1,6 +1,7 @@
 import "./TodoDetailModal.css";
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
@@ -51,6 +52,7 @@ export function TodoEditModal({
   }
 
   const [title, setTitle] = useState(todo.title);
+  const [emoji, setEmoji] = useState(todo.visual.value);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     todo.personalCategoryId ?? NO_CATEGORY_VALUE
   );
@@ -100,6 +102,7 @@ export function TodoEditModal({
       const isRecurring = recurrence.type !== "none";
       onUpdateTodo(todo.id, {
         title: trimmedTitle,
+        visual: { type: "lucide-icon", value: emoji },
         personalCategoryId: categoryId,
         recurrence,
         // Återkommande: visibleFrom är bara ankardatumet för förfallo-
@@ -139,10 +142,13 @@ export function TodoEditModal({
         </div>
 
         <form className="todo-detail-modal__body" onSubmit={handleSave}>
-          <label className="field-label">
-            Titel
-            <input className="text-input" onChange={(e) => setTitle(e.target.value)} value={title} />
-          </label>
+          <div className="todo-emoji-title-row">
+            <EmojiPickerPortal symbol={emoji} onSelect={setEmoji} triggerClassName="todo-emoji-btn" />
+            <label className="field-label todo-emoji-title-row__title">
+              Titel
+              <input className="text-input" onChange={(e) => setTitle(e.target.value)} value={title} />
+            </label>
+          </div>
 
           <label className="field-label">
             Kategori

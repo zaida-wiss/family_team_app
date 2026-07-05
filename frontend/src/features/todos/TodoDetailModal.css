@@ -123,6 +123,30 @@
   line-height: 1.5;
 }
 
+/* Anteckningar/Delmoment visas alltid med egen rubrik i visa-vyn (2026-07-06,
+   Zaidas begäran) — även när tomma, med en tydlig platshållartext, istället
+   för att sektionerna bara försvinner helt när det inte finns något ännu. */
+.todo-detail-modal__section {
+  display: grid;
+  gap: 6px;
+}
+
+.todo-detail-modal__section-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.todo-detail-modal__empty-hint {
+  margin: 0;
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
 /* Radera-knappen bredvid Spara i redigera-modalen (2026-07-05) — samma
    layout som kalenderns cal-form-actions. */
 .todo-edit-modal__actions {
@@ -160,6 +184,37 @@
   margin: 0;
   font-size: 0.9rem;
   white-space: pre-wrap;
+}
+
+.todo-detail-modal__emoji {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.todo-emoji-title-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.todo-emoji-title-row__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-emoji-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.todo-emoji-btn:hover {
+  border-color: var(--primary);
 }
 
 @media (max-width: 480px) {

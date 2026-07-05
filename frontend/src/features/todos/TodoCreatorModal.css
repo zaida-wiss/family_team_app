@@ -45,6 +45,51 @@
   font-family: inherit;
 }
 
+.todo-emoji-title-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.todo-emoji-title-row__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-emoji-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.todo-emoji-btn:hover {
+  border-color: var(--primary);
+}
+
+.todo-edit-modal__subtasks {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.todo-edit-modal__subtask-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-edit-modal__subtask-row .text-input {
+  flex: 1;
+}
+
 @media (max-width: 480px) {
   .todo-creator-overlay {
     padding: 16px 12px 100px;

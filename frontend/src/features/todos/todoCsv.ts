@@ -11,6 +11,7 @@ import { generateId } from "../../utils/uuid";
 // måste läggas till separat via RecurrencePicker/TimeWindowsPicker efteråt.
 export const TODO_CSV_HEADERS = [
   "Titel",
+  "Emoji",
   "Tilldelad",
   "Kategori",
   "Rutinkategori",
@@ -25,6 +26,7 @@ export const TODO_CSV_HEADERS = [
 ] as const;
 
 const SELF_LABEL = "Mig själv";
+const DEFAULT_EMOJI = "⭐";
 
 const RECURRENCE_UNIT_LABEL: Record<RecurrenceUnit, string> = {
   day: "Dag",
@@ -132,8 +134,8 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const oneOff = ["Handla mat", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
-  const recurring = ["Borsta tänderna", SELF_LABEL, "", "Hälsa", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
+  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
+  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "Hälsa", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
   return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
 }
 
@@ -207,6 +209,7 @@ export function todosToCsv(
     const { unit, every, days } = formatRecurrenceForCsv(todo.recurrence);
     return toCsvRow([
       todo.title,
+      todo.visual.value,
       assigneeLabel,
       "", // Kategorinamnet slås inte upp här — kategorierna är memberId-scopade
           // och kräver att man matchar rätt ägares kategorilista; hoppas över
@@ -231,6 +234,7 @@ export function todosToCsv(
 
 export type ParsedTodoRow = {
   title: string;
+  emoji: string;
   assignedTo: Id;
   personalCategoryId: Id | null;
   newCategoryName: string | null;
@@ -271,6 +275,7 @@ export function parseTodoCsv(
     return { rows: [], errors: [`Saknar kolumnen "Titel" — ladda ner mallen och jämför rubrikraden.`] };
   }
 
+  const emojiCol = col("Emoji");
   const assignedCol = col("Tilldelad");
   const categoryCol = col("Kategori");
   const routineCategoryCol = col("Rutinkategori");
@@ -294,6 +299,8 @@ export function parseTodoCsv(
       errors.push(`Rad ${rowNumber}: saknar en titel, hoppas över.`);
       return;
     }
+
+    const emoji = (emojiCol !== undefined ? cells[emojiCol] : "")?.trim() || DEFAULT_EMOJI;
 
     const assignedLabel = (assignedCol !== undefined ? cells[assignedCol] : "")?.trim() ?? "";
     let assignedTo: Id = currentMemberId;
@@ -397,6 +404,7 @@ export function parseTodoCsv(
 
     rows.push({
       title,
+      emoji,
       assignedTo,
       personalCategoryId,
       newCategoryName,

@@ -27,8 +27,8 @@ describe("todoCsv", () => {
     expect(table.length).toBe(3);
     expect(table[1][0]).toBe("Handla mat");
     expect(table[2][0]).toBe("Borsta tänderna");
-    expect(table[2][3]).toBe("Hälsa");
-    expect(table[2][7]).toBe("Dag");
+    expect(table[2][4]).toBe("Hälsa");
+    expect(table[2][8]).toBe("Dag");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -244,6 +244,29 @@ describe("todoCsv", () => {
 
     expect(errors).toEqual([]);
     expect(rows[0].routineCategory).toBe("Hälsa");
+  });
+
+  test("todosToCsv → parseTodoCsv tur och retur bevarar emoji, saknad emoji faller tillbaka på ⭐ vid import", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const original = createTodo({
+      id: "t1",
+      title: "Handla mat",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      visual: { type: "lucide-icon", value: "🛒" }
+    });
+
+    const csv = todosToCsv([original], members, "mem-1");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows[0].emoji).toBe("🛒");
+
+    const csvWithoutEmoji = [
+      "Titel,Tilldelad",
+      "Städa,Mig själv"
+    ].join("\r\n");
+    const { rows: rowsWithoutEmoji } = parseTodoCsv(csvWithoutEmoji, members, [], "mem-1");
+    expect(rowsWithoutEmoji[0].emoji).toBe("⭐");
   });
 
   test("parseTodoCsv: okänt värde i Rutinkategori ger ett fel och ignoreras", () => {

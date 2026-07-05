@@ -1,12 +1,15 @@
 import "./TodoCreatorModal.css";
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
+import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO } from "./recurringTodos";
-import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoTimeWindow } from "@shared/types";
+import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTimeWindow } from "@shared/types";
+
+const DEFAULT_EMOJI = "⭐";
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
@@ -57,6 +60,7 @@ export function TodoCreatorModal({
   }, [members, roles]);
 
   const [assigneeId, setAssigneeId] = useState<string>(SELF_VALUE);
+  const [emoji, setEmoji] = useState(DEFAULT_EMOJI);
   const [title, setTitle] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     defaultCategoryId ?? categories[0]?.id ?? NO_CATEGORY_VALUE
@@ -71,10 +75,23 @@ export function TodoCreatorModal({
     { visibleFrom: null, expiresAt: null }
   ]);
   const [notes, setNotes] = useState("");
+  const [subtasks, setSubtasks] = useState<TodoSubtask[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const isForChild = assigneeId !== SELF_VALUE;
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
+
+  function addSubtask() {
+    setSubtasks((prev) => [...prev, { id: generateId(), title: "", done: false }]);
+  }
+
+  function updateSubtaskTitle(id: Id, title: string) {
+    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
+  }
+
+  function removeSubtask(id: Id) {
+    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,7 +117,7 @@ export function TodoCreatorModal({
         isShared: false,
         status: "pending",
         starValue: isForChild ? starValue : 0,
-        visual: { type: "lucide-icon", value: "Star" },
+        visual: { type: "lucide-icon", value: emoji },
         recurrence,
         recurringSourceId: null,
         occurrenceDate: null,
@@ -118,7 +135,10 @@ export function TodoCreatorModal({
         deletedAt: null,
         deletedBy: null,
         personalCategoryId: categoryId,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        subtasks: subtasks
+          .map((s) => ({ ...s, title: s.title.trim() }))
+          .filter((s) => s.title.length > 0)
       });
       onClose();
     } finally {
@@ -161,16 +181,19 @@ export function TodoCreatorModal({
             </label>
           )}
 
-          <label className="field-label">
-            Titel
-            <input
-              autoFocus
-              className="text-input"
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Till exempel Handla mat"
-              value={title}
-            />
-          </label>
+          <div className="todo-emoji-title-row">
+            <EmojiPickerPortal symbol={emoji} onSelect={setEmoji} triggerClassName="todo-emoji-btn" />
+            <label className="field-label todo-emoji-title-row__title">
+              Titel
+              <input
+                autoFocus
+                className="text-input"
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Till exempel Handla mat"
+                value={title}
+              />
+            </label>
+          </div>
 
           <label className="field-label">
             Kategori
@@ -265,6 +288,35 @@ export function TodoCreatorModal({
               value={notes}
             />
           </label>
+
+          <div className="field-label">
+            <span>Delmoment (egen checklista)</span>
+            <ul className="todo-edit-modal__subtasks">
+              {subtasks.map((subtask) => (
+                <li key={subtask.id} className="todo-edit-modal__subtask-row">
+                  <input
+                    aria-label="Delmomentets titel"
+                    className="text-input"
+                    onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
+                    placeholder="Till exempel Uppvärmning"
+                    value={subtask.title}
+                  />
+                  <button
+                    aria-label="Ta bort delmoment"
+                    className="icon-button"
+                    onClick={() => removeSubtask(subtask.id)}
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button className="secondary-button" onClick={addSubtask} type="button">
+              <Plus size={14} />
+              Lägg till delmoment
+            </button>
+          </div>
 
           <button className="primary-button" disabled={submitting || isRecurrenceIncomplete(recurrence)} type="submit">
             Skapa

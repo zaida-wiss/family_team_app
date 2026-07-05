@@ -27,7 +27,7 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Tilldelad,Kategori,Rutinkategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Delmoment,Anteckningar"
+    "Titel,Emoji,Tilldelad,Kategori,Rutinkategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Delmoment,Anteckningar"
   );
 });
 
@@ -113,7 +113,7 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   const lines = text.split(/\r?\n/);
-  expect(lines[1]).toBe("Min uppgift,Mig själv,,,,,,,,,,");
+  expect(lines[1]).toBe("Min uppgift,Star,Mig själv,,,,,,,,,,");
 });
 
 // Zaida upptäckte 2026-07-05 att återkommande uppgifter tystnade helt ur
@@ -159,7 +159,7 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
   const localStart = new Date(RECURRING_TODO.visibleFrom);
   const pad = (n: number) => String(n).padStart(2, "0");
   const expectedStart = `${localStart.getFullYear()}-${pad(localStart.getMonth() + 1)}-${pad(localStart.getDate())} ${pad(localStart.getHours())}:${pad(localStart.getMinutes())}`;
-  expect(exportedCsv.split(/\r?\n/)[1]).toBe(`Träna,Mig själv,,,,${expectedStart},,Vecka,2,"mån,ons",,`);
+  expect(exportedCsv.split(/\r?\n/)[1]).toBe(`Träna,Star,Mig själv,,,,${expectedStart},,Vecka,2,"mån,ons",,`);
 
   await page.getByLabel("Importera CSV-fil").setInputFiles({
     name: "import.csv",
