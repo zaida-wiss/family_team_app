@@ -71,6 +71,21 @@ async function switchToListViewInSettings(page: import("@playwright/test").Page)
   await page.getByRole("button", { name: "Todos" }).click();
 }
 
+// Den fristående +-knappen togs bort 2026-07-06 (Zaidas beslut) — nya
+// uppgifter skapas nu enbart via en trådens egen "Lägg till uppgift"-
+// menyval. Barn-tråden (alltid närvarande, även utan personliga kategorier)
+// är fallbacket när inga kategorier finns än.
+async function openCreateModalFromBarnThread(page: import("@playwright/test").Page) {
+  await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Barn/ }).click();
+  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
+}
+
+async function openCreateModalFromCategoryThread(page: import("@playwright/test").Page, categoryLabel: string) {
+  const thread = page.getByRole("region", { name: `Tråd: ${categoryLabel}` });
+  await thread.getByRole("button", { name: new RegExp(categoryLabel) }).click();
+  await thread.getByRole("button", { name: "Lägg till uppgift" }).click();
+}
+
 test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-tråd visar bara mina egna", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
@@ -364,7 +379,7 @@ test("Ny uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när inga 
   await openThreadView(page);
   await expect(page.getByRole("region", { name: "Tråd: Barn" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  await openCreateModalFromBarnThread(page);
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   // Ingen kategori finns än — väljaren visar ändå "Ingen kategori" som förval
@@ -400,10 +415,10 @@ test("Ny uppgift-modalen: lägger till en uppgift i en befintlig kategori via v�
   });
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  await openCreateModalFromCategoryThread(page, "Träning");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel").fill("Yoga");
-  // Standardvalet i väljaren är redan den enda befintliga kategorin (Träning).
+  // Standardvalet i väljaren är redan den kategori man klickade "Lägg till uppgift" i (Träning).
   await dialog.getByRole("button", { name: "Skapa" }).click();
 
   await expect.poll(() => createdTodo?.title).toBe("Yoga");
@@ -426,7 +441,7 @@ test("Ny uppgift-modalen: skapar en återkommande uppgift med veckodagar och int
   });
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  await openCreateModalFromCategoryThread(page, "Träning");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel").fill("Vattna blommorna");
 
@@ -469,7 +484,7 @@ test("Ny uppgift-modalen: en återkommande uppgift kan få flera tidsintervall s
   });
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  await openCreateModalFromCategoryThread(page, "Träning");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel").fill("Borsta tänderna");
   await dialog.getByLabel("Återkommer").selectOption("recurring");
@@ -509,7 +524,7 @@ test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för m
   });
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  await openCreateModalFromBarnThread(page);
   const dialog = page.getByRole("dialog");
 
   await dialog.getByLabel("Åt vem?").selectOption({ label: "Lilla Barnet" });
@@ -541,7 +556,7 @@ test("Ny uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när kate
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
 
   await openThreadView(page);
-  await page.getByRole("button", { name: "Ny uppgift" }).click();
+  await openCreateModalFromCategoryThread(page, "Träning");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel").fill("Städa garaget");
   await dialog.getByRole("combobox", { name: "Kategori" }).selectOption({ label: "+ Ny kategori…" });
@@ -721,4 +736,163 @@ test("Bollar i tråd: visar Bubbelsysslor-rubriken bara i tråd-läget, inte i l
   await switchToListViewInSettings(page);
   await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Todos" })).toBeVisible();
+});
+
+// Zaida: "Vi har ingen emoji i todon. Det måste vi ha." (2026-07-06) — en
+// emoji-väljare (samma EmojiPickerPortal som belöningsbutiken/Medaljer/barnens
+// rutinskapare redan använder) lades till i både skapa- och redigera-modalen.
+test("Ny uppgift-modalen: väljer en emoji som sedan visas på bollen", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: createdTodo ? [createdTodo] : [] });
+    }
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  await dialog.locator(".todo-emoji-btn").click();
+  await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
+  await page.locator('button[title="Tandborste"]').click();
+
+  await dialog.getByLabel("Titel").fill("Borsta tänderna");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Borsta tänderna");
+  expect((createdTodo?.visual as { value: string })?.value).toBe("🪥");
+});
+
+// Zaida: "när jag ska redigera den så kan jag [lägga till deluppgifter],
+// jag vill att det ska vara samma på bägge ställen" (2026-07-06) — checklista-
+// sektionen som redan fanns i TodoEditModal speglades in i TodoCreatorModal.
+test("Ny uppgift-modalen: kan lägga till delmoment redan vid skapande", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  await dialog.getByLabel("Titel").fill("Städa rummet");
+  await dialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+  await dialog.getByLabel("Delmomentets titel").fill("Dammsuga");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Städa rummet");
+  expect(createdTodo?.subtasks).toEqual([{ id: expect.any(String), title: "Dammsuga", done: false }]);
+});
+
+// Bugg Zaida hittade 2026-07-06: den återkommande MALLEN visades som en egen
+// boll bredvid sin egen dagliga occurrence — mallen har bara ett ankardatum
+// (inga riktiga tider), occurrensen har de faktiska tiderna från timeWindows,
+// vilket gjorde att det såg ut som en dubblett. Fix: mallar visas aldrig som
+// en egen boll längre, bara deras materialiserade occurrence gör det.
+test("Bollar i tråd: återkommande mallen visas INTE som en egen boll bredvid sin dagliga occurrence", async ({ page }) => {
+  const TEMPLATE = {
+    id: "todo-template", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🪥" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: "cat-1"
+  };
+  // Id:t måste matcha appens egen occurrenceId()-formel (recurringTodos.ts) —
+  // annars tror syncScheduledTodos (som körs i bakgrunden på riktigt också)
+  // att dagens occurrence saknas och skapar ännu en, vilket precis skulle
+  // återinföra en (annan) dubblett i det här testet.
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: "todo-template-occurrence-2026-07-06",
+    recurrence: { type: "none" },
+    recurringSourceId: "todo-template",
+    occurrenceDate: "2026-07-06",
+    visibleFrom: "2026-07-06T07:00:00.000Z",
+    expiresAt: "2026-07-06T07:15:00.000Z"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await expect(thread.locator(".todo-thread__ball")).toHaveCount(1);
+});
+
+// Uppföljning till dubblett-fixen ovan: mallen är fortsatt det enda stället
+// att ändra återkommelsemönstret eller stoppa en serie, så en egen kompakt
+// hanteringsyta byggdes i Inställningar istället för att bara försvinna
+// (Zaidas beslut 2026-07-06).
+test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en egen lista", async ({ page }) => {
+  const TEMPLATE = {
+    id: "todo-template", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🪥" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null
+  };
+  let deletedId: string | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE] }));
+  await page.route("**/api/todos/todo-template", (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedId = "todo-template";
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
+
+  const row = page.getByText("Borsta tänderna").locator("../..");
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: /Ta bort serien/ }).click();
+
+  await expect.poll(() => deletedId).toBe("todo-template");
+});
+
+// Zaida: "Anteckningar och delmoment ska stå [i visa-vyn] också... det ska
+// inte behöva vara redigeringsläge" (2026-07-06) — rubrikerna syns nu alltid,
+// med en platshållartext när det inte finns något ännu, istället för att hela
+// sektionen bara försvinner.
+test("Bollar i tråd: visa-vyn visar alltid rubrikerna Delmoment och Anteckningar, även tomma", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Löpning/ }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Delmoment" })).toBeVisible();
+  await expect(dialog.getByText("Inga delmoment ännu.")).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Anteckningar" })).toBeVisible();
+  await expect(dialog.getByText("Inga anteckningar ännu.")).toBeVisible();
 });

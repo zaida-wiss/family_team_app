@@ -11,14 +11,18 @@ const APPROVED_TODO = {
   title: "Diska",
   createdBy: "mem-1",
   assignedTo: "mem-1",
+  isShared: false,
   status: "approved",
   starValue: 4,
+  visual: { type: "lucide-icon", value: "Star" },
+  recurrence: { type: "none" },
   completedAt: "2026-06-01T10:00:00.000Z",
   approvedBy: "mem-1",
   approvedAt: "2026-06-01T11:00:00.000Z",
   rejectedBy: null,
   rejectedAt: null,
   rejectedReason: null,
+  visibleFrom: null,
   expiresAt: null,
   recurringSourceId: null,
   occurrenceDate: null,
@@ -64,7 +68,11 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await page.getByRole("button", { name: "Todos" }).click();
 
     await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Ny uppgift" }).click();
+    // Den fristående +-knappen togs bort 2026-07-06 — nya uppgifter skapas via
+    // en trådens "Lägg till uppgift"-menyval, Barn-tråden som fallback utan
+    // egna kategorier.
+    await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Barn/ }).click();
+    await page.getByRole("button", { name: "Lägg till uppgift" }).click();
     await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toBeVisible();
 
     await page.keyboard.press("Escape");
