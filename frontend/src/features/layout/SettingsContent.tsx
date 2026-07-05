@@ -6,6 +6,7 @@ import { SettingsSection } from "./SettingsSection";
 import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import { TodoHistory } from "../todos/TodoHistory";
+import { TodoImportExport } from "../todos/TodoImportExport";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
@@ -76,6 +77,9 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onRemoveTimedTask,
     todoViewMode,
     onUpdateTodoViewMode,
+    personalCategories,
+    onCreateCategory,
+    onCreateTodo,
   } = settingsProps;
 
   return (
@@ -160,6 +164,17 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           roles={roles}
           todos={todos}
           allMembers={members}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="📥 Importera/exportera todos">
+        <TodoImportExport
+          currentMember={currentMember}
+          members={members}
+          todos={todos}
+          categories={personalCategories}
+          onCreateTodo={onCreateTodo}
+          onCreateCategory={onCreateCategory}
         />
       </SettingsSection>
 

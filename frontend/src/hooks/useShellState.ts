@@ -237,6 +237,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,
     onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles),
+    personalCategories: personalTodoCategories,
+    onCreateCategory: createTodoCategory,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => {

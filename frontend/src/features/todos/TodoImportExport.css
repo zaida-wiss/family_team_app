@@ -1,0 +1,27 @@
+.todo-import-export {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.todo-import-export__intro {
+  margin: 0;
+  color: var(--muted-fg);
+  font-size: 0.85rem;
+}
+
+.todo-import-export__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-import-export__result {
+  font-size: 0.85rem;
+}
+
+.todo-import-export__errors {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--destructive, #e74c3c);
+}
