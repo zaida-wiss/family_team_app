@@ -327,9 +327,6 @@ export function ParentTodoThreadView({
                         <span className="todo-thread__ball-progress">{progress}%</span>
                       )}
                     </button>
-                    <span className="todo-thread__item-assignee" aria-hidden="true">
-                      {assignee}
-                    </span>
                   </li>
                 );
               })}

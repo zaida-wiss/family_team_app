@@ -129,12 +129,15 @@
   gap: 4px;
 }
 
-/* Såpbubble-effekt (2026-07-05, Zaidas beslut, efter mockup) — riktig alfa-
-   transparens i baständningen (mot transparent, inte mot --card) så tråden
-   och det som ligger bakom skymtar svagt igenom, precis som en äkta
-   såpbubbla. Plus två ljusa rundlar (stor mjuk glans uppe till vänster,
-   liten blank prick nere till höger). Fungerar korrekt i alla fem teman
-   eftersom accentfärgen (--thread-accent) redan är tema-kopplad. */
+/* Glansig "bubbla" (2026-07-05, Zaidas beslut, justerad samma dag efter
+   feedback — den första versionen blandade basfärgen mot transparent så
+   mycket att texten blev oläslig). Basfärgen behöver tillräckligt med egen
+   färg/opacitet för att bära texten, men blandas ändå mot transparent (inte
+   --card) så det fortfarande skymtar lite bakgrund igenom kanterna — en
+   kompromiss mellan såpbubble-utseendet och läsbarhet. Plus två ljusa
+   rundlar (stor mjuk glans uppe till vänster, liten blank prick nere till
+   höger). Fungerar korrekt i alla fem teman eftersom accentfärgen
+   (--thread-accent) redan är tema-kopplad. */
 .todo-thread__ball {
   position: relative;
   z-index: 1;
@@ -148,7 +151,7 @@
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-  border: 1.5px solid color-mix(in srgb, var(--thread-accent, var(--border)) 55%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--thread-accent, var(--border)) 60%, transparent);
   border-radius: 50%;
   padding: 3px;
   background:
@@ -156,29 +159,17 @@
     radial-gradient(circle at 30% 26%, color-mix(in srgb, white 85%, transparent) 0%, transparent 42%),
     radial-gradient(
       circle at 50% 60%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 30%, transparent) 0%,
-      color-mix(in srgb, var(--thread-accent, var(--primary)) 45%, transparent) 100%
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 60%, transparent) 0%,
+      color-mix(in srgb, var(--thread-accent, var(--primary)) 80%, transparent) 100%
     );
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--thread-accent, var(--primary)) 18%, transparent),
-    0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 25%, transparent),
-    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 20%, transparent);
+    0 0 0 2px color-mix(in srgb, var(--thread-accent, var(--primary)) 22%, transparent),
+    0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 30%, transparent),
+    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 24%, transparent);
   color: var(--foreground);
   text-align: center;
   cursor: pointer;
   overflow: hidden;
-}
-
-.todo-thread__item-assignee {
-  /* Medlemmens egen färg (Member.color, satt i Inställningar) om den finns —
-     annars vanlig dämpad text. Samma mönster som kategorins --thread-accent
-     ovan (ingen kontrastklämning idag, känt fynd i sprintbackloggen). */
-  color: var(--assignee-color, var(--muted-fg));
-  font-size: 0.62rem;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
