@@ -6,7 +6,7 @@ import { decryptField, decryptNullable, encryptField, encryptNullable } from "..
 // Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
 // title/notes krypteras precis innan de sparas och dekrypteras precis innan de
 // returneras. API-kontraktet är oförändrat (ADR-0014).
-function decryptEvent<T extends { title: string; notes: string | null }>(accountId: string, event: T): T {
+export function decryptEvent<T extends { title: string; notes: string | null }>(accountId: string, event: T): T {
   return {
     ...event,
     title: decryptNullable(accountId, event.title) as string,

@@ -11,6 +11,14 @@
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
+ *
+ * Täcker även: exportAccount returnerade tidigare de RÅA fält-krypterade
+ * (ADR-0014) Mongoose-dokumenten rakt av — todos title/rejectedReason/notes,
+ * kalenderhändelsers title/notes, kalenderprenumerationers url och belöningars
+ * title kom ut som oläslig chiffertext (v1:<iv>:<tag>:…) i exporten istället
+ * för klartext, vilket gör en GDPR-dataportabilitets-export värdelös för de
+ * fälten. Upptäckt vid Zaidas fråga om hur en export+import av krypterad
+ * kalenderdata skulle fungera.
  */
 
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
@@ -72,12 +80,51 @@ describe.skipIf(!RUN)("GET /api/accounts/:id/export innehåller all kontodata", 
       expiresAt: new Date(Date.now() + 86_400_000).toISOString()
     });
 
+    const createTodo = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: "todo-export-crypt-test",
+        title: "Hemlig uppgiftstitel",
+        createdBy: memberId,
+        assignedTo: memberId,
+        isShared: false,
+        status: "pending",
+        starValue: 0,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        recurringSourceId: null,
+        occurrenceDate: null,
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        rejectedReason: null,
+        deletedAt: null,
+        deletedBy: null,
+        notes: "Hemlig anteckning"
+      });
+    expect(createTodo.status).toBe(201);
+
     const res = await request(app)
       .get(`/api/accounts/${accountId}/export`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
 
     expect(res.status).toBe(200);
+
+    // Fält-krypterade värden ska vara läsbar klartext i exporten, inte den
+    // råa lagringsformen (v1:<iv>:<tag>:<ciphertext>).
+    const exportedTodo = (res.body.todos as Array<{ id: string; title: string; notes: string }>).find(
+      (t) => t.id === "todo-export-crypt-test"
+    );
+    expect(exportedTodo?.title).toBe("Hemlig uppgiftstitel");
+    expect(exportedTodo?.notes).toBe("Hemlig anteckning");
+    expect(exportedTodo?.title.startsWith("v1:")).toBe(false);
 
     expect(res.body.todoCategories).toHaveLength(1);
     expect(res.body.todoCategories[0].name).toBe("Export-test-kategori");

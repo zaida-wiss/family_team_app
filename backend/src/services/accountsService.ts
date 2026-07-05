@@ -17,6 +17,8 @@ import { AuditLogModel } from "../db/models/AuditLog.js";
 import { UserModel } from "../db/models/User.js";
 import { validate } from "../utils/validate.js";
 import { AppError } from "../utils/errors.js";
+import { decryptEvent } from "./calendarsService.js";
+import { decryptField, decryptNullable } from "../utils/fieldEncryption.js";
 import { logger } from "../utils/logger.js";
 import type { PermissionKey } from "../../../shared/types.js";
 
@@ -168,6 +170,34 @@ export async function exportAccount(accountId: string, memberId: string | null |
     { _id: 0, id: 1, email: 1, name: 1, createdAt: 1 }
   );
 
+  // Fält-krypterade värden (ADR-0014) dekrypteras innan exporten skickas —
+  // annars innehåller GDPR-exporten bara oläslig chiffertext (v1:<iv>:<tag>:…)
+  // för todos title/rejectedReason/notes, kalenderhändelsers title/notes,
+  // kalenderprenumerationers url och belöningars title. En dataportabilitets-
+  // export måste vara läsbar, inte krypterad mot kontots egen nyckel.
+  const decryptedTodos = (todos as Array<{ title: string; rejectedReason: string | null; notes: string | null }>).map(
+    (todo) => ({
+      ...todo,
+      title: decryptField(accountId, todo.title),
+      rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null,
+      notes: decryptNullable(accountId, todo.notes) ?? null
+    })
+  );
+  const decryptedCalendars = (
+    calendars as Array<{ events: Array<{ title: string; notes: string | null }>; subscriptions: Array<{ url: string }> }>
+  ).map((calendar) => ({
+    ...calendar,
+    events: calendar.events.map((event) => decryptEvent(accountId, event)),
+    subscriptions: (calendar.subscriptions ?? []).map((sub) => ({
+      ...sub,
+      url: decryptField(accountId, sub.url)
+    }))
+  }));
+  const decryptedRewards = (rewards as Array<{ title: string }>).map((reward) => ({
+    ...reward,
+    title: decryptField(accountId, reward.title)
+  }));
+
   return {
     exportedAt: new Date().toISOString(),
     gdprNote: "Exporterad enligt GDPR Art. 20 – rätten till dataportabilitet.",
@@ -175,11 +205,11 @@ export async function exportAccount(accountId: string, memberId: string | null |
     users,
     members,
     roles: populatedRoles,
-    todos,
+    todos: decryptedTodos,
     todoCategories,
-    calendars,
+    calendars: decryptedCalendars,
     shoppingLists,
-    rewards,
+    rewards: decryptedRewards,
     rewardShop,
     purchasedRewards,
     timedTasks,
