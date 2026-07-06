@@ -143,6 +143,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     // Todos-panelens visningsläge väljs i Inställningar, ingen egen växlare
     // i panelen (2026-07-05, Zaidas beslut) — se settingsProps nedan.
     todoViewMode: currentMember.todoViewMode ?? "thread",
+    // Drag-and-drop-ordning på trådarna i "bollar i tråd" (2026-07-06).
+    todoThreadOrder: currentMember.todoThreadOrder ?? [],
+    onReorderThreads: (order: Id[]) => updateMemberNavigation(currentMember.id, { todoThreadOrder: order }),
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),

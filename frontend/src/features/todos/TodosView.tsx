@@ -23,6 +23,8 @@ type Props = {
   // Visningsläget (lista/tråd) väljs i Inställningar (2026-07-05, Zaidas
   // beslut) — ingen egen växlare i panelen, bara kategori/+-knappen/todos syns.
   todoViewMode: TodoViewMode;
+  todoThreadOrder: Id[];
+  onReorderThreads: (order: Id[]) => void;
   onSetEditingTodoTitle: (t: string) => void;
   onStartEditingTodo: (todo: Todo) => void;
   onSaveTodoTitle: (todoId: Id) => void;
@@ -61,6 +63,8 @@ export function TodosView({
   canSeeTodos,
   wishStars,
   todoViewMode,
+  todoThreadOrder,
+  onReorderThreads,
   onSetEditingTodoTitle,
   onStartEditingTodo,
   onSaveTodoTitle,
@@ -160,6 +164,8 @@ export function TodosView({
             onSetCategoryHidden={onSetCategoryHidden}
             onDeleteTodo={onSoftDeleteTodo}
             onAddTodoToCategory={openCreateModalForCategory}
+            todoThreadOrder={todoThreadOrder}
+            onReorderThreads={onReorderThreads}
           />
         )}
 

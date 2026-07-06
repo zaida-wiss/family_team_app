@@ -49,6 +49,8 @@ type Props = {
   editingTodoTitle: string;
   wishStars: Record<string, number>;
   todoViewMode: TodoViewMode;
+  todoThreadOrder: Id[];
+  onReorderThreads: (order: Id[]) => void;
   wishTitle: string;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
@@ -110,6 +112,7 @@ export function MemberShellContent({
   todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   editingTodoId, editingTodoTitle, wishStars, wishTitle, todoViewMode,
+  todoThreadOrder, onReorderThreads,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
   onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
@@ -244,6 +247,8 @@ export function MemberShellContent({
           canSeeTodos={canSeeTodos}
           wishStars={wishStars}
           todoViewMode={todoViewMode}
+          todoThreadOrder={todoThreadOrder}
+          onReorderThreads={onReorderThreads}
           onSetEditingTodoTitle={onSetEditingTodoTitle}
           onStartEditingTodo={onStartEditingTodo}
           onSaveTodoTitle={onSaveTodoTitle}

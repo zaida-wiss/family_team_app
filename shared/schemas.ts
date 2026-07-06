@@ -57,6 +57,7 @@ export const MemberSchema = z.object({
   lastSelectedDashboardMemberId: IdSchema.nullable().optional(),
   calendarView: CalendarViewModeSchema.optional(),
   todoViewMode: TodoViewModeSchema.optional(),
+  todoThreadOrder: z.array(IdSchema).optional(),
   spentStars: z.number().int().min(0),
   approvedStars: z.number().int().min(0),
   deletedAt: z.string().nullable(),
@@ -78,6 +79,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   lastSelectedDashboardMemberId: true,
   calendarView: true,
   todoViewMode: true,
+  todoThreadOrder: true,
   spentStars: true
 }).partial();
 

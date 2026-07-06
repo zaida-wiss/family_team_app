@@ -870,15 +870,23 @@ test("Bollar i tråd: återkommande mallen visas INTE som en egen boll bredvid s
   // Id:t måste matcha appens egen occurrenceId()-formel (recurringTodos.ts) —
   // annars tror syncScheduledTodos (som körs i bakgrunden på riktigt också)
   // att dagens occurrence saknas och skapar ännu en, vilket precis skulle
-  // återinföra en (annan) dubblett i det här testet.
+  // återinföra en (annan) dubblett i det här testet. Tider beräknas relativt
+  // "nu" (inte hårdkodade klockslag) — annars blir occurrensen tyst "expired"
+  // (expirePendingTodos) så fort testet råkar köras efter det hårdkodade
+  // klockslaget, oavsett vilket datum det är (upptäckt 2026-07-06).
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const occurrenceStart = new Date(now.getTime() + 60 * 60 * 1000);
+  const occurrenceEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const OCCURRENCE = {
     ...TEMPLATE,
-    id: "todo-template-occurrence-2026-07-06",
+    id: `todo-template-occurrence-${dateKey}`,
     recurrence: { type: "none" },
     recurringSourceId: "todo-template",
-    occurrenceDate: "2026-07-06",
-    visibleFrom: "2026-07-06T07:00:00.000Z",
-    expiresAt: "2026-07-06T07:15:00.000Z"
+    occurrenceDate: dateKey,
+    visibleFrom: occurrenceStart.toISOString(),
+    expiresAt: occurrenceEnd.toISOString()
   };
 
   await mockAuthAndData(page);
@@ -946,4 +954,62 @@ test("Bollar i tråd: visa-vyn visar alltid rubrikerna Delmoment och Anteckninga
   await expect(dialog.getByText("Inga delmoment ännu.")).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "Anteckningar" })).toBeVisible();
   await expect(dialog.getByText("Inga anteckningar ännu.")).toBeVisible();
+});
+
+// Zaida: "Jag vill kunna flytta mina todokategorier med drag and drop på
+// kategorinamnet" + "Även den [Barn-tråden] skall vara flyttbar" (2026-07-06).
+// Pointer-baserat (inte HTML5 drag-and-drop) för att fungera på touch också —
+// simuleras här med page.mouse, som Chromium omvandlar till riktiga
+// pointer-events.
+test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and-drop", async ({ page }) => {
+  let savedOrder: string[] | null = null;
+  const CATEGORY_2 = {
+    id: "cat-2", accountId: "acc-1", memberId: "mem-1", name: "Hushåll",
+    createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY, CATEGORY_2] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/members/mem-1", (route) => {
+    const body = route.request().postDataJSON() as { todoThreadOrder?: string[] };
+    if (body.todoThreadOrder) savedOrder = body.todoThreadOrder;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await openThreadView(page);
+
+  const traningBtn = page.getByRole("button", { name: /^Träning\./ });
+  const hushallBtn = page.getByRole("button", { name: /^Hushåll\./ });
+  await expect(traningBtn).toBeVisible();
+  await expect(hushallBtn).toBeVisible();
+
+  // Utgångsordning (ingen sparad ordning ännu): Barn, Träning, Hushåll.
+  await expect(page.locator(".todo-thread")).toHaveCount(3);
+  const idsBefore = await page.locator(".todo-thread").evaluateAll((els) =>
+    els.map((el) => el.getAttribute("data-thread-id"))
+  );
+  expect(idsBefore).toEqual(["__children__", "cat-1", "cat-2"]);
+
+  const traningBox = (await traningBtn.boundingBox())!;
+  const hushallBox = (await hushallBtn.boundingBox())!;
+
+  // Drar Hushåll till Tränings position (över tröskelvärdet på 8px, annars
+  // tolkas det som ett vanligt klick som öppnar menyn istället).
+  await page.mouse.move(hushallBox.x + hushallBox.width / 2, hushallBox.y + hushallBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(traningBox.x + traningBox.width / 2, traningBox.y + traningBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(() => savedOrder).not.toBeNull();
+  expect(savedOrder).toEqual(["__children__", "cat-2", "cat-1"]);
+
+  const idsAfter = await page.locator(".todo-thread").evaluateAll((els) =>
+    els.map((el) => el.getAttribute("data-thread-id"))
+  );
+  expect(idsAfter).toEqual(["__children__", "cat-2", "cat-1"]);
+
+  // Kategorimenyn ska INTE ha öppnats av draget (bara ett vanligt klick ska
+  // göra det).
+  await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
 });

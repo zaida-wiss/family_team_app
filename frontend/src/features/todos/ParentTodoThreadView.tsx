@@ -29,6 +29,8 @@ type Props = {
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
   onDeleteTodo: (todoId: Id) => void;
   onAddTodoToCategory: (categoryId: Id | null) => void;
+  todoThreadOrder: Id[];
+  onReorderThreads: (order: Id[]) => void;
 };
 
 type Thread = {
@@ -129,7 +131,9 @@ export function ParentTodoThreadView({
   onRemoveCategory,
   onSetCategoryHidden,
   onDeleteTodo,
-  onAddTodoToCategory
+  onAddTodoToCategory,
+  todoThreadOrder,
+  onReorderThreads
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -151,6 +155,15 @@ export function ParentTodoThreadView({
   // döljs ur tråd-vyn men finns kvar, visas igen via Inställningar).
   const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Drag-and-drop-ordning på trådarna (2026-07-06, Zaidas önskemål) — håll
+  // och dra i kategorinamnet (eller Barn-tråden, som också är flyttbar).
+  // Pointer-baserat (inte HTML5 drag-and-drop) för att fungera på touch också.
+  const suppressCategoryClickRef = useRef(false);
+  const dragStateRef = useRef<{ id: Id; x: number; y: number } | null>(null);
+  const [draggingId, setDraggingId] = useState<Id | null>(null);
+  const [dragOverId, setDragOverId] = useState<Id | null>(null);
+  const DRAG_THRESHOLD_PX = 8;
 
   useEffect(
     () => () => {
@@ -213,8 +226,62 @@ export function ParentTodoThreadView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTodos, members, roles, categories, currentMember.id]);
 
+  // Egen sparad ordning (drag-and-drop, 2026-07-06) — trådar som saknas i
+  // listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga ordning.
+  const orderedThreads: Thread[] = useMemo(() => {
+    if (todoThreadOrder.length === 0) return threads;
+    const orderIndex = new Map(todoThreadOrder.map((id, i) => [id, i]));
+    return [...threads].sort((a, b) => {
+      const ai = orderIndex.has(a.id) ? orderIndex.get(a.id)! : Number.MAX_SAFE_INTEGER;
+      const bi = orderIndex.has(b.id) ? orderIndex.get(b.id)! : Number.MAX_SAFE_INTEGER;
+      return ai - bi;
+    });
+  }, [threads, todoThreadOrder]);
+
   const detailTodo = todos.find((t) => t.id === detailTodoId) ?? null;
   const editTodo = todos.find((t) => t.id === editTodoId) ?? null;
+
+  function reorderThreads(draggedId: Id, targetId: Id) {
+    const currentIds = orderedThreads.map((t) => t.id);
+    const from = currentIds.indexOf(draggedId);
+    const to = currentIds.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    const next = [...currentIds];
+    next.splice(from, 1);
+    next.splice(to, 0, draggedId);
+    onReorderThreads(next);
+  }
+
+  function handleThreadPointerDown(e: React.PointerEvent<HTMLButtonElement>, threadId: Id) {
+    dragStateRef.current = { id: threadId, x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleThreadPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const start = dragStateRef.current;
+    if (!start) return;
+    if (draggingId === null) {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      setDraggingId(start.id);
+      suppressCategoryClickRef.current = true;
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const section = el instanceof Element ? el.closest<HTMLElement>("[data-thread-id]") : null;
+    setDragOverId((section?.dataset.threadId as Id | undefined) ?? null);
+  }
+
+  function handleThreadPointerUp() {
+    const wasDragging = draggingId;
+    const target = dragOverId;
+    dragStateRef.current = null;
+    if (wasDragging && target && wasDragging !== target) {
+      reorderThreads(wasDragging, target);
+    }
+    setDraggingId(null);
+    setDragOverId(null);
+  }
 
   function handleBallClick(todo: Todo) {
     if (suppressClickRef.current) {
@@ -254,6 +321,10 @@ export function ParentTodoThreadView({
   }
 
   function handleCategoryClick(thread: Thread) {
+    if (suppressCategoryClickRef.current) {
+      suppressCategoryClickRef.current = false;
+      return;
+    }
     setMenuCategoryId((current) => (current === thread.id ? null : thread.id));
   }
 
@@ -290,10 +361,15 @@ export function ParentTodoThreadView({
 
   return (
     <div className="todo-thread-view">
-      {threads.map((thread) => (
+      {orderedThreads.map((thread) => (
         <section
           key={thread.id}
-          className="todo-thread"
+          data-thread-id={thread.id}
+          className={
+            "todo-thread" +
+            (draggingId === thread.id ? " todo-thread--dragging" : "") +
+            (dragOverId === thread.id && draggingId !== thread.id ? " todo-thread--drop-target" : "")
+          }
           aria-label={`Tråd: ${thread.label}`}
           style={thread.accentColor ? ({ "--thread-accent": thread.accentColor } as React.CSSProperties) : undefined}
         >
@@ -314,10 +390,17 @@ export function ParentTodoThreadView({
               <h3 className="todo-thread__category">
                 <button
                   type="button"
-                  className="todo-thread__category-button"
+                  className={
+                    "todo-thread__category-button" +
+                    (draggingId === thread.id ? " todo-thread__category-button--dragging" : "")
+                  }
                   aria-expanded={menuCategoryId === thread.id}
-                  aria-label={`${thread.label}. Klicka för fler val.`}
+                  aria-label={`${thread.label}. Klicka för fler val, håll och dra för att flytta tråden.`}
                   onClick={() => handleCategoryClick(thread)}
+                  onPointerDown={(e) => handleThreadPointerDown(e, thread.id)}
+                  onPointerMove={handleThreadPointerMove}
+                  onPointerUp={handleThreadPointerUp}
+                  onPointerCancel={handleThreadPointerUp}
                 >
                   {thread.label}
                 </button>
@@ -371,6 +454,10 @@ export function ParentTodoThreadView({
                 const assignee = assigneeNameFor(todo, members);
                 const assigneeColor = assigneeColorFor(todo, members);
                 const isDissolving = dissolving.has(todo.id);
+                // Barnens bubblor görs mycket mindre än vuxnas egna
+                // kategori-trådar (2026-07-06, Zaidas begäran) — golvat på
+                // 44px, det minsta tillåtna touch-målet (CLAUDE.md), inte lägre.
+                const isChildrenThread = thread.id === CHILDREN_THREAD_ID;
                 return (
                   <li
                     key={todo.id}
@@ -381,6 +468,7 @@ export function ParentTodoThreadView({
                       type="button"
                       className={
                         "todo-thread__ball" +
+                        (isChildrenThread ? " todo-thread__ball--small" : "") +
                         (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                         (isDissolving ? " todo-thread__ball--dissolving" : "")
                       }

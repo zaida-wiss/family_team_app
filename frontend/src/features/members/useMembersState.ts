@@ -141,6 +141,7 @@ export function useMembersState() {
       lastSelectedDashboardMemberId?: Id | null;
       calendarView?: CalendarViewMode;
       todoViewMode?: TodoViewMode;
+      todoThreadOrder?: Id[];
     }
   ) {
     setMembers((current) =>

@@ -104,6 +104,12 @@ export type Member = {
   // egen växlare i panelen (2026-07-05, Zaidas beslut: panelen ska bara visa
   // kategori/+-knappen/todouppgifterna). Standard "thread" om osatt.
   todoViewMode?: TodoViewMode;
+  // Ordningen på trådarna i vuxenvyns "bollar i tråd" (2026-07-06, Zaidas
+  // önskemål om drag-and-drop) — en lista av tråd-id:n (kategori-id:n plus
+  // sentinelen "__children__" för den gemensamma Barn-tråden). Trådar som
+  // saknas i listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga
+  // ordning. Saknas fältet helt = ingen anpassad ordning ännu.
+  todoThreadOrder?: Id[];
   spentStars: number;
   approvedStars: number;
   deletedAt: string | null;

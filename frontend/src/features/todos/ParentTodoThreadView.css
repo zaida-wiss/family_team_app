@@ -100,8 +100,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
+  cursor: grab;
   text-align: center;
+  /* Håll-och-dra för att flytta tråden (2026-07-06) — utan detta scrollar
+     sidan istället för att starta draget på touch-enheter. */
+  touch-action: none;
+}
+
+.todo-thread__category-button--dragging {
+  cursor: grabbing;
+  opacity: 0.5;
+}
+
+/* Tråden man drar ("ghost") tonas ner, drop-målet får en tydlig ram (2026-07-06). */
+.todo-thread--dragging {
+  opacity: 0.5;
+}
+
+.todo-thread--drop-target {
+  outline: 2px dashed var(--thread-accent, var(--primary));
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .todo-thread__category-input {
@@ -204,6 +223,23 @@
   -webkit-user-select: none;
 }
 
+/* Barnens bubblor (Barn-tråden) mycket mindre än vuxnas egna kategori-trådar
+   (2026-07-06, Zaidas begäran) — golvat på 44px, det minsta tillåtna
+   touch-målet (CLAUDE.md), inte lägre. Text krympt i samma proportion. */
+.todo-thread__ball--small {
+  width: 44px;
+  height: 44px;
+  padding: 2px;
+}
+
+.todo-thread__ball--small .todo-thread__ball-title {
+  font-size: 0.44rem;
+}
+
+.todo-thread__ball--small .todo-thread__ball-progress {
+  font-size: 0.4rem;
+}
+
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
    fyllnadsanimation som barnens egen avklarmarkering (ChildTasks.css), fast
    som en ring runt den runda bollen istället för en bottenlinje. */
@@ -277,7 +313,18 @@
     height: 64px;
   }
 
+  /* Barnens bubblor stannar på 44px även på mobilen, växer inte med de
+     andra — se motiveringen vid .todo-thread__ball--small ovan. */
+  .todo-thread__ball--small {
+    width: 44px;
+    height: 44px;
+  }
+
   .todo-thread__ball-title {
     font-size: 0.62rem;
+  }
+
+  .todo-thread__ball--small .todo-thread__ball-title {
+    font-size: 0.44rem;
   }
 }
