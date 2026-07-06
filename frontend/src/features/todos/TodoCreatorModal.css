@@ -90,6 +90,33 @@
   flex: 1;
 }
 
+/* Flera mottagare samtidigt (2026-07-06) — togglebar knapp-grupp, samma
+   mönster som RecurrencePicker.css:s veckodagar. */
+.todo-assignee-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.todo-assignee-picker__btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.todo-assignee-picker__btn--on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg, white);
+}
+
 @media (max-width: 480px) {
   .todo-creator-overlay {
     padding: 16px 12px 100px;

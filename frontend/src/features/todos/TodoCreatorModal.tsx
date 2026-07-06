@@ -59,7 +59,11 @@ export function TodoCreatorModal({
     );
   }, [members, roles]);
 
-  const [assigneeId, setAssigneeId] = useState<string>(SELF_VALUE);
+  // Flera mottagare samtidigt (2026-07-06, Zaidas önskemål) — varje vald
+  // familjemedlem får en egen kopia av uppgiften (samma mönster som
+  // CSV-importen redan använder: en rad/todo per mottagare, inte en delad
+  // todo med flera tilldelade).
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([SELF_VALUE]);
   const [emoji, setEmoji] = useState(DEFAULT_EMOJI);
   const [title, setTitle] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
@@ -78,8 +82,19 @@ export function TodoCreatorModal({
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const isForChild = assigneeId !== SELF_VALUE;
+  const isForChild = assigneeIds.some((id) => id !== SELF_VALUE);
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
+
+  function toggleAssignee(id: string) {
+    setAssigneeIds((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((x) => x !== id);
+        // Minst en mottagare måste alltid vara vald.
+        return next.length > 0 ? next : prev;
+      }
+      return [...prev, id];
+    });
+  }
 
   function addSubtask() {
     setSubtasks((prev) => [...prev, { id: generateId(), title: "", done: false }]);
@@ -96,7 +111,7 @@ export function TodoCreatorModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || submitting || isRecurrenceIncomplete(recurrence)) return;
+    if (!trimmedTitle || submitting || assigneeIds.length === 0 || isRecurrenceIncomplete(recurrence)) return;
 
     setSubmitting(true);
     try {
@@ -109,37 +124,45 @@ export function TodoCreatorModal({
       }
 
       const isRecurring = recurrence.type !== "none";
-      onCreateTodo({
-        id: `todo-${generateId()}`,
-        title: trimmedTitle,
-        createdBy: currentMember.id,
-        assignedTo: isForChild ? assigneeId : currentMember.id,
-        isShared: false,
-        status: "pending",
-        starValue: isForChild ? starValue : 0,
-        visual: { type: "lucide-icon", value: emoji },
-        recurrence,
-        recurringSourceId: null,
-        occurrenceDate: null,
-        // Återkommande: visibleFrom är bara ankardatumet för förfallo-
-        // beräkningen, de faktiska klockslagen kommer från timeWindows.
-        visibleFrom: isRecurring ? dateOnlyToISO(startDate) : toDateTimeString(visibleFrom),
-        expiresAt: isRecurring ? null : toDateTimeString(expiresAt),
-        timeWindows: isRecurring ? timeWindows : undefined,
-        completedAt: null,
-        approvedBy: null,
-        approvedAt: null,
-        rejectedBy: null,
-        rejectedAt: null,
-        rejectedReason: null,
-        deletedAt: null,
-        deletedBy: null,
-        personalCategoryId: categoryId,
-        notes: notes.trim() || null,
-        subtasks: subtasks
-          .map((s) => ({ ...s, title: s.title.trim() }))
-          .filter((s) => s.title.length > 0)
-      });
+      const cleanedSubtasks = subtasks
+        .map((s) => ({ ...s, title: s.title.trim() }))
+        .filter((s) => s.title.length > 0);
+
+      // En kopia av uppgiften per vald mottagare (samma mönster som
+      // CSV-importen) — varje barn (eller jag själv) får sin egen todo med
+      // eget id/status, inte en delad uppgift med flera tilldelade.
+      for (const recipientId of assigneeIds) {
+        const isChildRecipient = recipientId !== SELF_VALUE;
+        onCreateTodo({
+          id: `todo-${generateId()}`,
+          title: trimmedTitle,
+          createdBy: currentMember.id,
+          assignedTo: isChildRecipient ? recipientId : currentMember.id,
+          isShared: false,
+          status: "pending",
+          starValue: isChildRecipient ? starValue : 0,
+          visual: { type: "lucide-icon", value: emoji },
+          recurrence,
+          recurringSourceId: null,
+          occurrenceDate: null,
+          // Återkommande: visibleFrom är bara ankardatumet för förfallo-
+          // beräkningen, de faktiska klockslagen kommer från timeWindows.
+          visibleFrom: isRecurring ? dateOnlyToISO(startDate) : toDateTimeString(visibleFrom),
+          expiresAt: isRecurring ? null : toDateTimeString(expiresAt),
+          timeWindows: isRecurring ? timeWindows : undefined,
+          completedAt: null,
+          approvedBy: null,
+          approvedAt: null,
+          rejectedBy: null,
+          rejectedAt: null,
+          rejectedReason: null,
+          deletedAt: null,
+          deletedBy: null,
+          personalCategoryId: categoryId,
+          notes: notes.trim() || null,
+          subtasks: cleanedSubtasks.map((s) => ({ ...s, id: generateId() }))
+        });
+      }
       onClose();
     } finally {
       setSubmitting(false);
@@ -164,21 +187,36 @@ export function TodoCreatorModal({
         </div>
         <form className="todo-creator-modal__body" onSubmit={handleSubmit}>
           {assignableChildren.length > 0 && (
-            <label className="field-label">
-              Åt vem?
-              <select
-                className="text-input"
-                onChange={(e) => setAssigneeId(e.target.value)}
-                value={assigneeId}
-              >
-                <option value={SELF_VALUE}>Mig själv</option>
+            <div className="field-label">
+              <span>Åt vem? (går att välja flera)</span>
+              <div aria-label="Åt vem?" className="todo-assignee-picker" role="group">
+                <button
+                  aria-pressed={assigneeIds.includes(SELF_VALUE)}
+                  className={
+                    "todo-assignee-picker__btn" +
+                    (assigneeIds.includes(SELF_VALUE) ? " todo-assignee-picker__btn--on" : "")
+                  }
+                  onClick={() => toggleAssignee(SELF_VALUE)}
+                  type="button"
+                >
+                  Mig själv
+                </button>
                 {assignableChildren.map((child) => (
-                  <option key={child.id} value={child.id}>
+                  <button
+                    aria-pressed={assigneeIds.includes(child.id)}
+                    className={
+                      "todo-assignee-picker__btn" +
+                      (assigneeIds.includes(child.id) ? " todo-assignee-picker__btn--on" : "")
+                    }
+                    key={child.id}
+                    onClick={() => toggleAssignee(child.id)}
+                    type="button"
+                  >
                     {child.name}
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
           )}
 
           <div className="todo-emoji-title-row">
@@ -318,7 +356,7 @@ export function TodoCreatorModal({
             </button>
           </div>
 
-          <button className="primary-button" disabled={submitting || isRecurrenceIncomplete(recurrence)} type="submit">
+          <button className="primary-button" disabled={submitting || assigneeIds.length === 0 || isRecurrenceIncomplete(recurrence)} type="submit">
             Skapa
           </button>
         </form>

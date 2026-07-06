@@ -527,7 +527,11 @@ test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för m
   await openCreateModalFromBarnThread(page);
   const dialog = page.getByRole("dialog");
 
-  await dialog.getByLabel("Åt vem?").selectOption({ label: "Lilla Barnet" });
+  // Åt vem? är sedan 2026-07-06 en flerval-knappgrupp (går att välja flera
+  // mottagare samtidigt) — här väljs bara barnet, "Mig själv" väljs bort.
+  const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
+  await assigneePicker.getByRole("button", { name: "Mig själv" }).click();
+  await assigneePicker.getByRole("button", { name: "Lilla Barnet" }).click();
   await dialog.getByLabel("Titel").fill("Plocka undan leksaker");
   await dialog.getByLabel("Stjärnor").fill("3");
   await dialog.getByRole("button", { name: "Skapa" }).click();
@@ -537,6 +541,50 @@ test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för m
   expect(createdTodo?.createdBy).toBe("mem-1");
   expect(createdTodo?.starValue).toBe(3);
   await expect(page.getByRole("region", { name: "Tråd: Barn" }).getByText("Plocka undan leksaker")).toBeVisible();
+});
+
+// Zaida: "när jag lägger in en ny todo-uppgift så vill jag kunna välja flera
+// familjemedlemmar samtidigt som alla ska få uppgiften" (2026-07-06) — varje
+// vald mottagare får en egen kopia av uppgiften (samma mönster som
+// CSV-importen: en todo per mottagare, inte en delad uppgift).
+test("Ny uppgift-modalen: väljer flera mottagare samtidigt, alla får varsin kopia av uppgiften", async ({ page }) => {
+  const createdTodos: Record<string, unknown>[] = [];
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      createdTodos.push(body);
+      return route.fulfill({ status: 201, json: { id: body.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  // "Mig själv" är förvalt som default — lämnas ikryssat och lägger till
+  // barnet också, så BÅDA ska få varsin uppgift.
+  const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
+  await assigneePicker.getByRole("button", { name: "Lilla Barnet" }).click();
+  await dialog.getByLabel("Titel").fill("Städa vardagsrummet");
+  await dialog.getByLabel("Stjärnor").fill("2");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodos.length).toBe(2);
+  const assignees = createdTodos.map((t) => t.assignedTo).sort();
+  expect(assignees).toEqual(["mem-1", "mem-child-1"].sort());
+  expect(createdTodos.every((t) => t.title === "Städa vardagsrummet")).toBe(true);
+  // Olika id — två oberoende todos, inte en delad uppgift.
+  expect(createdTodos[0].id).not.toBe(createdTodos[1].id);
+  // Stjärnor gäller bara barnets kopia, min egen kopia har alltid 0.
+  const childCopy = createdTodos.find((t) => t.assignedTo === "mem-child-1");
+  const selfCopy = createdTodos.find((t) => t.assignedTo === "mem-1");
+  expect(childCopy?.starValue).toBe(2);
+  expect(selfCopy?.starValue).toBe(0);
 });
 
 test("Ny uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när kategorier redan finns", async ({ page }) => {
