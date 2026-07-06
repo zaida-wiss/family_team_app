@@ -6,7 +6,47 @@ import { AppError } from "../utils/errors.js";
 import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { writeAuditLog } from "./auditLogService.js";
-import type { Todo } from "../../../shared/types.js";
+import { getAllRoles } from "./rolesService.js";
+import { canCompleteTodo, canManageChildAccount, hasPermission } from "../../../shared/permissions.js";
+import type { Member, Role, Todo } from "../../../shared/types.js";
+
+// Servern litade tidigare bara på att frontend gömde knapparna bakom
+// canCompleteTodo/hasPermission(..., "canApproveTodos") — vem som helst
+// inloggad i kontot kunde anropa complete/approve/reject direkt för VILKEN
+// TODO SOM HELST, oavsett tilldelning/roll (samma klass av brist som redan
+// fixades en gång för roller generellt, ADR-0009). hasPermission/canCompleteTodo
+// är samma rena funktioner som redan används i frontend (shared/permissions.ts),
+// återanvänds här istället för att skriva en ny variant.
+async function requireMember(memberId: string | null, accountId: string) {
+  const member = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
+  if (!member) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return member;
+}
+
+// completeTodo anropas alltid med den INLOGGADE medlemmens id (x-member-id sätts
+// en gång per session, aldrig per todo) — men frontend låter en förälder
+// slutföra ett BARNS uppgift via ett långt tryck i tråd-vyn (MemberShellContent.tsx),
+// vilket klientsidan tillåter genom att kontrollera canCompleteTodo mot BARNETS
+// (tilldelade medlemmens) identitet, inte förälderns. En ren port av
+// canCompleteTodo(inloggad medlem, ...) hade därför nekat detta helt legitima
+// flödet — och dessutom nekat en vuxen att slutföra sin EGEN personliga uppgift,
+// eftersom Förälder-rollens standardbehörigheter saknar canCompleteAssignedTodos
+// (den behörigheten gäller uppgifter TILLDELADE AV NÅGON ANNAN, t.ex. ett barns
+// rutin — inte en självskapad personlig todo). Tre giltiga vägar:
+// 1. Egen, självskapad OCH självtilldelad uppgift (personliga kategori-trådar) — kräver ingen särskild behörighet.
+// 2. Tilldelad AV någon annan, men till en själv, och man har canCompleteAssignedTodos.
+// 3. Barnets uppgift, hanterad åt barnet av en förälder med canManageChildTodos
+//    (canManageChildAccount, samma funktion som redan avgör om en förälder får
+//    hantera ett barns konto/uppgifter på andra ställen).
+async function canCompleteTodoAsCaller(caller: Member, roles: Role[], todo: Todo) {
+  if (todo.createdBy === caller.id && todo.assignedTo === caller.id) return true;
+  if (canCompleteTodo(caller, roles, todo)) return true;
+  if (!todo.assignedTo) return false;
+  const assignee = await MemberModel.findOne({ id: todo.assignedTo, accountId: caller.accountId, deletedAt: null });
+  return !!assignee && canManageChildAccount(caller, assignee, roles);
+}
 
 export async function getAllTodos(accountId: string) {
   const cutoff30 = new Date();
@@ -107,7 +147,11 @@ export async function completeTodo(id: string, accountId: string, memberId: stri
   if (!todo || todo.status !== "pending") {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
-
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!(await canCompleteTodoAsCaller(member, roles, todo))) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
   todo.completedAt = new Date().toISOString();
 
   if (await assignedMemberNeedsApproval(todo.assignedTo)) {
@@ -146,6 +190,11 @@ export async function approveTodo(id: string, accountId: string, memberId: strin
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
   }
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(member, roles, "canApproveTodos")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
   todo.status = "approved";
   todo.approvedBy = memberId;
   todo.approvedAt = new Date().toISOString();
@@ -170,6 +219,11 @@ export async function rejectTodo(id: string, accountId: string, memberId: string
   const todo = await TodoModel.findOne({ id, accountId });
   if (!todo || todo.status !== "done") {
     throw new AppError(404, "Todo hittades inte eller är inte done");
+  }
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(member, roles, "canApproveTodos")) {
+    throw new AppError(403, "Åtkomst nekad");
   }
   const encryptedReason = encryptNullable(accountId, reason) ?? null;
   if (canRetryRejectedTodo({ expiresAt: todo.expiresAt })) {
