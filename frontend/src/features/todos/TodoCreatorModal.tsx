@@ -84,6 +84,17 @@ export function TodoCreatorModal({
 
   const isForChild = assigneeIds.some((id) => id !== SELF_VALUE);
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
+  const isTitleMissing = title.trim().length === 0;
+  // Utan ett startdatum blir visibleFrom null för en återkommande mall, vilket
+  // gör att förfallo-beräkningen (recurringTodos.ts) tappar sitt ankardatum —
+  // samma grundorsak som produktionsincidenten 2026-07-06 (se
+  // incidents/2026-07-06-barnens-rutiner-forsvann.md). Spärras därför här.
+  const isStartDateMissing = recurrence.type !== "none" && !startDate;
+  const canSubmit =
+    !isTitleMissing &&
+    !isStartDateMissing &&
+    assigneeIds.length > 0 &&
+    !isRecurrenceIncomplete(recurrence);
 
   function toggleAssignee(id: string) {
     setAssigneeIds((prev) => {
@@ -111,7 +122,7 @@ export function TodoCreatorModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || submitting || assigneeIds.length === 0 || isRecurrenceIncomplete(recurrence)) return;
+    if (submitting || !canSubmit) return;
 
     setSubmitting(true);
     try {
@@ -232,6 +243,7 @@ export function TodoCreatorModal({
               />
             </label>
           </div>
+          {isTitleMissing && <p className="field-hint">Titel krävs.</p>}
 
           <label className="field-label">
             Kategori
@@ -311,6 +323,7 @@ export function TodoCreatorModal({
                   value={startDate}
                 />
               </label>
+              {isStartDateMissing && <p className="field-hint">Välj ett startdatum.</p>}
 
               <TimeWindowsPicker onChange={setTimeWindows} windows={timeWindows} />
             </>
@@ -356,7 +369,7 @@ export function TodoCreatorModal({
             </button>
           </div>
 
-          <button className="primary-button" disabled={submitting || assigneeIds.length === 0 || isRecurrenceIncomplete(recurrence)} type="submit">
+          <button className="primary-button" disabled={submitting || !canSubmit} type="submit">
             Skapa
           </button>
         </form>

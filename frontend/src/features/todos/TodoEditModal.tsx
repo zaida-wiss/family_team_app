@@ -83,11 +83,17 @@ export function TodoEditModal({
   }
 
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
+  const isTitleMissing = title.trim().length === 0;
+  // Se samma resonemang i TodoCreatorModal.tsx — utan startdatum tappar en
+  // återkommande mall sitt ankardatum (grundorsaken till incidenten
+  // 2026-07-06, se incidents/2026-07-06-barnens-rutiner-forsvann.md).
+  const isStartDateMissing = recurrence.type !== "none" && !startDate;
+  const canSubmit = !isTitleMissing && !isStartDateMissing && !isRecurrenceIncomplete(recurrence);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || saving || isRecurrenceIncomplete(recurrence)) return;
+    if (saving || !canSubmit) return;
 
     setSaving(true);
     try {
@@ -149,6 +155,7 @@ export function TodoEditModal({
               <input className="text-input" onChange={(e) => setTitle(e.target.value)} value={title} />
             </label>
           </div>
+          {isTitleMissing && <p className="field-hint">Titel krävs.</p>}
 
           <label className="field-label">
             Kategori
@@ -215,6 +222,7 @@ export function TodoEditModal({
                   value={startDate}
                 />
               </label>
+              {isStartDateMissing && <p className="field-hint">Välj ett startdatum.</p>}
 
               <TimeWindowsPicker onChange={setTimeWindows} windows={timeWindows} />
             </>
@@ -265,7 +273,7 @@ export function TodoEditModal({
               <Trash2 size={15} />
               Radera
             </button>
-            <button className="primary-button" disabled={saving || isRecurrenceIncomplete(recurrence)} type="submit">
+            <button className="primary-button" disabled={saving || !canSubmit} type="submit">
               Spara
             </button>
           </div>
