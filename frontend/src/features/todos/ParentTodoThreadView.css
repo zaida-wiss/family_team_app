@@ -150,7 +150,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  /* Halverat (2026-07-06, Zaidas begäran: "så det ryms") — var 16px. */
+  gap: 8px;
   list-style: none;
   margin: 0;
   padding: 14px 0 6px;
