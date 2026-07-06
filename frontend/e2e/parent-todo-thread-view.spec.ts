@@ -1013,3 +1013,27 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   // göra det).
   await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
 });
+
+// Zaida: "i nuläget markeras bara texten när jag ska lägga in en ny uppgift
+// genom att hålla 2 sekunder på kategorinamnet... jag vill att menyn skall
+// komma upp istället" (2026-07-06) — kategorinamnet saknade user-select:none,
+// så ett stillastående håll markerade texten som vanlig text och stoppade
+// klicket som annars öppnar menyn.
+test("Bollar i tråd: ett stillastående 2s-håll på kategorinamnet markerar inte texten, öppnar menyn", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+
+  await openThreadView(page);
+  const btn = page.getByRole("button", { name: /^Träning\./ });
+  const box = (await btn.boundingBox())!;
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(2000);
+  await page.mouse.up();
+
+  await expect(page.getByRole("button", { name: "Byt namn" })).toBeVisible();
+  const selectionText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  expect(selectionText).toBe("");
+});

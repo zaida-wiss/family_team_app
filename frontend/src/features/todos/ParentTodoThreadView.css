@@ -107,6 +107,12 @@
   /* Håll-och-dra för att flytta tråden (2026-07-06) — utan detta scrollar
      sidan istället för att starta draget på touch-enheter. */
   touch-action: none;
+  /* Utan detta markerade webbläsaren kategorinamnet som vanlig text vid ett
+     stillastående 2s-håll (Zaidas fynd 2026-07-06) — textmarkeringen
+     stoppade sedan klicket som annars öppnar menyn. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .todo-thread__category-button--dragging {
