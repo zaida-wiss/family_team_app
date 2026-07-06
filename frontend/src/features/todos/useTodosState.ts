@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { todosApi } from "../../api";
-import { canCompleteTodo, canDeleteTodo, canEditTodo } from "../../utils/permissions";
+import { canCompleteTodo, canDeleteTodo } from "../../utils/permissions";
 import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
@@ -8,8 +8,6 @@ import { trackEvent } from "../../utils/analytics";
 export function useTodosState() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const todosRef = useRef<Todo[]>([]);
-  const [editingTodoId, setEditingTodoId] = useState<Id | null>(null);
-  const [editingTodoTitle, setEditingTodoTitle] = useState("");
   // refreshTodos triggas från fyra oberoende källor (mount, SSE, visibilitychange,
   // efter godkänn/neka/avklara) som kan överlappa. Utan detta kan ett äldre svar
   // hinna komma in efter ett nyare och skriva över ett nyss godkänt uppdrag tillbaka
@@ -167,35 +165,6 @@ export function useTodosState() {
     );
   }
 
-  function startEditingTodo(todo: Todo, member: Member, roles: Role[]) {
-    if (!canEditTodo(member, roles, todo)) {
-      return;
-    }
-
-    setEditingTodoId(todo.id);
-    setEditingTodoTitle(todo.title);
-  }
-
-  function saveTodoTitle(todoId: Id, member: Member, roles: Role[]) {
-    const trimmedTitle = editingTodoTitle.trim();
-
-    if (!trimmedTitle) {
-      return;
-    }
-
-    const todo = todos.find((t) => t.id === todoId);
-    if (todo && canEditTodo(member, roles, todo)) {
-      updateTodo(todoId, { title: trimmedTitle });
-    }
-    setEditingTodoId(null);
-    setEditingTodoTitle("");
-  }
-
-  function cancelEditingTodo() {
-    setEditingTodoId(null);
-    setEditingTodoTitle("");
-  }
-
   function softDeleteTodo(todoId: Id, member: Member, roles: Role[]) {
     setTodos((current) =>
       current.map((todo) => {
@@ -211,10 +180,6 @@ export function useTodosState() {
         };
       })
     );
-
-    if (editingTodoId === todoId) {
-      cancelEditingTodo();
-    }
   }
 
   function restoreTodo(todoId: Id) {
@@ -402,16 +367,10 @@ export function useTodosState() {
 
   return {
     todos,
-    editingTodoId,
-    editingTodoTitle,
-    setEditingTodoTitle,
     createTodo,
     updateTodo,
     toggleSubtask,
     completeTodo,
-    startEditingTodo,
-    saveTodoTitle,
-    cancelEditingTodo,
     softDeleteTodo,
     restoreTodo,
     approveTodo,

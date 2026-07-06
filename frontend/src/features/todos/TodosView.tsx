@@ -1,8 +1,9 @@
 import "./TodosView.css";
-import { CheckCircle2, Pencil, Save, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
+import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
@@ -15,8 +16,6 @@ type Props = {
   roles: Role[];
   todos: Todo[];
   rewards: Reward[];
-  editingTodoId: Id | null;
-  editingTodoTitle: string;
   canApproveTodos: boolean;
   canSeeTodos: boolean;
   wishStars: Record<Id, number>;
@@ -25,10 +24,6 @@ type Props = {
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
-  onSetEditingTodoTitle: (t: string) => void;
-  onStartEditingTodo: (todo: Todo) => void;
-  onSaveTodoTitle: (todoId: Id) => void;
-  onCancelEditingTodo: () => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
@@ -57,18 +52,12 @@ export function TodosView({
   roles,
   todos,
   rewards,
-  editingTodoId,
-  editingTodoTitle,
   canApproveTodos,
   canSeeTodos,
   wishStars,
   todoViewMode,
   todoThreadOrder,
   onReorderThreads,
-  onSetEditingTodoTitle,
-  onStartEditingTodo,
-  onSaveTodoTitle,
-  onCancelEditingTodo,
   onCreateTodo,
   onToggleSubtask,
   onUpdateTodo,
@@ -99,6 +88,14 @@ export function TodosView({
   // Sätts när "Lägg till uppgift" väljs från en kategoris meny (2026-07-05) —
   // förvalt i skapa-modalen, fortsatt ändringsbart där.
   const [createDefaultCategoryId, setCreateDefaultCategoryId] = useState<Id | null>(null);
+  // Listläget öppnar nu samma fullständiga redigera-modal som tråd-vyn
+  // (2026-07-06, Zaidas fråga om var man rättar ett fel datum) — ersätter den
+  // gamla inline-titel-redigeringen, som inte kunde ändra Syns från/Försvinner
+  // och därför var en återvändsgränd om en engångsuppgift råkat få fel datum
+  // och därmed blivit osynlig i tråd-vyn (den enda andra platsen redigera-
+  // modalen nåddes ifrån).
+  const [editTodoId, setEditTodoId] = useState<Id | null>(null);
+  const editTodo = todos.find((t) => t.id === editTodoId) ?? null;
 
   function openCreateModalForCategory(categoryId: Id | null) {
     setCreateDefaultCategoryId(categoryId);
@@ -148,6 +145,17 @@ export function TodosView({
           />
         )}
 
+        {editTodo && (
+          <TodoEditModal
+            todo={editTodo}
+            categories={personalCategories}
+            onUpdateTodo={onUpdateTodo}
+            onCreateCategory={onCreateCategory}
+            onDeleteTodo={onSoftDeleteTodo}
+            onClose={() => setEditTodoId(null)}
+          />
+        )}
+
         {todoViewMode === "thread" && canSeeTodos && (
           <ParentTodoThreadView
             todos={visibleTodos}
@@ -169,52 +177,24 @@ export function TodosView({
           />
         )}
 
-        {todoViewMode === "list" && visibleTodos.map((todo) => {
-          const isEditing = editingTodoId === todo.id;
-          return (
-            <div className="dashboard-row todo-dashboard-row" key={todo.id}>
-              <CheckCircle2 size={18} />
-              {isEditing ? (
-                <input
-                  className="text-input todo-title-input"
-                  onChange={(e) => onSetEditingTodoTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") onSaveTodoTitle(todo.id);
-                    if (e.key === "Escape") onCancelEditingTodo();
-                  }}
-                  value={editingTodoTitle}
-                />
-              ) : (
-                <span>
-                  {todo.title}
-                  <small>{getAssigneeName(todo, allMembers)}</small>
-                </span>
-              )}
-              <strong>{getTodoSummary(todo)}</strong>
-              <div className="todo-row-actions">
-                {isEditing ? (
-                  <>
-                    <button className="icon-button" onClick={() => onSaveTodoTitle(todo.id)} title="Spara" type="button">
-                      <Save size={16} />
-                    </button>
-                    <button className="icon-button" onClick={onCancelEditingTodo} title="Avbryt" type="button">
-                      <XCircle size={16} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button className="icon-button" onClick={() => onStartEditingTodo(todo)} title="Redigera" type="button">
-                      <Pencil size={16} />
-                    </button>
-                    <button className="icon-button danger" onClick={() => onSoftDeleteTodo(todo.id)} title="Radera" type="button">
-                      <Trash2 size={16} />
-                    </button>
-                  </>
-                )}
-              </div>
+        {todoViewMode === "list" && visibleTodos.map((todo) => (
+          <div className="dashboard-row todo-dashboard-row" key={todo.id}>
+            <CheckCircle2 size={18} />
+            <span>
+              {todo.title}
+              <small>{getAssigneeName(todo, allMembers)}</small>
+            </span>
+            <strong>{getTodoSummary(todo)}</strong>
+            <div className="todo-row-actions">
+              <button className="icon-button" onClick={() => setEditTodoId(todo.id)} title="Redigera" type="button">
+                <Pencil size={16} />
+              </button>
+              <button className="icon-button danger" onClick={() => onSoftDeleteTodo(todo.id)} title="Radera" type="button">
+                <Trash2 size={16} />
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
 
         {visibleTodos.length === 0 && !canCreate && (
           <p className="empty-note">Inga todos att visa.</p>

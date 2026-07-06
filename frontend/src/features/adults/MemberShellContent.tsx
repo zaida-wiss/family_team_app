@@ -45,18 +45,12 @@ type Props = {
   canSeeShopping: boolean;
   canApproveTodos: boolean;
   canManageMembers: boolean;
-  editingTodoId: string | null;
-  editingTodoTitle: string;
   wishStars: Record<string, number>;
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
-  onSetEditingTodoTitle: (t: string) => void;
-  onStartEditingTodo: (todo: Todo) => void;
-  onSaveTodoTitle: (todoId: string) => void;
-  onCancelEditingTodo: () => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
@@ -109,10 +103,9 @@ export function MemberShellContent({
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
-  editingTodoId, editingTodoTitle, wishStars, todoViewMode,
+  wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads,
-  onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
-  onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
+  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
@@ -239,18 +232,12 @@ export function MemberShellContent({
           roles={roles}
           todos={todos}
           rewards={rewards}
-          editingTodoId={editingTodoId}
-          editingTodoTitle={editingTodoTitle}
           canApproveTodos={canApproveTodos}
           canSeeTodos={canSeeTodos}
           wishStars={wishStars}
           todoViewMode={todoViewMode}
           todoThreadOrder={todoThreadOrder}
           onReorderThreads={onReorderThreads}
-          onSetEditingTodoTitle={onSetEditingTodoTitle}
-          onStartEditingTodo={onStartEditingTodo}
-          onSaveTodoTitle={onSaveTodoTitle}
-          onCancelEditingTodo={onCancelEditingTodo}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onUpdateTodo={onUpdateTodo}

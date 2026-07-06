@@ -26,9 +26,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     activePanel, setActivePanel, apiError
   } = useAppState(activeMembership);
 
-  const { todos, editingTodoId, editingTodoTitle, setEditingTodoTitle,
-    createTodo, completeTodo, startEditingTodo, saveTodoTitle,
-    cancelEditingTodo, softDeleteTodo, restoreTodo, approveTodo, rejectTodo,
+  const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, approveTodo, rejectTodo,
     dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, refreshRoutineOccurrence } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, addCalendarEvent, updateCalendarEvent,
@@ -119,15 +117,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     calendars,
     shoppingLists,
     ...permissions,
-    editingTodoId,
-    editingTodoTitle,
     wishStars,
     onSelectMember: setSelectedDashboardMemberId,
-    onSetEditingTodoTitle: setEditingTodoTitle,
-    onStartEditingTodo: (todo: Parameters<typeof startEditingTodo>[0]) =>
-      startEditingTodo(todo, currentMember, roles),
-    onSaveTodoTitle: (todoId: string) => saveTodoTitle(todoId, currentMember, roles),
-    onCancelEditingTodo: cancelEditingTodo,
     onCreateTodo: createTodo,
     onToggleSubtask: toggleSubtask,
     onUpdateTodo: updateTodo,

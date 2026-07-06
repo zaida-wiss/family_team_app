@@ -104,4 +104,28 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await expect(page.getByText("Duka undan")).toBeVisible();
     await expect(page.getByText("Utgången", { exact: true })).toBeVisible();
   });
+
+  // 2026-07-06 (Zaidas fråga: var rättar man ett fel datum på en engångsuppgift?):
+  // listlägets pennikon öppnade tidigare bara en inline-titel-redigering, som
+  // inte kunde ändra Syns från/Försvinner — en återvändsgränd, eftersom
+  // tråd-vyn (den enda andra platsen redigera-modalen nåddes ifrån) bara visar
+  // dagens todos och därför gömmer precis den uppgift man behöver rätta.
+  // Pennikonen öppnar nu samma fullständiga redigera-modal som tråd-vyn.
+  test("Redigera i listläget öppnar den fullständiga redigera-modalen, inte inline-titel", async ({ page }) => {
+    await page.route("**/api/todos", (route) =>
+      route.fulfill({ json: route.request().method() === "GET" ? [PENDING_TODO] : {} })
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByLabel("Todos-vy").selectOption("list");
+    await page.getByRole("button", { name: "Todos" }).click();
+
+    await page.getByRole("button", { name: "Redigera" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel("Syns från")).toBeVisible();
+    await expect(dialog.getByLabel("Försvinner")).toBeVisible();
+  });
 });
