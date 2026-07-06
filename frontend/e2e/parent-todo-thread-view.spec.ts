@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { test, expect } from "@playwright/test";
 import { mockAuthAndData, MEMBER } from "./helpers";
 
