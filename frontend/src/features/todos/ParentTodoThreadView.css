@@ -5,7 +5,9 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 14px;
+  /* Pressat ihop (2026-07-06, Zaidas begäran: "minst 3 kategorier + barn ska
+     fylla skärmen") — var 14px. */
+  gap: 6px;
   overflow-x: auto;
   padding-bottom: 8px;
   /* Fyller kvarvarande yta ovanför bottenmenyn (2026-07-05, Zaidas begäran,
@@ -21,10 +23,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Breddad i takt med de större bollarna (2026-07-06) — samma marginal
-     proportionellt som tidigare (100px kolumn för en 56px boll). */
-  flex: 0 0 116px;
-  width: 116px;
+  /* Kolumnen matchar nu bollens bredd med bara lite marginal (2026-07-06,
+     samma begäran som ovan) — var 116px, mycket bredare än 72px-bollen. */
+  flex: 0 0 84px;
+  width: 84px;
 }
 
 .todo-thread__header {
@@ -140,9 +142,15 @@
 
 .todo-thread__empty {
   color: var(--muted-fg);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   margin: 0;
-  align-self: flex-start;
+  align-self: stretch;
+  /* Utan detta vägrar texten wrappa inom den nu smala kolumnen (2026-07-06-
+     fixet) — en ostretchad flex-kolumnbarn breder annars ut sig efter sin
+     egen textbredd istället för att respektera .todo-thread bredd. */
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: break-word;
 }
 
 .todo-thread__list {
@@ -309,13 +317,19 @@
   color: #000;
 }
 
-/* Lite större bollar på mobilen (2026-07-05, Zaidas begäran) — gott om
-   utrymme på höjden där (trådarna skrollar horisontellt ändå på smala
-   skärmar), touch-målet får bara bättre marginal av det. */
+/* Lite större bollar på mobilen (2026-07-05, Zaidas begäran). Kolumnen
+   pressas ihop till nästan bollens egen bredd (2026-07-06, Zaidas begäran:
+   "minst 3 kategorier + barn ska fylla skärmen", var 132px) — fyra 82px-
+   kolumner + tre 4px-mellanrum ryms på gott och väl inom en 360px-bred
+   mobilskärm, ingen horisontell scroll krävs längre för det vanliga fallet. */
 @media (max-width: 480px) {
+  .todo-thread-view {
+    gap: 4px;
+  }
+
   .todo-thread {
-    flex: 0 0 132px;
-    width: 132px;
+    flex: 0 0 82px;
+    width: 82px;
   }
 
   .todo-thread__ball {

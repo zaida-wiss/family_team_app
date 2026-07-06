@@ -449,6 +449,10 @@ test("Ny uppgift-modalen: skapar en återkommande uppgift med veckodagar och int
   await dialog.getByLabel("Återkommer").selectOption("recurring");
   await dialog.getByLabel("Intervall").fill("3");
   await dialog.getByLabel("Enhet för återkommelse").selectOption("week");
+  // Startdatum krävs för en återkommande uppgift (2026-07-06-spärren, se
+  // incidents/2026-07-06-barnens-rutiner-forsvann.md) — satt här så att
+  // disabled-kontrollen nedan isolerat testar veckodags-hintet.
+  await dialog.getByLabel("Startdatum").fill("2026-07-06");
   // Veckodagarna startar tomma som default (Zaidas beslut 2026-07-05) —
   // Skapa-knappen är avstängd tills minst en dag väljs.
   const createButton = dialog.getByRole("button", { name: "Skapa" });
@@ -490,6 +494,7 @@ test("Ny uppgift-modalen: en återkommande uppgift kan få flera tidsintervall s
   await dialog.getByLabel("Titel").fill("Borsta tänderna");
   await dialog.getByLabel("Återkommer").selectOption("recurring");
   await dialog.getByLabel("Enhet för återkommelse").selectOption("day");
+  await dialog.getByLabel("Startdatum").fill("2026-07-06");
 
   const timeRows = dialog.locator(".time-windows-picker__row");
   await expect(timeRows).toHaveCount(1);
