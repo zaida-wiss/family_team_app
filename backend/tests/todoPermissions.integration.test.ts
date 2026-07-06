@@ -1,10 +1,12 @@
 /**
- * Integrationstest (2026-07-06): /api/todos/:id/complete, /approve och /reject
- * saknade helt server-side behörighetskontroll — bara requireAuth+attachAccountId.
- * Vilken inloggad medlem som helst i kontot kunde anropa dessa direkt för VILKEN
- * TODO SOM HELST, oavsett tilldelning eller roll (samma klass av brist som redan
+ * Integrationstest (2026-07-06): /api/todos/:id/complete, /approve, /reject,
+ * PATCH /api/todos/:id och DELETE /api/todos/:id saknade helt server-side
+ * behörighetskontroll — bara requireAuth+attachAccountId. Vilken inloggad
+ * medlem som helst i kontot kunde anropa dessa direkt för VILKEN TODO SOM
+ * HELST, oavsett tilldelning eller roll (samma klass av brist som redan
  * fixades en gång för roller generellt, ADR-0009). Fyndet upptäcktes 2026-07-05
  * under Sprint 6 S4, flaggat som högsta prioritet i teamgenomgången 2026-07-06.
+ * PATCH/DELETE var en direkt uppföljning noterad i ADR-0016 samma dag.
  *
  * completeTodo har en extra nyans (se ADR-0016): en förälder får slutföra ett
  * BARNS uppgift åt barnet (håll-in-gesten i tråd-vyn), inte bara sin egen — det
@@ -210,5 +212,71 @@ describe.skipIf(!RUN)("todos.ts: server-side behörighetskontroll på complete/a
       .set("x-member-id", parentMemberId)
       .send({});
     expect(approve.status).toBe(200);
+  });
+
+  it("nekar PATCH/DELETE på en annan medlems todo utan canEditAnyTodos/canDeleteAnyTodos", async () => {
+    const todoId = `todo-perm-edit-a-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ id: todoId, title: "Förälderns todo", createdBy: parentMemberId, assignedTo: parentMemberId, ...todoPayload({}) });
+
+    const patch = await request(app)
+      .patch(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ title: "Kapad titel" });
+    expect(patch.status).toBe(403);
+
+    const del = await request(app)
+      .delete(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    expect(del.status).toBe(403);
+  });
+
+  it("tillåter skaparen PATCH/DELETE på sin egen todo, även utan canEditAnyTodos/canDeleteAnyTodos", async () => {
+    const todoId = `todo-perm-edit-b-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ id: todoId, title: "Begränsad medlems egen todo", createdBy: restrictedMemberId, assignedTo: restrictedMemberId, ...todoPayload({}) });
+
+    const patch = await request(app)
+      .patch(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ title: "Uppdaterad av mig själv" });
+    expect(patch.status).toBe(200);
+
+    const del = await request(app)
+      .delete(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    expect(del.status).toBe(200);
+  });
+
+  it("tillåter förälderns PATCH/DELETE på en todo skapad av någon annan, via canEditAnyTodos/canDeleteAnyTodos", async () => {
+    const todoId = `todo-perm-edit-c-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ id: todoId, title: "Skapad av barnet", createdBy: childMemberId, assignedTo: childMemberId, ...todoPayload({}) });
+
+    const patch = await request(app)
+      .patch(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ title: "Redigerad av förälder" });
+    expect(patch.status).toBe(200);
+
+    const del = await request(app)
+      .delete(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId);
+    expect(del.status).toBe(200);
   });
 });

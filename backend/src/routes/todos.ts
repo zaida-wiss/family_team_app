@@ -25,7 +25,7 @@ todosRouter.get("/events", requireAuth, async (_req, res) => {
 });
 
 todosRouter.patch("/:id", requireAuth, attachAccountId, async (req, res) => {
-  res.json(await todos.updateTodo(req.params.id, req.accountId!, req.body));
+  res.json(await todos.updateTodo(req.params.id, req.accountId!, req.body, req.memberId ?? null));
 });
 
 todosRouter.patch("/:id/complete", requireAuth, attachAccountId, async (req, res) => {

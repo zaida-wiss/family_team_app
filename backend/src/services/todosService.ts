@@ -7,7 +7,7 @@ import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { getAllRoles } from "./rolesService.js";
-import { canCompleteTodo, canManageChildAccount, hasPermission } from "../../../shared/permissions.js";
+import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, hasPermission } from "../../../shared/permissions.js";
 import type { Member, Role, Todo } from "../../../shared/types.js";
 
 // Servern litade tidigare bara på att frontend gömde knapparna bakom
@@ -169,11 +169,16 @@ export async function completeTodo(id: string, accountId: string, memberId: stri
   broadcastTodosChanged();
 }
 
-export async function updateTodo(id: string, accountId: string, data: unknown) {
+export async function updateTodo(id: string, accountId: string, data: unknown, memberId: string | null) {
   const patch = TodoPatchSchema.parse(data);
   const todo = await TodoModel.findOne({ id, accountId });
   if (!todo) {
     throw new AppError(404, "Todo hittades inte");
+  }
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!canEditTodo(member, roles, todo)) {
+    throw new AppError(403, "Åtkomst nekad");
   }
 
   if (patch.title !== undefined) patch.title = encryptField(accountId, patch.title);
@@ -259,6 +264,11 @@ export async function deleteTodo(id: string, accountId: string, memberId: string
   const todo = await TodoModel.findOne({ id, accountId });
   if (!todo) {
     throw new AppError(404, "Todo hittades inte");
+  }
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!canDeleteTodo(member, roles, todo)) {
+    throw new AppError(403, "Åtkomst nekad");
   }
   todo.deletedAt = new Date().toISOString();
   todo.deletedBy = memberId;
