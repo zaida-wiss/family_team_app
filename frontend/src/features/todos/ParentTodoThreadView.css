@@ -1,13 +1,24 @@
 /* Trådar sida vid sida (2026-07-05, Zaidas beslut) — så nästa grej att göra
    alltid syns i synfältet, ingen scroll krävs för att se alla kategorier på en
-   gång. Skrollbar horisontellt om de inte får plats. */
+   gång. Skrollbar horisontellt om de inte får plats.
+
+   Mobile-first, skalar med skärmbredden (2026-07-06, Zaidas fynd: en 800px-bred
+   surfplatta fick samma små bollar som en smal telefon, eftersom storleken
+   tidigare bara hade två fasta lägen — "mobil" (≤480px) och "allt annat" —
+   istället för att växa kontinuerligt med tillgänglig bredd). --ball-size
+   är en enda källa till sanning: en `clamp()` som håller sig kvar vid
+   golvvärdet (80px) på de smalaste telefonerna (så "Barn + minst 3 kategorier
+   fyller skärmen"-kravet från tidigare samma dag fortfarande håller — fyra
+   84px-kolumner + tre 4px-mellanrum = 348px, ryms gott och väl inom 360px),
+   men växer sedan gradvis i takt med `vw` upp till ett tak på större skärmar
+   (surfplattor, desktop) istället för att hoppa direkt till samma storlek
+   oavsett om skärmen är 500px eller 5000px bred. */
 .todo-thread-view {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  /* Pressat ihop (2026-07-06, Zaidas begäran: "minst 3 kategorier + barn ska
-     fylla skärmen") — var 14px. */
-  gap: 6px;
+  --ball-size: clamp(80px, 11vw, 116px);
+  gap: clamp(4px, 1vw, 8px);
   overflow-x: auto;
   padding-bottom: 8px;
   /* Fyller kvarvarande yta ovanför bottenmenyn (2026-07-05, Zaidas begäran,
@@ -16,17 +27,14 @@
   min-height: 60vh;
 }
 
-/* Bollarna hålls medvetet små (2026-07-05, Zaidas beslut) — så fler
-   kategori-trådar får plats sida vid sida på skärmen samtidigt, för
-   överblick över allt som ska göras utan att scrolla. */
+/* Kolumnen matchar bollens bredd med en liten, konstant marginal — växer med
+   --ball-size istället för att vara ett eget fast mått (2026-07-06). */
 .todo-thread {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Kolumnen matchar nu bollens bredd med bara lite marginal (2026-07-06,
-     samma begäran som ovan) — var 116px, mycket bredare än 72px-bollen. */
-  flex: 0 0 84px;
-  width: 84px;
+  flex: 0 0 calc(var(--ball-size) + 4px);
+  width: calc(var(--ball-size) + 4px);
 }
 
 .todo-thread__header {
@@ -204,11 +212,11 @@
   align-items: center;
   justify-content: center;
   gap: 1px;
-  /* 72px (2026-07-06, Zaidas begäran: "mina egna todo bubblor skall vara
-     större") — klart över minsta tillåtna touch-mål (44px), se
-     touch-first-principen i CLAUDE.md. Fast bredd=höjd — riktigt rund. */
-  width: 72px;
-  height: 72px;
+  /* Skalar med --ball-size (se .todo-thread-view), golvat på 80px — klart
+     över minsta tillåtna touch-mål (44px), se touch-first-principen i
+     CLAUDE.md. Fast bredd=höjd — riktigt rund. */
+  width: var(--ball-size);
+  height: var(--ball-size);
   flex-shrink: 0;
   border: 1px solid color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--border))) 80%, transparent);
   border-radius: 50%;
@@ -243,19 +251,20 @@
 
 /* Barnens bubblor (Barn-tråden) mycket mindre än vuxnas egna kategori-trådar
    (2026-07-06, Zaidas begäran) — golvat på 44px, det minsta tillåtna
-   touch-målet (CLAUDE.md), inte lägre. Text krympt i samma proportion. */
+   touch-målet (CLAUDE.md), inte lägre. Växer måttligt med skärmbredden precis
+   som huvudbollen, men med ett lägre tak så den förblir tydligt mindre. */
 .todo-thread__ball--small {
-  width: 44px;
-  height: 44px;
+  width: clamp(44px, 6vw, 60px);
+  height: clamp(44px, 6vw, 60px);
   padding: 2px;
 }
 
 .todo-thread__ball--small .todo-thread__ball-title {
-  font-size: 0.44rem;
+  font-size: clamp(0.44rem, 1vw, 0.52rem);
 }
 
 .todo-thread__ball--small .todo-thread__ball-progress {
-  font-size: 0.4rem;
+  font-size: clamp(0.4rem, 0.9vw, 0.46rem);
 }
 
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
@@ -296,7 +305,7 @@
 
 .todo-thread__ball-title {
   font-weight: 700;
-  font-size: 0.66rem;
+  font-size: clamp(0.72rem, 1.6vw, 0.85rem);
   line-height: 1.05;
   /* Bollen är nu en fast rund cirkel (se .todo-thread__ball) — långa titlar
      kapas med ellips istället för att göra bollen avlång (2026-07-05
@@ -312,43 +321,7 @@
 }
 
 .todo-thread__ball-progress {
-  font-size: 0.6rem;
+  font-size: clamp(0.6rem, 1.3vw, 0.7rem);
   font-weight: 700;
   color: #000;
-}
-
-/* Lite större bollar på mobilen (2026-07-05, Zaidas begäran). Kolumnen
-   pressas ihop till nästan bollens egen bredd (2026-07-06, Zaidas begäran:
-   "minst 3 kategorier + barn ska fylla skärmen", var 132px) — fyra 82px-
-   kolumner + tre 4px-mellanrum ryms på gott och väl inom en 360px-bred
-   mobilskärm, ingen horisontell scroll krävs längre för det vanliga fallet. */
-@media (max-width: 480px) {
-  .todo-thread-view {
-    gap: 4px;
-  }
-
-  .todo-thread {
-    flex: 0 0 82px;
-    width: 82px;
-  }
-
-  .todo-thread__ball {
-    width: 80px;
-    height: 80px;
-  }
-
-  /* Barnens bubblor stannar på 44px även på mobilen, växer inte med de
-     andra — se motiveringen vid .todo-thread__ball--small ovan. */
-  .todo-thread__ball--small {
-    width: 44px;
-    height: 44px;
-  }
-
-  .todo-thread__ball-title {
-    font-size: 0.72rem;
-  }
-
-  .todo-thread__ball--small .todo-thread__ball-title {
-    font-size: 0.44rem;
-  }
 }
