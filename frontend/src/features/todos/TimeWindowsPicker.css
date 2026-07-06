@@ -10,10 +10,15 @@
 .time-windows-picker__row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .time-windows-picker__row .text-input {
-  flex: 1;
-  min-width: 0;
+  /* type="time"-fält har ett inbyggt minimimått i de flesta webbläsare (flera
+     delfält: timme/minut) som inte krymper tillförlitligt under det även med
+     min-width:0 (2026-07-06-fix, samma orsak som RecurrencePicker.css). Bryter
+     till en ny rad på de smalaste mobilerna istället för att klippas. */
+  flex: 1 1 110px;
+  min-width: 110px;
 }

@@ -12,13 +12,18 @@
 .recurrence-picker__interval {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   font-size: 0.85rem;
 }
 
 .recurrence-picker__interval select {
-  flex: 1;
-  min-width: 0;
+  /* flex-wrap ovan + en rimlig min-bredd (2026-07-06-fix) — en <select> krymper
+     inte tillförlitligt under sitt eget innehålls bredd i alla webbläsare även
+     med min-width:0, vilket klippte av den på de smalaste mobilerna. Bryter
+     till en egen rad istället för att klippas av modalens overflow:hidden. */
+  flex: 1 1 90px;
+  min-width: 90px;
 }
 
 .recurrence-picker__every {

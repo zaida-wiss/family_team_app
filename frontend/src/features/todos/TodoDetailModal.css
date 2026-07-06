@@ -214,7 +214,18 @@
 
 @media (max-width: 480px) {
   .todo-detail-overlay {
-    padding: 16px 12px 100px;
+    padding: 10px 8px 96px;
     align-items: flex-start;
+  }
+
+  /* Minimalistisk/tätare på de minsta mobilerna (2026-07-06-fix) — mindre
+     luft mellan fälten så mer får plats i synfältet utan att skrolla. */
+  .todo-detail-modal__hdr {
+    padding: 10px 14px;
+  }
+
+  .todo-detail-modal__body {
+    padding: 10px 14px 14px;
+    gap: 9px;
   }
 }
