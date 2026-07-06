@@ -1,7 +1,7 @@
 import "./TodosView.css";
 import { CheckCircle2, Pencil, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
-import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoViewMode } from "@shared/types";
+import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoThreadRange, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
@@ -24,6 +24,9 @@ type Props = {
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
+  // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
+  // Inställningar, samma mönster som todoViewMode.
+  todoThreadRange: TodoThreadRange;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
@@ -58,6 +61,7 @@ export function TodosView({
   todoViewMode,
   todoThreadOrder,
   onReorderThreads,
+  todoThreadRange,
   onCreateTodo,
   onToggleSubtask,
   onUpdateTodo,
@@ -174,6 +178,7 @@ export function TodosView({
             onAddTodoToCategory={openCreateModalForCategory}
             todoThreadOrder={todoThreadOrder}
             onReorderThreads={onReorderThreads}
+            range={todoThreadRange}
           />
         )}
 

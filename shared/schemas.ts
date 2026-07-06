@@ -11,6 +11,9 @@ export const CalendarViewModeSchema = z.enum(["month", "week", "list", "timeline
 // panelen (2026-07-05, Zaidas beslut).
 export const TodoViewModeSchema = z.enum(["list", "thread"]);
 
+// Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål).
+export const TodoThreadRangeSchema = z.enum(["today", "week", "month", "all"]);
+
 // Partial<Record<CalendarFilterKey, ...>> — z.record().partial() finns inte i denna
 // zod-version (ZodRecord saknar .partial(), bara ZodObject har den), och CalendarFilterKey
 // har bara två kända nycklar, så ett explicit objekt uttrycker exakt samma typ.
@@ -58,6 +61,7 @@ export const MemberSchema = z.object({
   calendarView: CalendarViewModeSchema.optional(),
   todoViewMode: TodoViewModeSchema.optional(),
   todoThreadOrder: z.array(IdSchema).optional(),
+  todoThreadRange: TodoThreadRangeSchema.optional(),
   spentStars: z.number().int().min(0),
   approvedStars: z.number().int().min(0),
   deletedAt: z.string().nullable(),
@@ -80,6 +84,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   calendarView: true,
   todoViewMode: true,
   todoThreadOrder: true,
+  todoThreadRange: true,
   spentStars: true
 }).partial();
 

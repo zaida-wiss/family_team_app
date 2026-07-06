@@ -78,6 +78,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onRemoveTimedTask,
     todoViewMode,
     onUpdateTodoViewMode,
+    todoThreadRange,
+    onUpdateTodoThreadRange,
     personalCategories,
     onCreateCategory,
     onSetCategoryHidden,
@@ -109,6 +111,23 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
             <option value="list">Lista</option>
           </select>
         </label>
+        {todoViewMode === "thread" && (
+          <label className="field-label settings-todo-view-mode">
+            Hur mycket ska visas i tråd-vyn?
+            <select
+              className="text-input"
+              onChange={(e) =>
+                onUpdateTodoThreadRange(e.target.value as "today" | "week" | "month" | "all")
+              }
+              value={todoThreadRange}
+            >
+              <option value="today">Bara idag</option>
+              <option value="week">En vecka framåt</option>
+              <option value="month">En månad framåt</option>
+              <option value="all">Allt i framtiden</option>
+            </select>
+          </label>
+        )}
       </SettingsSection>
 
       <SettingsSection title="🏪 Belöningsbutiken" defaultOpen>

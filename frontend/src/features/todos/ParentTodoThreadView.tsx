@@ -1,6 +1,6 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
@@ -31,6 +31,10 @@ type Props = {
   onAddTodoToCategory: (categoryId: Id | null) => void;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
+  // Hur mycket som visas (2026-07-06, Zaidas önskemål: "bara idag, en vecka,
+  // en månad, eller en lång lista på allt i framtiden") — väljs i
+  // Inställningar, samma per-medlem-mönster som todoViewMode.
+  range: TodoThreadRange;
 };
 
 type Thread = {
@@ -89,16 +93,27 @@ function sortByEndThenStartTime(todos: Todo[]): Todo[] {
   });
 }
 
-// Visar bara dagens todos (2026-07-05, Zaidas beslut) — en todo räknas som
-// "idag" om dess synlighetsfönster (visibleFrom–expiresAt) övertäcker någon
-// del av dygnet, eller om den saknar schema helt (då är den inte knuten till
-// en viss dag och ska alltid synas).
-function isDueToday(todo: Todo, today: Date): boolean {
+// Hur mycket som visas (2026-07-06, Zaidas önskemål) — en todo räknas som
+// inom spannet om dess synlighetsfönster (visibleFrom–expiresAt) övertäcker
+// någon del av det, eller om den saknar schema helt (då är den inte knuten
+// till en viss dag/period och ska alltid synas). "Idag" (standard) beter sig
+// precis som tidigare — bara "week"/"month"/"all" är nya. "all" har ingen
+// bortre gräns (allt i framtiden), men utgångna uppgifter (until <= nu)
+// filtreras fortfarande bort, precis som i övriga spann.
+function rangeLengthInDays(range: TodoThreadRange): number | null {
+  if (range === "today") return 1;
+  if (range === "week") return 7;
+  if (range === "month") return 30;
+  return null;
+}
+
+function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange): boolean {
   const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+  const days = rangeLengthInDays(range);
+  const rangeEnd = days === null ? Number.POSITIVE_INFINITY : dayStart + days * 24 * 60 * 60 * 1000;
   const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
   const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
-  return from < dayEnd && until > dayStart;
+  return from < rangeEnd && until > dayStart;
 }
 
 // Vuxenvyn med delmoment (Sprint 6 S2–S4, ombyggd 2026-07-05 på Zaidas beslut) —
@@ -133,7 +148,8 @@ export function ParentTodoThreadView({
   onDeleteTodo,
   onAddTodoToCategory,
   todoThreadOrder,
-  onReorderThreads
+  onReorderThreads,
+  range
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -191,7 +207,7 @@ export function ParentTodoThreadView({
   // occurrensen har de faktiska tiderna från timeWindows, vilket gjorde
   // dubbletten synlig först efter att flera tidsintervall infördes).
   const pendingTodos = todos.filter(
-    (t) => t.status === "pending" && !isRecurringTemplate(t) && isDueToday(t, today)
+    (t) => t.status === "pending" && !isRecurringTemplate(t) && isDueWithinRange(t, today, range)
   );
   const visibleTodos = [
     ...pendingTodos,

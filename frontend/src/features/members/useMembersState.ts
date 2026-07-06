@@ -8,6 +8,7 @@ import type {
   DashboardThemeId,
   Id,
   Member,
+  TodoThreadRange,
   TodoViewMode
 } from "@shared/types";
 
@@ -142,6 +143,7 @@ export function useMembersState() {
       calendarView?: CalendarViewMode;
       todoViewMode?: TodoViewMode;
       todoThreadOrder?: Id[];
+      todoThreadRange?: TodoThreadRange;
     }
   ) {
     setMembers((current) =>

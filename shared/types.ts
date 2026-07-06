@@ -31,6 +31,11 @@ export type CalendarViewMode = "month" | "week" | "list" | "timeline";
 
 export type TodoViewMode = "list" | "thread";
 
+// Hur mycket som visas i "bollar i tråd" (2026-07-06, Zaidas begäran: "bara
+// idag, en vecka, en månad, eller en lång lista på allt i framtiden") — bara
+// tråd-vyn (bubblorna), listläget har aldrig haft ett datumfilter alls.
+export type TodoThreadRange = "today" | "week" | "month" | "all";
+
 export type CalendarFilterKey = "home" | "calendar";
 
 export type CalendarFilterSettings = Partial<Record<CalendarFilterKey, {
@@ -110,6 +115,9 @@ export type Member = {
   // saknas i listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga
   // ordning. Saknas fältet helt = ingen anpassad ordning ännu.
   todoThreadOrder?: Id[];
+  // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
+  // Inställningar, samma mönster som todoViewMode. Standard "today" om osatt.
+  todoThreadRange?: TodoThreadRange;
   spentStars: number;
   approvedStars: number;
   deletedAt: string | null;

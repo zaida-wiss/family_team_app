@@ -145,6 +145,80 @@ test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns el
   await expect(thread.getByText("För fyra dagar sedan")).toHaveCount(0);
 });
 
+// 2026-07-06 (Zaidas önskemål): "Bara idag, en vecka, en månad, eller en lång
+// lista på allt i framtiden" — ny per-medlem-inställning todoThreadRange,
+// väljs i Inställningar → Utseende, precis som Todos-vy.
+test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos visas", async ({ page }) => {
+  const todoWeek = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-week",
+    title: "Om fem dagar",
+    visibleFrom: "2026-07-11T00:00:00.000Z",
+    expiresAt: null
+  };
+  const todoMonth = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-month",
+    title: "Om tjugo dagar",
+    visibleFrom: "2026-07-26T00:00:00.000Z",
+    expiresAt: null
+  };
+  const todoFarFuture = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-far-future",
+    title: "Om hundra dagar",
+    visibleFrom: "2026-10-14T00:00:00.000Z",
+    expiresAt: null
+  };
+  const todoExpired = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-expired-range",
+    title: "Gick ut igår",
+    visibleFrom: null,
+    expiresAt: "2026-07-05T00:00:00.000Z"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [todoWeek, todoMonth, todoFarFuture, todoExpired] })
+  );
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+
+  // Standard ("Bara idag") — inget av de framtida syns.
+  await expect(thread.getByText("Om fem dagar")).toHaveCount(0);
+  await expect(thread.getByText("Om tjugo dagar")).toHaveCount(0);
+  await expect(thread.getByText("Om hundra dagar")).toHaveCount(0);
+  await expect(thread.getByText("Gick ut igår")).toHaveCount(0);
+
+  async function selectRange(label: string) {
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByLabel("Hur mycket ska visas i tråd-vyn?").selectOption(label);
+    await page.getByRole("button", { name: "Todos" }).click();
+  }
+
+  await selectRange("week");
+  await expect(thread.getByText("Om fem dagar")).toBeVisible();
+  await expect(thread.getByText("Om tjugo dagar")).toHaveCount(0);
+  await expect(thread.getByText("Om hundra dagar")).toHaveCount(0);
+  await expect(thread.getByText("Gick ut igår")).toHaveCount(0);
+
+  await selectRange("month");
+  await expect(thread.getByText("Om fem dagar")).toBeVisible();
+  await expect(thread.getByText("Om tjugo dagar")).toBeVisible();
+  await expect(thread.getByText("Om hundra dagar")).toHaveCount(0);
+  await expect(thread.getByText("Gick ut igår")).toHaveCount(0);
+
+  await selectRange("all");
+  await expect(thread.getByText("Om fem dagar")).toBeVisible();
+  await expect(thread.getByText("Om tjugo dagar")).toBeVisible();
+  await expect(thread.getByText("Om hundra dagar")).toBeVisible();
+  // Utgångna uppgifter ska ALDRIG synas, oavsett tidsspann.
+  await expect(thread.getByText("Gick ut igår")).toHaveCount(0);
+});
+
 test("Bollar i tråd: sorterar på sluttid, tidigast sluttid överst", async ({ page }) => {
   const todoLate = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-late", title: "Sent pass", expiresAt: "2026-07-10T18:00:00.000Z" };
   const todoEarly = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-early", title: "Tidigt pass", expiresAt: "2026-07-08T08:00:00.000Z" };

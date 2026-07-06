@@ -18,6 +18,7 @@ const memberSchema = new Schema<Member>({
   calendarView: { type: String, default: undefined },
   todoViewMode: { type: String, default: undefined },
   todoThreadOrder: { type: [String], default: undefined },
+  todoThreadRange: { type: String, default: undefined },
   spentStars: { type: Number, default: 0 },
   approvedStars: { type: Number, default: 0 },
   deletedAt: { type: String, default: null },

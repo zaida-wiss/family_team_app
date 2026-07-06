@@ -5,7 +5,7 @@ import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
 import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState";
 import { useAppFont } from "../components/FontPicker";
-import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TodoViewMode } from "@shared/types";
+import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TodoThreadRange, TodoViewMode } from "@shared/types";
 
 export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
   // En enda instans delad mellan flytande temaväljaren (Shell) och Inställningar-panelen
@@ -134,6 +134,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     // Drag-and-drop-ordning på trådarna i "bollar i tråd" (2026-07-06).
     todoThreadOrder: currentMember.todoThreadOrder ?? [],
     onReorderThreads: (order: Id[]) => updateMemberNavigation(currentMember.id, { todoThreadOrder: order }),
+    // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
+    // Inställningar, se settingsProps nedan.
+    todoThreadRange: currentMember.todoThreadRange ?? "today",
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
@@ -216,6 +219,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     todoViewMode: currentMember.todoViewMode ?? "thread",
     onUpdateTodoViewMode: (mode: TodoViewMode) =>
       updateMemberNavigation(currentMember.id, { todoViewMode: mode }),
+    todoThreadRange: currentMember.todoThreadRange ?? "today",
+    onUpdateTodoThreadRange: (range: TodoThreadRange) =>
+      updateMemberNavigation(currentMember.id, { todoThreadRange: range }),
     onUpdateChildTimelineSettings: updateChildTimelineSettings,
     onAssignRole: assignRole,
     onCreateRole: createRole,

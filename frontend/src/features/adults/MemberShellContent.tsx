@@ -22,7 +22,7 @@ const TodosView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoViewMode, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -49,6 +49,7 @@ type Props = {
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
+  todoThreadRange: TodoThreadRange;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
   onCreateTodo: (todo: Todo) => void;
@@ -104,7 +105,7 @@ export function MemberShellContent({
   todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
-  todoThreadOrder, onReorderThreads,
+  todoThreadOrder, onReorderThreads, todoThreadRange,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
@@ -238,6 +239,7 @@ export function MemberShellContent({
           todoViewMode={todoViewMode}
           todoThreadOrder={todoThreadOrder}
           onReorderThreads={onReorderThreads}
+          todoThreadRange={todoThreadRange}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onUpdateTodo={onUpdateTodo}
