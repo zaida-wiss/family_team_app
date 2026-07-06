@@ -35,7 +35,13 @@ export function useAppState(initialMembership: ActiveMembership) {
   const shoppingState = useShoppingState();
   const rewardsState = useRewardsState();
 
-  const [selectedDashboardMemberId, setSelectedDashboardMemberIdRaw] = useState<Id | null>(null);
+  // Återställs från persisterad state (2026-07-06-fix) — saknades tidigare,
+  // så en sidomladdning medan man tittade på ett barns dashboard nollställde
+  // valet och man hamnade på den inloggade medlemmens egen Hem-vy istället,
+  // trots att activePanel korrekt återställdes till "home".
+  const [selectedDashboardMemberId, setSelectedDashboardMemberIdRaw] = useState<Id | null>(
+    initialMembership.member.lastSelectedDashboardMemberId ?? null
+  );
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
   const [activePanel, setActivePanelRaw] = useState<ShellPanel>(
     initialMembership.member.lastActivePanel ?? "home"
