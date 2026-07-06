@@ -32,6 +32,11 @@
   padding: 0 12px;
   background: white;
   color: var(--foreground);
+  /* Måste vara >=16px: iOS Safari zoomar automatiskt in HELA sidan när ett
+     fokuserat textfält har mindre font-size än så. Utan denna rad ärver
+     fältet font-size från vilken förälder som helst (t.ex. .recurrence-
+     picker__interval på 0.85rem), vilket triggar zoomen. */
+  font-size: 16px;
 }
 
 .primary-button {
