@@ -40,7 +40,17 @@ async function run() {
   const intervalTodos = await TodoModel.find({ "recurrence.type": "interval" });
   for (const todo of intervalTodos) {
     const old = todo.recurrence as unknown as OldInterval;
-    const migrated: RecurrenceRule = { type: "recurring", unit: old.unit, every: old.every, daysOfWeek: null };
+    // Gamla "interval"-formen hade inget veckodags-koncept alls (bara ett
+    // dagräknat intervall) — den nya formen KRÄVER minst en vald veckodag när
+    // unit är "week" (schemats .refine i shared/schemas.ts). Att bara kopiera
+    // old.unit rakt av för unit:"week" skapar ett ogiltigt daysOfWeek:null-
+    // tillstånd (bugg hittad 2026-07-06, se incidents/). "Var N:e vecka" utan
+    // specifik veckodag är semantiskt identiskt med "var N*7:e dag" — så det
+    // skrivs om till unit:"day" istället för att gissa veckodagar.
+    const migrated: RecurrenceRule =
+      old.unit === "week"
+        ? { type: "recurring", unit: "day", every: old.every * 7, daysOfWeek: null }
+        : { type: "recurring", unit: old.unit, every: old.every, daysOfWeek: null };
     todo.recurrence = migrated;
     await todo.save();
   }
