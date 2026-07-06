@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Id, Member, Todo } from "@shared/types";
+import type { Member, Todo } from "@shared/types";
 
 function isSameLocalDay(isoStr: string | null, date: Date): boolean {
   if (!isoStr) return false;

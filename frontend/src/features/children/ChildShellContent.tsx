@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
-import type { Calendar, Id, Member, Reward, Role, Todo, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, Id, Member, Role, Todo, TimedTaskWithBest } from "@shared/types";
 
 type Props = {
   currentMember: Member;
   calendars: Calendar[];
   todos: Todo[];
-  rewards: Reward[];
   roles: Role[];
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
-  wishTitle: string;
-  onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
@@ -32,18 +29,14 @@ export function ChildShellContent({
   currentMember,
   calendars,
   todos,
-  rewards,
   roles,
   timedTasks,
   onRecordTimedAttempt,
-  wishTitle,
-  onSetWishTitle,
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
-  const childRewards = rewards.filter((r) => r.wishedBy === currentMember.id);
   const childTimedTasks = timedTasks.filter((t) => t.assignedTo === currentMember.id);
   const now = Date.now();
   const activeChildTodos = todos
@@ -87,13 +80,10 @@ export function ChildShellContent({
       child={currentMember}
       calendars={calendars}
       roles={roles}
-      childRewards={childRewards}
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}
       onOpenRecords={() => setView("records")}
-      wishTitle={wishTitle}
-      onSetWishTitle={onSetWishTitle}
       onCreateWish={onCreateWish}
       onCompleteTodo={(todoId) => onCompleteTodo(currentMember, todoId, roles)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}

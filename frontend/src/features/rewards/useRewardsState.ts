@@ -5,15 +5,14 @@ import { trackEvent } from "../../utils/analytics";
 
 export function useRewardsState() {
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const [wishTitle, setWishTitle] = useState("");
   const [wishStars, setWishStars] = useState<Record<Id, number>>({});
 
   useEffect(() => {
     rewardsApi.getAll().then(setRewards).catch(console.error);
   }, []);
 
-  function createWish(childId: Id, starsNeeded = 10, titleOverride?: string) {
-    const title = (titleOverride ?? wishTitle).trim();
+  function createWish(childId: Id, starsNeeded = 10, titleInput = "") {
+    const title = titleInput.trim();
     if (!title) return;
 
     const newReward: Reward = {
@@ -33,9 +32,6 @@ export function useRewardsState() {
     rewardsApi.create(newReward).catch(console.error);
     trackEvent("wish-created");
     setRewards((current) => [...current, newReward]);
-    if (titleOverride === undefined) {
-      setWishTitle("");
-    }
   }
 
   async function approveWish(rewardId: Id, approverId: Id) {
@@ -118,5 +114,5 @@ export function useRewardsState() {
     }
   }
 
-  return { rewards, wishTitle, setWishTitle, createWish, wishStars, setWishStars, approveWish, rejectWish, updateWish };
+  return { rewards, createWish, wishStars, setWishStars, approveWish, rejectWish, updateWish };
 }

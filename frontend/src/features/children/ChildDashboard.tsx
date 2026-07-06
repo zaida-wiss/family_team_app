@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Calendar, Id, Member, PurchasedReward, Reward, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, PurchasedReward, Role, Todo } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -23,13 +23,10 @@ type Props = {
   child: Member;
   calendars: Calendar[];
   roles: Role[];
-  childRewards: Reward[];
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
   onOpenRecords: () => void;
-  wishTitle: string;
-  onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
@@ -52,13 +49,10 @@ export function ChildDashboard({
   child,
   calendars,
   roles,
-  childRewards,
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
   onOpenRecords,
-  wishTitle,
-  onSetWishTitle,
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
@@ -73,12 +67,12 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
-  const { requireApprovalForCategories, items: shopItems, purchaseVersion, onPurchaseReward } = useRewardShopContext();
+  const { items: shopItems, purchaseVersion, onPurchaseReward } = useRewardShopContext();
   const { heldTodoId, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
     onCompleteTodo
   );
-  const { approvedStarsToday, totalApprovedStars, availableStars, pendingApprovalTodos } =
+  const { approvedStarsToday, availableStars, pendingApprovalTodos } =
     useChildStars(child, timelineTodos, timerNow, localSpentStars);
 
   useEffect(() => {

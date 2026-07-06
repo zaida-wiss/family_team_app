@@ -51,7 +51,6 @@ type Props = {
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
-  wishTitle: string;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
   onSetEditingTodoTitle: (t: string) => void;
@@ -90,7 +89,6 @@ type Props = {
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
-  onSetWishTitle: (title: string) => void;
   onCreateWish: (childId: string, starsNeeded?: number, title?: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: CalendarPanelProps["onUpdateCalendarKeepAllHistory"];
@@ -111,7 +109,7 @@ export function MemberShellContent({
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
-  editingTodoId, editingTodoTitle, wishStars, wishTitle, todoViewMode,
+  editingTodoId, editingTodoTitle, wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads,
   onNavigate, onSelectMember, onSetEditingTodoTitle, onStartEditingTodo, onSaveTodoTitle,
   onCancelEditingTodo, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
@@ -120,7 +118,7 @@ export function MemberShellContent({
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
-  onDismissRejectedTodo, onSetWishTitle, onCreateWish, calendarSettings, onLoadEventsForMonth,
+  onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
@@ -286,7 +284,6 @@ export function MemberShellContent({
   // Valt barn → barnens dashboard (enda vyn som är annorlunda)
   if (selectedMemberIsChild && selectedDashboardMember) {
     const now = Date.now();
-    const childRewards = rewards.filter((r) => r.wishedBy === selectedDashboardMember.id);
     const activeChildTodos = todos
       .filter(
         (t) =>
@@ -327,13 +324,10 @@ export function MemberShellContent({
           child={selectedDashboardMember}
           calendars={calendars}
           roles={roles}
-          childRewards={childRewards}
           timelineTodos={todos}
           activeChildTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}
           onOpenRecords={() => setShowChildRecords(true)}
-          wishTitle={wishTitle}
-          onSetWishTitle={onSetWishTitle}
           onCreateWish={onCreateWish}
           onCompleteTodo={(todoId) => onCompleteTodo(selectedDashboardMember, todoId, roles)}
           onDismissRejectedTodo={(todoId) =>
