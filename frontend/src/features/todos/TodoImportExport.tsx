@@ -47,7 +47,11 @@ function buildTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | nul
 // Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål) — en mall
 // med samma rubriker som exporten/importen förväntar sig, så man kan fylla i
 // den i valfritt kalkylarksprogram (Excel/Sheets/Numbers) och sedan importera
-// tillbaka. Bara engångsuppgifter (ingen återkommelse, se todoCsv.ts).
+// tillbaka. Täcker BÅDE engångsuppgifter och återkommande mallar (se
+// todoCsv.ts) — en rad = en mall (för återkommande) eller en engångsuppgift.
+// Introtexten nedan sa tidigare (felaktigt, 2026-07-07 rättelse) att bara
+// engångsuppgifter stöddes — koden har redan täckt återkommelse sedan samma
+// dag funktionen byggdes, texten hade bara inte hängt med.
 export function TodoImportExport({
   currentMember,
   members,
@@ -108,7 +112,7 @@ export function TodoImportExport({
     <div className="todo-import-export">
       <p className="todo-import-export__intro">
         Exportera dina egna uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka.
-        Bara engångsuppgifter stöds (inga återkommande scheman).
+        Både engångsuppgifter och återkommande mallar (med sina scheman) räknas med.
       </p>
 
       <div className="todo-import-export__actions">
