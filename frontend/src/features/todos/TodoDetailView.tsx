@@ -95,9 +95,14 @@ export function TodoDetailView({
               {assigneeName}
             </small>
           </div>
-          <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button">
-            <X size={18} />
-          </button>
+          <div className="todo-detail-modal__hdr-actions">
+            <button aria-label="Redigera uppgift" className="icon-button" onClick={onEdit} type="button">
+              <Pencil size={16} />
+            </button>
+            <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="todo-detail-modal__section">
@@ -120,17 +125,16 @@ export function TodoDetailView({
 
               <ul className="todo-detail-modal__checklist">
                 {subtasks.map((subtask) => (
-                  <li key={subtask.id}>
-                    <label className="todo-detail-modal__checklist-item">
-                      <input
-                        checked={subtask.done}
-                        onChange={() => onToggleSubtask(todo.id, subtask.id)}
-                        type="checkbox"
-                      />
-                      <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
-                        {subtask.title}
-                      </span>
-                    </label>
+                  <li className="todo-detail-modal__checklist-item" key={subtask.id}>
+                    <input
+                      aria-label={subtask.title}
+                      checked={subtask.done}
+                      onChange={() => onToggleSubtask(todo.id, subtask.id)}
+                      type="checkbox"
+                    />
+                    <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
+                      {subtask.title}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -164,11 +168,6 @@ export function TodoDetailView({
               <p className="todo-detail-modal__empty-hint">Inga anteckningar ännu.</p>
             )}
           </div>
-
-          <button className="primary-button" onClick={onEdit} type="button">
-            <Pencil size={16} />
-            Redigera uppgift
-          </button>
         </div>
       </div>
     </div>

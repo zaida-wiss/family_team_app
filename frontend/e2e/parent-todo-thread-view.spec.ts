@@ -270,6 +270,33 @@ test("Bollar i tråd: kort tryck öppnar visa-vyn med checklista, avbockning anr
   await expect(dialog).toHaveCount(0);
 });
 
+// 2026-07-07 (Zaidas fynd): "deluppgifter skall inte markeras som utförda av
+// att jag trycker på texten. Jag måste trycka i den lilla kryssrutan" — texten
+// låg tidigare INUTI samma <label> som kryssrutan, vilket gjorde att klick på
+// texten också triggade den (native label-for-input-vidarebefordran).
+test("Bollar i tråd: klick på delmomentets TEXT togglar inte kryssrutan, bara kryssrutan gör det", async ({ page }) => {
+  let toggleCalled = false;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-1/subtasks/sub-2", (route) => {
+    toggleCalled = true;
+    return route.fulfill({ json: { done: true } });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Styrketräning/ }).click();
+
+  const dialog = page.getByRole("dialog");
+  await dialog.getByText("Bänkpress").click();
+
+  await expect(dialog.getByRole("checkbox", { name: "Bänkpress" })).not.toBeChecked();
+  expect(toggleCalled).toBe(false);
+});
+
 test("Bollar i tråd: kort tryck öppnar en läsbar visa-vy (utan redigerbara fält), inte redigeraformuläret direkt", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
@@ -352,13 +379,13 @@ test("Ny uppgift-modalen: Tidta-kryssrutan finns bara för barn-mottagare, och s
   await openCreateModalFromBarnThread(page);
   const dialog = page.getByRole("dialog");
 
-  await expect(dialog.getByLabel("Tidta hur lång tid uppgiften tar")).toHaveCount(0);
+  await expect(dialog.getByLabel("Använd en timer för uppgiften")).toHaveCount(0);
 
   const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
   await assigneePicker.getByRole("button", { name: "Mig själv" }).click();
   await assigneePicker.getByRole("button", { name: "Lilla Barnet" }).click();
 
-  const timerCheckbox = dialog.getByLabel("Tidta hur lång tid uppgiften tar");
+  const timerCheckbox = dialog.getByLabel("Använd en timer för uppgiften");
   await expect(timerCheckbox).toBeVisible();
   await timerCheckbox.check();
 
@@ -391,7 +418,7 @@ test("Redigera uppgift: Tidta-kryssrutan finns för en barn-tilldelad uppgift oc
   await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
 
   const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
-  const timerCheckbox = editDialog.getByLabel("Tidta hur lång tid uppgiften tar");
+  const timerCheckbox = editDialog.getByLabel("Använd en timer för uppgiften");
   await expect(timerCheckbox).not.toBeChecked();
   await timerCheckbox.check();
 

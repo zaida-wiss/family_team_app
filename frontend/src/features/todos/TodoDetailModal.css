@@ -39,6 +39,16 @@
   font-size: 0.8rem;
 }
 
+/* Redigera-knappen flyttad in i headern som en liten ikon-knapp (2026-07-07,
+   Zaidas begäran: "Redigera skall endast vara en pytteliten knapp") — bredvid
+   Stäng-knappen, istället för en fullbredds-knapp längst ner i modalen. Frigör
+   samtidigt vertikalt utrymme åt checklistan. */
+.todo-detail-modal__hdr-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .todo-detail-modal__progress {
   display: flex;
   align-items: center;
@@ -71,9 +81,11 @@
 .todo-detail-modal__checklist {
   list-style: none;
   margin: 0;
-  padding: 8px 18px 4px;
+  /* Så mycket av listan som möjligt synlig på en gång (2026-07-07, Zaidas
+     begäran) — höjt tak, kompenserat av tätare rader/mindre chrome runtom. */
+  padding: 4px 18px 4px;
   flex-shrink: 0;
-  max-height: 160px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
@@ -81,15 +93,18 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
-  padding: 4px 6px;
-  cursor: pointer;
+  /* 44px är WCAG:s minsta touch-mål — gäller kryssrutan (nedan), inte hela
+     raden längre (2026-07-07-fix: bara kryssrutan ska vara klickbar/togglande,
+     inte texten bredvid — se TodoDetailView.tsx). */
+  min-height: 36px;
+  padding: 2px 4px;
 }
 
 .todo-detail-modal__checklist-item input[type="checkbox"] {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .todo-detail-modal__checklist-item-title--done {
