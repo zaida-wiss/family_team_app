@@ -259,12 +259,24 @@ function insertNewEvents(
 // Skriver om calendar.events till bara de poster som fortfarande ligger inom
 // retention-fönstret (3 mån för prenumererade, 1 mån för manuella om inte
 // keepAllHistory är satt). Returnerar om något faktiskt togs bort.
+//
+// Mjuk-raderade PRENUMERERADE händelser (ev.subscriptionId + ev.deletedAt)
+// tas bort ur arrayen omedelbart, oavsett datum (2026-07-07-fix) — de fyller
+// ingen funktion efter att reconcileExistingEvents redan ersatt dem med en ny
+// post från samma synk. Att låta dem ligga kvar tills de blev "gamla nog"
+// (som för manuella användarhändelser) lät arrayen växa obegränsat varje
+// timme om käll-flödets UID:n någon gång inte matchade tidigare sparade —
+// grundorsaken till upprepade minneskrascher i produktion (en kalender hade
+// vuxit till 11 000+ händelser, varav 11 000 redan mjuk-raderade spökposter).
 function pruneOldEvents(calendar: any, cutoffSub: string, cutoffAll: string): boolean {
   const keepAllHistory = calendar.keepAllHistory ?? false;
   const beforeCount = calendar.events.length;
   calendar.events = (calendar.events as any[]).filter((ev) => {
+    if (ev.subscriptionId) {
+      if (ev.deletedAt) return false;
+      return (ev.startsAt ?? "").slice(0, 10) >= cutoffSub;
+    }
     const d = (ev.startsAt ?? "").slice(0, 10);
-    if (ev.subscriptionId) return d >= cutoffSub;
     return keepAllHistory || d >= cutoffAll;
   }) as any;
   return calendar.events.length !== beforeCount;
