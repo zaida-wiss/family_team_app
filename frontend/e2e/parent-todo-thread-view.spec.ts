@@ -1165,6 +1165,48 @@ test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en eg
   await expect.poll(() => deletedId).toBe("todo-template");
 });
 
+// 2026-07-07 (Zaidas önskemål: "en lika strukturerad överblick i tidsordning")
+// — listan sorteras på startdatum, tidigast överst, och visar datumet.
+test("Inställningar: återkommande uppgifter listas i tidsordning (tidigast startdatum överst)", async ({ page }) => {
+  const LATER = {
+    id: "todo-later", accountId: "acc-1", title: "Byt vinterdäck", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "year", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-10-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null
+  };
+  const EARLIER = {
+    id: "todo-earlier", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  // Skickas medvetet i "fel" ordning (senare startdatum först) — testet ska
+  // bevisa att listan sorterar om, inte bara återger API-ordningen.
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [LATER, EARLIER] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
+
+  const rows = page.locator(".recurring-todos-settings__row");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Borsta tänderna");
+  await expect(rows.nth(0)).toContainText("från 2026-07-01");
+  await expect(rows.nth(1)).toContainText("Byt vinterdäck");
+  await expect(rows.nth(1)).toContainText("från 2026-10-01");
+});
+
 // Zaida: "Anteckningar och delmoment ska stå [i visa-vyn] också... det ska
 // inte behöva vara redigeringsläge" (2026-07-06) — rubrikerna syns nu alltid,
 // med en platshållartext när det inte finns något ännu, istället för att hela

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory } from "@shared/types";
 import { getVisibleTodos } from "./selectors";
-import { isRecurringTemplate, WEEKDAY_SHORT } from "./recurringTodos";
+import { isoToDateOnly, isRecurringTemplate, WEEKDAY_SHORT } from "./recurringTodos";
 import { TodoEditModal } from "./TodoEditModal";
 
 type Props = {
@@ -23,6 +23,13 @@ const UNIT_LABEL: Record<RecurrenceUnit, string> = {
   month: "månad",
   year: "år"
 };
+
+// Ankardatumets tidsstämpel, för sortering — mallar utan startdatum (borde
+// inte förekomma i praktiken, se ADR-0015/incidents/2026-07-06) hamnar sist
+// istället för att krascha sorteringen.
+function startTimeValue(todo: Todo): number {
+  return todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.POSITIVE_INFINITY;
+}
 
 function describeRecurrence(todo: Todo): string {
   const recurrence = todo.recurrence;
@@ -52,7 +59,11 @@ export function RecurringTodosSettings({
   onDeleteTodo
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
-  const templates = getVisibleTodos(currentMember, roles, todos).filter(isRecurringTemplate);
+  // Strukturerad överblick i tidsordning (2026-07-07, Zaidas önskemål) —
+  // sorterad på startdatum, tidigast överst, samma princip som tråd-vyns
+  // sortByEndThenStartTime.
+  const templates = [...getVisibleTodos(currentMember, roles, todos).filter(isRecurringTemplate)]
+    .sort((a, b) => startTimeValue(a) - startTimeValue(b));
   const editingTodo = templates.find((t) => t.id === editingId) ?? null;
 
   if (templates.length === 0) {
@@ -66,7 +77,10 @@ export function RecurringTodosSettings({
           <li className="recurring-todos-settings__row" key={todo.id}>
             <div className="recurring-todos-settings__info">
               <strong>{todo.title}</strong>
-              <small>{describeRecurrence(todo)}</small>
+              <small>
+                {describeRecurrence(todo)}
+                {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}
+              </small>
             </div>
             <button
               aria-label={`Redigera ${todo.title}`}
