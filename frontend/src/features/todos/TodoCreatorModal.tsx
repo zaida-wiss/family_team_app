@@ -7,6 +7,7 @@ import { generateId } from "../../utils/uuid";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO } from "./recurringTodos";
+import { isChildMember } from "./selectors";
 import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTimeWindow } from "@shared/types";
 
 const DEFAULT_EMOJI = "⭐";
@@ -52,12 +53,22 @@ export function TodoCreatorModal({
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
-  const assignableChildren = useMemo(() => {
-    const childRoleIds = new Set(roles.filter((r) => r.isChildRole).map((r) => r.id));
-    return members.filter(
-      (m) => m.deletedAt === null && (m.isChild || childRoleIds.has(m.roleId))
-    );
-  }, [members, roles]);
+  // Alla andra familjemedlemmar (2026-07-08-fix, Zaidas fynd: "jag kan inte
+  // tilldela familjemedlemmar todo-uppgifter") — var tidigare filtrerat till
+  // BARA barn (variabeln hette assignableChildren), vilket gjorde det omöjligt
+  // att tilldela en uppgift åt en annan vuxen (t.ex. en medförälder), och
+  // gjorde att hela "Åt vem?"-väljaren försvann helt om kontot råkade sakna
+  // barn. isChildMember avgörs nu per vald mottagare (se isRecipientChild
+  // nedan) istället för att antas utifrån "inte jag själv".
+  const assignableMembers = useMemo(
+    () => members.filter((m) => m.deletedAt === null && m.id !== currentMember.id),
+    [members, currentMember.id]
+  );
+
+  function isRecipientChild(id: string): boolean {
+    if (id === SELF_VALUE) return false;
+    return isChildMember(members.find((m) => m.id === id), roles);
+  }
 
   // Flera mottagare samtidigt (2026-07-06, Zaidas önskemål) — varje vald
   // familjemedlem får en egen kopia av uppgiften (samma mönster som
@@ -74,7 +85,7 @@ export function TodoCreatorModal({
   // Number(e.target.value) fältet till "0" så fort man raderar för att skriva
   // ett nytt värde, vilket gjorde det omöjligt att byta ut talet (en envis
   // nolla stod kvar först). Tolkas till ett tal bara vid spara, se starValue.
-  const [starValueInput, setStarValueInput] = useState("1");
+  const [starValueInput, setStarValueInput] = useState("0");
   const starValue = Math.max(0, Math.floor(Number(starValueInput)) || 0);
   const [recurrence, setRecurrence] = useState<RecurrenceRule>({ type: "none" });
   const [visibleFrom, setVisibleFrom] = useState("");
@@ -95,7 +106,7 @@ export function TodoCreatorModal({
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const isForChild = assigneeIds.some((id) => id !== SELF_VALUE);
+  const isForChild = assigneeIds.some(isRecipientChild);
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
   const isTitleMissing = title.trim().length === 0;
   // Utan ett startdatum blir visibleFrom null för en återkommande mall, vilket
@@ -185,15 +196,15 @@ export function TodoCreatorModal({
         .filter((s) => s.title.length > 0);
 
       // En kopia av uppgiften per vald mottagare (samma mönster som
-      // CSV-importen) — varje barn (eller jag själv) får sin egen todo med
-      // eget id/status, inte en delad uppgift med flera tilldelade.
+      // CSV-importen) — varje familjemedlem (eller jag själv) får sin egen
+      // todo med eget id/status, inte en delad uppgift med flera tilldelade.
       for (const recipientId of assigneeIds) {
-        const isChildRecipient = recipientId !== SELF_VALUE;
+        const isChildRecipient = isRecipientChild(recipientId);
         onCreateTodo({
           id: `todo-${generateId()}`,
           title: trimmedTitle,
           createdBy: currentMember.id,
-          assignedTo: isChildRecipient ? recipientId : currentMember.id,
+          assignedTo: recipientId === SELF_VALUE ? currentMember.id : recipientId,
           isShared: false,
           status: "pending",
           starValue: isChildRecipient ? starValue : 0,
@@ -248,7 +259,7 @@ export function TodoCreatorModal({
           </button>
         </div>
         <form className="todo-creator-modal__body" onSubmit={handleSubmit}>
-          {assignableChildren.length > 0 && (
+          {assignableMembers.length > 0 && (
             <div className="field-label">
               <span>Åt vem? (går att välja flera)</span>
               <div aria-label="Åt vem?" className="todo-assignee-picker" role="group">
@@ -263,18 +274,18 @@ export function TodoCreatorModal({
                 >
                   Mig själv
                 </button>
-                {assignableChildren.map((child) => (
+                {assignableMembers.map((member) => (
                   <button
-                    aria-pressed={assigneeIds.includes(child.id)}
+                    aria-pressed={assigneeIds.includes(member.id)}
                     className={
                       "todo-assignee-picker__btn" +
-                      (assigneeIds.includes(child.id) ? " todo-assignee-picker__btn--on" : "")
+                      (assigneeIds.includes(member.id) ? " todo-assignee-picker__btn--on" : "")
                     }
-                    key={child.id}
-                    onClick={() => toggleAssignee(child.id)}
+                    key={member.id}
+                    onClick={() => toggleAssignee(member.id)}
                     type="button"
                   >
-                    {child.name}
+                    {member.name}
                   </button>
                 ))}
               </div>
