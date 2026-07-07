@@ -28,7 +28,7 @@ describe("todoCsv", () => {
     expect(table[1][0]).toBe("Handla mat");
     expect(table[2][0]).toBe("Borsta tänderna");
     expect(table[2][4]).toBe("Hälsa");
-    expect(table[2][9]).toBe("Dag");
+    expect(table[2][10]).toBe("Dag");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -81,18 +81,27 @@ describe("todoCsv", () => {
     });
   });
 
-  test("parseTodoCsv: rad utan titel hoppas tyst över, okänt namn ger ett fel", () => {
+  test("parseTodoCsv: rad utan titel hoppas tyst över", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
-    const csv = [
-      "Titel,Tilldelad",
-      ",",
-      "Diska,Okänd Person"
-    ].join("\r\n");
+    const csv = ["Titel,Tilldelad", ","].join("\r\n");
 
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
     expect(rows).toEqual([]);
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toContain("Okänd Person");
+    expect(errors).toEqual([]);
+  });
+
+  // 2026-07-07 (Zaidas resonemang om att dela listor mellan familjer): ett
+  // okänt "Tilldelad"-namn hoppas INTE längre över — raden flaggas som olöst
+  // (unresolvedAssigneeLabel) så importören kan mappa namnet till en egen
+  // medlem i TodoImportExport.tsx, istället för att tyst tappa raden.
+  test("parseTodoCsv: okänt Tilldelad-namn flaggar raden som olöst istället för att hoppa över den", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = ["Titel,Tilldelad", "Diska,Okänd Person"].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].unresolvedAssigneeLabel).toBe("Okänd Person");
   });
 
   test("parseTodoCsv: saknad Titel-kolumn ger ett tydligt fel", () => {
@@ -259,7 +268,8 @@ describe("todoCsv", () => {
       title: "Städa rummet",
       createdBy: "mem-1",
       assignedTo: "mem-child",
-      timerEnabled: true
+      timerEnabled: true,
+      plannedDurationMinutes: 15
     });
 
     const csv = todosToCsv([original], members, "mem-1");
@@ -267,18 +277,20 @@ describe("todoCsv", () => {
 
     expect(errors).toEqual([]);
     expect(rows[0].timerEnabled).toBe(true);
+    expect(rows[0].plannedDurationMinutes).toBe(15);
   });
 
-  test("parseTodoCsv: Timer sätts alltid till false för Mig själv-rader, oavsett kolumnens värde", () => {
+  test("parseTodoCsv: Timer och Timer (min) sätts alltid till false/null för Mig själv-rader, oavsett kolumnernas värde", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [
-      "Titel,Tilldelad,Timer",
-      "Handla mat,Mig själv,Ja"
+      "Titel,Tilldelad,Timer,Timer (min)",
+      "Handla mat,Mig själv,Ja,15"
     ].join("\r\n");
 
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
     expect(errors).toEqual([]);
     expect(rows[0].timerEnabled).toBe(false);
+    expect(rows[0].plannedDurationMinutes).toBeNull();
   });
 
   test("todosToCsv → parseTodoCsv tur och retur bevarar emoji, saknad emoji faller tillbaka på ⭐ vid import", () => {

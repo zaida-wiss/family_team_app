@@ -17,13 +17,15 @@ export const TODO_CSV_HEADERS = [
   "Rutinkategori",
   "Stjärnor",
   "Timer",
+  "Timer (min)",
   "Startdatum",
   "Slutdatum",
   "Återkommer",
   "Intervall",
   "Veckodagar",
   "Delmoment",
-  "Anteckningar"
+  "Anteckningar",
+  "Id"
 ] as const;
 
 const SELF_LABEL = "Mig själv";
@@ -137,8 +139,8 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
-  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "Hälsa", "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
+  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", ""];
+  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "Hälsa", "", "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", "", ""];
   return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
 }
 
@@ -214,12 +216,12 @@ export function todosToCsv(
       todo.title,
       todo.visual.value,
       assigneeLabel,
-      "", // Kategorinamnet slås inte upp här — kategorierna är memberId-scopade
-          // och kräver att man matchar rätt ägares kategorilista; hoppas över
-          // vid export för att undvika att peka på fel medlems kategori.
+      "", // Kategorinamnet slås inte upp här — todosToCsv får bara members in,
+          // inte den kontobreda kategorilistan; hoppas över vid export.
       todo.routineCategory ?? "",
       todo.starValue > 0 ? String(todo.starValue) : "",
       todo.timerEnabled ? YES_LABEL : "",
+      todo.timerEnabled && todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : "",
       // Lokala Date-getters (inte en rå ISO-sträng-slice, som läser UTC och
       // kan hamna en dag fel beroende på tidszon) — inkluderar nu klockslag,
       // inte bara datum (2026-07-05, Zaidas fynd).
@@ -229,7 +231,8 @@ export function todosToCsv(
       every,
       days,
       subtasksToCsv(todo.subtasks),
-      todo.notes ?? ""
+      todo.notes ?? "",
+      todo.id
     ]);
   });
 
@@ -237,14 +240,25 @@ export function todosToCsv(
 }
 
 export type ParsedTodoRow = {
+  // Id från CSV:ns "Id"-kolumn — matchar mot en BEFINTLIG egen todo (2026-07-07,
+  // Zaidas önskemål om att kunna uppdatera via export/import, inte bara skapa
+  // nya). Matchar den inte något (saknas, tom mall-rad, eller okänt/annan
+  // familjs id) skapas en helt ny todo istället, se TodoImportExport.tsx.
+  sourceId: string | null;
   title: string;
   emoji: string;
   assignedTo: Id;
+  // Satt när "Tilldelad" inte matchar någon medlem i KONTOT som importerar —
+  // troligen en fil delad från en annan familj (2026-07-07, Zaidas resonemang).
+  // TodoImportExport.tsx frågar importören vem i DERAS familj namnet menas,
+  // innan raden faktiskt importeras.
+  unresolvedAssigneeLabel: string | null;
   personalCategoryId: Id | null;
   newCategoryName: string | null;
   routineCategory: string | null;
   starValue: number;
   timerEnabled: boolean;
+  plannedDurationMinutes: number | null;
   visibleFrom: string | null;
   expiresAt: string | null;
   recurrence: RecurrenceRule;
@@ -286,6 +300,7 @@ export function parseTodoCsv(
   const routineCategoryCol = col("Rutinkategori");
   const starsCol = col("Stjärnor");
   const timerCol = col("Timer");
+  const timerMinutesCol = col("Timer (min)");
   const startCol = col("Startdatum");
   const endCol = col("Slutdatum");
   const recurrenceCol = col("Återkommer");
@@ -293,6 +308,7 @@ export function parseTodoCsv(
   const weekdaysCol = col("Veckodagar");
   const subtasksCol = col("Delmoment");
   const notesCol = col("Anteckningar");
+  const idCol = col("Id");
 
   const rows: ParsedTodoRow[] = [];
   const errors: string[] = [];
@@ -310,22 +326,31 @@ export function parseTodoCsv(
 
     const assignedLabel = (assignedCol !== undefined ? cells[assignedCol] : "")?.trim() ?? "";
     let assignedTo: Id = currentMemberId;
+    let unresolvedAssigneeLabel: string | null = null;
     if (assignedLabel && assignedLabel.toLowerCase() !== SELF_LABEL.toLowerCase()) {
       const matches = members.filter(
         (m) => m.deletedAt === null && m.name.toLowerCase() === assignedLabel.toLowerCase()
       );
-      if (matches.length === 0) {
-        errors.push(`Rad ${rowNumber} ("${title}"): hittar ingen medlem som heter "${assignedLabel}", hoppas över.`);
-        return;
-      }
-      if (matches.length > 1) {
+      if (matches.length === 1) {
+        assignedTo = matches[0].id;
+      } else if (matches.length > 1) {
         errors.push(`Rad ${rowNumber} ("${title}"): flera medlemmar heter "${assignedLabel}", hoppas över — döp om eller lämna tomt för dig själv.`);
         return;
+      } else {
+        // Okänt namn — troligen en fil importerad från en ANNAN familj (2026-07-07,
+        // Zaidas resonemang kring att dela listor mellan familjer: "barnens namn
+        // kan ju inte finnas med, då måste systemet fråga vem som skall tilldelas").
+        // Raden hoppas INTE över — den flaggas som olöst, och TodoImportExport.tsx
+        // frågar importören vilken av DERAS egna medlemmar namnet ska mappas till
+        // (eller att hoppa över) innan importen fortsätter.
+        unresolvedAssigneeLabel = assignedLabel;
       }
-      assignedTo = matches[0].id;
     }
 
-    const isSelf = assignedTo === currentMemberId;
+    // En olöst rad är inte "jag själv" (den väntar på att mappas till en riktig
+    // medlem, troligen ett barn) — annars skulle Stjärnor/Timer nollställas
+    // innan mappningen ens gjorts.
+    const isSelf = assignedTo === currentMemberId && !unresolvedAssigneeLabel;
     const categoryLabel = (categoryCol !== undefined ? cells[categoryCol] : "")?.trim() ?? "";
     let personalCategoryId: Id | null = null;
     let newCategoryName: string | null = null;
@@ -356,6 +381,11 @@ export function parseTodoCsv(
 
     const timerRaw = (timerCol !== undefined ? cells[timerCol] : "")?.trim() ?? "";
     const timerEnabled = timerRaw.toLowerCase() === YES_LABEL.toLowerCase();
+
+    const timerMinutesRaw = (timerMinutesCol !== undefined ? cells[timerMinutesCol] : "")?.trim() ?? "";
+    const plannedDurationMinutes = timerMinutesRaw
+      ? Math.max(1, Math.min(480, parseInt(timerMinutesRaw, 10) || 1))
+      : null;
 
     const startRaw = (startCol !== undefined ? cells[startCol] : "")?.trim() ?? "";
     const endRaw = (endCol !== undefined ? cells[endCol] : "")?.trim() ?? "";
@@ -410,16 +440,20 @@ export function parseTodoCsv(
     }));
 
     const notes = (notesCol !== undefined ? cells[notesCol] : "")?.trim() || null;
+    const sourceId = (idCol !== undefined ? cells[idCol] : "")?.trim() || null;
 
     rows.push({
+      sourceId,
       title,
       emoji,
       assignedTo,
+      unresolvedAssigneeLabel,
       personalCategoryId,
       newCategoryName,
       routineCategory,
       starValue: isSelf ? 0 : starValue,
       timerEnabled: isSelf ? false : timerEnabled,
+      plannedDurationMinutes: isSelf ? null : plannedDurationMinutes,
       visibleFrom,
       expiresAt,
       recurrence,

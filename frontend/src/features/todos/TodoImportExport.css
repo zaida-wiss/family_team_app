@@ -25,3 +25,50 @@
   padding-left: 18px;
   color: var(--destructive, #e74c3c);
 }
+
+.todo-import-export__filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.todo-import-export__filter legend {
+  padding: 0 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+}
+
+.todo-import-export__filter label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-import-export__resolution {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 0.85rem;
+}
+
+.todo-import-export__resolution-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.todo-import-export__resolution-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

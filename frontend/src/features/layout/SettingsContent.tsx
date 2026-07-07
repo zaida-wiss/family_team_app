@@ -212,6 +212,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           todos={todos}
           categories={personalCategories}
           onCreateTodo={onCreateTodo}
+          onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
         />
       </SettingsSection>
