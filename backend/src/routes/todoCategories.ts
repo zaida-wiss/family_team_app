@@ -7,9 +7,9 @@ import { AppError } from "../utils/errors.js";
 export const todoCategoriesRouter = Router();
 todoCategoriesRouter.use(requireAuth, attachAccountId);
 
-// Personliga kategorier — kräver att servern vet VILKEN medlem som frågar, inte
-// bara vilket konto. Utan ett giltigt memberId (t.ex. x-member-id-headern
-// saknas) finns ingen medlem att äga kategorierna.
+// Kontobreda kategorier (2026-07-07) — kräver ändå att servern vet VILKEN
+// medlem som frågar, inte bara vilket konto (skrivoperationer spärrar mot
+// barn-roller i todoCategoriesService.ts).
 function requireMemberId(memberId: string | undefined): string {
   if (!memberId) {
     throw new AppError(401, "Medlems-id saknas");
@@ -18,8 +18,8 @@ function requireMemberId(memberId: string | undefined): string {
 }
 
 todoCategoriesRouter.get("/", async (req, res) => {
-  const memberId = requireMemberId(req.memberId);
-  res.json(await todoCategories.getOwnCategories(req.accountId!, memberId));
+  requireMemberId(req.memberId);
+  res.json(await todoCategories.getAllCategories(req.accountId!));
 });
 
 todoCategoriesRouter.post("/", async (req, res) => {

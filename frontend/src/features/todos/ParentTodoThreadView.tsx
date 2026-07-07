@@ -219,7 +219,13 @@ export function ParentTodoThreadView({
       )
     };
 
-    const categoryThreads: Thread[] = categories.filter((c) => !c.hidden).map((category, index) => ({
+    // Kategorier är kontobreda sedan 2026-07-07 (Zaidas beslut — alla vuxna ser
+    // och kan redigera varandras kategorier i skapa-/redigera-modalen), men
+    // tråd-vyns KOLUMNER visar fortsatt bara MINA egna — annars skulle varje
+    // vuxens personliga trådar dyka upp som tomma kolumner hos alla andra,
+    // vilket varken efterfrågats eller önskvärt (bryter mot minimalism-principen).
+    const myCategories = categories.filter((c) => c.memberId === currentMember.id);
+    const categoryThreads: Thread[] = myCategories.filter((c) => !c.hidden).map((category, index) => ({
       id: category.id,
       label: category.name,
       deletable: true,
