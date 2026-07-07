@@ -76,7 +76,10 @@ export function RecurringTodosSettings({
         {templates.map((todo) => (
           <li className="recurring-todos-settings__row" key={todo.id}>
             <div className="recurring-todos-settings__info">
-              <strong>{todo.title}</strong>
+              <strong>
+                {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+                {todo.title}
+              </strong>
               <small>
                 {describeRecurrence(todo)}
                 {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}

@@ -90,7 +90,14 @@ export function TodoDetailView({
       >
         <div className="todo-detail-modal__hdr">
           <div>
-            <span id="todo-detail-title">{todo.title}</span>
+            <span id="todo-detail-title">
+              {todo.visual.value && (
+                <span aria-hidden="true" className="todo-detail-modal__title-icon">
+                  {todo.visual.value}{" "}
+                </span>
+              )}
+              {todo.title}
+            </span>
             <small className="todo-detail-modal__assignee" style={assigneeColor ? { color: assigneeColor } : undefined}>
               {assigneeName}
             </small>

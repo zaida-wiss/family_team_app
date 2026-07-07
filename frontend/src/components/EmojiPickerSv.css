@@ -31,6 +31,25 @@
   border-color: var(--primary, #6c63ff);
 }
 
+.emoji-picker-sv__clear {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border, #e0e0e0);
+  background: transparent;
+  color: var(--muted-fg, #888);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.emoji-picker-sv__clear:hover {
+  background: color-mix(in oklch, var(--primary, #6c63ff) 8%, var(--background, #ffffff));
+  color: inherit;
+}
+
 .emoji-picker-sv__grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);

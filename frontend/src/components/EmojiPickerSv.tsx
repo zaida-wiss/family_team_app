@@ -29,6 +29,13 @@ export function EmojiPickerSv({ onSelect }: Props) {
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
+      <button
+        className="emoji-picker-sv__clear"
+        onClick={() => onSelect("")}
+        type="button"
+      >
+        Ingen ikon
+      </button>
       <div className="emoji-picker-sv__grid">
         {filtered.length === 0 ? (
           <p className="emoji-picker-sv__empty">Inga resultat</p>

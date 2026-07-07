@@ -517,3 +517,27 @@ export const EMOJIS: EmojiEntry[] = [
   { emoji: "🥉", label: "Brons", keywords: ["brons", "trea", "medalj"] },
   { emoji: "🎖️", label: "Medalj", keywords: ["medalj", "utmärkelse", "hedra"] },
 ];
+
+// Rekommenderad ikon utifrån uppgiftens titel (2026-07-08, Zaidas önskemål:
+// när ett barn tilldelas uppgiften ska en passande emoji föreslås) — samma
+// label/keywords-data som sökrutans matchning ovan, ingen separat modell.
+// Längsta matchande nyckelord/etikett vinner (mer specifikt än en kort,
+// generisk träff, t.ex. "borsta tänder" slår "tand" för titeln "Borsta tänderna").
+export function suggestEmojiForTitle(title: string): string | null {
+  const query = title.toLowerCase().trim();
+  if (!query) return null;
+
+  let best: { emoji: string; matchLength: number } | null = null;
+  for (const entry of EMOJIS) {
+    const candidates = [entry.label.toLowerCase(), ...entry.keywords.map((k) => k.toLowerCase())];
+    for (const candidate of candidates) {
+      if (candidate.length < 2) continue;
+      if (query.includes(candidate) || candidate.includes(query)) {
+        if (!best || candidate.length > best.matchLength) {
+          best = { emoji: entry.emoji, matchLength: candidate.length };
+        }
+      }
+    }
+  }
+  return best?.emoji ?? null;
+}

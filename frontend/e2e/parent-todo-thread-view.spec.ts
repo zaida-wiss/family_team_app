@@ -113,11 +113,11 @@ test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-t
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Läxor")).toHaveCount(0);
 });
 
-// 2026-07-07 (Zaidas begäran): emoji/ikon visas annars bara i barnvyn, men
-// uppgifter som ÄVEN är tilldelade ett barn ska alltid ha ikonen med i
-// vuxenvyns tråd-vy också ("så att de kan läsa") — oavsett vilken tråd
-// bollen visas i.
-test("Bollar i tråd: en boll tilldelad ett barn visar alltid ikonen, en personlig boll gör det inte", async ({ page }) => {
+// 2026-07-08 (Zaidas önskemål: "Även vuxna ska ha ikoner på sina todo") —
+// ikonen visas nu för ALLA todos i vuxenvyn, inte bara barn-tilldelade
+// (2026-07-06/07-beslutet begränsade den tidigare till barn-tilldelade,
+// upphävt här).
+test("Bollar i tråd: både en boll tilldelad ett barn och en personlig boll visar ikonen", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
@@ -133,7 +133,7 @@ test("Bollar i tråd: en boll tilldelad ett barn visar alltid ikonen, en personl
     .getByRole("button", { name: /Löpning/ });
 
   await expect(childBall.getByText("Star", { exact: true })).toBeVisible();
-  await expect(personalBall.getByText("Star", { exact: true })).toHaveCount(0);
+  await expect(personalBall.getByText("Star", { exact: true })).toBeVisible();
 });
 
 test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns eller redan gått ut", async ({ page }) => {

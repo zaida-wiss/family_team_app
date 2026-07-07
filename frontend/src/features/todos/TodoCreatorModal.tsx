@@ -1,7 +1,8 @@
 import "./TodoCreatorModal.css";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
+import { suggestEmojiForTitle } from "../../components/emojiData";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
@@ -76,6 +77,10 @@ export function TodoCreatorModal({
   // todo med flera tilldelade).
   const [assigneeIds, setAssigneeIds] = useState<string[]>([SELF_VALUE]);
   const [emoji, setEmoji] = useState(DEFAULT_EMOJI);
+  // Sant så fort användaren själv öppnat väljaren och valt något (även "Ingen
+  // ikon") — stänger av den automatiska rekommendationen nedan permanent för
+  // denna uppgift, så den inte skriver över ett medvetet val.
+  const [emojiTouched, setEmojiTouched] = useState(false);
   const [title, setTitle] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     defaultCategoryId ?? categories[0]?.id ?? NO_CATEGORY_VALUE
@@ -107,6 +112,17 @@ export function TodoCreatorModal({
   const [submitting, setSubmitting] = useState(false);
 
   const isForChild = assigneeIds.some(isRecipientChild);
+
+  // Rekommenderad ikon åt barnet (2026-07-08, Zaidas önskemål) — föreslår en
+  // passande emoji utifrån titeln så fort minst ett barn är valt, så länge
+  // ingen själv aktivt valt en ikon än. Uppdateras löpande medan titeln
+  // skrivs, slutar helt så fort emojiTouched blir sant.
+  useEffect(() => {
+    if (!isForChild || emojiTouched) return;
+    const suggestion = suggestEmojiForTitle(title);
+    if (suggestion) setEmoji(suggestion);
+  }, [title, isForChild, emojiTouched]);
+
   const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
   const isTitleMissing = title.trim().length === 0;
   // Utan ett startdatum blir visibleFrom null för en återkommande mall, vilket
@@ -293,7 +309,14 @@ export function TodoCreatorModal({
           )}
 
           <div className="todo-emoji-title-row">
-            <EmojiPickerPortal symbol={emoji} onSelect={setEmoji} triggerClassName="todo-emoji-btn" />
+            <EmojiPickerPortal
+              symbol={emoji}
+              onSelect={(value) => {
+                setEmoji(value);
+                setEmojiTouched(true);
+              }}
+              triggerClassName="todo-emoji-btn"
+            />
             <label className="field-label todo-emoji-title-row__title">
               Titel
               <input
