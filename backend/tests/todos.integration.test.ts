@@ -178,4 +178,97 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
       .send({});
     expect(approveAttempt.status).toBe(404);
   });
+
+  // Timerfunktion (2026-07-07, Zaidas önskemål) — helt separat, enklare
+  // system än TimedTask/Medaljer-Rekord: bara EN inspelad tid per todo,
+  // skickas med i /complete-anropets body.
+  it("sparar elapsedMs på en tidtagen todo vid complete", async () => {
+    const timerTodoId = `todo-int-timer-${crypto.randomUUID()}`;
+    const create = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: timerTodoId,
+        title: "Städa rummet",
+        createdBy: memberId,
+        assignedTo: childId,
+        isShared: false,
+        status: "pending",
+        starValue: 2,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+        timerEnabled: true,
+        elapsedMs: null,
+      });
+    expect(create.status).toBe(201);
+
+    const complete = await request(app)
+      .patch(`/api/todos/${timerTodoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childId)
+      .send({ elapsedMs: 4321 });
+    expect(complete.status).toBe(200);
+
+    const list = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const timerTodo = (list.body as Array<{ id: string; elapsedMs?: number | null }>)
+      .find((t) => t.id === timerTodoId);
+    expect(timerTodo?.elapsedMs).toBe(4321);
+  });
+
+  it("ignorerar elapsedMs för en todo som inte har timerEnabled", async () => {
+    const noTimerTodoId = `todo-int-notimer-${crypto.randomUUID()}`;
+    const create = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: noTimerTodoId,
+        title: "Duka bordet",
+        createdBy: memberId,
+        assignedTo: childId,
+        isShared: false,
+        status: "pending",
+        starValue: 1,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+      });
+    expect(create.status).toBe(201);
+
+    const complete = await request(app)
+      .patch(`/api/todos/${noTimerTodoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childId)
+      .send({ elapsedMs: 9999 });
+    expect(complete.status).toBe(200);
+
+    const list = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const noTimerTodo = (list.body as Array<{ id: string; elapsedMs?: number | null }>)
+      .find((t) => t.id === noTimerTodoId);
+    expect(noTimerTodo?.elapsedMs ?? null).toBeNull();
+  });
 });

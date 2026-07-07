@@ -45,6 +45,17 @@ function formatRecurrence(todo: Todo): string | null {
   return everyLabel;
 }
 
+// Samma formatering som ChildTasksSection.tsx (duplicerad hellre än ett
+// cross-feature-beroende, se Todo.elapsedMs-kommentaren i shared/types.ts).
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+}
+
 // Uppgifts-visa-modal (2026-07-05, Zaidas beslut) — ersätter den tidigare
 // kombinerade TodoDetailModal. Läsbar info om uppgiften (som kalenderns
 // CalendarEventDetail), INTE en redigeringsformulär. Delmomentens checklista
@@ -139,6 +150,10 @@ export function TodoDetailView({
                 </Fragment>
               ))}
             </p>
+          )}
+
+          {todo.timerEnabled && todo.elapsedMs != null && (
+            <p className="todo-detail-modal__meta">Tog {formatElapsed(todo.elapsedMs)}</p>
           )}
 
           <div className="todo-detail-modal__section">

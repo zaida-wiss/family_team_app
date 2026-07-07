@@ -11,7 +11,7 @@ type Props = {
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
-  onCompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
+  onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
 };
@@ -85,7 +85,7 @@ export function ChildShellContent({
       rejectedTodos={rejectedTodos}
       onOpenRecords={() => setView("records")}
       onCreateWish={onCreateWish}
-      onCompleteTodo={(todoId) => onCompleteTodo(currentMember, todoId, roles)}
+      onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(currentMember, todoId, roles, elapsedMs)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}
       onThemePickerOpen={onThemePickerOpen}
     />

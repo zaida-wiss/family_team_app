@@ -142,7 +142,12 @@ async function assignedMemberNeedsApproval(assignedTo: string | null): Promise<b
   return role?.isChildRole === true;
 }
 
-export async function completeTodo(id: string, accountId: string, memberId: string | null) {
+export async function completeTodo(
+  id: string,
+  accountId: string,
+  memberId: string | null,
+  elapsedMs: number | null = null
+) {
   const todo = await TodoModel.findOne({ id, accountId });
   if (!todo || todo.status !== "pending") {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
@@ -153,6 +158,11 @@ export async function completeTodo(id: string, accountId: string, memberId: stri
     throw new AppError(403, "Åtkomst nekad");
   }
   todo.completedAt = new Date().toISOString();
+  // Timerfunktion (2026-07-07) — sparas bara om uppgiften faktiskt hade
+  // timerEnabled och klienten skickade med en uppmätt tid.
+  if (todo.timerEnabled && elapsedMs !== null) {
+    todo.elapsedMs = elapsedMs;
+  }
 
   if (await assignedMemberNeedsApproval(todo.assignedTo)) {
     todo.status = "done";

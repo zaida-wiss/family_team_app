@@ -3,7 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
-import { RejectTodoBodySchema } from "../../../shared/schemas.js";
+import { CompleteTodoBodySchema, RejectTodoBodySchema } from "../../../shared/schemas.js";
 
 export const todosRouter = Router();
 
@@ -29,7 +29,8 @@ todosRouter.patch("/:id", requireAuth, attachAccountId, async (req, res) => {
 });
 
 todosRouter.patch("/:id/complete", requireAuth, attachAccountId, async (req, res) => {
-  await todos.completeTodo(req.params.id, req.accountId!, req.memberId ?? null);
+  const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
+  await todos.completeTodo(req.params.id, req.accountId!, req.memberId ?? null, elapsedMs ?? null);
   res.json({ ok: true });
 });
 

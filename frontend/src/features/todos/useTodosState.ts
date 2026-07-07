@@ -141,14 +141,14 @@ export function useTodosState() {
     );
   }
 
-  function completeTodo(member: Member, todoId: Id, roles: Role[]) {
+  function completeTodo(member: Member, todoId: Id, roles: Role[], elapsedMs: number | null = null) {
     const todoToComplete = todos.find((todo) => todo.id === todoId);
     if (!todoToComplete || !canCompleteTodo(member, roles, todoToComplete)) {
       return;
     }
 
     persistTodoIfGeneratedOccurrence(todoToComplete)
-      .then(() => todosApi.complete(todoId))
+      .then(() => todosApi.complete(todoId, elapsedMs))
       .catch(console.error);
     trackEvent("todo-completed");
 
@@ -159,7 +159,8 @@ export function useTodosState() {
           : {
               ...todo,
               status: "done" as const,
-              completedAt: new Date().toISOString()
+              completedAt: new Date().toISOString(),
+              ...(todo.timerEnabled && elapsedMs !== null ? { elapsedMs } : {})
             }
       )
     );

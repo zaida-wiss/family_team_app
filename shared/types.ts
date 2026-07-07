@@ -438,6 +438,16 @@ export type Todo = {
   // oberoende av varandras avklarmarkering. Bara meningsfullt på en
   // återkommande MALL (recurringSourceId === null) — ignoreras på occurrences.
   timeWindows?: TodoTimeWindow[];
+  // Timerfunktion (2026-07-07, Zaidas önskemål: "hur lång tid det tar att
+  // göra todo" — uttryckligen SKILT från visibleFrom/expiresAt, som styr NÄR
+  // uppgiften visas). Helt separat, enklare system än TimedTask/TimedAttempt
+  // (Medaljer/Rekord) — ingen upprepad personbästa-jämförelse, bara EN
+  // inspelad tid för just detta tillfälle. Samma "klienten mäter, ingen
+  // server-side pågående-status"-mönster som TimedTask redan använder —
+  // stänger man fliken mitt i en pågående timer förloras den bara, ingen
+  // återupptagning. Valfritt och bakåtkompatibelt.
+  timerEnabled?: boolean;
+  elapsedMs?: number | null;
 };
 
 export type TodoTimeWindow = {

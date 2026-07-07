@@ -28,7 +28,7 @@ type Props = {
   rejectedTodos: Todo[];
   onOpenRecords: () => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
-  onCompleteTodo: (todoId: Id) => void;
+  onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
 };
@@ -139,6 +139,7 @@ export function ChildDashboard({
             heldTodoId={heldTodoId}
             onStartHold={startHold}
             onClearHold={clearHold}
+            onCompleteTodo={onCompleteTodo}
           />
 
           <ChildRejectedTodos

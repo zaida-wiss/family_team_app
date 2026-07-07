@@ -330,6 +330,75 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
 // en barn-tilldelad uppgift, trots att skapa-modalen har det — inkonsekvent.
 // Fältet ska nu finnas i BÅDA, och siffer-inputen ska gå att tömma och skriva
 // om (en envis "0" stod tidigare kvar och gick inte att byta ut).
+// Timerfunktion (2026-07-07, Zaidas önskemål: "precis som barnens belöningar
+// skall man även kunna lägga in en timer på hur lång aktiviteten är") —
+// kryssrutan finns bara när uppgiften tilldelas ett barn, precis som
+// Stjärnor-fältet.
+test("Ny uppgift-modalen: Tidta-kryssrutan finns bara för barn-mottagare, och skickas med i uppgiften", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  await expect(dialog.getByLabel("Tidta hur lång tid uppgiften tar")).toHaveCount(0);
+
+  const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
+  await assigneePicker.getByRole("button", { name: "Mig själv" }).click();
+  await assigneePicker.getByRole("button", { name: "Lilla Barnet" }).click();
+
+  const timerCheckbox = dialog.getByLabel("Tidta hur lång tid uppgiften tar");
+  await expect(timerCheckbox).toBeVisible();
+  await timerCheckbox.check();
+
+  await dialog.getByLabel("Titel").fill("Diska efter middagen");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Diska efter middagen");
+  expect(createdTodo?.timerEnabled).toBe(true);
+});
+
+test("Redigera uppgift: Tidta-kryssrutan finns för en barn-tilldelad uppgift och sparas", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [CHILD_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route(`**/api/todos/${CHILD_TODO.id}`, (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Läxor/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  const timerCheckbox = editDialog.getByLabel("Tidta hur lång tid uppgiften tar");
+  await expect(timerCheckbox).not.toBeChecked();
+  await timerCheckbox.check();
+
+  await editDialog.getByRole("button", { name: "Spara" }).click();
+  await expect.poll(() => updatedPatch?.timerEnabled).toBe(true);
+});
+
 test("Redigera uppgift: Stjärnor-fältet finns för en barn-tilldelad uppgift, och går att tömma och skriva om", async ({ page }) => {
   let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);

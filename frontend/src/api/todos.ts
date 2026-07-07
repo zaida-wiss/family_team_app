@@ -10,10 +10,10 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify(patch)
     }),
-  complete: (id: string) =>
+  complete: (id: string, elapsedMs: number | null = null) =>
     request<{ ok: boolean }>(api(`todos/${id}/complete`), {
       method: "PATCH",
-      body: JSON.stringify({})
+      body: JSON.stringify({ elapsedMs })
     }),
   approve: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}/approve`), {

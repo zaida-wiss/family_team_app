@@ -81,6 +81,7 @@ export function TodoEditModal({
   );
   const [notes, setNotes] = useState(todo.notes ?? "");
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>(todo.subtasks ?? []);
+  const [timerEnabled, setTimerEnabled] = useState(todo.timerEnabled ?? false);
   const [saving, setSaving] = useState(false);
 
   function addSubtask() {
@@ -133,7 +134,7 @@ export function TodoEditModal({
         title: trimmedTitle,
         visual: { type: "lucide-icon", value: emoji },
         personalCategoryId: categoryId,
-        ...(isForChild ? { starValue } : {}),
+        ...(isForChild ? { starValue, timerEnabled } : {}),
         recurrence,
         // Återkommande: visibleFrom är bara ankardatumet för förfallo-
         // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
@@ -221,6 +222,17 @@ export function TodoEditModal({
                 type="number"
                 value={starValueInput}
               />
+            </label>
+          )}
+
+          {isForChild && (
+            <label className="todo-timer-toggle">
+              <input
+                checked={timerEnabled}
+                onChange={(e) => setTimerEnabled(e.target.checked)}
+                type="checkbox"
+              />
+              Tidta hur lång tid uppgiften tar
             </label>
           )}
 

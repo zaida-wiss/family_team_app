@@ -85,6 +85,10 @@ export function TodoCreatorModal({
   ]);
   const [notes, setNotes] = useState("");
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>([]);
+  // Timerfunktion (2026-07-07, Zaidas önskemål: "hur lång tid det tar att
+  // göra todo", precis som Medaljer/Rekord — men ett helt separat, enklare
+  // system, se Todo.timerEnabled-kommentaren i shared/types.ts).
+  const [timerEnabled, setTimerEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const isForChild = assigneeIds.some((id) => id !== SELF_VALUE);
@@ -193,7 +197,9 @@ export function TodoCreatorModal({
           deletedBy: null,
           personalCategoryId: categoryId,
           notes: notes.trim() || null,
-          subtasks: cleanedSubtasks.map((s) => ({ ...s, id: generateId() }))
+          subtasks: cleanedSubtasks.map((s) => ({ ...s, id: generateId() })),
+          timerEnabled: isChildRecipient ? timerEnabled : false,
+          elapsedMs: null
         });
       }
       onClose();
@@ -307,6 +313,17 @@ export function TodoCreatorModal({
                 type="number"
                 value={starValueInput}
               />
+            </label>
+          )}
+
+          {isForChild && (
+            <label className="todo-timer-toggle">
+              <input
+                checked={timerEnabled}
+                onChange={(e) => setTimerEnabled(e.target.checked)}
+                type="checkbox"
+              />
+              Tidta hur lång tid uppgiften tar
             </label>
           )}
 

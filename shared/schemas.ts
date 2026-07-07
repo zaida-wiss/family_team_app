@@ -286,7 +286,9 @@ export const TodoSchema = z.object({
   personalCategoryId: IdSchema.nullable().optional(),
   notes: z.string().nullable().optional(),
   subtasks: z.array(TodoSubtaskSchema).optional(),
-  timeWindows: z.array(TodoTimeWindowSchema).optional()
+  timeWindows: z.array(TodoTimeWindowSchema).optional(),
+  timerEnabled: z.boolean().optional(),
+  elapsedMs: z.number().int().min(0).nullable().optional()
 });
 
 // Fält en klient får patcha på en befintlig todo (titelredigering, rutinredigering via
@@ -310,7 +312,8 @@ export const TodoPatchSchema = TodoSchema.pick({
   personalCategoryId: true,
   notes: true,
   subtasks: true,
-  timeWindows: true
+  timeWindows: true,
+  timerEnabled: true
 }).partial().extend({
   status: z.literal("pending").optional(),
   completedAt: z.null().optional(),
@@ -324,6 +327,12 @@ export const TodoPatchSchema = TodoSchema.pick({
 
 export const RejectTodoBodySchema = z.object({
   reason: z.string().trim().min(1).max(200).nullable().optional()
+});
+
+// Timerfunktion (2026-07-07) — elapsedMs skickas bara med om uppgiften hade
+// timerEnabled och barnet faktiskt körde start/stopp, annars null/utelämnat.
+export const CompleteTodoBodySchema = z.object({
+  elapsedMs: z.number().int().min(0).nullable().optional()
 });
 
 // Flyttade hit från route-filerna (Sprint 3 S6) — låg tidigare som tre separata

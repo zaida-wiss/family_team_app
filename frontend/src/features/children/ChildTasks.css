@@ -227,3 +227,49 @@
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
+
+/* Timerfunktion (2026-07-07, Zaidas önskemål) — inte ett håll-in-kort utan
+   ett Play/Stopp-kontrollerat kort, samma grundstil (kant/bakgrund/rotation)
+   men egen layout eftersom det har en extra rad (live tidräknare + knapp). */
+.child-task-card--timer {
+  cursor: default;
+  height: auto;
+  min-height: 15cqh;
+  grid-template-rows: 1fr auto auto;
+}
+
+.child-task-timer-elapsed {
+  font-family: var(--font-display);
+  font-size: clamp(0.6rem, 4cqi, 0.95rem);
+  font-weight: 700;
+  color: var(--c1, var(--primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.child-task-timer-btn {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border: none;
+  border-radius: clamp(8px, 2cqi, 14px);
+  background: var(--task-accent);
+  color: var(--white, #fff);
+  font-family: var(--font-display);
+  font-size: clamp(0.68rem, 4cqi, 1rem);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.child-task-timer-btn--stop {
+  background: #e74c3c;
+}
+
+.child-task-card--timer-running::after {
+  transform: scaleX(1);
+  background: var(--task-accent);
+  opacity: 0.5;
+}
