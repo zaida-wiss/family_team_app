@@ -23,6 +23,8 @@ function buildTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | nul
     isShared: false,
     status: "pending",
     starValue: row.starValue,
+    timerEnabled: row.timerEnabled,
+    elapsedMs: null,
     visual: { type: "lucide-icon", value: row.emoji },
     recurrence: row.recurrence,
     recurringSourceId: null,

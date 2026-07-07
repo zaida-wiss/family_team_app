@@ -16,6 +16,7 @@ export const TODO_CSV_HEADERS = [
   "Kategori",
   "Rutinkategori",
   "Stjärnor",
+  "Timer",
   "Startdatum",
   "Slutdatum",
   "Återkommer",
@@ -38,6 +39,7 @@ const RECURRENCE_LABEL_TO_UNIT = new Map<string, RecurrenceUnit>(
   Object.entries(RECURRENCE_UNIT_LABEL).map(([unit, label]) => [label.toLowerCase(), unit as RecurrenceUnit])
 );
 const NONE_LABEL = "Nej";
+const YES_LABEL = "Ja";
 
 const WEEKDAY_SHORT_TO_KEY = new Map<string, Weekday>(
   (Object.entries(WEEKDAY_SHORT) as Array<[Weekday, string]>).map(([weekday, short]) => [short.toLowerCase(), weekday])
@@ -135,8 +137,8 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
-  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "Hälsa", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
+  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg"];
+  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "Hälsa", "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", ""];
   return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
 }
 
@@ -217,6 +219,7 @@ export function todosToCsv(
           // vid export för att undvika att peka på fel medlems kategori.
       todo.routineCategory ?? "",
       todo.starValue > 0 ? String(todo.starValue) : "",
+      todo.timerEnabled ? YES_LABEL : "",
       // Lokala Date-getters (inte en rå ISO-sträng-slice, som läser UTC och
       // kan hamna en dag fel beroende på tidszon) — inkluderar nu klockslag,
       // inte bara datum (2026-07-05, Zaidas fynd).
@@ -241,6 +244,7 @@ export type ParsedTodoRow = {
   newCategoryName: string | null;
   routineCategory: string | null;
   starValue: number;
+  timerEnabled: boolean;
   visibleFrom: string | null;
   expiresAt: string | null;
   recurrence: RecurrenceRule;
@@ -281,6 +285,7 @@ export function parseTodoCsv(
   const categoryCol = col("Kategori");
   const routineCategoryCol = col("Rutinkategori");
   const starsCol = col("Stjärnor");
+  const timerCol = col("Timer");
   const startCol = col("Startdatum");
   const endCol = col("Slutdatum");
   const recurrenceCol = col("Återkommer");
@@ -349,6 +354,9 @@ export function parseTodoCsv(
     const starsRaw = (starsCol !== undefined ? cells[starsCol] : "")?.trim() ?? "";
     const starValue = starsRaw ? Math.max(0, parseInt(starsRaw, 10) || 0) : 0;
 
+    const timerRaw = (timerCol !== undefined ? cells[timerCol] : "")?.trim() ?? "";
+    const timerEnabled = timerRaw.toLowerCase() === YES_LABEL.toLowerCase();
+
     const startRaw = (startCol !== undefined ? cells[startCol] : "")?.trim() ?? "";
     const endRaw = (endCol !== undefined ? cells[endCol] : "")?.trim() ?? "";
     const visibleFrom = dateTimeDisplayToISO(startRaw, false);
@@ -411,6 +419,7 @@ export function parseTodoCsv(
       newCategoryName,
       routineCategory,
       starValue: isSelf ? 0 : starValue,
+      timerEnabled: isSelf ? false : timerEnabled,
       visibleFrom,
       expiresAt,
       recurrence,

@@ -28,7 +28,7 @@ describe("todoCsv", () => {
     expect(table[1][0]).toBe("Handla mat");
     expect(table[2][0]).toBe("Borsta tänderna");
     expect(table[2][4]).toBe("Hälsa");
-    expect(table[2][8]).toBe("Dag");
+    expect(table[2][9]).toBe("Dag");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -244,6 +244,41 @@ describe("todoCsv", () => {
 
     expect(errors).toEqual([]);
     expect(rows[0].routineCategory).toBe("Hälsa");
+  });
+
+  // Timerfunktion (2026-07-07) — "Timer"-kolumnen (Ja/Nej) rundtrippar precis
+  // som Stjärnor: bara meningsfull för barn-tilldelade uppgifter, tvingas
+  // till false för Mig själv-rader (samma mönster som starValue).
+  test("todosToCsv → parseTodoCsv tur och retur bevarar Timer-kolumnen för en barn-tilldelad uppgift", () => {
+    const members = [
+      createMember("mem-1", { name: "Zaida" }),
+      createMember("mem-child", { name: "Alva", isChild: true })
+    ];
+    const original = createTodo({
+      id: "t1",
+      title: "Städa rummet",
+      createdBy: "mem-1",
+      assignedTo: "mem-child",
+      timerEnabled: true
+    });
+
+    const csv = todosToCsv([original], members, "mem-1");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+
+    expect(errors).toEqual([]);
+    expect(rows[0].timerEnabled).toBe(true);
+  });
+
+  test("parseTodoCsv: Timer sätts alltid till false för Mig själv-rader, oavsett kolumnens värde", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Tilldelad,Timer",
+      "Handla mat,Mig själv,Ja"
+    ].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows[0].timerEnabled).toBe(false);
   });
 
   test("todosToCsv → parseTodoCsv tur och retur bevarar emoji, saknad emoji faller tillbaka på ⭐ vid import", () => {
