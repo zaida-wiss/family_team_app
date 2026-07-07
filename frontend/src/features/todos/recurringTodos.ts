@@ -287,7 +287,18 @@ function startOfLocalDay(date: Date) {
  */
 export function applyTemplateToOccurrence(
   occurrence: Pick<Todo, "occurrenceDate">,
-  template: Pick<Todo, "title" | "starValue" | "visual" | "personalCategoryId" | "visibleFrom" | "expiresAt">
+  template: Pick<
+    Todo,
+    | "title"
+    | "starValue"
+    | "visual"
+    | "personalCategoryId"
+    | "visibleFrom"
+    | "expiresAt"
+    | "assignedTo"
+    | "timerEnabled"
+    | "plannedDurationMinutes"
+  >
 ): Partial<Todo> {
   const dateKey = occurrence.occurrenceDate ?? getDateKey(new Date());
   const visibleFrom = withOccurrenceDate(template.visibleFrom, dateKey);
@@ -300,5 +311,12 @@ export function applyTemplateToOccurrence(
     personalCategoryId: template.personalCategoryId,
     visibleFrom,
     expiresAt,
+    // Tillagt 2026-07-08 (Zaidas önskemål om full fältparitet mellan skapa/
+    // redigera) — mottagare och timerinställningar hör lika mycket till
+    // mallen som titel/stjärnor/kategori, se createOccurrence som redan
+    // sprider ALLA malfält till en helt ny occurrence.
+    assignedTo: template.assignedTo,
+    timerEnabled: template.timerEnabled,
+    plannedDurationMinutes: template.plannedDurationMinutes,
   };
 }

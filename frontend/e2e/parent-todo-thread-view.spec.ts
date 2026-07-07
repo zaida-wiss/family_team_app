@@ -1515,15 +1515,14 @@ test("Bollar i tråd: ett stillastående 2s-håll på kategorinamnet markerar in
 
 // 2026-07-08 (Zaidas fynd: "i bolltrådsvyn står den som inte återkommande om
 // man redigerar, medans den i återkommande på inställningar står som
-// återkommande") — bollen i tråd-vyn är alltid dagens OCCURRENCE av en
-// återkommande mall, inte mallen själv (mallen visas aldrig som en egen
-// boll). Occurrencens EGNA recurrence-fält är alltid "none" (en frusen
-// engångskopia), så visa-/redigera-vyn visade tidigare ingen hint om att
-// uppgiften faktiskt tillhör en serie — förvirrande, trots att inget var
-// tekniskt fel. Visa-vyn visar nu en hänvisning, redigera-modalen döljer
-// RecurrencePicker helt (den kunde ändå aldrig göra occurrencen till sin
-// egen mall) till förmån för samma hänvisning.
-test("Bollar i tråd: en daglig occurrence av en återkommande mall visar en hänvisning till serien, inte RecurrencePicker", async ({ page }) => {
+// återkommande", följt av "det ska vara samma i redigera som i skapa. samma
+// fält att ändra") — bollen i tråd-vyn är alltid dagens OCCURRENCE av en
+// återkommande mall, inte mallen själv. Full fältparitet med skapa-modalen
+// löstes genom att låta serie-definierande fält (titel/ikon/kategori/
+// mottagare/stjärnor/timer/återkommelse) redigeras på MALLEN oavsett vilken
+// dags-boll man öppnar (Zaida bekräftade: "Ändra HELA serien"), medan
+// anteckningar/delmoment stannar på den öppnade dagen.
+test("Bollar i tråd: en daglig occurrence av en återkommande mall har full fältparitet, sparar till hela serien", async ({ page }) => {
   // Id och occurrenceDate MÅSTE matcha appens egen occurrenceId()-formel
   // (recurringTodos.ts, dagens datum) — annars tror den bakgrundskörande
   // syncScheduledTodos att dagens occurrence saknas och skapar en ANDRA,
@@ -1543,9 +1542,10 @@ test("Bollar i tråd: en daglig occurrence av en återkommande mall visar en hä
     rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
     deletedAt: null, deletedBy: null, personalCategoryId: "cat-1"
   };
+  const occurrenceId = `todo-template-occurrence-${dateKey}`;
   const OCCURRENCE = {
     ...TEMPLATE,
-    id: `todo-template-occurrence-${dateKey}`,
+    id: occurrenceId,
     recurrence: { type: "none" },
     recurringSourceId: "todo-template",
     occurrenceDate: dateKey,
@@ -1553,9 +1553,21 @@ test("Bollar i tråd: en daglig occurrence av en återkommande mall visar en hä
     expiresAt: null
   };
 
+  let templatePatch: Record<string, unknown> | null = null;
+  let occurrencePatch: Record<string, unknown> | null = null;
+
   await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, OTHER_ADULT_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+  await page.route("**/api/todos/todo-template", (route) => {
+    if (route.request().method() === "PATCH") templatePatch = route.request().postDataJSON();
+    return route.fulfill({ json: {} });
+  });
+  await page.route(`**/api/todos/${occurrenceId}`, (route) => {
+    if (route.request().method() === "PATCH") occurrencePatch = route.request().postDataJSON();
+    return route.fulfill({ json: {} });
+  });
 
   await openThreadView(page);
   await page.getByRole("button", { name: /Borsta tänderna/ }).click();
@@ -1566,5 +1578,15 @@ test("Bollar i tråd: en daglig occurrence av en återkommande mall visar en hä
   await detailDialog.getByRole("button", { name: "Redigera uppgift" }).click();
   const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
   await expect(editDialog.getByText(/Del av en återkommande serie/)).toBeVisible();
-  await expect(editDialog.getByLabel("Återkommer")).toHaveCount(0);
+
+  // Samma fält som skapa-modalen: Åt vem? och en riktig Återkommelse-väljare
+  // (som korrekt visar mallens "Återkommande", inte occurrencens egna "none").
+  await expect(editDialog.getByText("Åt vem?")).toBeVisible();
+  await expect(editDialog.getByLabel("Återkommer")).toHaveValue("recurring");
+
+  await editDialog.getByLabel("Titel").fill("Borsta tänderna extra noga");
+
+  // Ändringen sparas till MALLEN (hela serien), inte bara dagens occurrence.
+  await expect.poll(() => templatePatch?.title).toBe("Borsta tänderna extra noga");
+  await expect.poll(() => occurrencePatch).not.toBeNull();
 });

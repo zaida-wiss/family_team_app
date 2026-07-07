@@ -55,6 +55,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  onRefreshRoutine: (routineId: Id) => void;
   personalCategories: TodoCategory[];
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
@@ -106,7 +107,7 @@ export function MemberShellContent({
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads, todoThreadRange,
-  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onUpdateTodo, onSoftDeleteTodo,
+  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
@@ -243,6 +244,7 @@ export function MemberShellContent({
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onUpdateTodo={onUpdateTodo}
+          onRefreshRoutine={onRefreshRoutine}
           onCompleteTodo={(todoId) => {
             // Långtryck i "bollar i tråd" (Sprint 6 S4) markerar en todo klar på ett
             // barns vägnar. Samma etablerade mönster som ChildDashboards onCompleteTodo

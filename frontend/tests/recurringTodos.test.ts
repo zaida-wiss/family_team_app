@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { getDateKey, getDueRecurringTodoOccurrences } from "../src/features/todos/recurringTodos";
+import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences } from "../src/features/todos/recurringTodos";
 import { createTodo } from "./testUtils";
 
 const monday = new Date("2026-06-08T08:00:00.000Z");
@@ -286,6 +286,34 @@ describe("recurringTodos", () => {
       });
       expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
       expect(getDueRecurringTodoOccurrences([template], new Date("2027-06-08T08:00:00.000Z")).length).toBe(0);
+    });
+  });
+
+  // 2026-07-08 (Zaidas önskemål om full fältparitet mellan skapa/redigera) —
+  // redigerar man en daglig occurrence sparas mottagare/timerinställningar nu
+  // till mallen, och den öppna dagens occurrence måste spegla det direkt.
+  describe("applyTemplateToOccurrence", () => {
+    test("synkar assignedTo/timerEnabled/plannedDurationMinutes från mallen", () => {
+      const occurrence = createTodo({ id: "occ-1", occurrenceDate: "2026-06-08" });
+      const template = createTodo({
+        id: "todo-template",
+        title: "Läxor",
+        starValue: 5,
+        assignedTo: "member-child-2",
+        timerEnabled: true,
+        plannedDurationMinutes: 15,
+        visual: { type: "lucide-icon", value: "Book" },
+        visibleFrom: "2026-06-01T07:00:00.000Z",
+        expiresAt: "2026-06-01T08:00:00.000Z"
+      });
+
+      const patch = applyTemplateToOccurrence(occurrence, template);
+
+      expect(patch.assignedTo).toBe("member-child-2");
+      expect(patch.timerEnabled).toBe(true);
+      expect(patch.plannedDurationMinutes).toBe(15);
+      expect(patch.title).toBe("Läxor");
+      expect(patch.starValue).toBe(5);
     });
   });
 });

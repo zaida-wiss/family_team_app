@@ -30,6 +30,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
   personalCategories: TodoCategory[];
   onCreateCategory: (name: string) => Promise<TodoCategory>;
@@ -65,6 +66,7 @@ export function TodosView({
   onCreateTodo,
   onToggleSubtask,
   onUpdateTodo,
+  onRefreshRoutine,
   onCompleteTodo,
   personalCategories,
   onCreateCategory,
@@ -152,12 +154,15 @@ export function TodosView({
         {editTodo && (
           <TodoEditModal
             todo={editTodo}
+            currentMember={currentMember}
             members={allMembers}
             roles={roles}
             categories={personalCategories}
+            todos={todos}
             onUpdateTodo={onUpdateTodo}
             onCreateCategory={onCreateCategory}
             onDeleteTodo={onSoftDeleteTodo}
+            onRefreshRoutine={onRefreshRoutine}
             onClose={() => setEditTodoId(null)}
           />
         )}
@@ -165,12 +170,14 @@ export function TodosView({
         {todoViewMode === "thread" && canSeeTodos && (
           <ParentTodoThreadView
             todos={visibleTodos}
+            allTodos={todos}
             members={allMembers}
             roles={roles}
             currentMember={currentMember}
             categories={personalCategories}
             onToggleSubtask={onToggleSubtask}
             onUpdateTodo={onUpdateTodo}
+            onRefreshRoutine={onRefreshRoutine}
             onCompleteTodo={onCompleteTodo}
             onCreateCategory={onCreateCategory}
             onRenameCategory={onRenameCategory}

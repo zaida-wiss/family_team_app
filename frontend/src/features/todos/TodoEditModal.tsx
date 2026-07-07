@@ -12,6 +12,7 @@ import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask,
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
+const SELF_VALUE = "__self__";
 // Autospara (2026-07-08, Zaidas önskemål: "jag vill inte behöva trycka på
 // spara... det skall sparas ändå när jag skriver") — väntar ut en kort paus i
 // skrivandet innan ändringen skickas, istället för att spara vid VARJE
@@ -21,12 +22,20 @@ const SAVED_INDICATOR_MS = 1500;
 
 type Props = {
   todo: Todo;
+  currentMember: Member;
   members: Member[];
   roles: Role[];
   categories: TodoCategory[];
+  // Behövs för att slå upp den återkommande mallen bakom en daglig occurrence
+  // (todo.recurringSourceId) — se seriesSource nedan.
+  todos: Todo[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onDeleteTodo: (todoId: Id) => void;
+  // Synkar dagens redan skapade occurrence med mallens NYA värden direkt
+  // (annars syns inte en redigering förrän occurrencen genereras om, se
+  // useTodosState.ts:s refreshRoutineOccurrence).
+  onRefreshRoutine: (routineId: Id) => void;
   onClose: () => void;
 };
 
@@ -47,12 +56,15 @@ function dateTimeLocalToISO(value: string): string | null {
 // kalenderns CalendarEventDetail → CalendarEventModal).
 export function TodoEditModal({
   todo,
+  currentMember,
   members,
   roles,
   categories,
+  todos,
   onUpdateTodo,
   onCreateCategory,
   onDeleteTodo,
+  onRefreshRoutine,
   onClose
 }: Props) {
   function handleDelete() {
@@ -60,45 +72,60 @@ export function TodoEditModal({
     onClose();
   }
 
-  // Mottagaren kan inte bytas i redigera-läget (bara i skapa-modalen) — men
-  // stjärnfältet ska ändå vara exakt samma som där (2026-07-07, Zaidas fynd:
-  // fältet saknades helt vid redigering) när uppgiften är tilldelad ett barn.
-  const isForChild = isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
-  // En genererad daglig occurrence (recurringSourceId satt) bär aldrig med sig
-  // mallens återkommelseregel — dess EGNA recurrence är alltid "none", en
-  // frusen engångskopia för just idag (recurringTodos.ts). RecurrencePicker
-  // visades ändå här och kunde ställas om till "Återkommande" utan att göra
-  // något meningsfullt (isRecurringTemplate kräver recurringSourceId===null,
-  // så occurrencen kan aldrig bli sin egen mall) — bara förvirrande (Zaida,
-  // 2026-07-08: bollens redigering visade "inte återkommande" trots att
-  // Inställningar → Återkommande uppgifter visade samma uppgift som
-  // återkommande). Väljaren döljs nu helt för en occurrence, till förmån för
-  // en hänvisning till var serien faktiskt redigeras.
+  // En genererad daglig occurrence (recurringSourceId satt) bär EGNA fält som
+  // bara är en frusen ögonblicksbild av mallen (recurringTodos.ts). Full
+  // fältparitet med skapa-modalen (2026-07-08, Zaidas önskemål: "det ska vara
+  // samma i redigera som i skapa... alla fält är viktiga att kunna redigera")
+  // löses genom att låta serie-definierande fält (titel/ikon/kategori/
+  // mottagare/stjärnor/timer/återkommelse) redigeras på MALLEN — oavsett
+  // vilken dags-boll man råkar öppna — medan anteckningar/delmoment stannar
+  // kvar på just den öppnade dagen.
   const isGeneratedOccurrence = todo.recurringSourceId !== null;
+  const template = isGeneratedOccurrence ? todos.find((t) => t.id === todo.recurringSourceId) ?? null : null;
+  const seriesSource = template ?? todo;
 
-  const [title, setTitle] = useState(todo.title);
-  const [emoji, setEmoji] = useState(todo.visual.value);
+  function isRecipientChild(id: string): boolean {
+    if (id === SELF_VALUE) return false;
+    return isChildMember(members.find((m) => m.id === id), roles);
+  }
+
+  // Alla andra familjemedlemmar (samma mönster som TodoCreatorModal.tsx).
+  const assignableMembers = members.filter((m) => m.deletedAt === null && m.id !== currentMember.id);
+
+  const [title, setTitle] = useState(seriesSource.title);
+  const [emoji, setEmoji] = useState(seriesSource.visual.value);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
-    todo.personalCategoryId ?? NO_CATEGORY_VALUE
+    seriesSource.personalCategoryId ?? NO_CATEGORY_VALUE
   );
   const [newCategoryName, setNewCategoryName] = useState("");
+  // Åt vem? (2026-07-08, Zaidas önskemål) — enval (till skillnad från
+  // skapa-modalens flerval, som skapar en kopia PER mottagare) eftersom
+  // redigering rör EN befintlig uppgift/serie, inte flera nya.
+  const [assigneeId, setAssigneeId] = useState<string>(
+    seriesSource.assignedTo === currentMember.id || !seriesSource.assignedTo
+      ? SELF_VALUE
+      : seriesSource.assignedTo
+  );
+  const isForChild = isRecipientChild(assigneeId);
   // Sträng, inte tal (2026-07-07-fix) — se samma resonemang i TodoCreatorModal.tsx.
-  const [starValueInput, setStarValueInput] = useState(String(todo.starValue));
+  const [starValueInput, setStarValueInput] = useState(String(seriesSource.starValue));
   const starValue = Math.max(0, Math.floor(Number(starValueInput)) || 0);
-  const [recurrence, setRecurrence] = useState<RecurrenceRule>(todo.recurrence);
+  const [recurrence, setRecurrence] = useState<RecurrenceRule>(seriesSource.recurrence);
   const [visibleFrom, setVisibleFrom] = useState(isoToDateTimeLocal(todo.visibleFrom));
   const [expiresAt, setExpiresAt] = useState(isoToDateTimeLocal(todo.expiresAt));
-  const [startDate, setStartDate] = useState(isoToDateOnly(todo.visibleFrom));
+  const [startDate, setStartDate] = useState(isoToDateOnly(seriesSource.visibleFrom));
   const [timeWindows, setTimeWindows] = useState<TodoTimeWindow[]>(
-    todo.timeWindows && todo.timeWindows.length > 0
-      ? todo.timeWindows
-      : [{ visibleFrom: todo.visibleFrom, expiresAt: todo.expiresAt }]
+    seriesSource.timeWindows && seriesSource.timeWindows.length > 0
+      ? seriesSource.timeWindows
+      : [{ visibleFrom: seriesSource.visibleFrom, expiresAt: seriesSource.expiresAt }]
   );
+  // Anteckningar/delmoment hör till just DEN HÄR dagen, inte serien — läses
+  // alltid från occurrencen/uppgiften själv, aldrig mallen.
   const [notes, setNotes] = useState(todo.notes ?? "");
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>(todo.subtasks ?? []);
-  const [timerEnabled, setTimerEnabled] = useState(todo.timerEnabled ?? false);
+  const [timerEnabled, setTimerEnabled] = useState(seriesSource.timerEnabled ?? false);
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState(
-    todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : ""
+    seriesSource.plannedDurationMinutes ? String(seriesSource.plannedDurationMinutes) : ""
   );
   // "Uppdaterat"-bekräftelsen (2026-07-08, Zaidas önskemål) — kort, tyst
   // bekräftelse istället för en Spara-knapp att trycka på.
@@ -168,20 +195,30 @@ export function TodoEditModal({
     }
 
     const isRecurring = recurrence.type !== "none";
-    onUpdateTodo(todo.id, {
+    const isChildRecipient = isRecipientChild(assigneeId);
+    const resolvedAssignedTo = assigneeId === SELF_VALUE ? currentMember.id : assigneeId;
+    const cleanedSubtasks = subtasks
+      .map((s) => ({ ...s, title: s.title.trim() }))
+      .filter((s) => s.title.length > 0);
+    const dayPatch: Partial<Todo> = {
+      notes: notes.trim() || null,
+      subtasks: cleanedSubtasks
+    };
+
+    // Titel/ikon/kategori/mottagare/stjärnor/timer/återkommelse hör till HELA
+    // serien, inte bara dagens boll (2026-07-08, Zaidas önskemål om full
+    // fältparitet med skapa-modalen) — sparas på mallen om en sådan finns.
+    const seriesPatch: Partial<Todo> = {
       title: title.trim(),
       visual: { type: "lucide-icon", value: emoji },
       personalCategoryId: categoryId,
-      ...(isForChild
-        ? {
-            starValue,
-            timerEnabled,
-            plannedDurationMinutes:
-              timerEnabled && plannedDurationMinutesInput
-                ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
-                : null
-          }
-        : {}),
+      assignedTo: resolvedAssignedTo,
+      starValue: isChildRecipient ? starValue : 0,
+      timerEnabled: isChildRecipient ? timerEnabled : false,
+      plannedDurationMinutes:
+        isChildRecipient && timerEnabled && plannedDurationMinutesInput
+          ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+          : null,
       recurrence,
       // Återkommande: visibleFrom är bara ankardatumet för förfallo-
       // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
@@ -189,13 +226,19 @@ export function TodoEditModal({
       // datum+tid som tidigare, timeWindows nollställs (annars kvarstår den
       // dött om uppgiften senare blir återkommande igen utan att fyllas i).
       visibleFrom: isRecurring ? dateOnlyToISO(startDate) : dateTimeLocalToISO(visibleFrom),
-      expiresAt: isRecurring ? todo.expiresAt : dateTimeLocalToISO(expiresAt),
-      timeWindows: isRecurring ? timeWindows : [],
-      notes: notes.trim() || null,
-      subtasks: subtasks
-        .map((s) => ({ ...s, title: s.title.trim() }))
-        .filter((s) => s.title.length > 0)
-    });
+      expiresAt: isRecurring ? seriesSource.expiresAt : dateTimeLocalToISO(expiresAt),
+      timeWindows: isRecurring ? timeWindows : []
+    };
+
+    if (template) {
+      onUpdateTodo(template.id, seriesPatch);
+      onUpdateTodo(todo.id, dayPatch);
+      // Speglar mallens nya värden på dagens redan skapade occurrence direkt
+      // — annars syns inte ändringen förrän occurrencen genereras om imorgon.
+      onRefreshRoutine(template.id);
+    } else {
+      onUpdateTodo(todo.id, { ...seriesPatch, ...dayPatch });
+    }
     setSaveStatus("saved");
   };
 
@@ -223,7 +266,7 @@ export function TodoEditModal({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    title, emoji, selectedCategoryId, newCategoryName, starValueInput, timerEnabled,
+    title, emoji, selectedCategoryId, newCategoryName, assigneeId, starValueInput, timerEnabled,
     plannedDurationMinutesInput, recurrence, visibleFrom, expiresAt, startDate, timeWindows,
     notes, subtasks
   ]);
@@ -271,6 +314,46 @@ export function TodoEditModal({
         </div>
 
         <div className="todo-detail-modal__body">
+          {isGeneratedOccurrence && (
+            <p className="field-hint field-hint--neutral">
+              Del av en återkommande serie. Titel, ikon, kategori, mottagare, stjärnor, timer och återkommelse gäller
+              hela serien. Anteckningar och delmoment gäller bara den här dagen.
+            </p>
+          )}
+
+          {assignableMembers.length > 0 && (
+            <div className="field-label">
+              <span>Åt vem?</span>
+              <div aria-label="Åt vem?" className="todo-assignee-picker" role="group">
+                <button
+                  aria-pressed={assigneeId === SELF_VALUE}
+                  className={
+                    "todo-assignee-picker__btn" +
+                    (assigneeId === SELF_VALUE ? " todo-assignee-picker__btn--on" : "")
+                  }
+                  onClick={() => setAssigneeId(SELF_VALUE)}
+                  type="button"
+                >
+                  Mig själv
+                </button>
+                {assignableMembers.map((member) => (
+                  <button
+                    aria-pressed={assigneeId === member.id}
+                    className={
+                      "todo-assignee-picker__btn" +
+                      (assigneeId === member.id ? " todo-assignee-picker__btn--on" : "")
+                    }
+                    key={member.id}
+                    onClick={() => setAssigneeId(member.id)}
+                    type="button"
+                  >
+                    {member.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="todo-emoji-title-row">
             <EmojiPickerPortal symbol={emoji} onSelect={setEmoji} triggerClassName="todo-emoji-btn" />
             <label className="field-label todo-emoji-title-row__title">
@@ -352,13 +435,7 @@ export function TodoEditModal({
             </label>
           )}
 
-          {isGeneratedOccurrence ? (
-            <p className="field-hint field-hint--neutral">
-              Del av en återkommande serie — ändra hela serien via Inställningar → 🔁 Återkommande uppgifter.
-            </p>
-          ) : (
-            <RecurrencePicker onChange={setRecurrence} value={recurrence} />
-          )}
+          <RecurrencePicker onChange={setRecurrence} value={recurrence} />
 
           {recurrence.type === "none" ? (
             <>

@@ -202,7 +202,15 @@ export function ChildRoutineCreator({
               todo.status === "pending"
           );
           if (todaysOccurrence) {
-            onUpdateTodo(todaysOccurrence.id, applyTemplateToOccurrence(todaysOccurrence, templateFields));
+            onUpdateTodo(
+              todaysOccurrence.id,
+              applyTemplateToOccurrence(todaysOccurrence, {
+                ...templateFields,
+                assignedTo: childId,
+                timerEnabled: existing.timerEnabled,
+                plannedDurationMinutes: existing.plannedDurationMinutes
+              })
+            );
           }
         } else {
           createRoutineForChild(childId, t, categoryId);

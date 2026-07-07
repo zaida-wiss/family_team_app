@@ -15,6 +15,7 @@ type Props = {
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onDeleteTodo: (todoId: Id) => void;
+  onRefreshRoutine: (routineId: Id) => void;
 };
 
 const UNIT_LABEL: Record<RecurrenceUnit, string> = {
@@ -56,7 +57,8 @@ export function RecurringTodosSettings({
   categories,
   onUpdateTodo,
   onCreateCategory,
-  onDeleteTodo
+  onDeleteTodo,
+  onRefreshRoutine
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
   // Strukturerad överblick i tidsordning (2026-07-07, Zaidas önskemål) —
@@ -109,11 +111,14 @@ export function RecurringTodosSettings({
 
       {editingTodo && (
         <TodoEditModal
+          currentMember={currentMember}
           members={members}
           roles={roles}
           categories={categories}
+          todos={todos}
           onCreateCategory={onCreateCategory}
           onDeleteTodo={onDeleteTodo}
+          onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditingId(null)}
           onUpdateTodo={onUpdateTodo}
           todo={editingTodo}

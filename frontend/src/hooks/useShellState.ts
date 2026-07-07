@@ -124,6 +124,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onCreateTodo: createTodo,
     onToggleSubtask: toggleSubtask,
     onUpdateTodo: updateTodo,
+    onRefreshRoutine: refreshRoutineOccurrence,
     personalCategories: personalTodoCategories,
     onCreateCategory: createTodoCategory,
     onRenameCategory: renameTodoCategory,

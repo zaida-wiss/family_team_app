@@ -15,6 +15,7 @@ type Props = {
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onDeleteTodo: (todoId: Id) => void;
+  onRefreshRoutine: (routineId: Id) => void;
 };
 
 function startTimeValue(todo: Todo): number {
@@ -43,7 +44,8 @@ export function OneOffTodosSettings({
   categories,
   onUpdateTodo,
   onCreateCategory,
-  onDeleteTodo
+  onDeleteTodo,
+  onRefreshRoutine
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
   const oneOffTodos = [...getVisibleTodos(currentMember, roles, todos).filter(isOneOffTodo)]
@@ -97,11 +99,14 @@ export function OneOffTodosSettings({
 
       {editingTodo && (
         <TodoEditModal
+          currentMember={currentMember}
           members={members}
           roles={roles}
           categories={categories}
+          todos={todos}
           onCreateCategory={onCreateCategory}
           onDeleteTodo={onDeleteTodo}
+          onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditingId(null)}
           onUpdateTodo={onUpdateTodo}
           todo={editingTodo}

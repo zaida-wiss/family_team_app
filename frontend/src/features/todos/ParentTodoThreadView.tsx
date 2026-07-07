@@ -17,12 +17,19 @@ const CHILDREN_THREAD_ID = "__children__";
 
 type Props = {
   todos: Todo[];
+  // Ofiltrerad lista (2026-07-08) — den vanliga todos-propen ovan är redan
+  // filtrerad (bara pending, inom valt tidsspann, mallar bortfiltrerade), så
+  // en återkommande MALL finns inte kvar i den. TodoEditModal behöver ändå
+  // kunna slå upp mallen bakom en occurrence (full fältparitet med
+  // skapa-modalen, se TodoEditModal.tsx:s seriesSource).
+  allTodos: Todo[];
   members: Member[];
   roles: Role[];
   currentMember: Member;
   categories: TodoCategory[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
@@ -130,12 +137,14 @@ function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange): bool
 // bollen "går upp i rök" (tonas/skalas bort) istället för att bara försvinna direkt.
 export function ParentTodoThreadView({
   todos,
+  allTodos,
   members,
   roles,
   currentMember,
   categories,
   onToggleSubtask,
   onUpdateTodo,
+  onRefreshRoutine,
   onCompleteTodo,
   onCreateCategory,
   onRenameCategory,
@@ -539,12 +548,15 @@ export function ParentTodoThreadView({
       {editTodo && (
         <TodoEditModal
           todo={editTodo}
+          currentMember={currentMember}
           members={members}
           roles={roles}
           categories={categories}
+          todos={allTodos}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
           onDeleteTodo={onDeleteTodo}
+          onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditTodoId(null)}
         />
       )}

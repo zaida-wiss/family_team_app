@@ -209,6 +209,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
           onDeleteTodo={onDeleteTodo}
+          onRefreshRoutine={settingsProps.onRefreshRoutine}
         />
       </SettingsSection>
 
@@ -222,6 +223,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
           onDeleteTodo={onDeleteTodo}
+          onRefreshRoutine={settingsProps.onRefreshRoutine}
         />
       </SettingsSection>
 
