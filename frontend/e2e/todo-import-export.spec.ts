@@ -34,7 +34,7 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Emoji,Tilldelad,Egen kategori,Rutinkategori (Hälsa/Trivsel/Pengar),Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Delmoment,Anteckningar,Id"
+    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Delmoment,Anteckningar,Id"
   );
 });
 
@@ -111,7 +111,7 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-    routineCategory: null, personalCategoryId: null, notes: null
+    personalCategoryId: null, notes: null
   };
   await mockAuthAndData(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO] }));
@@ -128,7 +128,7 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   const lines = text.split(/\r?\n/);
-  expect(lines[1]).toBe("Min uppgift,Star,Mig själv,,,,,,,,,,,,,todo-1");
+  expect(lines[1]).toBe("Min uppgift,Star,Mig själv,,,,,,,,,,,,todo-1");
 });
 
 // Zaida upptäckte 2026-07-05 att återkommande uppgifter tystnade helt ur
@@ -143,7 +143,7 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: "2026-07-06T00:00:00.000Z", expiresAt: null,
-    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null, notes: null
+    deletedAt: null, deletedBy: null, personalCategoryId: null, notes: null
   };
   // Exporten innehåller nu uppgiftens riktiga Id (2026-07-07, Zaidas önskemål
   // om uppdatering via export/import) — en re-import av samma fil matchar
@@ -181,7 +181,7 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
   const localStart = new Date(RECURRING_TODO.visibleFrom);
   const pad = (n: number) => String(n).padStart(2, "0");
   const expectedStart = `${localStart.getFullYear()}-${pad(localStart.getMonth() + 1)}-${pad(localStart.getDate())} ${pad(localStart.getHours())}:${pad(localStart.getMinutes())}`;
-  expect(exportedCsv.split(/\r?\n/)[1]).toBe(`Träna,Star,Mig själv,,,,,,${expectedStart},,Vecka,2,"mån,ons",,,todo-1`);
+  expect(exportedCsv.split(/\r?\n/)[1]).toBe(`Träna,Star,Mig själv,,,,,${expectedStart},,Vecka,2,"mån,ons",,,todo-1`);
 
   await page.getByLabel("Importera CSV-fil").setInputFiles({
     name: "import.csv",
@@ -210,7 +210,7 @@ test("Todos-import/export: en rad med ett okänt/tomt Id skapar en ny uppgift, r
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-    routineCategory: null, personalCategoryId: null, notes: null
+    personalCategoryId: null, notes: null
   };
   let createdTodo: Record<string, unknown> | null = null;
   let patchCalled = false;
@@ -289,7 +289,7 @@ test("Todos-import/export: avmarkerar Barn i exportfiltret utesluter barnens upp
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-    routineCategory: null, personalCategoryId: null, notes: null
+    personalCategoryId: null, notes: null
   };
   const CHILD_TODO = {
     id: "todo-child", accountId: "acc-1", title: "Barnets uppgift", createdBy: "mem-1",
@@ -298,7 +298,7 @@ test("Todos-import/export: avmarkerar Barn i exportfiltret utesluter barnens upp
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-    routineCategory: null, personalCategoryId: null, notes: null
+    personalCategoryId: null, notes: null
   };
 
   await mockAuthAndData(page);
@@ -372,7 +372,7 @@ test("Todos-import/export: 'Ångra senaste import' återställer en uppdaterad u
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-    routineCategory: null, personalCategoryId: null, notes: "Gamla anteckningar"
+    personalCategoryId: null, notes: "Gamla anteckningar"
   };
   const patches: Record<string, unknown>[] = [];
 

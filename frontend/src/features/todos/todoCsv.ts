@@ -1,5 +1,4 @@
 import type { Id, Member, RecurrenceRule, RecurrenceUnit, Todo, TodoCategory, TodoSubtask, Weekday } from "@shared/types";
-import { ROUTINE_CATEGORIES } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { generateId } from "../../utils/uuid";
 
@@ -14,7 +13,6 @@ export const TODO_CSV_HEADERS = [
   "Emoji",
   "Tilldelad",
   "Egen kategori",
-  "Rutinkategori (Hälsa/Trivsel/Pengar)",
   "Stjärnor",
   "Timer",
   "Timer (min)",
@@ -46,13 +44,6 @@ const YES_LABEL = "Ja";
 const WEEKDAY_SHORT_TO_KEY = new Map<string, Weekday>(
   (Object.entries(WEEKDAY_SHORT) as Array<[Weekday, string]>).map(([weekday, short]) => [short.toLowerCase(), weekday])
 );
-
-// Rutinkategori (Hälsa/Trivsel/Pengar) — barnens fasta rutinkategorier, styr
-// belöningsbutikens kategori-spärr. Helt separat från "Egen kategori"-kolumnen
-// (personlig, självägd, fritt namngiven) — kolumnerna döptes om 2026-07-08
-// (Zaidas fynd: "Hushåll" i fel kolumn gav ett förvirrande "okänt värde"-fel)
-// för att göra skillnaden mellan de två systemen tydligare direkt i kalkylarket.
-const ROUTINE_CATEGORY_LOOKUP = new Map(ROUTINE_CATEGORIES.map((c) => [c.toLowerCase(), c]));
 
 // Minimal RFC4180-liknande CSV — undviker ett nytt beroende (CLAUDE.md-regel:
 // nya beroenden kräver motivering) för ett format enkelt nog att skriva själv.
@@ -140,8 +131,8 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", ""];
-  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "Hälsa", "", "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", "", ""];
+  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", ""];
+  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", "", ""];
   return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
 }
 
@@ -219,7 +210,6 @@ export function todosToCsv(
       assigneeLabel,
       "", // Kategorinamnet slås inte upp här — todosToCsv får bara members in,
           // inte den kontobreda kategorilistan; hoppas över vid export.
-      todo.routineCategory ?? "",
       todo.starValue > 0 ? String(todo.starValue) : "",
       todo.timerEnabled ? YES_LABEL : "",
       todo.timerEnabled && todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : "",
@@ -256,7 +246,6 @@ export type ParsedTodoRow = {
   unresolvedAssigneeLabel: string | null;
   personalCategoryId: Id | null;
   newCategoryName: string | null;
-  routineCategory: string | null;
   starValue: number;
   timerEnabled: boolean;
   plannedDurationMinutes: number | null;
@@ -298,7 +287,6 @@ export function parseTodoCsv(
   const emojiCol = col("Emoji");
   const assignedCol = col("Tilldelad");
   const categoryCol = col("Egen kategori");
-  const routineCategoryCol = col("Rutinkategori (Hälsa/Trivsel/Pengar)");
   const starsCol = col("Stjärnor");
   const timerCol = col("Timer");
   const timerMinutesCol = col("Timer (min)");
@@ -352,28 +340,19 @@ export function parseTodoCsv(
     // medlem, troligen ett barn) — annars skulle Stjärnor/Timer nollställas
     // innan mappningen ens gjorts.
     const isSelf = assignedTo === currentMemberId && !unresolvedAssigneeLabel;
+    // Kategori gäller nu VILKEN mottagare som helst (2026-07-08, ADR-0020,
+    // Zaidas beslut: "kategorierna kan vara samma, vi behöver ingen
+    // rutinkategori, det räcker med kategori") — tidigare gällde det bara
+    // Mig själv-rader.
     const categoryLabel = (categoryCol !== undefined ? cells[categoryCol] : "")?.trim() ?? "";
     let personalCategoryId: Id | null = null;
     let newCategoryName: string | null = null;
-    if (isSelf && categoryLabel) {
+    if (categoryLabel) {
       const existing = categories.find((c) => c.name.toLowerCase() === categoryLabel.toLowerCase());
       if (existing) {
         personalCategoryId = existing.id;
       } else {
         newCategoryName = categoryLabel;
-      }
-    }
-
-    const routineCategoryRaw = (routineCategoryCol !== undefined ? cells[routineCategoryCol] : "")?.trim() ?? "";
-    let routineCategory: string | null = null;
-    if (routineCategoryRaw) {
-      const matched = ROUTINE_CATEGORY_LOOKUP.get(routineCategoryRaw.toLowerCase());
-      if (matched) {
-        routineCategory = matched;
-      } else {
-        errors.push(
-          `Rad ${rowNumber} ("${title}"): okänt värde "${routineCategoryRaw}" i Rutinkategori (vänta ${ROUTINE_CATEGORIES.join("/")} eller tomt — din egen fria kategori hör hemma i "Egen kategori"-kolumnen istället), ignoreras.`
-        );
       }
     }
 
@@ -467,7 +446,6 @@ export function parseTodoCsv(
       unresolvedAssigneeLabel,
       personalCategoryId,
       newCategoryName,
-      routineCategory,
       starValue: isSelf ? 0 : starValue,
       timerEnabled: isSelf ? false : timerEnabled,
       plannedDurationMinutes: isSelf ? null : plannedDurationMinutes,

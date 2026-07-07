@@ -1,6 +1,6 @@
 import "./RewardShopSettings.css";
-import { useEffect, useRef, useState } from "react";
-import type { Member, PurchasedReward, RewardShopItem, ShopAvailability } from "@shared/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Id, Member, PurchasedReward, RewardShopItem, ShopAvailability, Todo, TodoCategory } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useRewardShopContext } from "./RewardShopContext";
 import { AvailabilityEditor } from "./AvailabilityEditor";
@@ -12,6 +12,8 @@ type Props = {
   items: RewardShopItem[];
   currentMemberId: string;
   children: Member[];
+  todos: Todo[];
+  categories: TodoCategory[];
   purchasedItems: PurchasedReward[];
   purchasedTotal: number | null;
   purchasedLoading: boolean;
@@ -29,7 +31,7 @@ type FormState = {
   starCost: number;
   timerMinutes: number | null;
   availability: ShopAvailability | null;
-  requiredCategories: string[];
+  requiredCategories: Id[];
 };
 
 const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null, availability: null, requiredCategories: [] });
@@ -132,11 +134,25 @@ function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoa
   );
 }
 
-export function RewardShopSettings({ items, currentMemberId, children, purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, onAdd, onUpdate, onRemove, onMovePurchased, onDeletePurchased }: Props) {
+export function RewardShopSettings({ items, currentMemberId, children, todos, categories, purchasedItems, purchasedTotal, purchasedLoading, onLoadMore, onAdd, onUpdate, onRemove, onMovePurchased, onDeletePurchased }: Props) {
   const { requireApprovalForCategories, updateSettings: onUpdateSettings } = useRewardShopContext();
   const [form, setForm] = useState<FormState>(blank());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(blank());
+
+  // Kategorierna som faktiskt används på barnens uppgifter (2026-07-08,
+  // ADR-0020, Zaidas beslut: "i shoppen ska jag fylla i vilka kategorier som
+  // krävs och då är det samtliga kategorier som barnet har todouppgifter i")
+  // — ersätter det tidigare fasta Hälsa/Trivsel/Pengar-settet.
+  const availableCategories = useMemo(() => {
+    const childIds = new Set(children.map((c) => c.id));
+    const usedCategoryIds = new Set(
+      todos
+        .filter((t) => t.deletedAt === null && t.assignedTo && childIds.has(t.assignedTo) && t.personalCategoryId)
+        .map((t) => t.personalCategoryId as Id)
+    );
+    return categories.filter((c) => usedCategoryIds.has(c.id));
+  }, [children, todos, categories]);
 
   function startEdit(item: RewardShopItem) {
     setEditingId(item.id);
@@ -238,6 +254,7 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
         />
 
         <RequiredCategoriesEditor
+          availableCategories={availableCategories}
           value={form.requiredCategories}
           onChange={(v) => setForm((f) => ({ ...f, requiredCategories: v }))}
         />
@@ -288,6 +305,7 @@ export function RewardShopSettings({ items, currentMemberId, children, purchased
                   onChange={(v) => setEditForm((f) => ({ ...f, availability: v }))}
                 />
                 <RequiredCategoriesEditor
+                  availableCategories={availableCategories}
                   value={editForm.requiredCategories}
                   onChange={(v) => setEditForm((f) => ({ ...f, requiredCategories: v }))}
                 />

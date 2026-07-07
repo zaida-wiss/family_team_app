@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
-import type { Calendar, Id, Member, Role, Todo, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
 
 type Props = {
   currentMember: Member;
   calendars: Calendar[];
   todos: Todo[];
   roles: Role[];
+  categories: TodoCategory[];
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
@@ -30,6 +31,7 @@ export function ChildShellContent({
   calendars,
   todos,
   roles,
+  categories,
   timedTasks,
   onRecordTimedAttempt,
   onCreateWish,
@@ -80,6 +82,7 @@ export function ChildShellContent({
       child={currentMember}
       calendars={calendars}
       roles={roles}
+      categories={categories}
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}

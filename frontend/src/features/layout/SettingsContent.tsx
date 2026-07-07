@@ -135,6 +135,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           items={shopItems}
           currentMemberId={currentMember.id}
           children={members.filter((m) => m.deletedAt === null && m.isChild)}
+          todos={todos}
+          categories={personalCategories}
           purchasedItems={purchasedItems}
           purchasedTotal={purchasedTotal}
           purchasedLoading={purchasedLoading}
@@ -244,6 +246,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           roles={roles}
           todos={todos}
           rewards={rewards}
+          categories={personalCategories}
+          onCreateCategory={onCreateCategory}
           onCreateWish={settingsProps.onCreateWish}
           onApproveTodo={settingsProps.onApproveTodo}
           onRejectTodo={settingsProps.onRejectTodo}

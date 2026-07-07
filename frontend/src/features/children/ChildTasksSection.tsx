@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { Play, Square, Star } from "lucide-react";
-import type { Id, Todo } from "@shared/types";
+import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import "./ChildTasks.css";
@@ -49,6 +49,9 @@ function getTodayHeading(date: Date) {
 
 type Props = {
   todos: Todo[];
+  // Kontobreda kategorier (2026-07-08, ADR-0020 — ersätter routineCategory)
+  // — används bara för att härleda kortets accentfärg via personalCategoryId.
+  categories: TodoCategory[];
   today: Date;
   timerNow: number;
   heldTodoId: Id | null;
@@ -62,7 +65,7 @@ type Props = {
 
 const HOLD_DURATION_MS = 2000;
 
-export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo }: Props) {
+export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo }: Props) {
   // Bara EN uppgift kan tidtas åt gången (samma begränsning som Medaljer/
   // Rekord) — startedAt mäts lokalt (Date.now()), ingen pågående-status
   // sparas server-side, se Todo.elapsedMs-kommentaren i shared/types.ts.
@@ -114,7 +117,7 @@ export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartH
       <div className="child-tasks-grid">
         {todos
           .map((todo, i) => {
-            const category = todo.routineCategory ?? "";
+            const category = categories.find((c) => c.id === todo.personalCategoryId)?.name ?? "";
             const timeLeftPercent = getTimeLeftPercent(todo, timerNow);
             const style: TaskCardStyle = {
               animationDelay: `${i * 80}ms`,

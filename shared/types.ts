@@ -135,10 +135,6 @@ export type ShopAvailability = {
   timeIntervals: ShopTimeInterval[]; // tom = tillgänglig hela dagen
 };
 
-// Default-förslag för todo-kategorier — föräldern väljer fritt bland dessa
-// per belöning i RewardShopItem.requiredCategories.
-export const ROUTINE_CATEGORIES = ["Hälsa", "Trivsel", "Pengar"] as const;
-
 export type RewardShopItem = {
   id: Id;
   title: string;
@@ -146,7 +142,11 @@ export type RewardShopItem = {
   starCost: number;
   timerMinutes: number | null;
   availability: ShopAvailability | null; // null = alltid tillgänglig
-  requiredCategories: string[]; // tom = ingen kategori-spärr
+  // TodoCategory-id:n (2026-07-08, ADR-0020 — ersätter det tidigare fasta
+  // Hälsa/Trivsel/Pengar-namnbaserade settet). Föräldern väljer fritt bland
+  // de riktiga kategorier som redan används på barnens uppgifter — samma
+  // "Egen kategori"-system som resten av appen, inget separat fast enum.
+  requiredCategories: Id[]; // tom = ingen kategori-spärr
   createdBy: Id;
   deletedAt: string | null;
 };
@@ -417,14 +417,16 @@ export type Todo = {
   rejectedReason: string | null;
   deletedAt: string | null;
   deletedBy: Id | null;
-  routineCategory?: string | null;
   // Föräldravyn med delmoment (Sprint 6) — valfritt, lika vikt (procent = avbockade
   // / totalt). Påverkar inte befintlig todo-logik (listning, godkännande, historik)
   // när det saknas, se discussions/2026-07-04-designspike-medaljer-och-foraldravy.md.
   subtasks?: TodoSubtask[];
-  // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — helt separat från
-  // routineCategory ovan. Refererar en TodoCategory som ägs av den medlem som
-  // skapade/tilldelades todon, inte delad med resten av kontot.
+  // Kontobred, fritt namngiven kategori (2026-07-05) — refererar en TodoCategory.
+  // Sedan ADR-0020 (2026-07-08) det ENDA kategorisystemet på Todo — ersätter det
+  // tidigare separata, fasta routineCategory/ROUTINE_CATEGORIES-fältet (Hälsa/
+  // Trivsel/Pengar), som drev belöningsbutikens kategori-spärr och barnens
+  // rutinskapare. Se migrateRoutineCategoryToPersonalCategory.ts för migreringen
+  // av befintlig produktionsdata.
   personalCategoryId?: Id | null;
   // Fritextanteckningar (2026-07-05), redigerbara via TodoDetailModal. Krypterat
   // (ADR-0014), samma mönster som title/rejectedReason.
@@ -470,9 +472,11 @@ export type TodoSubtask = {
 };
 
 // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — en medlem kan skapa
-// sina egna kategorier för att organisera sina egna todos i sida-vid-sida-trådar,
-// oberoende av routineCategory (som driver belöningsbutikens kategori-spärr och
-// barnens rutiner, oförändrat).
+// sina egna kategorier för att organisera sina egna todos i sida-vid-sida-trådar.
+// Kontobred sedan ADR-0019 (2026-07-07) — alla vuxna ser/redigerar varandras.
+// Sedan ADR-0020 (2026-07-08) samma system som driver belöningsbutikens
+// kategori-spärr och barnens rutinskapare (ersätter det tidigare separata,
+// fasta routineCategory-fältet).
 export type TodoCategory = {
   id: Id;
   accountId: Id;

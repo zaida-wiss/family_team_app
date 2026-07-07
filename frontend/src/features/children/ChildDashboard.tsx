@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Calendar, Id, Member, PurchasedReward, Role, Todo } from "@shared/types";
+import type { Calendar, Id, Member, PurchasedReward, Role, Todo, TodoCategory } from "@shared/types";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -23,6 +23,7 @@ type Props = {
   child: Member;
   calendars: Calendar[];
   roles: Role[];
+  categories: TodoCategory[];
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
@@ -49,6 +50,7 @@ export function ChildDashboard({
   child,
   calendars,
   roles,
+  categories,
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
@@ -134,6 +136,7 @@ export function ChildDashboard({
 
           <ChildTasksSection
             todos={activeChildTodos}
+            categories={categories}
             today={today}
             timerNow={timerNow}
             heldTodoId={heldTodoId}

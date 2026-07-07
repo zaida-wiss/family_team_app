@@ -313,6 +313,7 @@ export function MemberShellContent({
           child={selectedDashboardMember}
           calendars={calendars}
           roles={roles}
+          categories={personalCategories}
           timelineTodos={todos}
           activeChildTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}

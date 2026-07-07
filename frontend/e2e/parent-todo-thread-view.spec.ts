@@ -8,15 +8,24 @@ import { mockAuthAndData, MEMBER } from "./helpers";
 // läget för barnen också. Därefter: den inloggade vuxnas egna, personliga
 // kategori-trådar (skapas/döps om/tas bort av medlemmen själv, delas inte med
 // resten av kontot) — visar bara todos tilldelade ELLER skapade av den
-// inloggade vuxna. Helt separat från routineCategory/ROUTINE_CATEGORIES, som
-// fortsatt driver belöningsbutikens kategori-spärr och barnens rutinskapare
-// oförändrat.
+// inloggade vuxna. Sedan ADR-0020 (2026-07-08) samma kategorisystem som
+// driver belöningsbutikens kategori-spärr och barnens rutinskapare.
 
 const CHILD_MEMBER = {
   id: "mem-child-1", accountId: "acc-1", userId: null,
   name: "Lilla Barnet", roleId: "role-child", isChild: true,
   avatarUrl: null, color: null, dashboardTheme: null,
   spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null
+};
+
+// En annan VUXEN familjemedlem (t.ex. en medförälder) — 2026-07-08-fixet:
+// "Åt vem?"-väljaren visade tidigare bara barn (assignableChildren), vilket
+// gjorde det omöjligt att tilldela en uppgift åt en annan vuxen.
+const OTHER_ADULT_MEMBER = {
+  id: "mem-2", accountId: "acc-1", userId: "user-2",
+  name: "Andra Föräldern", roleId: "role-1", isChild: false,
+  avatarUrl: null, color: null, dashboardTheme: null,
+  spentStars: 0, deletedAt: null, deletedBy: null
 };
 
 const CATEGORY = {
@@ -31,7 +40,7 @@ const CHILD_TODO = {
   recurringSourceId: null, occurrenceDate: null, completedAt: null,
   approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
   rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-  routineCategory: null, personalCategoryId: null
+  personalCategoryId: null
 };
 
 const PERSONAL_TODO_WITH_SUBTASKS = {
@@ -41,7 +50,7 @@ const PERSONAL_TODO_WITH_SUBTASKS = {
   recurringSourceId: null, occurrenceDate: null, completedAt: null,
   approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
   rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-  routineCategory: null, personalCategoryId: "cat-1",
+  personalCategoryId: "cat-1",
   subtasks: [
     { id: "sub-1", title: "Uppvärmning", done: true },
     { id: "sub-2", title: "Bänkpress", done: false }
@@ -55,7 +64,7 @@ const PERSONAL_TODO_NO_SUBTASKS = {
   recurringSourceId: null, occurrenceDate: null, completedAt: null,
   approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
   rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-  routineCategory: null, personalCategoryId: "cat-1"
+  personalCategoryId: "cat-1"
 };
 
 // Tråd-vyn (bubbelvyn) är den enda vyn i panelen sedan 2026-07-05 (Zaidas
@@ -1289,7 +1298,7 @@ test("Bollar i tråd: återkommande mallen visas INTE som en egen boll bredvid s
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
-    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: "cat-1"
+    deletedAt: null, deletedBy: null, personalCategoryId: "cat-1"
   };
   // Id:t måste matcha appens egen occurrenceId()-formel (recurringTodos.ts) —
   // annars tror syncScheduledTodos (som körs i bakgrunden på riktigt också)
@@ -1335,7 +1344,7 @@ test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en eg
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
-    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null
+    deletedAt: null, deletedBy: null, personalCategoryId: null
   };
   let deletedId: string | null = null;
 
@@ -1372,7 +1381,7 @@ test("Inställningar: återkommande uppgifter listas i tidsordning (tidigast sta
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: "2026-10-01T00:00:00.000Z", expiresAt: null,
-    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null
+    deletedAt: null, deletedBy: null, personalCategoryId: null
   };
   const EARLIER = {
     id: "todo-earlier", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-1",
@@ -1382,7 +1391,7 @@ test("Inställningar: återkommande uppgifter listas i tidsordning (tidigast sta
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
     rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
-    deletedAt: null, deletedBy: null, routineCategory: null, personalCategoryId: null
+    deletedAt: null, deletedBy: null, personalCategoryId: null
   };
 
   await mockAuthAndData(page);

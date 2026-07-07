@@ -2,6 +2,7 @@ import { RewardShopModel } from "../db/models/RewardShop.js";
 import { PurchasedRewardModel } from "../db/models/PurchasedReward.js";
 import { MemberModel } from "../db/models/Member.js";
 import { TodoModel } from "../db/models/Todo.js";
+import { TodoCategoryModel } from "../db/models/TodoCategory.js";
 import type { RewardShopItem } from "../../../shared/types.js";
 import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
@@ -97,7 +98,14 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
       shop?.requireApprovalForCategories ?? false
     );
     if (blocking.length > 0) {
-      throw new AppError(409, `Kategorispärr blockerar köpet: ${blocking.join(", ")}`);
+      // blockingCategories() returnerar kategori-ID:n (2026-07-08, ADR-0020)
+      // — slå upp namnen för ett läsbart felmeddelande.
+      const blockingCategoryDocs = await TodoCategoryModel.find(
+        { id: { $in: blocking } },
+        { _id: 0, name: 1 }
+      );
+      const names = blockingCategoryDocs.map((c) => c.name);
+      throw new AppError(409, `Kategorispärr blockerar köpet: ${names.join(", ")}`);
     }
   }
 

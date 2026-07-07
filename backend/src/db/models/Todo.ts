@@ -29,10 +29,11 @@ const todoSchema = new Schema<Todo>({
   notes: { type: String, default: null },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null },
-  routineCategory: { type: String, default: null },
-  // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — helt separat från
-  // routineCategory/ROUTINE_CATEGORIES ovan, som fortsatt driver belöningsbutikens
-  // kategori-spärr och barnens rutinskapare oförändrat.
+  // Kontobred, fritt namngiven kategori (2026-07-05) — sedan ADR-0020
+  // (2026-07-08) det ENDA kategorisystemet, ersätter det tidigare separata,
+  // fasta routineCategory-fältet (borttaget ur schemat här, men befintliga
+  // dokuments råa fält rörs inte av detta — se
+  // migrateRoutineCategoryToPersonalCategory.ts för migreringen).
   personalCategoryId: { type: String, default: null },
   subtasks: {
     type: [

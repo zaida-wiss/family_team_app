@@ -103,6 +103,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     calendars,
     todos,
     roles,
+    categories: personalTodoCategories,
     ...sharedChildProps
   };
 

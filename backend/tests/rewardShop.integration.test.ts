@@ -99,7 +99,6 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         rejectedAt: null,
         deletedAt: null,
         deletedBy: null,
-        routineCategory: null,
       });
     await request(app)
       .patch(`/api/todos/${starTodoId}/complete`)
@@ -111,6 +110,15 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
       .send({});
+
+    // En riktig kategori (ADR-0020 — ersätter det tidigare fasta
+    // routineCategory-namnet "Hälsa" med en vanlig, kontobred TodoCategory).
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Hälsa" });
+    const categoryId = (category.body as { id: string }).id;
 
     // Ett obligatoriskt kategori-uppdrag som ännu inte är avklarat.
     const categoryTodoId = `todo-${crypto.randomUUID()}`;
@@ -139,7 +147,7 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         rejectedAt: null,
         deletedAt: null,
         deletedBy: null,
-        routineCategory: "Hälsa",
+        personalCategoryId: categoryId,
       });
 
     const itemId = `item-${crypto.randomUUID()}`;
@@ -154,7 +162,7 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         starCost: 5,
         timerMinutes: null,
         availability: null,
-        requiredCategories: ["Hälsa"],
+        requiredCategories: [categoryId],
         createdBy: memberId,
         deletedAt: null,
       });

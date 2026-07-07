@@ -19,7 +19,7 @@ export function blockingCategories(
   childId: Id,
   requireApproval = false,
   now = Date.now()
-): string[] {
+): Id[] {
   if ((item.requiredCategories ?? []).length === 0) return [];
 
   const unresolved = new Set(
@@ -27,8 +27,8 @@ export function blockingCategories(
       .filter((t) => {
         if (t.assignedTo !== childId) return false;
         if (t.deletedAt !== null) return false;
-        if (!t.routineCategory) return false;
-        if (!item.requiredCategories.includes(t.routineCategory)) return false;
+        if (!t.personalCategoryId) return false;
+        if (!item.requiredCategories.includes(t.personalCategoryId)) return false;
 
         const from = t.visibleFrom ? new Date(t.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
         const until = t.expiresAt ? new Date(t.expiresAt).getTime() : Number.POSITIVE_INFINITY;
@@ -36,7 +36,7 @@ export function blockingCategories(
 
         return requireApproval ? t.status !== "approved" : t.status === "pending";
       })
-      .map((t) => t.routineCategory as string)
+      .map((t) => t.personalCategoryId as Id)
   );
 
   return [...unresolved];

@@ -5,7 +5,7 @@ import { CheckCircle2, Pencil, Save, Star, X, XCircle } from "lucide-react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { hasPermission } from "../../utils/permissions";
-import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo } from "@shared/types";
+import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -13,6 +13,8 @@ type Props = {
   roles: Role[];
   todos: Todo[];
   rewards: Reward[];
+  categories: TodoCategory[];
+  onCreateCategory: (name: string) => Promise<TodoCategory>;
   onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
   onApproveTodo: (todoId: Id) => void;
   onRejectTodo: (todoId: Id, reason: string | null) => void;
@@ -37,6 +39,8 @@ export function ChildSettings({
   roles,
   todos,
   rewards,
+  categories,
+  onCreateCategory,
   onCreateWish,
   onApproveTodo,
   onRejectTodo,
@@ -304,6 +308,8 @@ export function ChildSettings({
             children={childMembers}
             roles={roles}
             todos={todos}
+            categories={categories}
+            onCreateCategory={onCreateCategory}
             showTitle={false}
             onCreateTodo={onCreateTodo}
             onUpdateTodo={onUpdateTodo}

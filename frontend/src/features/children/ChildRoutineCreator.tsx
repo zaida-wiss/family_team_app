@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Plus, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
-import type { Id, Member, Role, Todo, Weekday } from "@shared/types";
-import { ROUTINE_CATEGORIES } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory, Weekday } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 import { generateId } from "../../utils/uuid";
 import { RoutineList } from "./RoutineList";
@@ -18,11 +17,16 @@ import {
 } from "./routineHelpers";
 import "./ChildRoutineCreator.css";
 
+const NO_CATEGORY_VALUE = "__none__";
+const NEW_CATEGORY_VALUE = "__new__";
+
 type Props = {
   currentMember: Member;
   children: Member[];
   roles: Role[];
   todos: Todo[];
+  categories: TodoCategory[];
+  onCreateCategory: (name: string) => Promise<TodoCategory>;
   showTitle?: boolean;
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: string, patch: Partial<Todo>) => void;
@@ -35,6 +39,8 @@ export function ChildRoutineCreator({
   children,
   roles,
   todos,
+  categories,
+  onCreateCategory,
   showTitle = true,
   onCreateTodo,
   onUpdateTodo,
@@ -47,7 +53,14 @@ export function ChildRoutineCreator({
   const [emoji, setEmoji] = useState("⭐");
   const [title, setTitle] = useState("");
   const [starsRaw, setStarsRaw] = useState("2");
-  const [category, setCategory] = useState("");
+  // Egen kategori (2026-07-08, ADR-0020, Zaidas beslut: "kategorierna kan
+  // vara samma, vi behöver ingen rutinkategori, det räcker med kategori")
+  // — ersätter det tidigare fasta Hälsa/Trivsel/Pengar-valet. Samma
+  // kontobreda kategorilista som vuxenvyns tråd-vy, föräldern skapar/väljer
+  // åt barnet.
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(NO_CATEGORY_VALUE);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const isCreatingCategory = selectedCategoryId === NEW_CATEGORY_VALUE;
   const [selectedChildIds, setSelectedChildIds] = useState<Id[]>(() =>
     children.length === 1 ? [children[0].id] : []
   );
@@ -85,7 +98,8 @@ export function ChildRoutineCreator({
     setTitle("");
     setEmoji("⭐");
     setStarsRaw("2");
-    setCategory("");
+    setSelectedCategoryId(NO_CATEGORY_VALUE);
+    setNewCategoryName("");
     setStartTime("");
     setEndTime("");
     setDays(["monday", "tuesday", "wednesday", "thursday", "friday"]);
@@ -108,7 +122,7 @@ export function ChildRoutineCreator({
 
   const stars = Math.max(1, Math.min(99, parseInt(starsRaw, 10) || 1));
 
-  function createRoutineForChild(childId: Id, trimmedTitle: string) {
+  function createRoutineForChild(childId: Id, trimmedTitle: string, categoryId: Id | null) {
     onCreateTodo({
       id: `routine-${generateId()}` as Id,
       title: trimmedTitle,
@@ -131,13 +145,23 @@ export function ChildRoutineCreator({
       rejectedReason: null,
       deletedAt: null,
       deletedBy: null,
-      routineCategory: category || null,
+      personalCategoryId: categoryId,
     });
   }
 
-  function submit() {
+  async function submit() {
     const t = title.trim();
     if (!t || selectedChildIds.length === 0 || days.length === 0) return;
+
+    // Egen kategori (2026-07-08, ADR-0020) — skapar en ny kategori vid behov,
+    // en gång, innan den återanvänds för alla valda barn.
+    let categoryId: Id | null = selectedCategoryId === NO_CATEGORY_VALUE ? null : selectedCategoryId;
+    if (isCreatingCategory) {
+      const trimmedName = newCategoryName.trim();
+      if (!trimmedName) return;
+      const created = await onCreateCategory(trimmedName);
+      categoryId = created.id;
+    }
 
     if (editingRoutineIds.length > 0) {
       const editedRoutines = existingRoutines.filter((routine) =>
@@ -153,7 +177,7 @@ export function ChildRoutineCreator({
         title: t,
         starValue: stars,
         visual: { type: "lucide-icon" as const, value: emoji },
-        routineCategory: category || null,
+        personalCategoryId: categoryId,
         visibleFrom: timeToAnchorISO(startTime),
         expiresAt: timeToAnchorISO(endTime),
       };
@@ -181,7 +205,7 @@ export function ChildRoutineCreator({
             onUpdateTodo(todaysOccurrence.id, applyTemplateToOccurrence(todaysOccurrence, templateFields));
           }
         } else {
-          createRoutineForChild(childId, t);
+          createRoutineForChild(childId, t, categoryId);
         }
       }
 
@@ -196,7 +220,7 @@ export function ChildRoutineCreator({
     }
 
     for (const childId of selectedChildIds) {
-      createRoutineForChild(childId, t);
+      createRoutineForChild(childId, t, categoryId);
     }
 
     resetForm();
@@ -208,7 +232,7 @@ export function ChildRoutineCreator({
     setEmoji(todo.visual.value);
     setTitle(todo.title);
     setStarsRaw(String(todo.starValue));
-    setCategory(todo.routineCategory ?? "");
+    setSelectedCategoryId(todo.personalCategoryId ?? NO_CATEGORY_VALUE);
     setSelectedChildIds(group.children.map((child) => child.id));
     setStartTime(isoToTimeInput(todo.visibleFrom));
     setEndTime(isoToTimeInput(todo.expiresAt));
@@ -321,18 +345,29 @@ export function ChildRoutineCreator({
             )}
           </div>
 
-          {/* Category */}
+          {/* Egen kategori (2026-07-08, ADR-0020) */}
           <select
             className="rcr-select-native"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
             aria-label="Kategori"
           >
-            <option value="">Kategori</option>
-            {ROUTINE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+            <option value={NO_CATEGORY_VALUE}>Kategori</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
+            <option value={NEW_CATEGORY_VALUE}>+ Ny kategori…</option>
           </select>
+          {isCreatingCategory && (
+            <input
+              autoFocus
+              className="rcr-input"
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Namn på ny kategori"
+              value={newCategoryName}
+              aria-label="Namn på ny kategori"
+            />
+          )}
         </div>
 
         {/* Row 2: time range | days | add button */}
@@ -372,7 +407,7 @@ export function ChildRoutineCreator({
           <button
             className="rcr-add-btn"
             type="button"
-            onClick={submit}
+            onClick={() => void submit()}
             disabled={!title.trim() || selectedChildIds.length === 0 || days.length === 0}
             aria-label={editingRoutineIds.length > 0 ? "Spara rutin" : "Lägg till rutin"}
           >

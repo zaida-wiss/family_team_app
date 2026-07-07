@@ -287,7 +287,7 @@ function startOfLocalDay(date: Date) {
  */
 export function applyTemplateToOccurrence(
   occurrence: Pick<Todo, "occurrenceDate">,
-  template: Pick<Todo, "title" | "starValue" | "visual" | "routineCategory" | "visibleFrom" | "expiresAt">
+  template: Pick<Todo, "title" | "starValue" | "visual" | "personalCategoryId" | "visibleFrom" | "expiresAt">
 ): Partial<Todo> {
   const dateKey = occurrence.occurrenceDate ?? getDateKey(new Date());
   const visibleFrom = withOccurrenceDate(template.visibleFrom, dateKey);
@@ -297,7 +297,7 @@ export function applyTemplateToOccurrence(
     title: template.title,
     starValue: template.starValue,
     visual: template.visual,
-    routineCategory: template.routineCategory,
+    personalCategoryId: template.personalCategoryId,
     visibleFrom,
     expiresAt,
   };

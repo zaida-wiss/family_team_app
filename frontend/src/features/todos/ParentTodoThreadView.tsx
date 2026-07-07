@@ -118,9 +118,10 @@ function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange): bool
 // (oavsett barn/kategori) — så den vuxna har koll på läget för barnen också.
 // Därefter: den vuxnas egna, personliga kategori-trådar (skapas i en separat
 // modal från Todos-panelen, döps om/tas bort direkt i tråd-huvudet här) —
-// visar todos tilldelade ELLER skapade av den inloggade vuxna. Helt separat
-// från routineCategory/ROUTINE_CATEGORIES, som fortsatt driver
-// belöningsbutikens kategori-spärr och barnens rutinskapare oförändrat. Kort
+// visar todos tilldelade ELLER skapade av den inloggade vuxna. Samma
+// kontobreda kategorisystem driver numera även belöningsbutikens
+// kategori-spärr och barnens rutinskapare (ADR-0020, 2026-07-08 — ersätter
+// det tidigare separata, fasta routineCategory/ROUTINE_CATEGORIES-settet). Kort
 // tryck öppnar en läsbar uppgifts-visa-vy (TodoDetailView, 2026-07-05) på
 // VILKEN boll som helst — anteckningar, delmomentens checklista om uppgiften
 // har några, och en pennikon som öppnar TodoEditModal för att redigera titel/

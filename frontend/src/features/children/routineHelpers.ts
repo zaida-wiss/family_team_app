@@ -39,7 +39,7 @@ export function routineGroupKey(todo: Todo): string {
     String(todo.starValue),
     todo.visibleFrom ?? "",
     todo.expiresAt ?? "",
-    todo.routineCategory ?? "",
+    todo.personalCategoryId ?? "",
     recurrenceKey(todo)
   ].join("|");
 }
