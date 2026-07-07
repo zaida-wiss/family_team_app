@@ -59,3 +59,18 @@ export function getTodoHistory(member: Member, roles: Role[], todos: Todo[]): To
     .filter(isTodoHistory)
     .sort((a, b) => historySortDate(b) - historySortDate(a));
 }
+
+// Engångsuppgifter (2026-07-08, Zaidas önskemål: en motsvarande lista i
+// Inställningar för uppgifter UTAN återkommelse, precis som de återkommande
+// mallarna redan har en egen hanteringsyta) — en genuin engångsuppgift, inte
+// en daglig occurrence av en återkommande mall (recurringSourceId, syns redan
+// som en vanlig boll/rad i Todos-panelen) och inte redan avslutad (hör hemma
+// i Todo-historik istället, se isTodoHistory).
+export function isOneOffTodo(todo: Todo): boolean {
+  return (
+    todo.deletedAt === null &&
+    todo.recurringSourceId === null &&
+    todo.recurrence.type === "none" &&
+    !isTodoHistory(todo)
+  );
+}

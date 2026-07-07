@@ -128,4 +128,68 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await expect(dialog.getByLabel("Syns från")).toBeVisible();
     await expect(dialog.getByLabel("Försvinner")).toBeVisible();
   });
+
+  // 2026-07-08 (Zaidas fråga: "jag verkar inte kunna se todos som inte är
+  // återkommande i Inställningar") — en aktiv engångsuppgift gick tidigare
+  // bara att hitta i tråd-vyn/listläget (kräver att man vet vilken kategori
+  // den ligger i). Ny "📌 Engångsuppgifter"-sektion samlar dem på ett ställe,
+  // med samma Redigera/Ta bort-mönster som Återkommande uppgifter redan har.
+  test("Engångsuppgifter listas i Inställningar, återkommande mallar och historik gör det inte", async ({ page }) => {
+    const RECURRING_TEMPLATE = {
+      ...APPROVED_TODO,
+      id: "todo-template",
+      title: "Borsta tänderna",
+      status: "pending",
+      completedAt: null,
+      approvedBy: null,
+      approvedAt: null,
+      recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null }
+    };
+    const OCCURRENCE = {
+      ...PENDING_TODO,
+      id: "todo-occurrence",
+      title: "Borsta tänderna (idag)",
+      recurringSourceId: "todo-template"
+    };
+
+    await page.route("**/api/todos", (route) =>
+      route.fulfill({
+        json:
+          route.request().method() === "GET"
+            ? [PENDING_TODO, RECURRING_TEMPLATE, OCCURRENCE, APPROVED_TODO, EXPIRED_TODO]
+            : {}
+      })
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "📌 Engångsuppgifter" }).click();
+
+    const rows = page.locator(".one-off-todos-settings__row");
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText("Dammsuga");
+  });
+
+  test("Engångsuppgifter: pennikonen öppnar redigera-modalen, papperskorgen tar bort uppgiften", async ({ page }) => {
+    let deletedId: string | null = null;
+    await page.route("**/api/todos", (route) => {
+      if (route.request().method() === "GET") return route.fulfill({ json: [PENDING_TODO] });
+      return route.fulfill({ json: {} });
+    });
+    await page.route("**/api/todos/todo-pending", (route) => {
+      if (route.request().method() === "DELETE") deletedId = "todo-pending";
+      return route.fulfill({ json: {} });
+    });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "📌 Engångsuppgifter" }).click();
+
+    await page.getByRole("button", { name: "Redigera Dammsuga" }).click();
+    await expect(page.getByRole("dialog", { name: "Redigera uppgift" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "Ta bort Dammsuga" }).click();
+    await expect.poll(() => deletedId).toBe("todo-pending");
+  });
 });
