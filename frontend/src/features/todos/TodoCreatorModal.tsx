@@ -1,6 +1,6 @@
 import "./TodoCreatorModal.css";
 import { useMemo, useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
@@ -147,6 +147,21 @@ export function TodoCreatorModal({
 
   function removeSubtask(id: Id) {
     setSubtasks((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  // Flytta ett delmoment upp/ner i listan (2026-07-08, Zaidas önskemål:
+  // "jag behöver kunna flytta ordningen på delmomenten") — enkla pil-knappar
+  // istället för drag-and-drop, samma touch-/tangentbordsvänliga mönster som
+  // resten av appen använder för listor med få rader.
+  function moveSubtask(id: Id, direction: -1 | 1) {
+    setSubtasks((prev) => {
+      const index = prev.findIndex((s) => s.id === id);
+      const targetIndex = index + direction;
+      if (index === -1 || targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -409,7 +424,7 @@ export function TodoCreatorModal({
           <div className="field-label">
             <span>Delmoment (egen checklista)</span>
             <ul className="todo-edit-modal__subtasks">
-              {subtasks.map((subtask) => (
+              {subtasks.map((subtask, index) => (
                 <li key={subtask.id} className="todo-edit-modal__subtask-row">
                   <input
                     aria-label="Delmomentets titel"
@@ -418,6 +433,24 @@ export function TodoCreatorModal({
                     placeholder="Till exempel Uppvärmning"
                     value={subtask.title}
                   />
+                  <button
+                    aria-label="Flytta delmoment upp"
+                    className="icon-button"
+                    disabled={index === 0}
+                    onClick={() => moveSubtask(subtask.id, -1)}
+                    type="button"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    aria-label="Flytta delmoment ner"
+                    className="icon-button"
+                    disabled={index === subtasks.length - 1}
+                    onClick={() => moveSubtask(subtask.id, 1)}
+                    type="button"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
                   <button
                     aria-label="Ta bort delmoment"
                     className="icon-button"

@@ -572,6 +572,44 @@ test("Redigera uppgift: lägger till ett delmoment via den nya checklista-hanter
   ]);
 });
 
+// 2026-07-08 (Zaidas önskemål: "jag behöver kunna flytta ordningen på
+// delmomenten") — pil-knapper flyttar en rad upp/ner i checklistan.
+test("Redigera uppgift: flyttar ett delmoment upp i checklistan med pilknappen", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-1", (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Styrketräning/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  const titleInputs = editDialog.getByLabel("Delmomentets titel");
+  await expect(titleInputs.nth(0)).toHaveValue("Uppvärmning");
+  await expect(titleInputs.nth(1)).toHaveValue("Bänkpress");
+
+  const upButtons = editDialog.getByRole("button", { name: "Flytta delmoment upp" });
+  await expect(upButtons.nth(0)).toBeDisabled();
+  await upButtons.nth(1).click();
+
+  await expect(titleInputs.nth(0)).toHaveValue("Bänkpress");
+  await expect(titleInputs.nth(1)).toHaveValue("Uppvärmning");
+
+  await expect.poll(() => (updatedPatch?.subtasks as Array<{ title: string }> | undefined)?.map((s) => s.title))
+    .toEqual(["Bänkpress", "Uppvärmning"]);
+});
+
 test("Bollar i tråd: långt tryck (2s) markerar hela uppgiften klar och visar en bortdöende-animation innan den lämnar tråden", async ({ page }) => {
   let completed = false;
   await mockAuthAndData(page);
@@ -1196,6 +1234,45 @@ test("Ny uppgift-modalen: kan lägga till delmoment redan vid skapande", async (
 
   await expect.poll(() => createdTodo?.title).toBe("Städa rummet");
   expect(createdTodo?.subtasks).toEqual([{ id: expect.any(String), title: "Dammsuga", done: false }]);
+});
+
+// 2026-07-08 (Zaidas önskemål: "jag behöver kunna flytta ordningen på
+// delmomenten") — samma pilknappar finns redan vid skapande.
+test("Ny uppgift-modalen: flyttar ett delmoment ner i checklistan med pilknappen", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  await dialog.getByLabel("Titel").fill("Städa rummet");
+  await dialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+  await dialog.getByLabel("Delmomentets titel").fill("Dammsuga");
+  await dialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+  const titleInputs = dialog.getByLabel("Delmomentets titel");
+  await titleInputs.nth(1).fill("Torka golv");
+
+  const downButtons = dialog.getByRole("button", { name: "Flytta delmoment ner" });
+  await expect(downButtons.nth(1)).toBeDisabled();
+  await downButtons.nth(0).click();
+
+  await expect(titleInputs.nth(0)).toHaveValue("Torka golv");
+  await expect(titleInputs.nth(1)).toHaveValue("Dammsuga");
+
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => (createdTodo?.subtasks as Array<{ title: string }> | undefined)?.map((s) => s.title))
+    .toEqual(["Torka golv", "Dammsuga"]);
 });
 
 // Bugg Zaida hittade 2026-07-06: den återkommande MALLEN visades som en egen
