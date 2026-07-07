@@ -326,6 +326,72 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
   await expect(editDialog).toHaveCount(0);
 });
 
+// 2026-07-07 (Zaidas fynd): redigera-modalen saknade Stjärnor-fältet helt för
+// en barn-tilldelad uppgift, trots att skapa-modalen har det — inkonsekvent.
+// Fältet ska nu finnas i BÅDA, och siffer-inputen ska gå att tömma och skriva
+// om (en envis "0" stod tidigare kvar och gick inte att byta ut).
+test("Redigera uppgift: Stjärnor-fältet finns för en barn-tilldelad uppgift, och går att tömma och skriva om", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [CHILD_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route(`**/api/todos/${CHILD_TODO.id}`, (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Läxor/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  const stars = editDialog.getByLabel("Stjärnor");
+  await expect(stars).toHaveValue("3");
+
+  // Tömmer fältet helt — ska bli genuint tomt, inte hoppa tillbaka till "0".
+  await stars.fill("");
+  await expect(stars).toHaveValue("");
+  await stars.fill("7");
+  await expect(stars).toHaveValue("7");
+
+  await editDialog.getByRole("button", { name: "Spara" }).click();
+  await expect.poll(() => updatedPatch?.starValue).toBe(7);
+});
+
+// 2026-07-07 (Zaidas fynd): "Försvinner" förifylls nu med samma värde som
+// "Syns från" när man fyller i ett datum, så en tidigare, oifylld Försvinner
+// inte kan bli tidigare än startdatumet av misstag.
+test("Redigera uppgift: Försvinner förifylls med Syns från, men bara om det var tomt sen innan", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Löpning/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  const visibleFrom = editDialog.getByLabel("Syns från");
+  const expiresAt = editDialog.getByLabel("Försvinner");
+  await expect(expiresAt).toHaveValue("");
+
+  await visibleFrom.fill("2026-07-10T09:00");
+  await expect(expiresAt).toHaveValue("2026-07-10T09:00");
+
+  // Ändrar man Försvinner själv efteråt ska det INTE skrivas över igen om
+  // Syns från justeras ytterligare en gång.
+  await expiresAt.fill("2026-07-10T18:00");
+  await visibleFrom.fill("2026-07-11T09:00");
+  await expect(expiresAt).toHaveValue("2026-07-10T18:00");
+});
+
 // Radera-knappen fanns bara i list-vyns rader — försvann ur räckhåll helt när
 // tråd-vyn blev default (ingen väg dit i visa/redigera-modalerna), upptäckt
 // och fixat 2026-07-05 vid Zaidas fråga om varför hon inte längre kunde

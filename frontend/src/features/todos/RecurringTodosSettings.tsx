@@ -8,6 +8,7 @@ import { TodoEditModal } from "./TodoEditModal";
 
 type Props = {
   currentMember: Member;
+  members: Member[];
   roles: Role[];
   todos: Todo[];
   categories: TodoCategory[];
@@ -41,6 +42,7 @@ function describeRecurrence(todo: Todo): string {
 // separat hanteringsyta i Inställningar istället för att bara försvinna.
 export function RecurringTodosSettings({
   currentMember,
+  members,
   roles,
   todos,
   categories,
@@ -89,6 +91,8 @@ export function RecurringTodosSettings({
 
       {editingTodo && (
         <TodoEditModal
+          members={members}
+          roles={roles}
           categories={categories}
           onCreateCategory={onCreateCategory}
           onDeleteTodo={onDeleteTodo}

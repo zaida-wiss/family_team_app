@@ -195,6 +195,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
       <SettingsSection title="🔁 Återkommande uppgifter">
         <RecurringTodosSettings
           currentMember={currentMember}
+          members={members}
           roles={roles}
           todos={todos}
           categories={personalCategories}

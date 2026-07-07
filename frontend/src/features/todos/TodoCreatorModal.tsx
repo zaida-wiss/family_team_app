@@ -70,7 +70,12 @@ export function TodoCreatorModal({
     defaultCategoryId ?? categories[0]?.id ?? NO_CATEGORY_VALUE
   );
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [starValue, setStarValue] = useState(1);
+  // Sträng, inte tal (2026-07-07-fix, Zaidas fynd) — annars tvingar
+  // Number(e.target.value) fältet till "0" så fort man raderar för att skriva
+  // ett nytt värde, vilket gjorde det omöjligt att byta ut talet (en envis
+  // nolla stod kvar först). Tolkas till ett tal bara vid spara, se starValue.
+  const [starValueInput, setStarValueInput] = useState("1");
+  const starValue = Math.max(0, Math.floor(Number(starValueInput)) || 0);
   const [recurrence, setRecurrence] = useState<RecurrenceRule>({ type: "none" });
   const [visibleFrom, setVisibleFrom] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -90,11 +95,28 @@ export function TodoCreatorModal({
   // samma grundorsak som produktionsincidenten 2026-07-06 (se
   // incidents/2026-07-06-barnens-rutiner-forsvann.md). Spärras därför här.
   const isStartDateMissing = recurrence.type !== "none" && !startDate;
+  // Försvinner tidigare än Syns från vore ett ogiltigt fönster (uppgiften
+  // skulle aldrig synas) — spärras här (2026-07-07, Zaidas fynd).
+  const isEndBeforeStart =
+    recurrence.type === "none" && !!visibleFrom && !!expiresAt && expiresAt < visibleFrom;
   const canSubmit =
     !isTitleMissing &&
     !isStartDateMissing &&
+    !isEndBeforeStart &&
     assigneeIds.length > 0 &&
     !isRecurrenceIncomplete(recurrence);
+
+  // Försvinner förifylls med samma värde som Syns från (2026-07-07, Zaidas
+  // önskemål) — så man inte behöver fylla i det två gånger, och för att
+  // förhindra att det annars tomma/omedvetet kvarlämnade fältet råkar bli
+  // tidigare än startdatumet. Bara ett förslag: skriver inte över ett värde
+  // användaren redan aktivt valt i Försvinner.
+  function handleVisibleFromChange(value: string) {
+    setVisibleFrom(value);
+    if (!expiresAt) {
+      setExpiresAt(value);
+    }
+  }
 
   function toggleAssignee(id: string) {
     setAssigneeIds((prev) => {
@@ -281,9 +303,9 @@ export function TodoCreatorModal({
               <input
                 className="text-input"
                 min={0}
-                onChange={(e) => setStarValue(Number(e.target.value))}
+                onChange={(e) => setStarValueInput(e.target.value)}
                 type="number"
-                value={starValue}
+                value={starValueInput}
               />
             </label>
           )}
@@ -296,7 +318,7 @@ export function TodoCreatorModal({
                 Syns från
                 <input
                   className="text-input"
-                  onChange={(e) => setVisibleFrom(e.target.value)}
+                  onChange={(e) => handleVisibleFromChange(e.target.value)}
                   type="datetime-local"
                   value={visibleFrom}
                 />
@@ -311,6 +333,7 @@ export function TodoCreatorModal({
                   value={expiresAt}
                 />
               </label>
+              {isEndBeforeStart && <p className="field-hint">Försvinner kan inte vara tidigare än Syns från.</p>}
             </>
           ) : (
             <>

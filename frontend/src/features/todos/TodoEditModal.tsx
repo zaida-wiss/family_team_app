@@ -6,14 +6,17 @@ import { useModalA11y } from "../../hooks/useModalA11y";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
+import { isChildMember } from "./selectors";
 import { generateId } from "../../utils/uuid";
-import type { Id, RecurrenceRule, Todo, TodoCategory, TodoSubtask, TodoTimeWindow } from "@shared/types";
+import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTimeWindow } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
 
 type Props = {
   todo: Todo;
+  members: Member[];
+  roles: Role[];
   categories: TodoCategory[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
@@ -38,6 +41,8 @@ function dateTimeLocalToISO(value: string): string | null {
 // kalenderns CalendarEventDetail → CalendarEventModal).
 export function TodoEditModal({
   todo,
+  members,
+  roles,
   categories,
   onUpdateTodo,
   onCreateCategory,
@@ -51,12 +56,20 @@ export function TodoEditModal({
     onClose();
   }
 
+  // Mottagaren kan inte bytas i redigera-läget (bara i skapa-modalen) — men
+  // stjärnfältet ska ändå vara exakt samma som där (2026-07-07, Zaidas fynd:
+  // fältet saknades helt vid redigering) när uppgiften är tilldelad ett barn.
+  const isForChild = isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
+
   const [title, setTitle] = useState(todo.title);
   const [emoji, setEmoji] = useState(todo.visual.value);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     todo.personalCategoryId ?? NO_CATEGORY_VALUE
   );
   const [newCategoryName, setNewCategoryName] = useState("");
+  // Sträng, inte tal (2026-07-07-fix) — se samma resonemang i TodoCreatorModal.tsx.
+  const [starValueInput, setStarValueInput] = useState(String(todo.starValue));
+  const starValue = Math.max(0, Math.floor(Number(starValueInput)) || 0);
   const [recurrence, setRecurrence] = useState<RecurrenceRule>(todo.recurrence);
   const [visibleFrom, setVisibleFrom] = useState(isoToDateTimeLocal(todo.visibleFrom));
   const [expiresAt, setExpiresAt] = useState(isoToDateTimeLocal(todo.expiresAt));
@@ -88,7 +101,17 @@ export function TodoEditModal({
   // återkommande mall sitt ankardatum (grundorsaken till incidenten
   // 2026-07-06, se incidents/2026-07-06-barnens-rutiner-forsvann.md).
   const isStartDateMissing = recurrence.type !== "none" && !startDate;
-  const canSubmit = !isTitleMissing && !isStartDateMissing && !isRecurrenceIncomplete(recurrence);
+  // Se samma resonemang i TodoCreatorModal.tsx.
+  const isEndBeforeStart =
+    recurrence.type === "none" && !!visibleFrom && !!expiresAt && expiresAt < visibleFrom;
+  const canSubmit = !isTitleMissing && !isStartDateMissing && !isEndBeforeStart && !isRecurrenceIncomplete(recurrence);
+
+  function handleVisibleFromChange(value: string) {
+    setVisibleFrom(value);
+    if (!expiresAt) {
+      setExpiresAt(value);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -110,6 +133,7 @@ export function TodoEditModal({
         title: trimmedTitle,
         visual: { type: "lucide-icon", value: emoji },
         personalCategoryId: categoryId,
+        ...(isForChild ? { starValue } : {}),
         recurrence,
         // Återkommande: visibleFrom är bara ankardatumet för förfallo-
         // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
@@ -187,6 +211,19 @@ export function TodoEditModal({
             </label>
           )}
 
+          {isForChild && (
+            <label className="field-label">
+              Stjärnor
+              <input
+                className="text-input"
+                min={0}
+                onChange={(e) => setStarValueInput(e.target.value)}
+                type="number"
+                value={starValueInput}
+              />
+            </label>
+          )}
+
           <RecurrencePicker onChange={setRecurrence} value={recurrence} />
 
           {recurrence.type === "none" ? (
@@ -195,7 +232,7 @@ export function TodoEditModal({
                 Syns från
                 <input
                   className="text-input"
-                  onChange={(e) => setVisibleFrom(e.target.value)}
+                  onChange={(e) => handleVisibleFromChange(e.target.value)}
                   type="datetime-local"
                   value={visibleFrom}
                 />
@@ -210,6 +247,7 @@ export function TodoEditModal({
                   value={expiresAt}
                 />
               </label>
+              {isEndBeforeStart && <p className="field-hint">Försvinner kan inte vara tidigare än Syns från.</p>}
             </>
           ) : (
             <>

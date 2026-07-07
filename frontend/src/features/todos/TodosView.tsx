@@ -152,6 +152,8 @@ export function TodosView({
         {editTodo && (
           <TodoEditModal
             todo={editTodo}
+            members={allMembers}
+            roles={roles}
             categories={personalCategories}
             onUpdateTodo={onUpdateTodo}
             onCreateCategory={onCreateCategory}

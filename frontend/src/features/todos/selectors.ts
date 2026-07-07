@@ -1,6 +1,15 @@
 import type { Member, Role, Todo } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 
+// Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
+// avgör om en medlem är ett barn, antingen via member.isChild direkt eller
+// via rollens isChildRole (samma två vägar som resten av appen redan kollar).
+export function isChildMember(member: Member | undefined, roles: Role[]): boolean {
+  if (!member) return false;
+  if (member.isChild) return true;
+  return roles.find((r) => r.id === member.roleId)?.isChildRole ?? false;
+}
+
 export function getVisibleTodos(
   member: Member,
   roles: Role[],

@@ -6,6 +6,7 @@ import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { isRecurringTemplate } from "./recurringTodos";
+import { isChildMember } from "./selectors";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -70,12 +71,6 @@ function assigneeNameFor(todo: Todo, members: Member[]): string {
 // Barn-tråden där flera barns uppgifter blandas (Zaidas beslut 2026-07-05).
 function assigneeColorFor(todo: Todo, members: Member[]): string | undefined {
   return members.find((m) => m.id === todo.assignedTo)?.color ?? undefined;
-}
-
-function isChildMember(member: Member | undefined, roles: Role[]): boolean {
-  if (!member) return false;
-  if (member.isChild) return true;
-  return roles.find((r) => r.id === member.roleId)?.isChildRole ?? false;
 }
 
 // Sortering på tråden: sluttid (expiresAt) först, starttid (visibleFrom) som
@@ -532,6 +527,8 @@ export function ParentTodoThreadView({
       {editTodo && (
         <TodoEditModal
           todo={editTodo}
+          members={members}
+          roles={roles}
           categories={categories}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
