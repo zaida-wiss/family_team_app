@@ -32,7 +32,19 @@ const UNIT_LABEL: Record<RecurrenceUnit, string> = {
   year: "år"
 };
 
+// En genererad daglig occurrence av en återkommande mall bär ALDRIG med sig
+// mallens recurrence-regel (den är alltid "none" — occurrencen är en frusen
+// engångskopia, se recurringTodos.ts), vilket gjorde att visa-vyn tyst
+// visade INGEN återkommelse-info alls för en sådan uppgift — förvirrande
+// (Zaida, 2026-07-08: "i bolltrådsvyn står den som inte återkommande om man
+// redigerar, medans den i återkommande på inställningar står som
+// återkommande"). Visar nu istället en tydlig hänvisning till var hela
+// serien faktiskt redigeras.
 function formatRecurrence(todo: Todo): string | null {
+  if (todo.recurringSourceId !== null) {
+    return "Del av en återkommande serie — ändra hela serien via Inställningar → 🔁 Återkommande uppgifter";
+  }
+
   const recurrence = todo.recurrence;
   if (recurrence.type === "none") return null;
 

@@ -64,6 +64,17 @@ export function TodoEditModal({
   // stjärnfältet ska ändå vara exakt samma som där (2026-07-07, Zaidas fynd:
   // fältet saknades helt vid redigering) när uppgiften är tilldelad ett barn.
   const isForChild = isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
+  // En genererad daglig occurrence (recurringSourceId satt) bär aldrig med sig
+  // mallens återkommelseregel — dess EGNA recurrence är alltid "none", en
+  // frusen engångskopia för just idag (recurringTodos.ts). RecurrencePicker
+  // visades ändå här och kunde ställas om till "Återkommande" utan att göra
+  // något meningsfullt (isRecurringTemplate kräver recurringSourceId===null,
+  // så occurrencen kan aldrig bli sin egen mall) — bara förvirrande (Zaida,
+  // 2026-07-08: bollens redigering visade "inte återkommande" trots att
+  // Inställningar → Återkommande uppgifter visade samma uppgift som
+  // återkommande). Väljaren döljs nu helt för en occurrence, till förmån för
+  // en hänvisning till var serien faktiskt redigeras.
+  const isGeneratedOccurrence = todo.recurringSourceId !== null;
 
   const [title, setTitle] = useState(todo.title);
   const [emoji, setEmoji] = useState(todo.visual.value);
@@ -341,7 +352,13 @@ export function TodoEditModal({
             </label>
           )}
 
-          <RecurrencePicker onChange={setRecurrence} value={recurrence} />
+          {isGeneratedOccurrence ? (
+            <p className="field-hint field-hint--neutral">
+              Del av en återkommande serie — ändra hela serien via Inställningar → 🔁 Återkommande uppgifter.
+            </p>
+          ) : (
+            <RecurrencePicker onChange={setRecurrence} value={recurrence} />
+          )}
 
           {recurrence.type === "none" ? (
             <>

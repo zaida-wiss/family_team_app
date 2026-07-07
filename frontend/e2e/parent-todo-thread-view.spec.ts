@@ -1512,3 +1512,59 @@ test("Bollar i tråd: ett stillastående 2s-håll på kategorinamnet markerar in
   const selectionText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
   expect(selectionText).toBe("");
 });
+
+// 2026-07-08 (Zaidas fynd: "i bolltrådsvyn står den som inte återkommande om
+// man redigerar, medans den i återkommande på inställningar står som
+// återkommande") — bollen i tråd-vyn är alltid dagens OCCURRENCE av en
+// återkommande mall, inte mallen själv (mallen visas aldrig som en egen
+// boll). Occurrencens EGNA recurrence-fält är alltid "none" (en frusen
+// engångskopia), så visa-/redigera-vyn visade tidigare ingen hint om att
+// uppgiften faktiskt tillhör en serie — förvirrande, trots att inget var
+// tekniskt fel. Visa-vyn visar nu en hänvisning, redigera-modalen döljer
+// RecurrencePicker helt (den kunde ändå aldrig göra occurrencen till sin
+// egen mall) till förmån för samma hänvisning.
+test("Bollar i tråd: en daglig occurrence av en återkommande mall visar en hänvisning till serien, inte RecurrencePicker", async ({ page }) => {
+  // Id och occurrenceDate MÅSTE matcha appens egen occurrenceId()-formel
+  // (recurringTodos.ts, dagens datum) — annars tror den bakgrundskörande
+  // syncScheduledTodos att dagens occurrence saknas och skapar en ANDRA,
+  // vilket ger två bollar istället för en (samma fälla som kommenteras i
+  // testet "återkommande mallen visas INTE som en egen boll" ovan).
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  const TEMPLATE = {
+    id: "todo-template", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🪥" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, personalCategoryId: "cat-1"
+  };
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: `todo-template-occurrence-${dateKey}`,
+    recurrence: { type: "none" },
+    recurringSourceId: "todo-template",
+    occurrenceDate: dateKey,
+    visibleFrom: null,
+    expiresAt: null
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Borsta tänderna/ }).click();
+
+  const detailDialog = page.getByRole("dialog");
+  await expect(detailDialog.getByText(/Del av en återkommande serie/)).toBeVisible();
+
+  await detailDialog.getByRole("button", { name: "Redigera uppgift" }).click();
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  await expect(editDialog.getByText(/Del av en återkommande serie/)).toBeVisible();
+  await expect(editDialog.getByLabel("Återkommer")).toHaveCount(0);
+});
