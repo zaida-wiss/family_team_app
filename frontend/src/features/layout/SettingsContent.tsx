@@ -87,6 +87,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onCreateTodo,
     onUpdateTodo,
     onDeleteTodo,
+    todoImportResult,
+    onSetTodoImportResult,
+    todoImportUndo,
+    onSetTodoImportUndo,
   } = settingsProps;
 
   const hiddenCategories = personalCategories.filter((c) => c.hidden);
@@ -231,6 +235,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onUpdateTodo={onUpdateTodo}
           onDeleteTodo={onDeleteTodo}
           onCreateCategory={onCreateCategory}
+          result={todoImportResult}
+          setResult={onSetTodoImportResult}
+          lastImportUndo={todoImportUndo}
+          setLastImportUndo={onSetTodoImportUndo}
         />
       </SettingsSection>
 

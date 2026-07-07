@@ -5,9 +5,26 @@ import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences }
 import type { Id, Member, Role, Todo } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
 
+export type ImportUndo = {
+  // Uppdaterade rader: id + de värden de hade INNAN denna import.
+  updated: { id: Id; previous: Partial<Todo> }[];
+  // Nyskapade rader: bara deras id, ångras med en mjuk radering.
+  createdIds: Id[];
+};
+
+export type ImportResult = { created: number; updated: number; errors: string[] };
+
 export function useTodosState() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const todosRef = useRef<Todo[]>([]);
+  // Senaste CSV-importens resultat + ångra-underlag (2026-07-08, Zaidas
+  // önskemål: "ångra senaste import måste vara kvar även om jag växlar vy,
+  // eftersom jag behöver upptäcka eventuella fel") — låg tidigare som lokal
+  // state i TodoImportExport.tsx, men Shell.tsx:s <ErrorBoundary key={activePanel}>
+  // ommonterar hela panelträdet vid varje panelbyte, vilket nollställde den.
+  // Lever här istället, i samma hook som redan överlever panelbyten.
+  const [lastImportResult, setLastImportResult] = useState<ImportResult | null>(null);
+  const [lastImportUndo, setLastImportUndo] = useState<ImportUndo | null>(null);
   // refreshTodos triggas från fyra oberoende källor (mount, SSE, visibilitychange,
   // efter godkänn/neka/avklara) som kan överlappa. Utan detta kan ett äldre svar
   // hinna komma in efter ett nyare och skriva över ett nyss godkänt uppdrag tillbaka
@@ -378,7 +395,11 @@ export function useTodosState() {
     rejectTodo,
     dismissRejectedTodo,
     softDeleteTodosForMember,
-    refreshRoutineOccurrence
+    refreshRoutineOccurrence,
+    lastImportResult,
+    setLastImportResult,
+    lastImportUndo,
+    setLastImportUndo
   };
 }
 

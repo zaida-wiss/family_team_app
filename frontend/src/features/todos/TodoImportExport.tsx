@@ -4,6 +4,7 @@ import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import type { Id, Member, Todo, TodoCategory } from "@shared/types";
 import { generateId } from "../../utils/uuid";
 import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type ParsedTodoRow } from "./todoCsv";
+import type { ImportResult, ImportUndo } from "./useTodosState";
 
 type Props = {
   currentMember: Member;
@@ -14,6 +15,14 @@ type Props = {
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onDeleteTodo: (todoId: Id) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
+  // Ligger i useTodosState (2026-07-08, Zaidas önskemål: "ångra senaste import
+  // måste vara kvar även om jag växlar vy") istället för lokal state här —
+  // Shell.tsx:s <ErrorBoundary key={activePanel}> ommonterar hela panelen vid
+  // varje panelbyte, vilket annars nollställde både resultatet och ångra-läget.
+  result: ImportResult | null;
+  setResult: (result: ImportResult | null) => void;
+  lastImportUndo: ImportUndo | null;
+  setLastImportUndo: (undo: ImportUndo | null) => void;
 };
 
 const CHILDREN_FILTER_ID = "__children__";
@@ -91,13 +100,6 @@ function extractPatchFields(todo: Todo): Partial<Todo> {
   };
 }
 
-type ImportUndo = {
-  // Uppdaterade rader: id + de värden de hade INNAN denna import.
-  updated: { id: Id; previous: Partial<Todo> }[];
-  // Nyskapade rader: bara deras id, ångras med en mjuk radering.
-  createdIds: Id[];
-};
-
 // Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål, utökad
 // samma dag till att även täcka återkommelse). En rad = en mall (för
 // återkommande) eller en engångsuppgift. Flera tidsintervall per dag
@@ -115,14 +117,14 @@ export function TodoImportExport({
   onCreateTodo,
   onUpdateTodo,
   onDeleteTodo,
-  onCreateCategory
+  onCreateCategory,
+  result,
+  setResult,
+  lastImportUndo,
+  setLastImportUndo
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
-  // Ångra senaste import (2026-07-08) — null när det inte finns något att
-  // ångra (ingen import körd än denna session, eller redan ångrad).
-  const [lastImportUndo, setLastImportUndo] = useState<ImportUndo | null>(null);
   // Väntar på att importören mappar okända "Tilldelad"-namn innan importen
   // faktiskt körs — null när ingen mappning behövs (det vanliga fallet, en
   // export/import inom samma familj).

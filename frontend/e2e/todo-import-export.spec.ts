@@ -362,6 +362,40 @@ test("Todos-import/export: 'Ångra senaste import' tar bort en nyskapad uppgift"
   await expect.poll(() => deletedId).toBe(createdTodo?.id as string);
 });
 
+// 2026-07-08 (Zaidas fynd: "ångra senaste import måste vara kvar även om jag
+// växlar vy, eftersom jag behöver upptäcka eventuella fel") — resultatet och
+// Ångra-knappen låg tidigare som lokal state i TodoImportExport.tsx, vilket
+// nollställdes av Shell.tsx:s <ErrorBoundary key={activePanel}> så fort man
+// navigerade bort från Inställningar och tillbaka. Ligger nu i useTodosState.
+test("Todos-import/export: importresultatet och Ångra-knappen ligger kvar efter ett panelbyte", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") return route.fulfill({ status: 201, json: { id: "todo-x" } });
+    return route.fulfill({ json: {} });
+  });
+
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Id", "Ny uppgift,Mig själv,"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ångra senaste import" })).toBeVisible();
+
+  // Byt till en annan panel och tillbaka till Inställningar.
+  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "📥 Importera/exportera uppgifter" }).click();
+
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ångra senaste import" })).toBeVisible();
+});
+
 // 2026-07-08 — en UPPDATERAD uppgift återställs till sina tidigare värden om
 // man ångrar, inte bara raderas (den fanns redan innan importen).
 test("Todos-import/export: 'Ångra senaste import' återställer en uppdaterad uppgift till tidigare värden", async ({ page }) => {
