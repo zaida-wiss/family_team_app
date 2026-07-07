@@ -475,6 +475,13 @@ export function ParentTodoThreadView({
                 // kategori-trådar (2026-07-06, Zaidas begäran) — golvat på
                 // 44px, det minsta tillåtna touch-målet (CLAUDE.md), inte lägre.
                 const isChildrenThread = thread.id === CHILDREN_THREAD_ID;
+                // Emoji visas annars bara i barnvyn (2026-07-06, Zaidas
+                // rättelse) — men uppgifter som ÄVEN är tilldelade ett barn ska
+                // alltid ha ikonen med här också (2026-07-07, Zaidas begäran:
+                // "så att de kan läsa"), oavsett vilken tråd bollen råkar visas
+                // i (Barn-tråden, eller en personlig kategori-tråd om uppgiften
+                // fått en personalCategoryId).
+                const isAssignedToChild = isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
                 return (
                   <li
                     key={todo.id}
@@ -502,6 +509,11 @@ export function ParentTodoThreadView({
                         ". Håll intryckt i två sekunder för att markera hela uppgiften klar."
                       }
                     >
+                      {isAssignedToChild && (
+                        <span aria-hidden="true" className="todo-thread__ball-icon">
+                          {todo.visual.value}
+                        </span>
+                      )}
                       <span className="todo-thread__ball-title">{todo.title}</span>
                       {progress !== null && (
                         <span className="todo-thread__ball-progress">{progress}%</span>

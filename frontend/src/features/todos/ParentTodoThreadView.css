@@ -303,6 +303,19 @@
   100% { transform: scale(1.6) translateY(-14px); opacity: 0; }
 }
 
+/* Ikon på bollen (2026-07-07, Zaidas begäran) — annars bara synlig i
+   barnvyn, men uppgifter tilldelade ett barn ska alltid visa den här också,
+   "så att de kan läsa" (barnet kan känna igen ikonen även om det inte kan
+   läsa titeln). */
+.todo-thread__ball-icon {
+  font-size: clamp(1rem, 2.4vw, 1.3rem);
+  line-height: 1;
+}
+
+.todo-thread__ball--small .todo-thread__ball-icon {
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
+}
+
 .todo-thread__ball-title {
   font-weight: 700;
   font-size: clamp(0.72rem, 1.6vw, 0.85rem);
