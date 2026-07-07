@@ -1,9 +1,11 @@
 /**
- * Integrationstest (2026-07-05): vuxenvyns personliga kategori-trådar.
- * Verifierar CRUD (skapa/lista/döpa om/ta bort), kontoscopning (ett annat
- * konto ska aldrig se/ändra), OCH medlems-ägarskap (en ANNAN medlem i SAMMA
- * konto ska heller inte kunna se/ändra en annan medlems personliga kategorier
- * — samma klass av brist som ADR-0009 om det saknas).
+ * Integrationstest (2026-07-05, ombyggt 2026-07-07 för ADR-0019): vuxenvyns
+ * personliga kategori-trådar. Verifierar CRUD (skapa/lista/döpa om/ta bort),
+ * kontoscopning (ett annat konto ska aldrig se/ändra) OCH — sedan ADR-0019 —
+ * att kategorier är KONTOBREDA: vilken VUXEN medlem som helst i samma konto
+ * kan se/döpa om/ta bort varandras kategorier (var tidigare strikt privat per
+ * medlem, se ADR-0019 för motivering). Barn ska fortfarande aldrig kunna
+ * skapa/ändra/ta bort en kategori (requireAdultMember).
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -31,9 +33,10 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
   let accessToken: string;
   let memberId: string;
   let secondMemberId: string;
+  let childMemberId: string;
   let categoryId: string;
 
-  it("registrerar användare, familjekonto och en andra medlem i samma konto", async () => {
+  it("registrerar användare, familjekonto, en andra vuxen medlem och ett barn i samma konto", async () => {
     const register = await request(app)
       .post("/api/auth/register")
       .send({ email: "categories-int@bmad.test", password: "Lösenord1!", name: "Kategoritest" });
@@ -53,6 +56,9 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
     const parentRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>).find(
       (r) => !r.isChildRole
     )!.id;
+    const childRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>).find(
+      (r) => r.isChildRole
+    )!.id;
 
     const secondMember = await request(app)
       .post("/api/members")
@@ -60,6 +66,13 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
       .set("x-member-id", memberId)
       .send({ name: "Andra föräldern", roleId: parentRoleId, isChild: false, avatarUrl: null, color: null, dashboardTheme: null });
     secondMemberId = (secondMember.body as { id: string }).id;
+
+    const childMember = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Barnet", roleId: childRoleId, isChild: true, avatarUrl: null, color: null, dashboardTheme: null });
+    childMemberId = (childMember.body as { id: string }).id;
   });
 
   it("skapar en personlig kategori", async () => {
@@ -73,7 +86,7 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
     categoryId = res.body.id;
   });
 
-  it("listar bara den egna medlemmens kategorier", async () => {
+  it("listar kontots kategorier (kontobrett sedan ADR-0019)", async () => {
     const res = await request(app)
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -83,33 +96,50 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
     expect(res.body[0].name).toBe("Träning");
   });
 
-  it("en ANNAN medlem i samma konto ser INTE den första medlemmens kategori", async () => {
+  it("en ANNAN vuxen medlem i samma konto SER den första medlemmens kategori (kontobrett)", async () => {
     const res = await request(app)
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", secondMemberId);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].name).toBe("Träning");
   });
 
-  it("en ANNAN medlem i samma konto kan inte döpa om den första medlemmens kategori", async () => {
+  it("ett barn kan inte skapa en kategori", async () => {
+    const res = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childMemberId)
+      .send({ name: "Barnets kategori" });
+    expect(res.status).toBe(403);
+  });
+
+  it("en ANNAN vuxen medlem i samma konto kan döpa om en kategori som inte är hens egen", async () => {
     const res = await request(app)
       .patch(`/api/todo-categories/${categoryId}`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", secondMemberId)
-      .send({ name: "Kapad" });
-    expect(res.status).toBe(404);
-  });
+      .send({ name: "Kondition" });
+    expect(res.status).toBe(200);
 
-  it("en ANNAN medlem i samma konto kan inte ta bort den första medlemmens kategori", async () => {
-    const res = await request(app)
-      .delete(`/api/todo-categories/${categoryId}`)
+    const list = await request(app)
+      .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
-      .set("x-member-id", secondMemberId);
-    expect(res.status).toBe(404);
+      .set("x-member-id", memberId);
+    expect(list.body[0].name).toBe("Kondition");
   });
 
-  it("ägaren kan döpa om sin egen kategori", async () => {
+  it("ett barn kan inte döpa om en kategori", async () => {
+    const res = await request(app)
+      .patch(`/api/todo-categories/${categoryId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childMemberId)
+      .send({ name: "Kapad" });
+    expect(res.status).toBe(403);
+  });
+
+  it("den ursprungliga ägaren kan fortfarande döpa om kategorin", async () => {
     const res = await request(app)
       .patch(`/api/todo-categories/${categoryId}`)
       .set("Authorization", `Bearer ${accessToken}`)
@@ -133,11 +163,19 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
     expect(res.status).toBe(400);
   });
 
-  it("ägaren kan ta bort sin egen kategori (mjuk radering — försvinner ur listan)", async () => {
+  it("ett barn kan inte ta bort en kategori", async () => {
+    const res = await request(app)
+      .delete(`/api/todo-categories/${categoryId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childMemberId);
+    expect(res.status).toBe(403);
+  });
+
+  it("en ANNAN vuxen medlem i samma konto kan ta bort en kategori som inte är hens egen (mjuk radering)", async () => {
     const del = await request(app)
       .delete(`/api/todo-categories/${categoryId}`)
       .set("Authorization", `Bearer ${accessToken}`)
-      .set("x-member-id", memberId);
+      .set("x-member-id", secondMemberId);
     expect(del.status).toBe(200);
 
     const list = await request(app)
