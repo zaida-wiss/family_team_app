@@ -213,6 +213,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           categories={personalCategories}
           onCreateTodo={onCreateTodo}
           onUpdateTodo={onUpdateTodo}
+          onDeleteTodo={onDeleteTodo}
           onCreateCategory={onCreateCategory}
         />
       </SettingsSection>

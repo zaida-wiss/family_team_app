@@ -320,3 +320,89 @@ test("Todos-import/export: avmarkerar Barn i exportfiltret utesluter barnens upp
 
   expect(titles).toEqual(["Min egen uppgift"]);
 });
+
+// 2026-07-08 (Zaidas önskemål efter att ha ångrat en import: "vi behöver en
+// knapp för att ångra senaste import") — en NYSKAPAD uppgift tas bort (mjukt)
+// om man ångrar.
+test("Todos-import/export: 'Ångra senaste import' tar bort en nyskapad uppgift", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  let deletedId: string | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route(/\/api\/todos\/todo-.*/, (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedId = route.request().url().split("/").pop() ?? null;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Id", "Ny uppgift,Mig själv,"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  await expect.poll(() => createdTodo?.id).not.toBeUndefined();
+
+  await page.getByRole("button", { name: "Ångra senaste import" }).click();
+  await expect.poll(() => deletedId).toBe(createdTodo?.id as string);
+});
+
+// 2026-07-08 — en UPPDATERAD uppgift återställs till sina tidigare värden om
+// man ångrar, inte bara raderas (den fanns redan innan importen).
+test("Todos-import/export: 'Ångra senaste import' återställer en uppdaterad uppgift till tidigare värden", async ({ page }) => {
+  const EXISTING = {
+    id: "todo-existing", accountId: "acc-1", title: "Gammal titel", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    routineCategory: null, personalCategoryId: null, notes: "Gamla anteckningar"
+  };
+  const patches: Record<string, unknown>[] = [];
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [EXISTING] }));
+  await page.route("**/api/todos/todo-existing", (route) => {
+    if (route.request().method() === "PATCH") {
+      patches.push(route.request().postDataJSON() as Record<string, unknown>);
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openImportExportSettings(page);
+
+  const csv = [
+    "Titel,Tilldelad,Anteckningar,Id",
+    "Ny titel,Mig själv,Nya anteckningar,todo-existing"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("0 uppgifter importerade, 1 uppgift uppdaterade.")).toBeVisible();
+  await expect.poll(() => patches[0]?.title).toBe("Ny titel");
+
+  await page.getByRole("button", { name: "Ångra senaste import" }).click();
+  await expect.poll(() => patches[1]?.title).toBe("Gammal titel");
+  expect(patches[1]?.notes).toBe("Gamla anteckningar");
+});

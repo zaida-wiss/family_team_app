@@ -12,6 +12,7 @@ type Props = {
   categories: TodoCategory[];
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  onDeleteTodo: (todoId: Id) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
 };
 
@@ -72,6 +73,34 @@ function buildUpdatePatch(row: ParsedTodoRow, categoryId: Id | null): Partial<To
   };
 }
 
+// Samma fält som buildUpdatePatch — läser av EXISTERANDE värden innan en
+// uppdatering appliceras, så "Ångra senaste import" (2026-07-08, Zaidas
+// önskemål efter att ha ångrat en import: "vi behöver en knapp för att ångra
+// senaste import") kan återställa exakt det som skrevs över.
+function extractPatchFields(todo: Todo): Partial<Todo> {
+  return {
+    title: todo.title,
+    visual: todo.visual,
+    starValue: todo.starValue,
+    timerEnabled: todo.timerEnabled,
+    plannedDurationMinutes: todo.plannedDurationMinutes,
+    recurrence: todo.recurrence,
+    visibleFrom: todo.visibleFrom,
+    expiresAt: todo.expiresAt,
+    routineCategory: todo.routineCategory,
+    personalCategoryId: todo.personalCategoryId,
+    subtasks: todo.subtasks,
+    notes: todo.notes
+  };
+}
+
+type ImportUndo = {
+  // Uppdaterade rader: id + de värden de hade INNAN denna import.
+  updated: { id: Id; previous: Partial<Todo> }[];
+  // Nyskapade rader: bara deras id, ångras med en mjuk radering.
+  createdIds: Id[];
+};
+
 // Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål, utökad
 // samma dag till att även täcka återkommelse). En rad = en mall (för
 // återkommande) eller en engångsuppgift. Flera tidsintervall per dag
@@ -88,11 +117,15 @@ export function TodoImportExport({
   categories,
   onCreateTodo,
   onUpdateTodo,
+  onDeleteTodo,
   onCreateCategory
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
+  // Ångra senaste import (2026-07-08) — null när det inte finns något att
+  // ångra (ingen import körd än denna session, eller redan ångrad).
+  const [lastImportUndo, setLastImportUndo] = useState<ImportUndo | null>(null);
   // Väntar på att importören mappar okända "Tilldelad"-namn innan importen
   // faktiskt körs — null när ingen mappning behövs (det vanliga fallet, en
   // export/import inom samma familj).
@@ -149,6 +182,8 @@ export function TodoImportExport({
       const createdCategoryIds = new Map<string, Id>();
       let created = 0;
       let updated = 0;
+      const undoUpdated: ImportUndo["updated"] = [];
+      const undoCreatedIds: Id[] = [];
 
       for (const row of rows) {
         let assignedTo = row.assignedTo;
@@ -183,20 +218,41 @@ export function TodoImportExport({
           : undefined;
 
         if (existing) {
+          undoUpdated.push({ id: existing.id, previous: extractPatchFields(existing) });
           onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId));
           updated++;
         } else {
-          onCreateTodo(buildNewTodo(row, currentMember.id, categoryId, assignedTo));
+          const newTodo = buildNewTodo(row, currentMember.id, categoryId, assignedTo);
+          undoCreatedIds.push(newTodo.id);
+          onCreateTodo(newTodo);
           created++;
         }
       }
 
       setResult({ created, updated, errors: parseErrors });
+      setLastImportUndo({ updated: undoUpdated, createdIds: undoCreatedIds });
       setPendingImport(null);
       setResolutions({});
     } finally {
       setImporting(false);
     }
+  }
+
+  // Ångra senaste import (2026-07-08, Zaidas önskemål) — återställer varje
+  // uppdaterad todo till dess värden precis innan importen, och tar bort
+  // (mjukt) varje todo som importen skapade. Fungerar bara för importer körda
+  // EFTER att den här knappen fanns — kan inte återställa ett tillstånd som
+  // aldrig sparades.
+  function handleUndoLastImport() {
+    if (!lastImportUndo) return;
+    for (const id of lastImportUndo.createdIds) {
+      onDeleteTodo(id);
+    }
+    for (const { id, previous } of lastImportUndo.updated) {
+      onUpdateTodo(id, previous);
+    }
+    setLastImportUndo(null);
+    setResult(null);
   }
 
   async function handleImportFile(file: File | null) {
@@ -357,6 +413,11 @@ export function TodoImportExport({
                 <li key={error}>{error}</li>
               ))}
             </ul>
+          )}
+          {lastImportUndo && (lastImportUndo.updated.length > 0 || lastImportUndo.createdIds.length > 0) && (
+            <button className="secondary-button" onClick={handleUndoLastImport} type="button">
+              Ångra senaste import
+            </button>
           )}
         </div>
       )}
