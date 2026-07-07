@@ -102,11 +102,49 @@ export function getDateKey(date: Date): string {
   ].join("-");
 }
 
+// Ordnad (måndag→söndag) veckodagslista — används för att räkna "hur många av
+// de valda veckodagarna infaller på eller före idag" (occurrenceIndexForWeek).
+const WEEKDAY_ORDER: Weekday[] = [
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+];
+
+// Slutvillkor (2026-07-07, Zaidas önskemål): "never" (standard, saknas fältet
+// helt tolkas likadant) gör ingen skillnad. "until" stoppar serien efter ett
+// visst datum (inklusive själva det datumet). "count" stoppar efter att
+// serien totalt kört ett visst antal gånger — kräver att veta VILKET
+// tillfälle dagens (annars redan mönster-matchande) datum skulle vara,
+// därav occurrenceIndex-parametern (0-indexerad, uträknad per enhet nedan).
+function isWithinRecurrenceEnd(
+  recurrence: Extract<RecurrenceRule, { type: "recurring" }>,
+  now: Date,
+  occurrenceIndex: number
+): boolean {
+  const end = recurrence.end;
+  if (!end || end.type === "never") return true;
+  if (end.type === "until") {
+    return startOfLocalDay(now).getTime() <= startOfLocalDay(new Date(end.date)).getTime();
+  }
+  return occurrenceIndex < end.count;
+}
+
+// Räknar ut det 0-indexerade tillfälle som "idag" skulle vara för unit==="week"
+// — flera veckodagar per vecka gör detta mer invecklat än ett enkelt
+// dag/månads-intervall (se isRecurrenceDue). Anropas bara när dagens veckodag
+// och veckointervall redan är bekräftat mönster-matchande.
+function occurrenceIndexForWeek(daysOfWeek: Weekday[], every: number, weeksElapsed: number, now: Date): number {
+  const priorQualifyingWeeks = weeksElapsed > 0 ? Math.floor((weeksElapsed - 1) / every) + 1 : 0;
+  const todayOrder = WEEKDAY_ORDER.indexOf(weekdays[now.getDay()]);
+  const selectedUpToToday = daysOfWeek.filter((d) => WEEKDAY_ORDER.indexOf(d) <= todayOrder).length;
+  return priorQualifyingWeeks * daysOfWeek.length + selectedUpToToday - 1;
+}
+
 // Förfallologik för den kombinerade enhet+intervall+veckodagar-modellen
-// (ADR-0015). "week" kräver att dagens veckodag finns i daysOfWeek OCH att
-// antalet hela veckor sedan startveckan är delbart med every (t.ex. "var 3:e
-// vecka på måndag+onsdag"). "month" kräver samma dag-i-månaden som startDate.
-// "day" är ett enkelt dagsintervall, som tidigare.
+// (ADR-0015, "year" tillagt 2026-07-07). "week" kräver att dagens veckodag
+// finns i daysOfWeek OCH att antalet hela veckor sedan startveckan är delbart
+// med every (t.ex. "var 3:e vecka på måndag+onsdag"). "month"/"year" kräver
+// samma dag-i-månaden (och för år: samma månad) som startDate. "day" är ett
+// enkelt dagsintervall, som tidigare. Ett valfritt slutvillkor (end) kan
+// stoppa serien efter ett datum eller ett antal gånger, se isWithinRecurrenceEnd.
 function isRecurrenceDue(
   recurrence: RecurrenceRule,
   visibleFrom: string | null,
@@ -129,7 +167,9 @@ function isRecurrenceDue(
     const weeksElapsed = Math.floor(
       (startOfWeek(now).getTime() - startOfWeek(startDate).getTime()) / (7 * 86_400_000)
     );
-    return weeksElapsed >= 0 && weeksElapsed % recurrence.every === 0;
+    if (weeksElapsed < 0 || weeksElapsed % recurrence.every !== 0) return false;
+    const occurrenceIndex = occurrenceIndexForWeek(recurrence.daysOfWeek, recurrence.every, weeksElapsed, now);
+    return isWithinRecurrenceEnd(recurrence, now, occurrenceIndex);
   }
 
   if (recurrence.unit === "month") {
@@ -138,14 +178,25 @@ function isRecurrenceDue(
     }
     const monthsElapsed =
       (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
-    return monthsElapsed >= 0 && monthsElapsed % recurrence.every === 0;
+    if (monthsElapsed < 0 || monthsElapsed % recurrence.every !== 0) return false;
+    return isWithinRecurrenceEnd(recurrence, now, monthsElapsed / recurrence.every);
+  }
+
+  if (recurrence.unit === "year") {
+    if (now.getDate() !== startDate.getDate() || now.getMonth() !== startDate.getMonth()) {
+      return false;
+    }
+    const yearsElapsed = now.getFullYear() - startDate.getFullYear();
+    if (yearsElapsed < 0 || yearsElapsed % recurrence.every !== 0) return false;
+    return isWithinRecurrenceEnd(recurrence, now, yearsElapsed / recurrence.every);
   }
 
   const elapsedDays = Math.floor(
     (startOfLocalDay(now).getTime() - startOfLocalDay(startDate).getTime()) /
       86_400_000
   );
-  return elapsedDays >= 0 && elapsedDays % recurrence.every === 0;
+  if (elapsedDays < 0 || elapsedDays % recurrence.every !== 0) return false;
+  return isWithinRecurrenceEnd(recurrence, now, elapsedDays / recurrence.every);
 }
 
 // Måndagsankrad vecka (svensk kalenderkonvention) — getDay(): 0=söndag.

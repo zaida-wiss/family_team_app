@@ -197,4 +197,95 @@ describe("recurringTodos", () => {
     expect(occurrences.length).toBe(1);
     expect(occurrences[0]?.id).toBe("todo-single-occurrence-2026-06-08");
   });
+
+  // "year" tillagt 2026-07-07 (Zaidas önskemål, t.ex. födelsedagar).
+  test("yearly recurrence creates an occurrence on the same day+month every N years", () => {
+    const template = createTodo({
+      id: "todo-yearly",
+      recurrence: { type: "recurring", unit: "year", every: 2, daysOfWeek: null },
+      visibleFrom: "2024-06-08T07:00:00.000Z"
+    });
+    // Ett år senare (2025) — every:2 betyder vartannat år, ska INTE slå till.
+    expect(getDueRecurringTodoOccurrences([template], new Date("2025-06-08T08:00:00.000Z")).length).toBe(0);
+    // Två år senare (2026), samma dag+månad — ska slå till.
+    expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
+    // Rätt år men fel dag — ska INTE slå till.
+    expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-09T08:00:00.000Z")).length).toBe(0);
+  });
+
+  // Slutvillkor (2026-07-07, Zaidas önskemål): "en sluttid med datum,
+  // alternativt hur många gånger det ska upprepa sig".
+  describe("slutvillkor (RecurrenceEnd)", () => {
+    test("saknat end-fält (befintlig data) beter sig som 'never' — repeterar oförändrat", () => {
+      const template = createTodo({
+        id: "todo-no-end",
+        recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+        visibleFrom: "2026-06-01T07:00:00.000Z"
+      });
+      expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
+    });
+
+    test("'until' stoppar serien efter slutdatumet, men inte på eller före det", () => {
+      const template = createTodo({
+        id: "todo-until",
+        recurrence: {
+          type: "recurring", unit: "day", every: 1, daysOfWeek: null,
+          end: { type: "until", date: "2026-06-08" }
+        },
+        visibleFrom: "2026-06-01T07:00:00.000Z"
+      });
+      expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
+      expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-09T08:00:00.000Z")).length).toBe(0);
+    });
+
+    test("'count' på ett dagsintervall stoppar serien efter angivet antal gånger", () => {
+      const template = createTodo({
+        id: "todo-count-day",
+        recurrence: {
+          type: "recurring", unit: "day", every: 1, daysOfWeek: null,
+          end: { type: "count", count: 2 }
+        },
+        visibleFrom: "2026-06-08T07:00:00.000Z"
+      });
+      // Tillfälle 1 (idag, index 0) — inom gränsen.
+      expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
+      // Tillfälle 2 (index 1, dag efter) — fortfarande inom gränsen (count:2).
+      expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-09T08:00:00.000Z")).length).toBe(1);
+      // Tillfälle 3 (index 2) — utanför gränsen, serien har redan kört klart.
+      expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-10T08:00:00.000Z")).length).toBe(0);
+    });
+
+    test("'count' på veckovis återkommelse med flera veckodagar räknar varje veckodag som ett eget tillfälle", () => {
+      const template = createTodo({
+        id: "todo-count-week",
+        recurrence: {
+          type: "recurring", unit: "week", every: 1, daysOfWeek: ["monday", "wednesday"],
+          end: { type: "count", count: 3 }
+        },
+        // Startveckans måndag.
+        visibleFrom: "2026-06-08T07:00:00.000Z"
+      });
+      // Vecka 1, måndag — tillfälle 1.
+      expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
+      // Vecka 1, onsdag — tillfälle 2.
+      expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-10T08:00:00.000Z")).length).toBe(1);
+      // Vecka 2, måndag — tillfälle 3, sista tillåtna.
+      expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-15T08:00:00.000Z")).length).toBe(1);
+      // Vecka 2, onsdag — tillfälle 4, utanför gränsen (count:3).
+      expect(getDueRecurringTodoOccurrences([template], new Date("2026-06-17T08:00:00.000Z")).length).toBe(0);
+    });
+
+    test("'count' på årsvis återkommelse", () => {
+      const template = createTodo({
+        id: "todo-count-year",
+        recurrence: {
+          type: "recurring", unit: "year", every: 1, daysOfWeek: null,
+          end: { type: "count", count: 1 }
+        },
+        visibleFrom: "2026-06-08T07:00:00.000Z"
+      });
+      expect(getDueRecurringTodoOccurrences([template], monday).length).toBe(1);
+      expect(getDueRecurringTodoOccurrences([template], new Date("2027-06-08T08:00:00.000Z")).length).toBe(0);
+    });
+  });
 });

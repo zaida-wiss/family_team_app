@@ -210,7 +210,17 @@ export const WeekdaySchema = z.enum([
   "sunday"
 ]);
 
-export const RecurrenceUnitSchema = z.enum(["day", "week", "month"]);
+// "year" tillagt 2026-07-07 (Zaidas önskemål) — se shared/types.ts.
+export const RecurrenceUnitSchema = z.enum(["day", "week", "month", "year"]);
+
+// Slutvillkor för en återkommande serie (2026-07-07, Zaidas önskemål) —
+// valfritt, saknas det tolkas det som "never" (oförändrat beteende för
+// befintlig data, se shared/types.ts).
+export const RecurrenceEndSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("never") }),
+  z.object({ type: z.literal("until"), date: z.string() }),
+  z.object({ type: z.literal("count"), count: z.number().int().min(1) })
+]);
 
 // Kombinerad enhet+intervall+veckodagar-modell (2026-07-05, ADR) — ersätter
 // tidigare separata "weekly"/"interval". daysOfWeek krävs (icke-tom) exakt
@@ -222,7 +232,8 @@ export const RecurrenceRuleSchema = z
       type: z.literal("recurring"),
       unit: RecurrenceUnitSchema,
       every: z.number().int().min(1),
-      daysOfWeek: z.array(WeekdaySchema).min(1).nullable()
+      daysOfWeek: z.array(WeekdaySchema).min(1).nullable(),
+      end: RecurrenceEndSchema.optional()
     })
   ])
   .refine(

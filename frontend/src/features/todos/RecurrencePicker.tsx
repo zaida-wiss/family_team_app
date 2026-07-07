@@ -1,5 +1,6 @@
 import "./RecurrencePicker.css";
-import type { RecurrenceRule, RecurrenceUnit, Weekday } from "@shared/types";
+import { useState } from "react";
+import type { RecurrenceEnd, RecurrenceRule, RecurrenceUnit, Weekday } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 
 const WEEKDAY_ORDER: Weekday[] = [
@@ -9,7 +10,8 @@ const WEEKDAY_ORDER: Weekday[] = [
 const UNIT_LABEL: Record<RecurrenceUnit, string> = {
   day: "dag",
   week: "vecka",
-  month: "månad"
+  month: "månad",
+  year: "år"
 };
 
 type Props = {
@@ -28,18 +30,27 @@ export function isRecurrenceIncomplete(recurrence: RecurrenceRule): boolean {
   return recurrence.type === "recurring" && recurrence.unit === "week" && recurrence.daysOfWeek?.length === 0;
 }
 
-// Delad återkommande-väljare (2026-07-05, ADR-0015) — enhet (dag/vecka/månad)
-// + intervall (varannan/var tredje/…) + veckodags-kryssrutor (bara relevanta
-// för vecka), kombinerbara. Ersätter den tidigare duplicerade
-// createRecurrence()-hjälpfunktionen i både TodoCreatorModal och
-// TodoEditModal — används av båda.
+// Delad återkommande-väljare (2026-07-05, ADR-0015) — enhet (dag/vecka/månad/
+// år) + intervall (varannan/var tredje/…) + veckodags-kryssrutor (bara
+// relevanta för vecka) + slutvillkor (2026-07-07), kombinerbara. Ersätter den
+// tidigare duplicerade createRecurrence()-hjälpfunktionen i både
+// TodoCreatorModal och TodoEditModal — används av båda.
 export function RecurrencePicker({ value, onChange }: Props) {
   const isRecurring = value.type === "recurring";
+  const end: RecurrenceEnd = (isRecurring && value.end) || { type: "never" };
+
+  // Sträng, inte tal (samma "envis nolla vid tömning"-fix som Stjärnor-fältet,
+  // 2026-07-07) — bara denna komponent skriver till end.count, så lokalt state
+  // som initieras en gång vid montering (modalen monteras om per redigerad
+  // uppgift) håller sig i synk utan extra tillsynkronisering.
+  const [countInput, setCountInput] = useState(
+    String(end.type === "count" ? end.count : 1)
+  );
 
   function setRecurring(recurring: boolean) {
     onChange(
       recurring
-        ? { type: "recurring", unit: "week", every: 1, daysOfWeek: [] }
+        ? { type: "recurring", unit: "week", every: 1, daysOfWeek: [], end: { type: "never" } }
         : { type: "none" }
     );
   }
@@ -50,7 +61,8 @@ export function RecurrencePicker({ value, onChange }: Props) {
       type: "recurring",
       unit,
       every: value.every,
-      daysOfWeek: unit === "week" ? value.daysOfWeek ?? [] : null
+      daysOfWeek: unit === "week" ? value.daysOfWeek ?? [] : null,
+      end: value.end
     });
   }
 
@@ -62,6 +74,28 @@ export function RecurrencePicker({ value, onChange }: Props) {
   function setDaysOfWeek(days: Weekday[]) {
     if (value.type !== "recurring") return;
     onChange({ ...value, daysOfWeek: days });
+  }
+
+  function setEndType(type: RecurrenceEnd["type"]) {
+    if (value.type !== "recurring") return;
+    if (type === "never") {
+      onChange({ ...value, end: { type: "never" } });
+    } else if (type === "until") {
+      onChange({ ...value, end: { type: "until", date: "" } });
+    } else {
+      onChange({ ...value, end: { type: "count", count: Math.max(1, Math.floor(Number(countInput)) || 1) } });
+    }
+  }
+
+  function setEndDate(date: string) {
+    if (value.type !== "recurring") return;
+    onChange({ ...value, end: { type: "until", date } });
+  }
+
+  function setEndCountInput(input: string) {
+    setCountInput(input);
+    if (value.type !== "recurring") return;
+    onChange({ ...value, end: { type: "count", count: Math.max(1, Math.floor(Number(input)) || 1) } });
   }
 
   return (
@@ -100,6 +134,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
               <option value="day">{UNIT_LABEL.day}</option>
               <option value="week">{UNIT_LABEL.week}</option>
               <option value="month">{UNIT_LABEL.month}</option>
+              <option value="year">{UNIT_LABEL.year}</option>
             </select>
           </div>
 
@@ -124,6 +159,45 @@ export function RecurrencePicker({ value, onChange }: Props) {
 
           {isRecurrenceIncomplete(value) && (
             <p className="recurrence-picker__hint">Välj minst en veckodag.</p>
+          )}
+
+          <label className="field-label">
+            Slutar
+            <select
+              aria-label="Slutar"
+              className="text-input"
+              onChange={(e) => setEndType(e.target.value as RecurrenceEnd["type"])}
+              value={end.type}
+            >
+              <option value="never">Aldrig</option>
+              <option value="until">På ett datum</option>
+              <option value="count">Efter ett antal gånger</option>
+            </select>
+          </label>
+
+          {end.type === "until" && (
+            <label className="field-label">
+              Slutdatum
+              <input
+                className="text-input"
+                onChange={(e) => setEndDate(e.target.value)}
+                type="date"
+                value={end.date}
+              />
+            </label>
+          )}
+
+          {end.type === "count" && (
+            <label className="field-label">
+              Antal gånger
+              <input
+                className="text-input"
+                min={1}
+                onChange={(e) => setEndCountInput(e.target.value)}
+                type="number"
+                value={countInput}
+              />
+            </label>
           )}
         </>
       )}

@@ -31,7 +31,8 @@ const DEFAULT_EMOJI = "⭐";
 const RECURRENCE_UNIT_LABEL: Record<RecurrenceUnit, string> = {
   day: "Dag",
   week: "Vecka",
-  month: "Månad"
+  month: "Månad",
+  year: "År"
 };
 const RECURRENCE_LABEL_TO_UNIT = new Map<string, RecurrenceUnit>(
   Object.entries(RECURRENCE_UNIT_LABEL).map(([unit, label]) => [label.toLowerCase(), unit as RecurrenceUnit])
@@ -365,7 +366,7 @@ export function parseTodoCsv(
       const unit = RECURRENCE_LABEL_TO_UNIT.get(recurrenceLabel.toLowerCase());
       if (!unit) {
         errors.push(
-          `Rad ${rowNumber} ("${title}"): okänt värde "${recurrenceLabel}" i Återkommer (vänta Dag/Vecka/Månad/Nej), behandlas som engångsuppgift.`
+          `Rad ${rowNumber} ("${title}"): okänt värde "${recurrenceLabel}" i Återkommer (vänta Dag/Vecka/Månad/År/Nej), behandlas som engångsuppgift.`
         );
       } else {
         const intervalRaw = (intervalCol !== undefined ? cells[intervalCol] : "")?.trim() ?? "";

@@ -609,7 +609,89 @@ test("Ny uppgift-modalen: skapar en återkommande uppgift med veckodagar och int
     type: "recurring",
     unit: "week",
     every: 3,
-    daysOfWeek: ["monday", "wednesday"]
+    daysOfWeek: ["monday", "wednesday"],
+    end: { type: "never" }
+  });
+});
+
+// 2026-07-07 (Zaidas önskemål): "år" som ett fjärde intervall-alternativ
+// (t.ex. födelsedagar), samt ett slutvillkor — antingen ett slutdatum eller
+// ett antal gånger — för hur länge en serie ska fortsätta.
+test("Ny uppgift-modalen: återkommande var N:e år, med ett slutdatum", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromCategoryThread(page, "Träning");
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Titel").fill("Hälsokontroll");
+
+  await dialog.getByLabel("Återkommer").selectOption("recurring");
+  await dialog.getByLabel("Enhet för återkommelse").selectOption("year");
+  await dialog.getByLabel("Startdatum").fill("2026-07-06");
+
+  await dialog.getByLabel("Slutar").selectOption("until");
+  await dialog.getByLabel("Slutdatum").fill("2030-07-06");
+
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Hälsokontroll");
+  expect(createdTodo?.recurrence).toEqual({
+    type: "recurring",
+    unit: "year",
+    every: 1,
+    daysOfWeek: null,
+    end: { type: "until", date: "2030-07-06" }
+  });
+});
+
+test("Ny uppgift-modalen: återkommande med ett antal gånger som slutvillkor, siffer-input tömbar", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromCategoryThread(page, "Träning");
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Titel").fill("Byt tandborste");
+
+  await dialog.getByLabel("Återkommer").selectOption("recurring");
+  await dialog.getByLabel("Enhet för återkommelse").selectOption("month");
+  await dialog.getByLabel("Startdatum").fill("2026-07-06");
+
+  await dialog.getByLabel("Slutar").selectOption("count");
+  const count = dialog.getByLabel("Antal gånger");
+  // Tömmer och skriver om — samma "envis nolla"-robusthet som Stjärnor-fältet.
+  await count.fill("");
+  await expect(count).toHaveValue("");
+  await count.fill("6");
+
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Byt tandborste");
+  expect(createdTodo?.recurrence).toEqual({
+    type: "recurring",
+    unit: "month",
+    every: 1,
+    daysOfWeek: null,
+    end: { type: "count", count: 6 }
   });
 });
 

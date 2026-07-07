@@ -363,7 +363,22 @@ export type Weekday =
   | "saturday"
   | "sunday";
 
-export type RecurrenceUnit = "day" | "week" | "month";
+// "year" tillagt 2026-07-07 (Zaidas önskemål, t.ex. födelsedagar/årliga
+// hälsokontroller) — kalenderns egna händelser hade redan "yearly" sedan
+// tidigare, en rimlig lucka att täppa till för todos också.
+export type RecurrenceUnit = "day" | "week" | "month" | "year";
+
+// Slutvillkor för en återkommande serie (2026-07-07, Zaidas önskemål: "en
+// sluttid med datum, alternativt hur många gånger det ska upprepa sig").
+// Valfritt fält (se RecurrenceRule nedan) — saknas det (befintlig data från
+// innan denna ändring) tolkas det som "never" (repeterar för evigt, oförändrat
+// beteende). Mallen ligger kvar och syns i Inställningar → Återkommande
+// uppgifter även efter att slutvillkoret nåtts — den slutar bara generera nya
+// dagliga bollar, försvinner inte (Zaidas beslut).
+export type RecurrenceEnd =
+  | { type: "never" }
+  | { type: "until"; date: string }
+  | { type: "count"; count: number };
 
 // Ersätter (2026-07-05, ADR) de tidigare separata "weekly"/"interval"-formerna
 // med en enda kombinerad form — enhet + intervall (varannan/var tredje osv)
@@ -372,7 +387,7 @@ export type RecurrenceUnit = "day" | "week" | "month";
 // RecurrenceRuleSchema i schemas.ts för valideringen av detta samband.
 export type RecurrenceRule =
   | { type: "none" }
-  | { type: "recurring"; unit: RecurrenceUnit; every: number; daysOfWeek: Weekday[] | null };
+  | { type: "recurring"; unit: RecurrenceUnit; every: number; daysOfWeek: Weekday[] | null; end?: RecurrenceEnd };
 
 export type TodoVisual = {
   type: "lucide-icon" | "image";

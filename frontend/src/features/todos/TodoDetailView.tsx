@@ -28,7 +28,8 @@ function formatSchedule(todo: Todo): string | null {
 const UNIT_LABEL: Record<RecurrenceUnit, string> = {
   day: "dag",
   week: "vecka",
-  month: "månad"
+  month: "månad",
+  year: "år"
 };
 
 function formatRecurrence(todo: Todo): string | null {
