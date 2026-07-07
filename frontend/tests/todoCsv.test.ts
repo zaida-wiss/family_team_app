@@ -152,6 +152,7 @@ describe("todoCsv", () => {
       title: "Träna",
       createdBy: "mem-1",
       assignedTo: "mem-1",
+      visibleFrom: new Date(2026, 6, 6).toISOString(),
       recurrence: { type: "recurring", unit: "week", every: 2, daysOfWeek: ["monday", "wednesday"] }
     });
 
@@ -340,5 +341,24 @@ describe("todoCsv", () => {
     expect(rows[0].recurrence).toEqual({ type: "none" });
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain("Veckodagar");
+  });
+
+  // 2026-07-08 (Zaida, upptäckt via en riktig produktionsdiagnos): flera
+  // återkommande mallar i produktion hade visibleFrom:null (samma grundorsak
+  // som incidenten 2026-07-06, se incidents/2026-07-06-barnens-rutiner-forsvann.md)
+  // — en tom Startdatum-cell vid import/uppdatering fick tyst nollställa
+  // ankardatumet istället för att flaggas. Raden ska nu hoppas över helt,
+  // inte sparas i ett trasigt tillstånd (varken vid skapande eller uppdatering).
+  test("parseTodoCsv: en återkommande rad utan Startdatum hoppas över med ett tydligt fel", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Tilldelad,Egen kategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Anteckningar",
+      "Töm diskmaskinen,Mig själv,,,,,Dag,1,,"
+    ].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(rows).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("Startdatum");
   });
 });

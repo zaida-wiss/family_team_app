@@ -433,6 +433,22 @@ export function parseTodoCsv(
       }
     }
 
+    // En återkommande mall MÅSTE ha ett ankardatum (Startdatum) — utan det
+    // kan förfallo-beräkningen (recurringTodos.ts) aldrig avgöra om mallen är
+    // förfallen, exakt samma grundorsak som produktionsincidenten 2026-07-06
+    // (se incidents/2026-07-06-barnens-rutiner-forsvann.md). Detta är EXTRA
+    // viktigt vid en UPPDATERING (matchning via Id) — en tom Startdatum-cell
+    // skulle annars tyst NOLLSTÄLLA en redan giltig ankardatum på en befintlig
+    // mall. Hela raden hoppas över (skapas/uppdateras inte alls) hellre än att
+    // spara en trasig mall, samma säkerhetsnivå som skapa-/redigera-modalens
+    // egen spärr (isStartDateMissing).
+    if (recurrence.type === "recurring" && !visibleFrom) {
+      errors.push(
+        `Rad ${rowNumber} ("${title}"): återkommande uppgifter kräver ett Startdatum (annars tappar mallen sitt ankardatum och slutar fungera) — raden hoppas över.`
+      );
+      return;
+    }
+
     const subtasksRaw = (subtasksCol !== undefined ? cells[subtasksCol] : "")?.trim() ?? "";
     const subtasks: TodoSubtask[] = csvToSubtaskTitles(subtasksRaw).map((subtaskTitle) => ({
       id: `subtask-${generateId()}`,
