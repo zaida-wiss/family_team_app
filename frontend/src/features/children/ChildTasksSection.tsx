@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Play, Square, Star } from "lucide-react";
 import type { Id, Todo } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
+import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import "./ChildTasks.css";
 
 // Formaterar millisekunder som mm:ss (eller h:mm:ss om det tar över en timme)
@@ -59,12 +60,22 @@ type Props = {
   onCompleteTodo: (id: Id, elapsedMs: number | null) => void;
 };
 
+const HOLD_DURATION_MS = 2000;
+
 export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo }: Props) {
   // Bara EN uppgift kan tidtas åt gången (samma begränsning som Medaljer/
   // Rekord) — startedAt mäts lokalt (Date.now()), ingen pågående-status
   // sparas server-side, se Todo.elapsedMs-kommentaren i shared/types.ts.
   const [runningTimer, setRunningTimer] = useState<{ id: Id; startedAt: number } | null>(null);
   useWakeLock(runningTimer !== null);
+
+  // Nedräkningsläget (plannedDurationMinutes satt, 2026-07-07 Zaidas
+  // förtydligande) avslutas med samma håll-in-2-sekunder-gest som vanliga
+  // uppgifter, INTE en Klar-knapp — men med sin egen useHoldToConfirm-instans
+  // (inte den delade heldTodoId/onStartHold som styr icke-timer-korten), så
+  // att elapsedMs kan räknas ut från runningTimer.startedAt vid bekräftelse-
+  // tillfället utan att ändra useChildCompleteHold.ts:s delade kontrakt.
+  const { heldId: timerHeldId, startHold: startTimerHold, clearHold: clearTimerHold } = useHoldToConfirm(HOLD_DURATION_MS);
 
   if (todos.length === 0) {
     return <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>;
@@ -74,11 +85,24 @@ export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartH
     setRunningTimer({ id, startedAt: Date.now() });
   }
 
+  // Öppen tidtagning (fallback när plannedDurationMinutes saknas) — Klar-
+  // knappen ÄR bekräftelsen, oförändrat sedan tidigare.
   function stopTimer(id: Id) {
     if (!runningTimer || runningTimer.id !== id) return;
     const elapsedMs = Date.now() - runningTimer.startedAt;
     setRunningTimer(null);
     onCompleteTodo(id, elapsedMs);
+  }
+
+  // Nedräkning — bekräftas via 2s-håll, inte ett klick. Läser startedAt via
+  // funktionell uppdatering så den alltid är färsk, inte en gammal closure.
+  function confirmCountdownComplete(id: Id) {
+    setRunningTimer((current) => {
+      if (current && current.id === id) {
+        onCompleteTodo(id, Date.now() - current.startedAt);
+      }
+      return null;
+    });
   }
 
   return (
@@ -106,6 +130,59 @@ export function ChildTasksSection({ todos, today, timerNow, heldTodoId, onStartH
               </span>
             );
 
+            // Nedräkning (2026-07-07, Zaidas förtydligande: "jag menar en
+            // timer, där bordet visar hur lång tid som är kvar efter att man
+            // tryckt på knappen med dubbelklick. Sedan markerar man den som
+            // klar med två sekunderstryck.") — dubbelklick startar, håll-in-2s
+            // avslutar, precis som en vanlig uppgift. Kräver plannedDuration-
+            // Minutes (satt av föräldern); saknas den faller kortet tillbaka
+            // på den öppna Starta/Klar-tidtagningen (nedan), som Zaida bad få
+            // stå kvar ("den får gärna stå kvar").
+            if (todo.timerEnabled && todo.plannedDurationMinutes) {
+              const isRunning = runningTimer?.id === todo.id;
+              const isHeld = timerHeldId === todo.id;
+              const totalMs = todo.plannedDurationMinutes * 60000;
+              const remainingMs = isRunning ? Math.max(0, totalMs - (timerNow - runningTimer.startedAt)) : totalMs;
+              return (
+                <div
+                  key={todo.id}
+                  className={[
+                    "child-task-card",
+                    "child-task-card--timer",
+                    isRunning ? "child-task-card--timer-running" : "",
+                    isHeld ? "child-task-card--holding" : "",
+                    timeLeftPercent !== null ? "child-task-card--timed" : "",
+                  ].filter(Boolean).join(" ")}
+                  style={{ ...style, touchAction: "manipulation" }}
+                  onDoubleClick={() => !isRunning && startTimer(todo.id)}
+                  onPointerDown={() => isRunning && startTimerHold(todo.id, () => confirmCountdownComplete(todo.id))}
+                  onPointerLeave={clearTimerHold}
+                  onPointerCancel={clearTimerHold}
+                  onPointerUp={clearTimerHold}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={
+                    isRunning
+                      ? `${todo.title}, ${formatElapsed(remainingMs)} kvar. Håll intryckt i två sekunder för att markera klar.`
+                      : `${todo.title}. Dubbelklicka för att starta nedräkningen på ${todo.plannedDurationMinutes} minuter.`
+                  }
+                >
+                  <div className="child-task-icon-circle">
+                    <span className="child-task-icon">{todo.visual.value}</span>
+                  </div>
+                  <span className="child-task-copy">
+                    <span className={nameClass}>{todo.title}</span>
+                    <span className="child-task-timer-elapsed" aria-live="polite">
+                      {isRunning ? formatElapsed(remainingMs) + " kvar" : "Dubbelklicka för att starta"}
+                    </span>
+                  </span>
+                  {starBadge}
+                </div>
+              );
+            }
+
+            // Öppen tidtagning (fallback, oförändrad sedan tidigare) — bara
+            // för uppgifter med timerEnabled men UTAN plannedDurationMinutes.
             if (todo.timerEnabled) {
               const isRunning = runningTimer?.id === todo.id;
               return (

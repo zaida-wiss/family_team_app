@@ -238,6 +238,17 @@
   grid-template-rows: 1fr auto auto;
 }
 
+/* Nedräkningsläget (2026-07-07) — hela kortet är dubbelklicks-/håll-ytan,
+   ingen separat knapp. touch-action: manipulation sätts inline (JSX) för att
+   dubbeltryck ska trigga dblclick istället för webbläsarens dubbeltryck-zoom. */
+.child-task-card--timer[role="button"] {
+  cursor: pointer;
+}
+
+.child-task-card--timer[role="button"]:active {
+  transform: scale(0.97);
+}
+
 .child-task-timer-elapsed {
   font-family: var(--font-display);
   font-size: clamp(0.6rem, 4cqi, 0.95rem);

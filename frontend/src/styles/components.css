@@ -31,6 +31,12 @@
   color: #e74c3c;
 }
 
+/* Neutral variant (2026-07-07) — informativ hjälptext, inte ett fel/varning. */
+.field-hint--neutral {
+  color: var(--muted-fg);
+  font-weight: 500;
+}
+
 /* Delad kryssruta-rad (2026-07-07) — todo-formulärets "Tidta uppgiften"-val,
    samma mönster i skapa- och redigera-modalen. */
 .todo-timer-toggle {

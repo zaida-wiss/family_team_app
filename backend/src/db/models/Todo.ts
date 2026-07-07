@@ -60,6 +60,7 @@ const todoSchema = new Schema<Todo>({
   // TimedTask/TimedAttempt (Medaljer/Rekord): en enda inspelad tid per
   // uppgift, ingen personbästa-jämförelse.
   timerEnabled: { type: Boolean, default: undefined },
+  plannedDurationMinutes: { type: Number, default: null },
   elapsedMs: { type: Number, default: null }
 });
 

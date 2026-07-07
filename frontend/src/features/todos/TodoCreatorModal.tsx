@@ -89,6 +89,10 @@ export function TodoCreatorModal({
   // göra todo", precis som Medaljer/Rekord — men ett helt separat, enklare
   // system, se Todo.timerEnabled-kommentaren i shared/types.ts).
   const [timerEnabled, setTimerEnabled] = useState(false);
+  // Planerad tid i minuter (2026-07-07, Zaidas förtydligande: en NEDRÄKNING,
+  // inte en tidtagning) — samma sträng-baserade mönster som starValueInput
+  // (undviker den redan kända "envis nolla vid tömning"-buggen).
+  const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const isForChild = assigneeIds.some((id) => id !== SELF_VALUE);
@@ -199,6 +203,10 @@ export function TodoCreatorModal({
           notes: notes.trim() || null,
           subtasks: cleanedSubtasks.map((s) => ({ ...s, id: generateId() })),
           timerEnabled: isChildRecipient ? timerEnabled : false,
+          plannedDurationMinutes:
+            isChildRecipient && timerEnabled && plannedDurationMinutesInput
+              ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+              : null,
           elapsedMs: null
         });
       }
@@ -323,7 +331,25 @@ export function TodoCreatorModal({
                 onChange={(e) => setTimerEnabled(e.target.checked)}
                 type="checkbox"
               />
-              Tidta hur lång tid uppgiften tar
+              Använd en timer för uppgiften
+            </label>
+          )}
+
+          {isForChild && timerEnabled && (
+            <label className="field-label">
+              Planerad tid (minuter)
+              <input
+                className="text-input"
+                min={1}
+                max={480}
+                onChange={(e) => setPlannedDurationMinutesInput(e.target.value)}
+                placeholder="T.ex. 10"
+                type="number"
+                value={plannedDurationMinutesInput}
+              />
+              <span className="field-hint field-hint--neutral">
+                Barnet dubbelklickar för att starta nedräkningen. Lämnas det tomt visas en vanlig tidtagning istället.
+              </span>
             </label>
           )}
 

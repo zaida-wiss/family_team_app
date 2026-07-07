@@ -447,6 +447,14 @@ export type Todo = {
   // stänger man fliken mitt i en pågående timer förloras den bara, ingen
   // återupptagning. Valfritt och bakåtkompatibelt.
   timerEnabled?: boolean;
+  // Planerad tid i MINUTER (samma enhet/mönster som RewardShopItem.timerMinutes)
+  // — sätts av föräldern vid skapande. Är detta satt visar barnets uppgiftskort
+  // en NEDRÄKNING (dubbelklick startar, räknar ner mot noll) istället för den
+  // öppna uppåträknande tidtagningen (2026-07-07, Zaidas förtydligande: "jag
+  // menar en timer, där bordet visar hur lång tid som är kvar" — inte en
+  // tidtagning). Saknas fältet (eller är null) faller kortet tillbaka på den
+  // ursprungliga öppna tidtagningen (Starta/Klar-knappar, räknar uppåt).
+  plannedDurationMinutes?: number | null;
   elapsedMs?: number | null;
 };
 

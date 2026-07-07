@@ -82,6 +82,9 @@ export function TodoEditModal({
   const [notes, setNotes] = useState(todo.notes ?? "");
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>(todo.subtasks ?? []);
   const [timerEnabled, setTimerEnabled] = useState(todo.timerEnabled ?? false);
+  const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState(
+    todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : ""
+  );
   const [saving, setSaving] = useState(false);
 
   function addSubtask() {
@@ -134,7 +137,16 @@ export function TodoEditModal({
         title: trimmedTitle,
         visual: { type: "lucide-icon", value: emoji },
         personalCategoryId: categoryId,
-        ...(isForChild ? { starValue, timerEnabled } : {}),
+        ...(isForChild
+          ? {
+              starValue,
+              timerEnabled,
+              plannedDurationMinutes:
+                timerEnabled && plannedDurationMinutesInput
+                  ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+                  : null
+            }
+          : {}),
         recurrence,
         // Återkommande: visibleFrom är bara ankardatumet för förfallo-
         // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
@@ -232,7 +244,25 @@ export function TodoEditModal({
                 onChange={(e) => setTimerEnabled(e.target.checked)}
                 type="checkbox"
               />
-              Tidta hur lång tid uppgiften tar
+              Använd en timer för uppgiften
+            </label>
+          )}
+
+          {isForChild && timerEnabled && (
+            <label className="field-label">
+              Planerad tid (minuter)
+              <input
+                className="text-input"
+                min={1}
+                max={480}
+                onChange={(e) => setPlannedDurationMinutesInput(e.target.value)}
+                placeholder="T.ex. 10"
+                type="number"
+                value={plannedDurationMinutesInput}
+              />
+              <span className="field-hint field-hint--neutral">
+                Barnet dubbelklickar för att starta nedräkningen. Lämnas det tomt visas en vanlig tidtagning istället.
+              </span>
             </label>
           )}
 

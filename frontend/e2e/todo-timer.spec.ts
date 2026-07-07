@@ -73,6 +73,18 @@ const TIMER_TODO = {
   elapsedMs: null,
 };
 
+// Nedräkningsläget (2026-07-07, Zaidas förtydligande: "jag menar en timer,
+// där bordet visar hur lång tid som är kvar efter att man tryckt på knappen
+// med dubbelklick. Sedan markerar man den som klar med två sekunderstryck.")
+// — plannedDurationMinutes satt gör att kortet räknar NER istället för upp,
+// och avslutas med samma 2s-håll som en vanlig uppgift, inte en Klar-knapp.
+const COUNTDOWN_TODO = {
+  ...TIMER_TODO,
+  id: "todo-timer-2",
+  title: "Plocka undan leksaker",
+  plannedDurationMinutes: 1
+};
+
 async function mockChildSession(page: Page) {
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD] }));
@@ -159,4 +171,32 @@ test("Barnets uppgifter: begär skärm-wake-lock medan en todo-timer pågår, sl
   await expect.poll(() =>
     page.evaluate(() => (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls)
   ).toContain("release");
+});
+
+test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning, dubbelklick startar, 2s-håll avslutar", async ({ page }) => {
+  let sentElapsedMs: number | null | undefined;
+  await mockChildSession(page);
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [COUNTDOWN_TODO] }));
+  await page.route("**/api/todos/todo-timer-2/complete", (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}") as { elapsedMs: number | null };
+    sentElapsedMs = body.elapsedMs;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  const card = page.getByRole("button", { name: /Plocka undan leksaker/ });
+  await expect(card).toBeVisible();
+  // Innan start: ingen Starta/Klar-knapp — hela kortet är dubbelklicksytan.
+  await expect(page.getByRole("button", { name: "Starta Plocka undan leksaker" })).toHaveCount(0);
+
+  await card.dblclick();
+  await expect(page.getByText(/0:5\d kvar|1:00 kvar/)).toBeVisible();
+
+  // Simulerar ett 2+ sekunders håll, samma dispatchEvent-mönster som det
+  // befintliga långtryck-testet i parent-todo-thread-view.spec.ts (undviker
+  // page.mouse:s känslighet för layoutskift under väntan).
+  await card.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await expect.poll(() => sentElapsedMs, { timeout: 3000 }).not.toBeUndefined();
+  expect(sentElapsedMs).not.toBeNull();
+  expect(sentElapsedMs as number).toBeGreaterThan(1800);
 });

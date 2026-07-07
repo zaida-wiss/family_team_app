@@ -288,6 +288,7 @@ export const TodoSchema = z.object({
   subtasks: z.array(TodoSubtaskSchema).optional(),
   timeWindows: z.array(TodoTimeWindowSchema).optional(),
   timerEnabled: z.boolean().optional(),
+  plannedDurationMinutes: z.number().int().min(1).max(480).nullable().optional(),
   elapsedMs: z.number().int().min(0).nullable().optional()
 });
 
@@ -313,7 +314,8 @@ export const TodoPatchSchema = TodoSchema.pick({
   notes: true,
   subtasks: true,
   timeWindows: true,
-  timerEnabled: true
+  timerEnabled: true,
+  plannedDurationMinutes: true
 }).partial().extend({
   status: z.literal("pending").optional(),
   completedAt: z.null().optional(),
