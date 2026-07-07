@@ -13,8 +13,8 @@ export const TODO_CSV_HEADERS = [
   "Titel",
   "Emoji",
   "Tilldelad",
-  "Kategori",
-  "Rutinkategori",
+  "Egen kategori",
+  "Rutinkategori (Hälsa/Trivsel/Pengar)",
   "Stjärnor",
   "Timer",
   "Timer (min)",
@@ -48,9 +48,10 @@ const WEEKDAY_SHORT_TO_KEY = new Map<string, Weekday>(
 );
 
 // Rutinkategori (Hälsa/Trivsel/Pengar) — barnens fasta rutinkategorier, styr
-// belöningsbutikens kategori-spärr. Helt separat från "Kategori"-kolumnen
-// (personlig, självägd), men Zaida ville att den också ska rundtrippa via
-// kalkylarket (2026-07-05).
+// belöningsbutikens kategori-spärr. Helt separat från "Egen kategori"-kolumnen
+// (personlig, självägd, fritt namngiven) — kolumnerna döptes om 2026-07-08
+// (Zaidas fynd: "Hushåll" i fel kolumn gav ett förvirrande "okänt värde"-fel)
+// för att göra skillnaden mellan de två systemen tydligare direkt i kalkylarket.
 const ROUTINE_CATEGORY_LOOKUP = new Map(ROUTINE_CATEGORIES.map((c) => [c.toLowerCase(), c]));
 
 // Minimal RFC4180-liknande CSV — undviker ett nytt beroende (CLAUDE.md-regel:
@@ -296,8 +297,8 @@ export function parseTodoCsv(
 
   const emojiCol = col("Emoji");
   const assignedCol = col("Tilldelad");
-  const categoryCol = col("Kategori");
-  const routineCategoryCol = col("Rutinkategori");
+  const categoryCol = col("Egen kategori");
+  const routineCategoryCol = col("Rutinkategori (Hälsa/Trivsel/Pengar)");
   const starsCol = col("Stjärnor");
   const timerCol = col("Timer");
   const timerMinutesCol = col("Timer (min)");
@@ -371,7 +372,7 @@ export function parseTodoCsv(
         routineCategory = matched;
       } else {
         errors.push(
-          `Rad ${rowNumber} ("${title}"): okänt värde "${routineCategoryRaw}" i Rutinkategori (vänta ${ROUTINE_CATEGORIES.join("/")} eller tomt), ignoreras.`
+          `Rad ${rowNumber} ("${title}"): okänt värde "${routineCategoryRaw}" i Rutinkategori (vänta ${ROUTINE_CATEGORIES.join("/")} eller tomt — din egen fria kategori hör hemma i "Egen kategori"-kolumnen istället), ignoreras.`
         );
       }
     }

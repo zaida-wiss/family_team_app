@@ -34,7 +34,7 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Emoji,Tilldelad,Kategori,Rutinkategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Delmoment,Anteckningar,Id"
+    "Titel,Emoji,Tilldelad,Egen kategori,Rutinkategori (Hälsa/Trivsel/Pengar),Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Delmoment,Anteckningar,Id"
   );
 });
 
@@ -67,7 +67,7 @@ test("Todos-import/export: importerar en CSV-fil och skapar todos, inklusive en 
   await openImportExportSettings(page);
 
   const csv = [
-    "Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar",
+    "Titel,Tilldelad,Egen kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar",
     "Handla mat,Mig själv,Hushåll,,,,Mjölk och bröd",
     ",,,,,,",
     "Diska,Okänd Person,,,,,"

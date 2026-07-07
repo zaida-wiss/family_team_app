@@ -34,7 +34,7 @@ describe("todoCsv", () => {
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [
-      "Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar",
+      "Titel,Tilldelad,Egen kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar",
       "Handla mat,Mig själv,Hushåll,,2026-07-10,2026-07-11,Mjölk och bröd"
     ].join("\r\n");
 
@@ -65,7 +65,7 @@ describe("todoCsv", () => {
       { id: "cat-1", accountId: "acc-1", memberId: "mem-1", name: "Hushåll", createdAt: "", deletedAt: null, deletedBy: null }
     ];
     const csv = [
-      "Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar",
+      "Titel,Tilldelad,Egen kategori,Stjärnor,Startdatum,Slutdatum,Anteckningar",
       "Plocka undan,Alva,Hushåll,3,,,"
     ].join("\r\n");
 
@@ -319,7 +319,7 @@ describe("todoCsv", () => {
   test("parseTodoCsv: okänt värde i Rutinkategori ger ett fel och ignoreras", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [
-      "Titel,Tilldelad,Rutinkategori",
+      "Titel,Tilldelad,Rutinkategori (Hälsa/Trivsel/Pengar)",
       "Läxor,Mig själv,Skola"
     ].join("\r\n");
 
@@ -332,7 +332,7 @@ describe("todoCsv", () => {
   test("parseTodoCsv: Vecka utan giltiga veckodagar ger ett fel och behandlas som engångsuppgift", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [
-      "Titel,Tilldelad,Kategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Anteckningar",
+      "Titel,Tilldelad,Egen kategori,Stjärnor,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar,Anteckningar",
       "Träna,Mig själv,,,,,Vecka,1,,"
     ].join("\r\n");
 
