@@ -369,10 +369,13 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
   // Ingen checklista att kryssa av — sektionen finns bara i visa-vyn.
   await expect(editDialog.getByRole("checkbox")).toHaveCount(0);
 
+  // Autospara (2026-07-08) — ingen Spara-knapp längre, ändringen skickas av
+  // sig själv efter en kort skrivpaus.
   await editDialog.getByLabel("Anteckningar").fill("Kom ihåg skorna");
-  await editDialog.getByRole("button", { name: "Spara" }).click();
-
+  await expect(editDialog.getByText("Uppdaterat ✓")).toBeVisible();
   await expect.poll(() => updatedPatch?.notes).toBe("Kom ihåg skorna");
+
+  await editDialog.getByRole("button", { name: "Stäng" }).click();
   await expect(editDialog).toHaveCount(0);
 });
 
@@ -445,7 +448,6 @@ test("Redigera uppgift: Tidta-kryssrutan finns för en barn-tilldelad uppgift oc
   await expect(timerCheckbox).not.toBeChecked();
   await timerCheckbox.check();
 
-  await editDialog.getByRole("button", { name: "Spara" }).click();
   await expect.poll(() => updatedPatch?.timerEnabled).toBe(true);
 });
 
@@ -480,7 +482,6 @@ test("Redigera uppgift: Stjärnor-fältet finns för en barn-tilldelad uppgift, 
   await stars.fill("7");
   await expect(stars).toHaveValue("7");
 
-  await editDialog.getByRole("button", { name: "Spara" }).click();
   await expect.poll(() => updatedPatch?.starValue).toBe(7);
 });
 
@@ -565,7 +566,6 @@ test("Redigera uppgift: lägger till ett delmoment via den nya checklista-hanter
   const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
   await editDialog.getByRole("button", { name: "Lägg till delmoment" }).click();
   await editDialog.getByLabel("Delmomentets titel").fill("Dammsuga");
-  await editDialog.getByRole("button", { name: "Spara" }).click();
 
   await expect.poll(() => updatedPatch?.subtasks).toEqual([
     { id: expect.any(String), title: "Dammsuga", done: false }

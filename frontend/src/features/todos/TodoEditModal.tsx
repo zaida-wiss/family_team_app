@@ -1,5 +1,5 @@
 import "./TodoDetailModal.css";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
@@ -12,6 +12,12 @@ import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask,
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
+// Autospara (2026-07-08, Zaidas önskemål: "jag vill inte behöva trycka på
+// spara... det skall sparas ändå när jag skriver") — väntar ut en kort paus i
+// skrivandet innan ändringen skickas, istället för att spara vid VARJE
+// tangenttryckning.
+const AUTOSAVE_DEBOUNCE_MS = 700;
+const SAVED_INDICATOR_MS = 1500;
 
 type Props = {
   todo: Todo;
@@ -49,8 +55,6 @@ export function TodoEditModal({
   onDeleteTodo,
   onClose
 }: Props) {
-  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
-
   function handleDelete() {
     onDeleteTodo(todo.id);
     onClose();
@@ -85,7 +89,9 @@ export function TodoEditModal({
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState(
     todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : ""
   );
-  const [saving, setSaving] = useState(false);
+  // "Uppdaterat"-bekräftelsen (2026-07-08, Zaidas önskemål) — kort, tyst
+  // bekräftelse istället för en Spara-knapp att trycka på.
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
 
   function addSubtask() {
     setSubtasks((prev) => [...prev, { id: generateId(), title: "", done: false }]);
@@ -117,58 +123,109 @@ export function TodoEditModal({
     }
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmedTitle = title.trim();
-    if (saving || !canSubmit) return;
+  // performSave/scheduleAutosave hålls i refs så den alltid kör med FÄRSKA
+  // state-värden (undviker stale closures i den debounce-timeout som skapas
+  // en gång per render, se useEffect nedan).
+  const performSaveRef = useRef<() => Promise<void>>(async () => {});
+  performSaveRef.current = async () => {
+    if (!canSubmit) return;
 
-    setSaving(true);
-    try {
-      let categoryId: Id | null = selectedCategoryId === NO_CATEGORY_VALUE ? null : selectedCategoryId;
-      if (isCreatingCategory) {
-        const trimmedName = newCategoryName.trim();
-        if (!trimmedName) return;
-        const category = await onCreateCategory(trimmedName);
-        categoryId = category.id;
-      }
-
-      const isRecurring = recurrence.type !== "none";
-      onUpdateTodo(todo.id, {
-        title: trimmedTitle,
-        visual: { type: "lucide-icon", value: emoji },
-        personalCategoryId: categoryId,
-        ...(isForChild
-          ? {
-              starValue,
-              timerEnabled,
-              plannedDurationMinutes:
-                timerEnabled && plannedDurationMinutesInput
-                  ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
-                  : null
-            }
-          : {}),
-        recurrence,
-        // Återkommande: visibleFrom är bara ankardatumet för förfallo-
-        // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
-        // timeWindows. Engångsuppgift: visibleFrom/expiresAt är en fullständig
-        // datum+tid som tidigare, timeWindows nollställs (annars kvarstår den
-        // dött om uppgiften senare blir återkommande igen utan att fyllas i).
-        visibleFrom: isRecurring ? dateOnlyToISO(startDate) : dateTimeLocalToISO(visibleFrom),
-        expiresAt: isRecurring ? todo.expiresAt : dateTimeLocalToISO(expiresAt),
-        timeWindows: isRecurring ? timeWindows : [],
-        notes: notes.trim() || null,
-        subtasks: subtasks
-          .map((s) => ({ ...s, title: s.title.trim() }))
-          .filter((s) => s.title.length > 0)
-      });
-      onClose();
-    } finally {
-      setSaving(false);
+    let categoryId: Id | null = selectedCategoryId === NO_CATEGORY_VALUE ? null : selectedCategoryId;
+    if (isCreatingCategory) {
+      const trimmedName = newCategoryName.trim();
+      if (!trimmedName) return;
+      const category = await onCreateCategory(trimmedName);
+      categoryId = category.id;
+      // Undviker att skapa ännu en kategori nästa gång autospara triggas av en
+      // orelaterad ändring — pekar om valet mot den nyss skapade kategorin.
+      setSelectedCategoryId(category.id);
     }
+
+    const isRecurring = recurrence.type !== "none";
+    onUpdateTodo(todo.id, {
+      title: title.trim(),
+      visual: { type: "lucide-icon", value: emoji },
+      personalCategoryId: categoryId,
+      ...(isForChild
+        ? {
+            starValue,
+            timerEnabled,
+            plannedDurationMinutes:
+              timerEnabled && plannedDurationMinutesInput
+                ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+                : null
+          }
+        : {}),
+      recurrence,
+      // Återkommande: visibleFrom är bara ankardatumet för förfallo-
+      // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
+      // timeWindows. Engångsuppgift: visibleFrom/expiresAt är en fullständig
+      // datum+tid som tidigare, timeWindows nollställs (annars kvarstår den
+      // dött om uppgiften senare blir återkommande igen utan att fyllas i).
+      visibleFrom: isRecurring ? dateOnlyToISO(startDate) : dateTimeLocalToISO(visibleFrom),
+      expiresAt: isRecurring ? todo.expiresAt : dateTimeLocalToISO(expiresAt),
+      timeWindows: isRecurring ? timeWindows : [],
+      notes: notes.trim() || null,
+      subtasks: subtasks
+        .map((s) => ({ ...s, title: s.title.trim() }))
+        .filter((s) => s.title.length > 0)
+    });
+    setSaveStatus("saved");
+  };
+
+  const saveTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const savedIndicatorTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const hasMountedRef = useRef(false);
+
+  useEffect(() => {
+    // Första körningen är bara state satt från den befintliga todon — inget
+    // att spara än.
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (saveTimeoutRef.current !== null) window.clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = window.setTimeout(() => {
+      saveTimeoutRef.current = null;
+      void performSaveRef.current();
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    title, emoji, selectedCategoryId, newCategoryName, starValueInput, timerEnabled,
+    plannedDurationMinutesInput, recurrence, visibleFrom, expiresAt, startDate, timeWindows,
+    notes, subtasks
+  ]);
+
+  useEffect(() => {
+    if (saveStatus !== "saved") return;
+    if (savedIndicatorTimeoutRef.current !== null) window.clearTimeout(savedIndicatorTimeoutRef.current);
+    savedIndicatorTimeoutRef.current = window.setTimeout(() => setSaveStatus("idle"), SAVED_INDICATOR_MS);
+    return () => {
+      if (savedIndicatorTimeoutRef.current !== null) window.clearTimeout(savedIndicatorTimeoutRef.current);
+    };
+  }, [saveStatus]);
+
+  // Stänger man direkt efter att ha skrivit klart (innan debounce-fönstret
+  // hinner löpa ut) ska den sista ändringen ändå inte tappas bort.
+  function handleClose() {
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+      void performSaveRef.current();
+    }
+    onClose();
   }
 
+  const dialogRef = useModalA11y<HTMLDivElement>(handleClose);
+
   return (
-    <div className="todo-detail-overlay" onClick={onClose}>
+    <div className="todo-detail-overlay" onClick={handleClose}>
       <div
         aria-labelledby="todo-edit-title"
         aria-modal="true"
@@ -179,12 +236,15 @@ export function TodoEditModal({
       >
         <div className="todo-detail-modal__hdr">
           <span id="todo-edit-title">Redigera uppgift</span>
-          <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button">
+          <span aria-live="polite" className="todo-edit-modal__save-status">
+            {saveStatus === "saved" ? "Uppdaterat ✓" : ""}
+          </span>
+          <button aria-label="Stäng" className="icon-button" onClick={handleClose} type="button">
             <X size={18} />
           </button>
         </div>
 
-        <form className="todo-detail-modal__body" onSubmit={handleSave}>
+        <div className="todo-detail-modal__body">
           <div className="todo-emoji-title-row">
             <EmojiPickerPortal symbol={emoji} onSelect={setEmoji} triggerClassName="todo-emoji-btn" />
             <label className="field-label todo-emoji-title-row__title">
@@ -353,11 +413,8 @@ export function TodoEditModal({
               <Trash2 size={15} />
               Radera
             </button>
-            <button className="primary-button" disabled={saving || !canSubmit} type="submit">
-              Spara
-            </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

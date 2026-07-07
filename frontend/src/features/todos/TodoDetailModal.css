@@ -162,16 +162,24 @@
   font-style: italic;
 }
 
-/* Radera-knappen bredvid Spara i redigera-modalen (2026-07-05) — samma
-   layout som kalenderns cal-form-actions. */
+/* Radera-knappen i redigera-modalen (2026-07-05) — Spara-knappen togs bort
+   2026-07-08 (autospara istället, se .todo-edit-modal__save-status). */
 .todo-edit-modal__actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.todo-edit-modal__actions .primary-button {
+/* Autospara-bekräftelse i headern (2026-07-08, Zaidas önskemål: "jag vill
+   inte behöva trycka på spara... kanske bara en bekräftelse på att det är
+   sparat/uppdaterat") — ersätter den tidigare Spara-knappen helt. */
+.todo-edit-modal__save-status {
   flex: 1;
+  margin: 0 8px;
+  color: var(--muted-fg);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
 }
 
 /* Delmoment-hantering i redigera-modalen (2026-07-05) — egen checklista man
