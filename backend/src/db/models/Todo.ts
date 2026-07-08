@@ -65,4 +65,11 @@ const todoSchema = new Schema<Todo>({
   elapsedMs: { type: Number, default: null }
 });
 
+// Saknades tidigare helt (2026-07-08, Zaidas fynd: todos laddas segt) — till
+// skillnad från nästan alla andra modeller i appen (Role/TodoCategory/
+// TimedTask/AuditLog/PurchasedReward har redan sitt eget accountId-index).
+// getAllTodos() filtrerar alltid på accountId högst upp i frågan — utan
+// index scannar MongoDB annars hela collection:en (alla konton) varje gång.
+todoSchema.index({ accountId: 1 });
+
 export const TodoModel = model<Todo>("Todo", todoSchema);
