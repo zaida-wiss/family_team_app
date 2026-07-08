@@ -338,3 +338,35 @@
   font-weight: 700;
   color: #000;
 }
+
+/* Återanvänd kategori (2026-07-08) — en liten fristående modal, samma
+   overlay-princip som TodoDetailModal.css men egna klassnamn (inget
+   cross-file-beroende, minsta diff). */
+.todo-thread-view__reuse-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.todo-thread-view__reuse-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 340px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.todo-thread-view__reuse-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

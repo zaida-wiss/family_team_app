@@ -1143,6 +1143,42 @@ test("Bollar i tråd: 'Lägg till uppgift' i kategorimenyn öppnar skapa-modalen
   expect(createdTodo?.personalCategoryId).toBe("cat-1");
 });
 
+// 2026-07-08 (Zaidas önskemål: "Vi behöver kunna återanvända en kategori...
+// nollställa och sätta ett nytt startdatum. och då ska samtliga uppgifter i
+// den kategorin uppdatera sig") — t.ex. en packlista inför en ny resa: samma
+// delmoment, nytt datum, alla bockar nollställda.
+test("Bollar i tråd: 'Återanvänd' i kategorimenyn sätter nytt startdatum och nollställer delmomentens bockar", async ({ page }) => {
+  const patches: Record<string, Record<string, unknown>> = {};
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] }));
+  await page.route("**/api/todos/todo-1", (route) => {
+    if (route.request().method() === "PATCH") {
+      patches["todo-1"] = route.request().postDataJSON() as Record<string, unknown>;
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await thread.getByRole("button", { name: "Återanvänd" }).click();
+
+  const dialog = page.getByRole("dialog", { name: /Återanvänd/ });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Nytt startdatum").fill("2026-08-01");
+  await dialog.getByRole("button", { name: "Uppdatera" }).click();
+
+  await expect.poll(() => patches["todo-1"]).toBeTruthy();
+  const newVisibleFrom = new Date(patches["todo-1"].visibleFrom as string);
+  expect(newVisibleFrom.getFullYear()).toBe(2026);
+  expect(newVisibleFrom.getMonth()).toBe(7); // augusti (0-indexerat)
+  expect(newVisibleFrom.getDate()).toBe(1);
+  const subtasks = patches["todo-1"].subtasks as { id: string; done: boolean }[];
+  expect(subtasks.every((s) => s.done === false)).toBe(true);
+  await expect(dialog).toHaveCount(0);
+});
+
 test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));

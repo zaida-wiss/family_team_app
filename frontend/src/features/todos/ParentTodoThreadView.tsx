@@ -176,6 +176,12 @@ export function ParentTodoThreadView({
   // döljs ur tråd-vyn men finns kvar, visas igen via Inställningar).
   const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Återanvänd kategori (2026-07-08, Zaidas önskemål: t.ex. en packlista man
+  // vill starta om inför nästa resa) — ett nytt startdatum sätts på SAMTLIGA
+  // uppgifter i kategorin (mallar och engångsuppgifter, inte deras redan
+  // genererade dagliga occurrences) och deras delmoment bockas av på nytt.
+  const [reuseCategoryId, setReuseCategoryId] = useState<Id | null>(null);
+  const [reuseDateInput, setReuseDateInput] = useState("");
 
   // Drag-and-drop-ordning på trådarna (2026-07-06, Zaidas önskemål) — håll
   // och dra i kategorinamnet (eller Barn-tråden, som också är flyttbar).
@@ -386,6 +392,46 @@ export function ParentTodoThreadView({
     onSetCategoryHidden(categoryId, true);
   }
 
+  function handleReuseFromMenu(categoryId: Id) {
+    setMenuCategoryId(null);
+    setReuseCategoryId(categoryId);
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setReuseDateInput(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`);
+  }
+
+  // Samma dag, ny klockslag (om uppgiften redan hade ett) — bara datumdelen
+  // byts ut, samma princip som recurringTodos.ts:s withOccurrenceDate.
+  function withNewDate(oldVisibleFrom: string | null, newDateStr: string): string {
+    const [year, month, day] = newDateStr.split("-").map(Number);
+    if (!oldVisibleFrom) {
+      return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+    }
+    const old = new Date(oldVisibleFrom);
+    return new Date(
+      year, month - 1, day,
+      old.getHours(), old.getMinutes(), old.getSeconds(), old.getMilliseconds()
+    ).toISOString();
+  }
+
+  function handleConfirmReuse() {
+    if (!reuseCategoryId || !reuseDateInput) return;
+    // Mallar och engångsuppgifter i kategorin — INTE deras redan genererade
+    // dagliga occurrences (de är frusna kopior för en specifik redan passerad
+    // dag, ska inte skrivas om i efterhand).
+    const targets = allTodos.filter(
+      (t) => t.personalCategoryId === reuseCategoryId && t.deletedAt === null && t.recurringSourceId === null
+    );
+    for (const t of targets) {
+      onUpdateTodo(t.id, {
+        visibleFrom: withNewDate(t.visibleFrom, reuseDateInput),
+        subtasks: t.subtasks?.map((s) => ({ ...s, done: false }))
+      });
+    }
+    setReuseCategoryId(null);
+    setReuseDateInput("");
+  }
+
   return (
     <div className="todo-thread-view">
       {orderedThreads.map((thread) => (
@@ -455,6 +501,9 @@ export function ParentTodoThreadView({
                   <>
                     <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
                       Ladda ner
+                    </button>
+                    <button onClick={() => handleReuseFromMenu(thread.id)} type="button">
+                      Återanvänd
                     </button>
                     <button onClick={() => handleHideFromMenu(thread.id)} type="button">
                       Göm
@@ -559,6 +608,47 @@ export function ParentTodoThreadView({
           onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditTodoId(null)}
         />
+      )}
+
+      {reuseCategoryId && (
+        <div className="todo-thread-view__reuse-overlay" onClick={() => setReuseCategoryId(null)}>
+          <div
+            aria-labelledby="reuse-category-title"
+            aria-modal="true"
+            className="todo-thread-view__reuse-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <h3 id="reuse-category-title">
+              Återanvänd {categories.find((c) => c.id === reuseCategoryId)?.name ?? ""}
+            </h3>
+            <p className="field-hint field-hint--neutral">
+              Alla uppgifter i kategorin får det nya startdatumet och deras delmoment bockas av på nytt.
+            </p>
+            <label className="field-label">
+              Nytt startdatum
+              <input
+                className="text-input"
+                onChange={(e) => setReuseDateInput(e.target.value)}
+                type="date"
+                value={reuseDateInput}
+              />
+            </label>
+            <div className="todo-thread-view__reuse-actions">
+              <button className="secondary-button" onClick={() => setReuseCategoryId(null)} type="button">
+                Avbryt
+              </button>
+              <button
+                className="primary-button"
+                disabled={!reuseDateInput}
+                onClick={handleConfirmReuse}
+                type="button"
+              >
+                Uppdatera
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
