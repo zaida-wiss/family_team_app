@@ -1179,6 +1179,39 @@ test("Bollar i tråd: 'Återanvänd' i kategorimenyn sätter nytt startdatum och
   await expect(dialog).toHaveCount(0);
 });
 
+// 2026-07-08 (Zaidas önskemål: "om jag vill se vad jag missat för att fylla
+// i det under dagen i efterhand så ska jag kunna välja att se utgångna") —
+// utgångna uppgifter är annars alltid dolda, oavsett valt tidsspann.
+test("Bollar i tråd: 'Visa utgångna' i kategorimenyn visar/döljer utgångna uppgifter", async ({ page }) => {
+  const EXPIRED_TODO = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-expired",
+    title: "Missad uppgift",
+    status: "expired",
+    expiresAt: "2026-07-01T00:00:00.000Z"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS, EXPIRED_TODO] })
+  );
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+
+  await expect(thread.getByRole("button", { name: /Löpning/ })).toBeVisible();
+  await expect(thread.getByRole("button", { name: /Missad uppgift/ })).toHaveCount(0);
+
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await thread.getByRole("button", { name: "Visa utgångna" }).click();
+  await expect(thread.getByRole("button", { name: /Missad uppgift/ })).toBeVisible();
+
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await thread.getByRole("button", { name: "Dölj utgångna" }).click();
+  await expect(thread.getByRole("button", { name: /Missad uppgift/ })).toHaveCount(0);
+});
+
 test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));

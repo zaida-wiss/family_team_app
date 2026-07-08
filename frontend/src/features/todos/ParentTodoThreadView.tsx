@@ -182,6 +182,11 @@ export function ParentTodoThreadView({
   // genererade dagliga occurrences) och deras delmoment bockas av på nytt.
   const [reuseCategoryId, setReuseCategoryId] = useState<Id | null>(null);
   const [reuseDateInput, setReuseDateInput] = useState("");
+  // Visa utgångna (2026-07-08, Zaidas önskemål: "om jag vill se vad jag
+  // missat för att fylla i det under dagen i efterhand ska jag kunna välja
+  // att se utgångna") — per tråd, av (dolda) som standard, oförändrat
+  // beteende om man aldrig slår på det.
+  const [showExpiredThreadIds, setShowExpiredThreadIds] = useState<Set<Id>>(new Set());
 
   // Drag-and-drop-ordning på trådarna (2026-07-06, Zaidas önskemål) — håll
   // och dra i kategorinamnet (eller Barn-tråden, som också är flyttbar).
@@ -220,18 +225,33 @@ export function ParentTodoThreadView({
   const pendingTodos = todos.filter(
     (t) => t.status === "pending" && !isRecurringTemplate(t) && isDueWithinRange(t, today, range)
   );
+  // Utgångna (missade) uppgifter är medvetet UTANFÖR range-filtret ovan — de
+  // ska gå att hitta oavsett vilket tidsspann (idag/vecka/månad) som är valt,
+  // eftersom hela poängen är att se det man missade, inte bara det som råkar
+  // falla inom det vanliga fönstret. Visas bara för trådar där man aktivt
+  // slagit på "Visa utgångna" (se showExpiredThreadIds), filtreras in per
+  // tråd nedan. Läses från allTodos (ofiltrerad), inte todos — TodosView.tsx
+  // filtrerar redan bort status "expired" via isTodoHistory innan den vanliga
+  // todos-propen ens når hit.
+  const expiredTodos = allTodos.filter((t) => t.status === "expired" && !isRecurringTemplate(t));
   const visibleTodos = [
     ...pendingTodos,
+    ...expiredTodos,
     ...[...dissolving.values()].filter((t) => !pendingTodos.some((p) => p.id === t.id))
   ];
 
   const threads: Thread[] = useMemo(() => {
+    const showChildExpired = showExpiredThreadIds.has(CHILDREN_THREAD_ID);
     const childThread: Thread = {
       id: CHILDREN_THREAD_ID,
       label: "Barn",
       deletable: false,
       todos: sortByEndThenStartTime(
-        visibleTodos.filter((t) => isChildMember(members.find((m) => m.id === t.assignedTo), roles))
+        visibleTodos.filter(
+          (t) =>
+            isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
+            (t.status !== "expired" || showChildExpired)
+        )
       )
     };
 
@@ -241,23 +261,27 @@ export function ParentTodoThreadView({
     // vuxens personliga trådar dyka upp som tomma kolumner hos alla andra,
     // vilket varken efterfrågats eller önskvärt (bryter mot minimalism-principen).
     const myCategories = categories.filter((c) => c.memberId === currentMember.id);
-    const categoryThreads: Thread[] = myCategories.filter((c) => !c.hidden).map((category, index) => ({
-      id: category.id,
-      label: category.name,
-      deletable: true,
-      accentColor: accentColorForIndex(index),
-      todos: sortByEndThenStartTime(
-        visibleTodos.filter(
-          (t) =>
-            t.personalCategoryId === category.id &&
-            (t.assignedTo === currentMember.id || t.createdBy === currentMember.id)
+    const categoryThreads: Thread[] = myCategories.filter((c) => !c.hidden).map((category, index) => {
+      const showExpired = showExpiredThreadIds.has(category.id);
+      return {
+        id: category.id,
+        label: category.name,
+        deletable: true,
+        accentColor: accentColorForIndex(index),
+        todos: sortByEndThenStartTime(
+          visibleTodos.filter(
+            (t) =>
+              t.personalCategoryId === category.id &&
+              (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+              (t.status !== "expired" || showExpired)
+          )
         )
-      )
-    }));
+      };
+    });
 
     return [childThread, ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos, members, roles, categories, currentMember.id]);
+  }, [visibleTodos, members, roles, categories, currentMember.id, showExpiredThreadIds]);
 
   // Egen sparad ordning (drag-and-drop, 2026-07-06) — trådar som saknas i
   // listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga ordning.
@@ -370,6 +394,16 @@ export function ParentTodoThreadView({
   function handleAddTodoFromMenu(categoryId: Id | null) {
     setMenuCategoryId(null);
     onAddTodoToCategory(categoryId);
+  }
+
+  function handleToggleExpiredFromMenu(threadId: Id) {
+    setMenuCategoryId(null);
+    setShowExpiredThreadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(threadId)) next.delete(threadId);
+      else next.add(threadId);
+      return next;
+    });
   }
 
   function handleDeleteFromMenu(categoryId: Id) {
@@ -496,6 +530,9 @@ export function ParentTodoThreadView({
                   type="button"
                 >
                   Lägg till uppgift
+                </button>
+                <button onClick={() => handleToggleExpiredFromMenu(thread.id)} type="button">
+                  {showExpiredThreadIds.has(thread.id) ? "Dölj utgångna" : "Visa utgångna"}
                 </button>
                 {thread.deletable && (
                   <>
