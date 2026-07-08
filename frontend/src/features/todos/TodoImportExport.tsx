@@ -166,7 +166,7 @@ export function TodoImportExport({
         ? exportSelection.has(todo.personalCategoryId)
         : exportSelection.has(NO_CATEGORY_FILTER_ID);
     });
-    downloadCsv("mina-todos.csv", todosToCsv(included, members, currentMember.id));
+    downloadCsv("mina-todos.csv", todosToCsv(included, members, currentMember.id, categories));
   }
 
   async function runImport(

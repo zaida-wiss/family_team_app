@@ -376,7 +376,7 @@ export function ParentTodoThreadView({
     const category = categories.find((c) => c.id === categoryId);
     if (!category) return;
     const categoryTodos = todos.filter((t) => t.personalCategoryId === categoryId);
-    const csv = todosToCsv(categoryTodos, members, currentMember.id);
+    const csv = todosToCsv(categoryTodos, members, currentMember.id, categories);
     const safeName = category.name.trim().replace(/[^\p{L}\p{N}]+/gu, "-") || "kategori";
     downloadCsv(`todos-${safeName}.csv`, csv);
   }

@@ -188,7 +188,8 @@ function csvToSubtaskTitles(value: string): string[] {
 export function todosToCsv(
   todos: Todo[],
   members: Member[],
-  currentMemberId: Id
+  currentMemberId: Id,
+  categories: TodoCategory[]
 ): string {
   // Återkommande MALLAR exporteras (recurringSourceId === null) — dagens
   // redan genererade occurrences (recurringSourceId satt) exporteras inte,
@@ -208,8 +209,7 @@ export function todosToCsv(
       todo.title,
       todo.visual.value,
       assigneeLabel,
-      "", // Kategorinamnet slås inte upp här — todosToCsv får bara members in,
-          // inte den kontobreda kategorilistan; hoppas över vid export.
+      categories.find((c) => c.id === todo.personalCategoryId)?.name ?? "",
       todo.starValue > 0 ? String(todo.starValue) : "",
       todo.timerEnabled ? YES_LABEL : "",
       todo.timerEnabled && todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : "",

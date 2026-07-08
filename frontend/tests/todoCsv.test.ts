@@ -121,7 +121,7 @@ describe("todoCsv", () => {
       expiresAt: new Date(2026, 6, 11, 0, 0, 0).toISOString()
     });
 
-    const csv = todosToCsv([original], members, "mem-1");
+    const csv = todosToCsv([original], members, "mem-1", []);
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
 
     expect(errors).toEqual([]);
@@ -139,7 +139,7 @@ describe("todoCsv", () => {
       createTodo({ id: "t5", title: "En occurrence", createdBy: "mem-1", assignedTo: "mem-1", recurringSourceId: "t4" })
     ];
 
-    const csv = todosToCsv(todos, members, "mem-1");
+    const csv = todosToCsv(todos, members, "mem-1", []);
     const table = parseCsvText(csv);
     const titles = table.slice(1).map((row) => row[0]);
     expect(titles).toEqual(["Min uppgift", "Återkommande mall"]);
@@ -156,7 +156,7 @@ describe("todoCsv", () => {
       recurrence: { type: "recurring", unit: "week", every: 2, daysOfWeek: ["monday", "wednesday"] }
     });
 
-    const csv = todosToCsv([original], members, "mem-1");
+    const csv = todosToCsv([original], members, "mem-1", []);
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
 
     expect(errors).toEqual([]);
@@ -183,7 +183,7 @@ describe("todoCsv", () => {
       recurrence: { type: "weekly", daysOfWeek: ["monday", "tuesday"] } as never
     });
 
-    const csv = todosToCsv([legacyTodo], members, "mem-1");
+    const csv = todosToCsv([legacyTodo], members, "mem-1", []);
     const table = parseCsvText(csv);
     const row = table[1];
     const recurrenceCol = table[0].indexOf("Återkommer");
@@ -193,6 +193,32 @@ describe("todoCsv", () => {
     expect(row[recurrenceCol]).toBe("Vecka");
     expect(row[intervalCol]).toBe("1");
     expect(row[weekdaysCol]).toBe("mån,tis");
+  });
+
+  // Zaida upptäckte 2026-07-08 att "Egen kategori"-kolumnen var TOM i en
+  // riktig export trots att todon hade en riktig kategori i databasen —
+  // todosToCsv slog aldrig upp kategorinamnet, bara en hårdkodad tom sträng.
+  test("todosToCsv → parseTodoCsv tur och retur bevarar Egen kategori", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const categories = [
+      { id: "cat-1", accountId: "acc-1", memberId: "mem-1", name: "Packa", createdAt: "", deletedAt: null, deletedBy: null }
+    ];
+    const original = createTodo({
+      id: "t1",
+      title: "Camping-grejer",
+      createdBy: "mem-1",
+      assignedTo: "mem-1",
+      personalCategoryId: "cat-1"
+    });
+
+    const csv = todosToCsv([original], members, "mem-1", categories);
+    const table = parseCsvText(csv);
+    const categoryCol = table[0].indexOf("Egen kategori");
+    expect(table[1][categoryCol]).toBe("Packa");
+
+    const { rows, errors } = parseTodoCsv(csv, members, categories, "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows[0].personalCategoryId).toBe("cat-1");
   });
 
   test("todosToCsv → parseTodoCsv tur och retur bevarar klockslag, inte bara datum", () => {
@@ -206,7 +232,7 @@ describe("todoCsv", () => {
       expiresAt: new Date(2026, 6, 10, 15, 0, 0).toISOString()
     });
 
-    const csv = todosToCsv([original], members, "mem-1");
+    const csv = todosToCsv([original], members, "mem-1", []);
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
 
     expect(errors).toEqual([]);
@@ -229,7 +255,7 @@ describe("todoCsv", () => {
       ]
     });
 
-    const csv = todosToCsv([original], members, "mem-1");
+    const csv = todosToCsv([original], members, "mem-1", []);
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
 
     expect(errors).toEqual([]);
@@ -256,7 +282,7 @@ describe("todoCsv", () => {
       plannedDurationMinutes: 15
     });
 
-    const csv = todosToCsv([original], members, "mem-1");
+    const csv = todosToCsv([original], members, "mem-1", []);
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
 
     expect(errors).toEqual([]);
@@ -287,7 +313,7 @@ describe("todoCsv", () => {
       visual: { type: "lucide-icon", value: "🛒" }
     });
 
-    const csv = todosToCsv([original], members, "mem-1");
+    const csv = todosToCsv([original], members, "mem-1", []);
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
     expect(errors).toEqual([]);
     expect(rows[0].emoji).toBe("🛒");
