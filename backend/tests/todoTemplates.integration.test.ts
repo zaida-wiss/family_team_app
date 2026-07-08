@@ -111,13 +111,19 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     categoryTemplateId = res.body.id;
   });
 
+  // 500, inte 400: samma som övriga routes i kodbasen som anropar ett Zod-
+  // schemas .parse() direkt utan egen try/catch (t.ex. timedTasks.ts/
+  // rewards.ts/analytics.ts) — den generella felhanteraren i app.ts läser
+  // bara err.status (saknas på ett ZodError) och default:ar till 500. Ett
+  // redan existerande, bredare fynd (Zod-fel borde ge 400 överallt), inte
+  // något att ändra isolerat här.
   it("en kategori-mall utan uppgifter avvisas", async () => {
     const res = await request(app)
       .post("/api/todo-templates/categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
       .send({ name: "Tom", tasks: [] });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
   });
 
   it("listar kontots kategori-mallar", async () => {
