@@ -1,7 +1,7 @@
 import "./TodosView.css";
 import { CheckCircle2, Pencil, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
-import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoThreadRange, TodoViewMode } from "@shared/types";
+import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
@@ -37,6 +37,10 @@ type Props = {
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
+  taskTemplates: TodoTemplate[];
+  categoryTemplates: TodoCategoryTemplate[];
+  onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
+  onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
@@ -73,6 +77,10 @@ export function TodosView({
   onRenameCategory,
   onRemoveCategory,
   onSetCategoryHidden,
+  taskTemplates,
+  categoryTemplates,
+  onCreateTaskTemplate,
+  onCreateCategoryTemplate,
   onSoftDeleteTodo,
   onApproveWish,
   onRejectWish,
@@ -147,6 +155,8 @@ export function TodosView({
             defaultCategoryId={createDefaultCategoryId}
             onCreateCategory={onCreateCategory}
             onCreateTodo={onCreateTodo}
+            taskTemplates={taskTemplates}
+            categoryTemplates={categoryTemplates}
             onClose={closeCreateModal}
           />
         )}
@@ -161,6 +171,7 @@ export function TodosView({
             todos={todos}
             onUpdateTodo={onUpdateTodo}
             onCreateCategory={onCreateCategory}
+            onCreateTaskTemplate={onCreateTaskTemplate}
             onDeleteTodo={onSoftDeleteTodo}
             onRefreshRoutine={onRefreshRoutine}
             onClose={() => setEditTodoId(null)}
@@ -183,6 +194,8 @@ export function TodosView({
             onRenameCategory={onRenameCategory}
             onRemoveCategory={onRemoveCategory}
             onSetCategoryHidden={onSetCategoryHidden}
+            onCreateTaskTemplate={onCreateTaskTemplate}
+            onCreateCategoryTemplate={onCreateCategoryTemplate}
             onDeleteTodo={onSoftDeleteTodo}
             onAddTodoToCategory={openCreateModalForCategory}
             todoThreadOrder={todoThreadOrder}

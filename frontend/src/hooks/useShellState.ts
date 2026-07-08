@@ -4,6 +4,7 @@ import { useShellPermissions } from "./useShellPermissions";
 import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
 import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState";
+import { useTodoTemplatesState } from "../features/todos/useTodoTemplatesState";
 import { useAppFont } from "../components/FontPicker";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TodoThreadRange, TodoViewMode } from "@shared/types";
 
@@ -70,6 +71,15 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     setCategoryHidden: setTodoCategoryHidden
   } = useTodoCategoriesState();
 
+  const {
+    taskTemplates,
+    categoryTemplates,
+    createTaskTemplate,
+    removeTaskTemplate,
+    createCategoryTemplate,
+    removeCategoryTemplate
+  } = useTodoTemplatesState();
+
   const permissions = useShellPermissions(currentMember, roles);
 
   const themePickerMember = themePickerMemberId
@@ -130,6 +140,12 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRenameCategory: renameTodoCategory,
     onRemoveCategory: removeTodoCategory,
     onSetCategoryHidden: setTodoCategoryHidden,
+    // Mallbibliotek (2026-07-08) — läses in i tråd-vyn/skapa-modalen (Hämta
+    // från mall) och skrivs till från tråd-vyns "Spara som mall"-menyval.
+    taskTemplates,
+    categoryTemplates,
+    onCreateTaskTemplate: createTaskTemplate,
+    onCreateCategoryTemplate: createCategoryTemplate,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
     // Todos-panelens visningsläge väljs i Inställningar, ingen egen växlare
     // i panelen (2026-07-05, Zaidas beslut) — se settingsProps nedan.
@@ -246,6 +262,12 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     personalCategories: personalTodoCategories,
     onCreateCategory: createTodoCategory,
     onSetCategoryHidden: setTodoCategoryHidden,
+    taskTemplates,
+    categoryTemplates,
+    onCreateTaskTemplate: createTaskTemplate,
+    onCreateCategoryTemplate: createCategoryTemplate,
+    onRemoveTaskTemplate: removeTaskTemplate,
+    onRemoveCategoryTemplate: removeCategoryTemplate,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => {

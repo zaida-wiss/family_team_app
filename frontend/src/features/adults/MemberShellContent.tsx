@@ -22,7 +22,7 @@ const TodosView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -61,6 +61,10 @@ type Props = {
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
+  taskTemplates: TodoTemplate[];
+  categoryTemplates: TodoCategoryTemplate[];
+  onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
+  onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
   onSoftDeleteTodo: (todoId: string) => void;
   onApproveWish: (rewardId: string) => void;
   onRejectWish: (rewardId: string) => void;
@@ -109,6 +113,7 @@ export function MemberShellContent({
   todoThreadOrder, onReorderThreads, todoThreadRange,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
+  taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
@@ -259,6 +264,10 @@ export function MemberShellContent({
           onRenameCategory={onRenameCategory}
           onRemoveCategory={onRemoveCategory}
           onSetCategoryHidden={onSetCategoryHidden}
+          taskTemplates={taskTemplates}
+          categoryTemplates={categoryTemplates}
+          onCreateTaskTemplate={onCreateTaskTemplate}
+          onCreateCategoryTemplate={onCreateCategoryTemplate}
           onSoftDeleteTodo={onSoftDeleteTodo}
           onApproveWish={onApproveWish}
           onRejectWish={onRejectWish}

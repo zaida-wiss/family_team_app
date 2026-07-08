@@ -6,6 +6,7 @@ import { TodoModel } from "./db/models/Todo.js";
 import { ShoppingListModel } from "./db/models/ShoppingList.js";
 import { RewardModel } from "./db/models/Reward.js";
 import { syncSubscription } from "./services/calendarSubscriptionsService.js";
+import { pruneOldTodoOccurrences } from "./services/todosService.js";
 import { logger } from "./utils/logger.js";
 
 const PORT = process.env.PORT ?? 3000;
@@ -59,6 +60,8 @@ async function start() {
     logger.info(`Servern lyssnar på port ${PORT}`);
   });
   setInterval(() => { syncAllSubscriptions().catch((e) => logger.error(e)); }, 60 * 60 * 1000);
+  // Dagligen räcker gott och väl för en 1-veckas-gräns (2026-07-08).
+  setInterval(() => { pruneOldTodoOccurrences().catch((e) => logger.error(e)); }, 24 * 60 * 60 * 1000);
 }
 
 start().catch((e) => logger.error(e));

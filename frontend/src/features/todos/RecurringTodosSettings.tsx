@@ -1,7 +1,7 @@
 import "./RecurringTodosSettings.css";
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory } from "@shared/types";
+import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { getVisibleTodos } from "./selectors";
 import { isoToDateOnly, isRecurringTemplate, WEEKDAY_SHORT } from "./recurringTodos";
 import { TodoEditModal } from "./TodoEditModal";
@@ -14,6 +14,7 @@ type Props = {
   categories: TodoCategory[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
+  onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
   onDeleteTodo: (todoId: Id) => void;
   onRefreshRoutine: (routineId: Id) => void;
 };
@@ -57,6 +58,7 @@ export function RecurringTodosSettings({
   categories,
   onUpdateTodo,
   onCreateCategory,
+  onCreateTaskTemplate,
   onDeleteTodo,
   onRefreshRoutine
 }: Props) {
@@ -117,6 +119,7 @@ export function RecurringTodosSettings({
           categories={categories}
           todos={todos}
           onCreateCategory={onCreateCategory}
+          onCreateTaskTemplate={onCreateTaskTemplate}
           onDeleteTodo={onDeleteTodo}
           onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditingId(null)}

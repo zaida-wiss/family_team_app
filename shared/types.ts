@@ -492,6 +492,47 @@ export type TodoCategory = {
   deletedBy: Id | null;
 };
 
+// Mallbibliotek (2026-07-08, Zaidas önskemål: "det är ingen vits med att spara
+// gamla avklarade kopior... jag vill spara både återkommande uppgifter och
+// hela kategorier som mall för fler tillfällen då jag får en kopia"). En mall
+// är alltid "fryst" — den lever helt oberoende av den ursprungliga uppgiften/
+// kategorin den skapades från, och rörs inte om originalet senare redigeras
+// eller raderas.
+export type TodoTemplateTask = {
+  title: string;
+  visual: TodoVisual;
+  // Bara titlar — en färsk kopia från en mall ska alltid börja obockad, det
+  // finns ingen mening att spara done-status i en mall.
+  subtasks: { title: string }[];
+  recurrence: RecurrenceRule;
+  starValue: number;
+};
+
+// Fristående uppgiftsmall (kan hämtas oberoende av kategori, t.ex. via "Lägg
+// till uppgift" i valfri tråd).
+export type TodoTemplate = TodoTemplateTask & {
+  id: Id;
+  accountId: Id;
+  memberId: Id;
+  createdAt: string;
+  deletedAt: string | null;
+  deletedBy: Id | null;
+};
+
+// Hel kategori sparad som mall (t.ex. en packlista) — bäddar in frusna
+// kopior av uppgifterna direkt, oberoende av det separata TodoTemplate-
+// biblioteket ovan.
+export type TodoCategoryTemplate = {
+  id: Id;
+  accountId: Id;
+  memberId: Id;
+  name: string;
+  tasks: TodoTemplateTask[];
+  createdAt: string;
+  deletedAt: string | null;
+  deletedBy: Id | null;
+};
+
 export type Reward = {
   id: Id;
   accountId?: Id;

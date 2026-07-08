@@ -48,6 +48,10 @@ export async function mockDataAPIs(page: Page) {
   // Vuxenvyns personliga kategori-trådar (2026-07-05) — hämtas globalt av
   // useShellState oavsett aktiv panel, precis som timed-tasks/reward-shop.
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  // Mallbibliotek (2026-07-08) — hämtas globalt av useShellState, samma
+  // mönster som todo-categories ovan.
+  await page.route("**/api/todo-templates/tasks", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todo-templates/categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));

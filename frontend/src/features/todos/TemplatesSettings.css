@@ -1,0 +1,32 @@
+.templates-settings {
+  display: grid;
+  gap: 16px;
+}
+
+.templates-settings__heading {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: var(--muted-fg);
+}
+
+.templates-settings__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.templates-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.templates-settings__row small {
+  color: var(--muted-fg);
+}

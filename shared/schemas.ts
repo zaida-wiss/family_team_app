@@ -329,6 +329,24 @@ export const RejectTodoBodySchema = z.object({
   reason: z.string().trim().min(1).max(200).nullable().optional()
 });
 
+// Mallbibliotek (2026-07-08) — se TodoTemplate/TodoCategoryTemplate i
+// shared/types.ts. Bara det klienten faktiskt skickar in (create-payload),
+// inte hela dokumentet (id/accountId/memberId/createdAt sätts av servern).
+export const TodoTemplateTaskSchema = z.object({
+  title: z.string().min(1, "Uppgiftstitel krävs"),
+  visual: TodoVisualSchema,
+  subtasks: z.array(z.object({ title: z.string().min(1, "Delmomentets titel krävs") })),
+  recurrence: RecurrenceRuleSchema,
+  starValue: z.number().int().min(0)
+});
+
+export const CreateTodoTemplateBodySchema = TodoTemplateTaskSchema;
+
+export const CreateTodoCategoryTemplateBodySchema = z.object({
+  name: z.string().min(1, "Kategorinamn krävs"),
+  tasks: z.array(TodoTemplateTaskSchema).min(1, "Kategorin har inga uppgifter att spara")
+});
+
 // Timerfunktion (2026-07-07) — elapsedMs skickas bara med om uppgiften hade
 // timerEnabled och barnet faktiskt körde start/stopp, annars null/utelämnat.
 export const CompleteTodoBodySchema = z.object({

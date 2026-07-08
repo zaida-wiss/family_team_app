@@ -1,6 +1,6 @@
 import "./TodoDetailModal.css";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FileStack, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
@@ -8,7 +8,7 @@ import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
 import { isChildMember } from "./selectors";
 import { generateId } from "../../utils/uuid";
-import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTimeWindow } from "@shared/types";
+import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTemplate, TodoTemplateTask, TodoTimeWindow } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
@@ -31,6 +31,7 @@ type Props = {
   todos: Todo[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
+  onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
   onDeleteTodo: (todoId: Id) => void;
   // Synkar dagens redan skapade occurrence med mallens NYA värden direkt
   // (annars syns inte en redigering förrän occurrencen genereras om, se
@@ -63,6 +64,7 @@ export function TodoEditModal({
   todos,
   onUpdateTodo,
   onCreateCategory,
+  onCreateTaskTemplate,
   onDeleteTodo,
   onRefreshRoutine,
   onClose
@@ -70,6 +72,24 @@ export function TodoEditModal({
   function handleDelete() {
     onDeleteTodo(todo.id);
     onClose();
+  }
+
+  // Mallbibliotek (2026-07-08) — sparar en frusen ögonblicksbild (titel/ikon/
+  // delmoment/återkommelse/stjärnor), fristående från den här specifika
+  // uppgiften. Rör inte uppgiften själv, bara en engångsläsning av dagens
+  // fältvärden.
+  const [templateSaved, setTemplateSaved] = useState(false);
+  function handleSaveAsTemplate() {
+    onCreateTaskTemplate({
+      title: title.trim() || todo.title,
+      visual: { type: "lucide-icon", value: emoji },
+      subtasks: subtasks.filter((s) => s.title.trim().length > 0).map((s) => ({ title: s.title.trim() })),
+      recurrence,
+      starValue
+    }).then(() => {
+      setTemplateSaved(true);
+      window.setTimeout(() => setTemplateSaved(false), SAVED_INDICATOR_MS);
+    });
   }
 
   // En genererad daglig occurrence (recurringSourceId satt) bär EGNA fält som
@@ -536,6 +556,10 @@ export function TodoEditModal({
           </div>
 
           <div className="todo-edit-modal__actions">
+            <button className="secondary-button" onClick={handleSaveAsTemplate} type="button">
+              <FileStack size={15} />
+              {templateSaved ? "Sparad som mall ✓" : "Spara som mall"}
+            </button>
             <button className="danger-button" onClick={handleDelete} type="button">
               <Trash2 size={15} />
               Radera

@@ -1,7 +1,7 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Id, Member, Role, Todo, TodoCategory, TodoThreadRange } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
@@ -36,6 +36,8 @@ type Props = {
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
+  onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
+  onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
   onDeleteTodo: (todoId: Id) => void;
   onAddTodoToCategory: (categoryId: Id | null) => void;
   todoThreadOrder: Id[];
@@ -170,6 +172,8 @@ export function ParentTodoThreadView({
   onRenameCategory,
   onRemoveCategory,
   onSetCategoryHidden,
+  onCreateTaskTemplate,
+  onCreateCategoryTemplate,
   onDeleteTodo,
   onAddTodoToCategory,
   todoThreadOrder,
@@ -497,6 +501,27 @@ export function ParentTodoThreadView({
     onSetCategoryHidden(categoryId, true);
   }
 
+  // Mallbibliotek (2026-07-08) — sparar en frusen ögonblicksbild av kategorins
+  // DEFINIERANDE uppgifter (mallar och engångsuppgifter, inte deras redan
+  // genererade dagliga occurrences — samma urval som handleReuseFromMenu
+  // använder). Kategorin/uppgifterna rörs inte, bara läses.
+  function handleSaveCategoryAsTemplate(categoryId: Id) {
+    setMenuCategoryId(null);
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) return;
+    const tasks: TodoTemplateTask[] = allTodos
+      .filter((t) => t.personalCategoryId === categoryId && t.deletedAt === null && t.recurringSourceId === null)
+      .map((t) => ({
+        title: t.title,
+        visual: t.visual,
+        subtasks: (t.subtasks ?? []).map((s) => ({ title: s.title })),
+        recurrence: t.recurrence,
+        starValue: t.starValue
+      }));
+    if (tasks.length === 0) return;
+    onCreateCategoryTemplate(category.name, tasks);
+  }
+
   function handleReuseFromMenu(categoryId: Id) {
     setMenuCategoryId(null);
     setReuseCategoryId(categoryId);
@@ -623,6 +648,9 @@ export function ParentTodoThreadView({
                       <button onClick={() => handleReuseFromMenu(thread.id)} type="button">
                         Återanvänd
                       </button>
+                      <button onClick={() => handleSaveCategoryAsTemplate(thread.id)} type="button">
+                        Spara som mall
+                      </button>
                       <button onClick={() => handleHideFromMenu(thread.id)} type="button">
                         Göm
                       </button>
@@ -723,6 +751,7 @@ export function ParentTodoThreadView({
           todos={allTodos}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
+          onCreateTaskTemplate={onCreateTaskTemplate}
           onDeleteTodo={onDeleteTodo}
           onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditTodoId(null)}

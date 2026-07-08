@@ -1228,6 +1228,112 @@ test("Bollar i tråd: 'Återanvänd' i kategorimenyn sätter nytt startdatum och
   await expect(dialog).toHaveCount(0);
 });
 
+// 2026-07-08 (Zaidas önskemål: "jag vill spara både återkommande uppgifter
+// och hela kategorier som mall för fler tillfällen då jag får en kopia") —
+// mallbiblioteket, kategori-delen.
+test("Bollar i tråd: 'Spara som mall' i kategorimenyn skapar en kategori-mall av kategorins uppgifter", async ({ page }) => {
+  let createdTemplate: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] }));
+  await page.route("**/api/todo-templates/categories", (route) => {
+    if (route.request().method() === "POST") {
+      createdTemplate = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: "todo-category-template-1", ...createdTemplate } });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await page.getByRole("button", { name: "Spara som mall" }).click();
+
+  await expect.poll(() => createdTemplate).toBeTruthy();
+  expect((createdTemplate as unknown as { name: string }).name).toBe("Träning");
+  const tasks = (createdTemplate as unknown as { tasks: { title: string; subtasks: { title: string }[] }[] }).tasks;
+  expect(tasks).toHaveLength(1);
+  expect(tasks[0].title).toBe("Styrketräning");
+  expect(tasks[0].subtasks.map((s) => s.title)).toEqual(["Uppvärmning", "Bänkpress"]);
+});
+
+// Mallbiblioteket, uppgifts-delen — sparas via redigera-modalens knapp.
+test("Redigera-modalen: 'Spara som mall' skapar en fristående uppgiftsmall", async ({ page }) => {
+  let createdTemplate: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] }));
+  await page.route("**/api/todo-templates/tasks", (route) => {
+    if (route.request().method() === "POST") {
+      createdTemplate = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: "todo-template-1", ...createdTemplate } });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Styrketräning/ }).click();
+  await page.getByRole("button", { name: "Redigera uppgift" }).click();
+  await page.getByRole("button", { name: "Spara som mall" }).click();
+
+  await expect.poll(() => createdTemplate).toBeTruthy();
+  expect((createdTemplate as unknown as { title: string }).title).toBe("Styrketräning");
+  await expect(page.getByRole("button", { name: /Sparad som mall/ })).toBeVisible();
+});
+
+// Mallbiblioteket — hämtar en HEL kategori-mall vid "Ny kategori" i skapa-modalen.
+test("Ny uppgift-modalen: 'Från mall' vid Ny kategori skapar kategorin och alla dess uppgifter", async ({ page }) => {
+  const CATEGORY_TEMPLATE = {
+    id: "todo-category-template-1",
+    accountId: "acc-1",
+    memberId: "mem-1",
+    name: "Packa",
+    tasks: [
+      { title: "Badkläder", visual: { type: "lucide-icon", value: "Shirt" }, subtasks: [{ title: "Handduk" }], recurrence: { type: "none" }, starValue: 0 },
+      { title: "Solkräm", visual: { type: "lucide-icon", value: "Sun" }, subtasks: [], recurrence: { type: "none" }, starValue: 0 }
+    ],
+    createdAt: "2026-07-01T00:00:00.000Z",
+    deletedAt: null,
+    deletedBy: null
+  };
+  let createdCategory: Record<string, unknown> | null = null;
+  const createdTodos: Record<string, unknown>[] = [];
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => {
+    if (route.request().method() === "POST") {
+      createdCategory = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: "cat-new", ...createdCategory } });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.route("**/api/todo-templates/categories", (route) => route.fulfill({ json: [CATEGORY_TEMPLATE] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      createdTodos.push(body);
+      return route.fulfill({ status: 201, json: { id: body.id } });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Barn/ }).click();
+  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Ny uppgift" });
+  await dialog.getByRole("combobox", { name: "Kategori" }).selectOption({ label: "+ Ny kategori…" });
+  await dialog.getByRole("button", { name: "Från mall" }).click();
+  await dialog.getByRole("combobox", { name: "Mall" }).selectOption({ label: "Packa (2 uppgifter)" });
+  await dialog.getByLabel("Startdatum för uppgifterna").fill("2026-08-01");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdCategory).toBeTruthy();
+  expect((createdCategory as unknown as { name: string }).name).toBe("Packa");
+  await expect.poll(() => createdTodos.length).toBe(2);
+  expect(createdTodos.map((t) => t.title)).toEqual(["Badkläder", "Solkräm"]);
+  expect(createdTodos.every((t) => t.personalCategoryId === "cat-new")).toBe(true);
+});
+
 // 2026-07-08 (Zaidas önskemål: "om jag vill se vad jag missat för att fylla
 // i det under dagen i efterhand så ska jag kunna välja att se utgångna") —
 // utgångna uppgifter är annars alltid dolda, oavsett valt tidsspann.

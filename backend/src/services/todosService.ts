@@ -315,3 +315,35 @@ export async function toggleSubtask(id: string, accountId: string, subtaskId: st
   broadcastTodosChanged();
   return { done: subtask.done };
 }
+
+// Automatisk mjuk-radering av gamla, avslutade återkommande OCCURRENCES
+// (2026-07-08, Zaidas önskemål: "det är ingen vits med att spara gamla
+// avklarade kopior på en todo som renderas och blir en ny kopia varje gång
+// för varje person"). Rör ALDRIG mallen själv (recurringSourceId===null) —
+// mallen ska finnas kvar för evigt, precis som "mallen ska finnas kvar"
+// (samma princip gäller nu mallbiblioteket, se todoTemplatesService.ts).
+// Rör heller aldrig engångsuppgifter (de kan istället sparas som en
+// uppgiftsmall om man vill bevara dem). Gäller bara avslutade tillstånd
+// (approved/rejected/expired) — pending/done (väntar på godkännande) rörs
+// aldrig, de är fortfarande aktiva.
+export async function pruneOldTodoOccurrences() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffIso = cutoff.toISOString();
+  const nowIso = new Date().toISOString();
+
+  const result = await TodoModel.updateMany(
+    {
+      recurringSourceId: { $ne: null },
+      deletedAt: null,
+      status: { $in: ["approved", "rejected", "expired"] },
+      $or: [
+        { approvedAt: { $ne: null, $lt: cutoffIso } },
+        { rejectedAt: { $ne: null, $lt: cutoffIso } },
+        { expiresAt: { $ne: null, $lt: cutoffIso } }
+      ]
+    },
+    { $set: { deletedAt: nowIso, deletedBy: null } }
+  );
+  return { prunedCount: result.modifiedCount };
+}

@@ -8,7 +8,7 @@ import { AppError } from "../utils/errors.js";
 // kategorier (barnen har ingen egen åtkomst till dessa vyer överhuvudtaget, så
 // bara vuxna behöver kunna hantera dem). `memberId` behålls på varje kategori
 // som skapar-metadata (vem som gjorde den), inte längre som en åtkomstspärr.
-async function requireAdultMember(memberId: string | null | undefined, accountId: string) {
+export async function requireAdultMember(memberId: string | null | undefined, accountId: string) {
   const member = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
   if (!member) {
     throw new AppError(403, "Åtkomst nekad");

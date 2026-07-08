@@ -22,3 +22,4 @@ export { rewardShopApi } from "./rewardShop";
 export { timedTasksApi } from "./timedTasks";
 export { auditLogApi } from "./auditLog";
 export { todoCategoriesApi } from "./todoCategories";
+export { todoTemplatesApi } from "./todoTemplates";

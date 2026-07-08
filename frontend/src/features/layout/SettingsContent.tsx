@@ -9,6 +9,7 @@ import { TodoHistory } from "../todos/TodoHistory";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
+import { TemplatesSettings } from "../todos/TemplatesSettings";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
 
@@ -84,6 +85,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     personalCategories,
     onCreateCategory,
     onSetCategoryHidden,
+    taskTemplates,
+    categoryTemplates,
+    onCreateTaskTemplate,
+    onRemoveTaskTemplate,
+    onRemoveCategoryTemplate,
     onCreateTodo,
     onUpdateTodo,
     onDeleteTodo,
@@ -208,6 +214,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           categories={personalCategories}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
+          onCreateTaskTemplate={onCreateTaskTemplate}
           onDeleteTodo={onDeleteTodo}
           onRefreshRoutine={settingsProps.onRefreshRoutine}
         />
@@ -222,8 +229,18 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           categories={personalCategories}
           onUpdateTodo={onUpdateTodo}
           onCreateCategory={onCreateCategory}
+          onCreateTaskTemplate={onCreateTaskTemplate}
           onDeleteTodo={onDeleteTodo}
           onRefreshRoutine={settingsProps.onRefreshRoutine}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="📋 Mallar">
+        <TemplatesSettings
+          taskTemplates={taskTemplates}
+          categoryTemplates={categoryTemplates}
+          onRemoveTaskTemplate={onRemoveTaskTemplate}
+          onRemoveCategoryTemplate={onRemoveCategoryTemplate}
         />
       </SettingsSection>
 
