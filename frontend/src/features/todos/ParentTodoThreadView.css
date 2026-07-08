@@ -387,3 +387,21 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* Filtrera efter person (2026-07-08) — samma modal-skal som Återanvänd,
+   återanvänder todo-thread-view__reuse-*-klasserna, bara checkbox-listan
+   är egen. */
+.todo-thread-view__filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.todo-thread-view__filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}

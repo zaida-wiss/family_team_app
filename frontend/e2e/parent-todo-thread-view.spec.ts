@@ -132,6 +132,36 @@ test("Bollar i tråd: en uppgift tilldelad ett barn syns bara i Barn-tråden, al
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Läxor")).toHaveCount(0);
 });
 
+// 2026-07-08 (Zaidas önskemål: filtrera en tråd efter vem uppgiften är
+// tilldelad — mest relevant i Barn-tråden där flera barns uppgifter blandas).
+test("Bollar i tråd: 'Filtrera efter person' i Barn-tråden visar bara ett valt barns uppgifter", async ({ page }) => {
+  const CHILD_MEMBER_2 = { ...CHILD_MEMBER, id: "mem-child-2", name: "Andra Barnet" };
+  const CHILD_TODO_2 = { ...CHILD_TODO, id: "todo-child-2", title: "Diska", assignedTo: "mem-child-2" };
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER, CHILD_MEMBER_2] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [CHILD_TODO, CHILD_TODO_2] }));
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Barn" });
+  await expect(thread.getByText("Läxor")).toBeVisible();
+  await expect(thread.getByText("Diska")).toBeVisible();
+
+  await thread.getByRole("button", { name: /^Barn\./ }).click();
+  await page.getByRole("button", { name: "Filtrera efter person" }).click();
+
+  const dialog = page.getByRole("dialog", { name: /Filtrera Barn/ });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("checkbox", { name: "Andra Barnet" }).uncheck();
+
+  await expect(thread.getByText("Läxor")).toBeVisible();
+  await expect(thread.getByText("Diska")).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Visa alla" }).click();
+  await expect(thread.getByText("Läxor")).toBeVisible();
+  await expect(thread.getByText("Diska")).toBeVisible();
+});
+
 // 2026-07-08 (Zaidas önskemål: "Även vuxna ska ha ikoner på sina todo") —
 // ikonen visas nu för ALLA todos i vuxenvyn, inte bara barn-tilldelade
 // (2026-07-06/07-beslutet begränsade den tidigare till barn-tilldelade,

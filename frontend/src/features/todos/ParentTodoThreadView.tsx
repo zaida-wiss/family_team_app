@@ -52,6 +52,13 @@ type Thread = {
   todos: Todo[];
   deletable: boolean;
   accentColor?: string;
+  // Distinkta mottagare bland trådens EGNA uppgifter (innan ett ev. eget
+  // person-filter appliceras) — används för att bygga filtreringsmenyn och
+  // för att avgöra om den ens ska visas (ingen mening att filtrera en tråd
+  // med bara en mottagare). 2026-07-08, Zaidas önskemål: "Vem uppgiften är
+  // tilldelad" som filterkriterium, mest relevant i Barn-tråden där flera
+  // barns uppgifter blandas.
+  assignees: { id: Id; name: string }[];
 };
 
 // Varje personlig kategori får en egen accentfärg, kopplad till det AKTIVA
@@ -86,6 +93,18 @@ function assigneeColorFor(todo: Todo, members: Member[]): string | undefined {
 // 2026-07-05, se ADR-diskussion i sprint6-mötesdokumentet).
 function timeValue(iso: string | null): number {
   return iso ? new Date(iso).getTime() : Number.POSITIVE_INFINITY;
+}
+
+function uniqueAssignees(todos: Todo[], members: Member[]): { id: Id; name: string }[] {
+  const seen = new Map<Id, string>();
+  for (const t of todos) {
+    if (t.assignedTo && !seen.has(t.assignedTo)) {
+      seen.set(t.assignedTo, members.find((m) => m.id === t.assignedTo)?.name ?? "Okänd");
+    }
+  }
+  return [...seen.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "sv"));
 }
 
 function sortByEndThenStartTime(todos: Todo[]): Todo[] {
@@ -194,6 +213,11 @@ export function ParentTodoThreadView({
   // att se utgångna") — per tråd, av (dolda) som standard, oförändrat
   // beteende om man aldrig slår på det.
   const [showExpiredThreadIds, setShowExpiredThreadIds] = useState<Set<Id>>(new Set());
+  // Filtrera efter mottagare (2026-07-08, Zaidas önskemål) — per tråd, av
+  // (visar alla) som standard. Map-nyckeln saknas = inget filter aktivt;
+  // finns nyckeln = bara de id:n i mängden visas.
+  const [filterThreadId, setFilterThreadId] = useState<Id | null>(null);
+  const [assigneeFilters, setAssigneeFilters] = useState<Map<Id, Set<Id>>>(new Map());
 
   // Drag-and-drop-ordning på trådarna (2026-07-06, Zaidas önskemål) — håll
   // och dra i kategorinamnet (eller Barn-tråden, som också är flyttbar).
@@ -248,18 +272,26 @@ export function ParentTodoThreadView({
   ];
 
   const threads: Thread[] = useMemo(() => {
+    // Filtrera efter mottagare (2026-07-08) — appliceras EFTER övriga filter
+    // (status/tidsspann), på precis den tråden det gäller.
+    function applyAssigneeFilter(threadId: Id, baseTodos: Todo[]): Todo[] {
+      const filter = assigneeFilters.get(threadId);
+      if (!filter) return baseTodos;
+      return baseTodos.filter((t) => t.assignedTo !== null && filter.has(t.assignedTo));
+    }
+
     const showChildExpired = showExpiredThreadIds.has(CHILDREN_THREAD_ID);
+    const childBaseTodos = visibleTodos.filter(
+      (t) =>
+        isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
+        (t.status !== "expired" || showChildExpired)
+    );
     const childThread: Thread = {
       id: CHILDREN_THREAD_ID,
       label: "Barn",
       deletable: false,
-      todos: sortByEndThenStartTime(
-        visibleTodos.filter(
-          (t) =>
-            isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
-            (t.status !== "expired" || showChildExpired)
-        )
-      )
+      assignees: uniqueAssignees(childBaseTodos, members),
+      todos: sortByEndThenStartTime(applyAssigneeFilter(CHILDREN_THREAD_ID, childBaseTodos))
     };
 
     // Kategorier är kontobreda sedan 2026-07-07 (Zaidas beslut — alla vuxna ser
@@ -270,30 +302,30 @@ export function ParentTodoThreadView({
     const myCategories = categories.filter((c) => c.memberId === currentMember.id);
     const categoryThreads: Thread[] = myCategories.filter((c) => !c.hidden).map((category, index) => {
       const showExpired = showExpiredThreadIds.has(category.id);
+      const categoryBaseTodos = visibleTodos.filter(
+        (t) =>
+          t.personalCategoryId === category.id &&
+          (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+          // Barnens uppgifter hör alltid hemma i Barn-tråden, aldrig i en
+          // personlig kategori-tråd — även om jag skapat uppgiften åt
+          // barnet och satt en av mina egna kategorier på den
+          // (2026-07-08, Zaidas fynd/rättelse).
+          !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
+          (t.status !== "expired" || showExpired)
+      );
       return {
         id: category.id,
         label: category.name,
         deletable: true,
         accentColor: accentColorForIndex(index),
-        todos: sortByEndThenStartTime(
-          visibleTodos.filter(
-            (t) =>
-              t.personalCategoryId === category.id &&
-              (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
-              // Barnens uppgifter hör alltid hemma i Barn-tråden, aldrig i en
-              // personlig kategori-tråd — även om jag skapat uppgiften åt
-              // barnet och satt en av mina egna kategorier på den
-              // (2026-07-08, Zaidas fynd/rättelse).
-              !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
-              (t.status !== "expired" || showExpired)
-          )
-        )
+        assignees: uniqueAssignees(categoryBaseTodos, members),
+        todos: sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos))
       };
     });
 
     return [childThread, ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos, members, roles, categories, currentMember.id, showExpiredThreadIds]);
+  }, [visibleTodos, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters]);
 
   // Egen sparad ordning (drag-and-drop, 2026-07-06) — trådar som saknas i
   // listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga ordning.
@@ -416,6 +448,31 @@ export function ParentTodoThreadView({
       const next = new Set(prev);
       if (next.has(threadId)) next.delete(threadId);
       else next.add(threadId);
+      return next;
+    });
+  }
+
+  function handleFilterFromMenu(threadId: Id) {
+    setMenuCategoryId(null);
+    setFilterThreadId(threadId);
+  }
+
+  function toggleAssigneeFilter(threadId: Id, assigneeId: Id, allAssignees: { id: Id }[]) {
+    setAssigneeFilters((prev) => {
+      const next = new Map(prev);
+      const current = next.get(threadId) ?? new Set(allAssignees.map((a) => a.id));
+      const updated = new Set(current);
+      if (updated.has(assigneeId)) updated.delete(assigneeId);
+      else updated.add(assigneeId);
+      next.set(threadId, updated);
+      return next;
+    });
+  }
+
+  function clearAssigneeFilter(threadId: Id) {
+    setAssigneeFilters((prev) => {
+      const next = new Map(prev);
+      next.delete(threadId);
       return next;
     });
   }
@@ -553,6 +610,11 @@ export function ParentTodoThreadView({
                   <button onClick={() => handleToggleExpiredFromMenu(thread.id)} type="button">
                     {showExpiredThreadIds.has(thread.id) ? "Dölj utgångna" : "Visa utgångna"}
                   </button>
+                  {thread.assignees.length > 1 && (
+                    <button onClick={() => handleFilterFromMenu(thread.id)} type="button">
+                      Filtrera efter person
+                    </button>
+                  )}
                   {thread.deletable && (
                     <>
                       <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
@@ -707,6 +769,50 @@ export function ParentTodoThreadView({
           </div>
         </div>
       )}
+
+      {filterThreadId &&
+        (() => {
+          const filterThread = orderedThreads.find((t) => t.id === filterThreadId);
+          if (!filterThread) return null;
+          const selected = assigneeFilters.get(filterThreadId) ?? null;
+          return (
+            <div className="todo-thread-view__reuse-overlay" onClick={() => setFilterThreadId(null)}>
+              <div
+                aria-labelledby="filter-thread-title"
+                aria-modal="true"
+                className="todo-thread-view__reuse-modal"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+              >
+                <h3 id="filter-thread-title">Filtrera {filterThread.label}</h3>
+                <div className="todo-thread-view__filter-options">
+                  {filterThread.assignees.map((a) => (
+                    <label className="todo-thread-view__filter-option" key={a.id}>
+                      <input
+                        checked={selected === null || selected.has(a.id)}
+                        onChange={() => toggleAssigneeFilter(filterThreadId, a.id, filterThread.assignees)}
+                        type="checkbox"
+                      />
+                      {a.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="todo-thread-view__reuse-actions">
+                  <button
+                    className="secondary-button"
+                    onClick={() => clearAssigneeFilter(filterThreadId)}
+                    type="button"
+                  >
+                    Visa alla
+                  </button>
+                  <button className="primary-button" onClick={() => setFilterThreadId(null)} type="button">
+                    Stäng
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }
