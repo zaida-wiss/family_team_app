@@ -1,5 +1,6 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Id, Member, Role, Todo, TodoCategory, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
@@ -176,6 +177,12 @@ export function ParentTodoThreadView({
   // döljs ur tråd-vyn men finns kvar, visas igen via Inställningar).
   const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Menyn portalas till document.body (2026-07-08) — kolumnen (.todo-thread)
+  // fick eget scroll (overflow-y:auto, se ParentTodoThreadView.css) för att
+  // en sticky rubrik ska fungera, vilket annars klipper bort en absolut-
+  // positionerad meny som sträcker sig utanför kolumnens synliga yta. Samma
+  // portal-mönster som EmojiPickerPortal.tsx redan använder.
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   // Återanvänd kategori (2026-07-08, Zaidas önskemål: t.ex. en packlista man
   // vill starta om inför nästa resa) — ett nytt startdatum sätts på SAMTLIGA
   // uppgifter i kategorin (mallar och engångsuppgifter, inte deras redan
@@ -273,6 +280,11 @@ export function ParentTodoThreadView({
             (t) =>
               t.personalCategoryId === category.id &&
               (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+              // Barnens uppgifter hör alltid hemma i Barn-tråden, aldrig i en
+              // personlig kategori-tråd — även om jag skapat uppgiften åt
+              // barnet och satt en av mina egna kategorier på den
+              // (2026-07-08, Zaidas fynd/rättelse).
+              !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
               (t.status !== "expired" || showExpired)
           )
         )
@@ -377,11 +389,13 @@ export function ParentTodoThreadView({
     setEditingCategoryName("");
   }
 
-  function handleCategoryClick(thread: Thread) {
+  function handleCategoryClick(thread: Thread, event: React.MouseEvent<HTMLButtonElement>) {
     if (suppressCategoryClickRef.current) {
       suppressCategoryClickRef.current = false;
       return;
     }
+    const rect = event.currentTarget.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 4, left: rect.left });
     setMenuCategoryId((current) => (current === thread.id ? null : thread.id));
   }
 
@@ -503,7 +517,7 @@ export function ParentTodoThreadView({
                   }
                   aria-expanded={menuCategoryId === thread.id}
                   aria-label={`${thread.label}. Klicka för fler val, håll och dra för att flytta tråden.`}
-                  onClick={() => handleCategoryClick(thread)}
+                  onClick={(e) => handleCategoryClick(thread, e)}
                   onPointerDown={(e) => handleThreadPointerDown(e, thread.id)}
                   onPointerMove={handleThreadPointerMove}
                   onPointerUp={handleThreadPointerUp}
@@ -518,44 +532,50 @@ export function ParentTodoThreadView({
                 (ingen riktig TodoCategory-post) — bara "Lägg till uppgift" (utan
                 förvald kategori), ersätter 2026-07-06 den borttagna fristående
                 +-knappen som fallback när inga personliga kategorier finns än. */}
-            {menuCategoryId === thread.id && (
-              <div className="todo-thread__category-menu" ref={menuRef}>
-                {thread.deletable && (
-                  <button onClick={() => handleRenameFromMenu(thread.id)} type="button">
-                    Byt namn
-                  </button>
-                )}
-                <button
-                  onClick={() => handleAddTodoFromMenu(thread.deletable ? thread.id : null)}
-                  type="button"
+            {menuCategoryId === thread.id &&
+              createPortal(
+                <div
+                  className="todo-thread__category-menu"
+                  ref={menuRef}
+                  style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
                 >
-                  Lägg till uppgift
-                </button>
-                <button onClick={() => handleToggleExpiredFromMenu(thread.id)} type="button">
-                  {showExpiredThreadIds.has(thread.id) ? "Dölj utgångna" : "Visa utgångna"}
-                </button>
-                {thread.deletable && (
-                  <>
-                    <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
-                      Ladda ner
+                  {thread.deletable && (
+                    <button onClick={() => handleRenameFromMenu(thread.id)} type="button">
+                      Byt namn
                     </button>
-                    <button onClick={() => handleReuseFromMenu(thread.id)} type="button">
-                      Återanvänd
-                    </button>
-                    <button onClick={() => handleHideFromMenu(thread.id)} type="button">
-                      Göm
-                    </button>
-                    <button
-                      className="todo-thread__category-menu-danger"
-                      onClick={() => handleDeleteFromMenu(thread.id)}
-                      type="button"
-                    >
-                      Radera
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                  <button
+                    onClick={() => handleAddTodoFromMenu(thread.deletable ? thread.id : null)}
+                    type="button"
+                  >
+                    Lägg till uppgift
+                  </button>
+                  <button onClick={() => handleToggleExpiredFromMenu(thread.id)} type="button">
+                    {showExpiredThreadIds.has(thread.id) ? "Dölj utgångna" : "Visa utgångna"}
+                  </button>
+                  {thread.deletable && (
+                    <>
+                      <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
+                        Ladda ner
+                      </button>
+                      <button onClick={() => handleReuseFromMenu(thread.id)} type="button">
+                        Återanvänd
+                      </button>
+                      <button onClick={() => handleHideFromMenu(thread.id)} type="button">
+                        Göm
+                      </button>
+                      <button
+                        className="todo-thread__category-menu-danger"
+                        onClick={() => handleDeleteFromMenu(thread.id)}
+                        type="button"
+                      >
+                        Radera
+                      </button>
+                    </>
+                  )}
+                </div>,
+                document.body
+              )}
           </div>
 
           {thread.todos.length === 0 ? (

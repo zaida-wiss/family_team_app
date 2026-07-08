@@ -28,32 +28,57 @@
 }
 
 /* Kolumnen matchar bollens bredd med en liten, konstant marginal — växer med
-   --ball-size istället för att vara ett eget fast mått (2026-07-06). */
+   --ball-size istället för att vara ett eget fast mått (2026-07-06).
+   Ogenomskinlig ljus bakgrund (2026-07-08, Zaidas begäran: "bakgrunden kan
+   inte vara transparant... en ljus färg" som följer temat) — utan detta syns
+   den trådlinje/bakgrund som annars ligger bakom en fast rubrik när bollarna
+   scrollar förbi den. */
+/* Egen, begränsad höjd + eget scroll (2026-07-08) — .todo-thread-view:s
+   overflow-x:auto tvingar CSS-spec-mässigt fram overflow-y:auto också (man
+   kan inte scrolla bara ett håll), vilket gjorde den till bollarnas FAKTISKA
+   scroll-behållare trots att den själv aldrig syntes scrolla (växer bara med
+   innehållet) — en sticky rubrik däri hade därför ingen egen scroll-kontext
+   att fästa mot och rullade bara bort med resten. Varje kolumn scrollar nu
+   för sig, så rubriken kan fästa (sticky) mot RÄTT behållare. */
 .todo-thread {
   display: flex;
   flex-direction: column;
   align-items: center;
   flex: 0 0 calc(var(--ball-size) + 4px);
   width: calc(var(--ball-size) + 4px);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 6px 2px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
+/* Fast (sticky) rubrik (2026-07-08, Zaidas begäran) — kategorinamnet syns
+   alltid överst i kolumnen även när många bollar scrollar förbi under. Måste
+   ha samma ogenomskinliga bakgrund som .todo-thread, annars syns bollarna
+   genom/bakom rubriken medan de scrollar. */
 .todo-thread__header {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 4px;
   width: 100%;
   margin-bottom: 4px;
+  background: var(--card);
+  padding-top: 2px;
 }
 
 /* Kategorinamnets meny (2026-07-05, Zaidas beslut, utökad senare samma dag)
    — "Byt namn", "Lägg till uppgift", "Ladda ner" (CSV av kategorins
    uppgifter), "Göm" eller "Radera". Ersätter den tidigare håll-intryckt (2s)
    -mekanismen för radering helt — nu en explicit menyknapp istället. */
+/* Position (fixed/top/left) sätts inline i JSX, uträknat från knappens
+   getBoundingClientRect() — portalas till document.body (2026-07-08) för att
+   inte klippas av kolumnens egna overflow-y:auto (se .todo-thread), samma
+   mönster som EmojiPickerPortal.tsx redan använder. */
 .todo-thread__category-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -174,18 +199,10 @@
   width: 100%;
 }
 
-/* Tråden hänger rakt ner från kategorirubriken, genom mitten av varje boll. */
-.todo-thread__list::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--thread-accent, var(--border));
-  transform: translateX(-50%);
-  z-index: 0;
-}
+/* Den tidigare synliga trådlinjen (2026-07-05, "bollar i tråd") togs bort
+   2026-07-08 på Zaidas begäran — med en fast rubrik och en ogenomskinlig
+   kolumnbakgrund (se .todo-thread) ser en linje som scrollar bakom rubriken
+   trasig ut istället för att förstärka "hänger på en tråd"-känslan. */
 
 .todo-thread__item {
   position: relative;

@@ -93,7 +93,7 @@ async function openCreateModalFromBarnThread(page: import("@playwright/test").Pa
 async function openCreateModalFromCategoryThread(page: import("@playwright/test").Page, categoryLabel: string) {
   const thread = page.getByRole("region", { name: `Tråd: ${categoryLabel}` });
   await thread.getByRole("button", { name: new RegExp(categoryLabel) }).click();
-  await thread.getByRole("button", { name: "Lägg till uppgift" }).click();
+  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
 }
 
 test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-tråd visar bara mina egna", async ({ page }) => {
@@ -110,6 +110,25 @@ test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-t
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Styrketräning")).toBeVisible();
   // Ingen korskontaminering — barnets todo syns inte i den personliga tråden och tvärtom.
   await expect(page.getByRole("region", { name: "Tråd: Barn" }).getByText("Styrketräning")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Läxor")).toHaveCount(0);
+});
+
+// 2026-07-08 (Zaidas fynd: "barnens uppgifter ska inte på default synas i
+// vuxenvyn. De hamnar i en egen tråd med kategorin barnen.") — en uppgift
+// tilldelad ett barn hörde ändå hemma i min personliga kategori-tråd om JAG
+// skapat den åt barnet och satt en av mina egna kategorier på den (kategori-
+// trådens filter kollade bara assignedTo/createdBy, inte om mottagaren var
+// ett barn). Barnets uppgift ska alltid bara synas i Barn-tråden.
+test("Bollar i tråd: en uppgift tilldelad ett barn syns bara i Barn-tråden, aldrig i en personlig kategori-tråd", async ({ page }) => {
+  const CHILD_TODO_WITH_MY_CATEGORY = { ...CHILD_TODO, personalCategoryId: "cat-1" };
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [CHILD_TODO_WITH_MY_CATEGORY] }));
+
+  await openThreadView(page);
+
+  await expect(page.getByRole("region", { name: "Tråd: Barn" }).getByText("Läxor")).toBeVisible();
   await expect(page.getByRole("region", { name: "Tråd: Träning" }).getByText("Läxor")).toHaveCount(0);
 });
 
@@ -1046,7 +1065,7 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   // Klick öppnar en liten meny (2026-07-05, Zaidas beslut) — "Byt namn"
   // eller "Lägg till uppgift" — istället för att direkt öppna redigering.
   await thread.getByRole("button", { name: /Träning/ }).click();
-  await thread.getByRole("button", { name: "Byt namn" }).click();
+  await page.getByRole("button", { name: "Byt namn" }).click();
   await thread.getByRole("textbox").fill("Gym");
   await page.keyboard.press("Enter");
   await expect.poll(() => renamedTo).toBe("Gym");
@@ -1057,7 +1076,7 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   // senare samma dag) — ersätter den tidigare håll-intryckt (2s)-mekanismen
   // helt med en explicit menyknapp.
   await renamedThread.getByRole("button", { name: /Gym/ }).click();
-  await renamedThread.getByRole("button", { name: "Radera" }).click();
+  await page.getByRole("button", { name: "Radera" }).click();
   await expect.poll(() => deletedId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
 });
@@ -1075,7 +1094,7 @@ test("Bollar i tråd: 'Ladda ner' i kategorimenyn exporterar bara den kategorins
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    thread.getByRole("button", { name: "Ladda ner" }).click()
+    page.getByRole("button", { name: "Ladda ner" }).click()
   ]);
 
   expect(download.suggestedFilename()).toBe("todos-Träning.csv");
@@ -1099,7 +1118,7 @@ test("Bollar i tråd: 'Göm' i kategorimenyn döljer tråden, 'Visa igen' i Inst
   await openThreadView(page);
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
   await thread.getByRole("button", { name: /Träning/ }).click();
-  await thread.getByRole("button", { name: "Göm" }).click();
+  await page.getByRole("button", { name: "Göm" }).click();
 
   await expect.poll(() => hiddenValue).toBe(true);
   await expect(page.getByRole("region", { name: "Tråd: Träning" })).toHaveCount(0);
@@ -1130,7 +1149,7 @@ test("Bollar i tråd: 'Lägg till uppgift' i kategorimenyn öppnar skapa-modalen
   await openThreadView(page);
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
   await thread.getByRole("button", { name: /Träning/ }).click();
-  await thread.getByRole("button", { name: "Lägg till uppgift" }).click();
+  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Ny uppgift" });
   await expect(dialog).toBeVisible();
@@ -1162,7 +1181,7 @@ test("Bollar i tråd: 'Återanvänd' i kategorimenyn sätter nytt startdatum och
   await openThreadView(page);
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
   await thread.getByRole("button", { name: /Träning/ }).click();
-  await thread.getByRole("button", { name: "Återanvänd" }).click();
+  await page.getByRole("button", { name: "Återanvänd" }).click();
 
   const dialog = page.getByRole("dialog", { name: /Återanvänd/ });
   await expect(dialog).toBeVisible();
@@ -1204,11 +1223,11 @@ test("Bollar i tråd: 'Visa utgångna' i kategorimenyn visar/döljer utgångna u
   await expect(thread.getByRole("button", { name: /Missad uppgift/ })).toHaveCount(0);
 
   await thread.getByRole("button", { name: /Träning/ }).click();
-  await thread.getByRole("button", { name: "Visa utgångna" }).click();
+  await page.getByRole("button", { name: "Visa utgångna" }).click();
   await expect(thread.getByRole("button", { name: /Missad uppgift/ })).toBeVisible();
 
   await thread.getByRole("button", { name: /Träning/ }).click();
-  await thread.getByRole("button", { name: "Dölj utgångna" }).click();
+  await page.getByRole("button", { name: "Dölj utgångna" }).click();
   await expect(thread.getByRole("button", { name: /Missad uppgift/ })).toHaveCount(0);
 });
 
