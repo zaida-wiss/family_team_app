@@ -252,8 +252,20 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
 });
 
 test("Bollar i tråd: sorterar på sluttid, tidigast sluttid överst", async ({ page }) => {
-  const todoLate = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-late", title: "Sent pass", expiresAt: "2026-07-10T18:00:00.000Z" };
-  const todoEarly = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-early", title: "Tidigt pass", expiresAt: "2026-07-08T08:00:00.000Z" };
+  // Relativt "nu" (inte hårdkodade datum) — annars blir todoEarly tyst
+  // "expired" och filtreras bort så fort det verkliga datumet passerar det
+  // hårdkodade klockslaget, oavsett vilket datum det är (samma fälla som
+  // upptäcktes 2026-07-08 i ett annat test i den här filen).
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const todoLate = {
+    ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-late", title: "Sent pass",
+    expiresAt: new Date(now + 3 * oneDayMs).toISOString()
+  };
+  const todoEarly = {
+    ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-early", title: "Tidigt pass",
+    expiresAt: new Date(now + oneDayMs).toISOString()
+  };
 
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
@@ -1303,15 +1315,16 @@ test("Bollar i tråd: återkommande mallen visas INTE som en egen boll bredvid s
   // Id:t måste matcha appens egen occurrenceId()-formel (recurringTodos.ts) —
   // annars tror syncScheduledTodos (som körs i bakgrunden på riktigt också)
   // att dagens occurrence saknas och skapar ännu en, vilket precis skulle
-  // återinföra en (annan) dubblett i det här testet. Tider beräknas relativt
-  // "nu" (inte hårdkodade klockslag) — annars blir occurrensen tyst "expired"
-  // (expirePendingTodos) så fort testet råkar köras efter det hårdkodade
-  // klockslaget, oavsett vilket datum det är (upptäckt 2026-07-06).
+  // återinföra en (annan) dubblett i det här testet. Tidsfönstret sätts till
+  // dygnets start/slut, inte "nu + offset" (upptäckt 2026-07-06, sedan igen
+  // 2026-07-08: en enkel offset kan hamna på morgondagen om testet råkar köras
+  // nära midnatt, medan occurrenceDate fortfarande är idag) — garanterar att
+  // "nu" alltid ligger inom fönstret, oavsett tid på dygnet testet körs.
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const occurrenceStart = new Date(now.getTime() + 60 * 60 * 1000);
-  const occurrenceEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const occurrenceStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 1);
+  const occurrenceEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59);
   const OCCURRENCE = {
     ...TEMPLATE,
     id: `todo-template-occurrence-${dateKey}`,
