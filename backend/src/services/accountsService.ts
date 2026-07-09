@@ -92,7 +92,7 @@ export async function setupAccount(userId: string, data: unknown) {
       roleId: förälderRoleId,
       isChild: false,
       avatarUrl: null,
-      dashboardTheme: "focus",
+      dashboardTheme: "clear",
       deletedAt: null,
       deletedBy: null
     }).save()

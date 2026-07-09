@@ -8,10 +8,9 @@ export type DashboardTheme = {
 
 export const dashboardThemes: DashboardTheme[] = [
   { id: "clear",            name: "Klar",           audience: "adult" },
-  { id: "focus",            name: "Fokus",          audience: "adult" },
-  { id: "warm",             name: "Varm",           audience: "adult" },
-  { id: "dark",             name: "Mörk",           audience: "adult" },
-  { id: "nature",           name: "Natur",          audience: "adult" },
+  { id: "sunset",           name: "Solnedgång",     audience: "adult" },
+  { id: "turquoise",        name: "Turkos",         audience: "adult" },
+  { id: "lagoon",           name: "Lagun",          audience: "adult" },
   { id: "space",            name: "Rymd",           audience: "child" },
   { id: "cosmic-cobalt",    name: "Cosmic cobalt",  audience: "child" },
   { id: "lavender-blossom", name: "Lavendelblom",   audience: "child" },

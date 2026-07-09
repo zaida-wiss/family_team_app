@@ -74,7 +74,7 @@ await MemberModel.create([
     roleId: "role-foralder",
     isChild: false,
     avatarUrl: null,
-    dashboardTheme: "warm",
+    dashboardTheme: "clear",
     deletedAt: null,
     deletedBy: null
   },

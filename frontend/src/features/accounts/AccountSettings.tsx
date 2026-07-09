@@ -71,7 +71,7 @@ export function AccountSettings({
       isChild,
       avatarUrl: null,
       color: null,
-      dashboardTheme: isChild ? "space" : "focus",
+      dashboardTheme: isChild ? "space" : "clear",
       spentStars: 0,
       approvedStars: 0,
       deletedAt: null,

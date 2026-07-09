@@ -126,7 +126,7 @@ export async function acceptInvitation(token: string, data: unknown) {
     roleId: invitation.roleId,
     isChild: invitation.isChild,
     avatarUrl: null,
-    dashboardTheme: invitation.isChild ? "space" : "focus",
+    dashboardTheme: invitation.isChild ? "space" : "clear",
     deletedAt: null,
     deletedBy: null
   });

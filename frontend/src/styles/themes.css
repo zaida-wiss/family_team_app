@@ -11,84 +11,143 @@
   --theme-nav-active-bg: var(--primary);
   --theme-nav-active-fg: var(--primary-fg);
   /* global tokens — default, no overrides needed */
+
+  /* 8-färgsskala härledd ur Klars EGEN primärfärg (inte en ny design) — fixar
+     ett fynd från 2026-07-09: .todos-bubble-header__title och
+     .todo-thread__ball förlitar sig på --c0…--c4, men de fanns aldrig för
+     något av de fem ursprungliga vuxentemana (rubriken osynlig, bubblorna
+     färglösa). Klar är nu den enda kvarvarande av de fem, se CLAUDE.md. */
+  --c0: color-mix(in oklch, var(--primary) 100%, black 22%);
+  --c1: var(--primary);
+  --c2: color-mix(in oklch, var(--primary) 70%, white 30%);
+  --c3: color-mix(in oklch, var(--primary) 55%, white 45%);
+  --c4: color-mix(in oklch, var(--primary) 35%, white 65%);
+  --c5: color-mix(in oklch, var(--primary) 85%, white 15%);
+  --c6: color-mix(in oklch, var(--primary) 60%, white 40%);
+  --c7: color-mix(in oklch, var(--primary) 20%, white 80%);
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--white);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 }
 
-.app-shell.theme-focus {
-  --theme-nav-bg: linear-gradient(180deg, #eef4ff 0%, #d6e5ff 100%);
-  --theme-nav-border: #c8d8ff;
-  --theme-nav-fg: #23375f;
-  --theme-nav-muted: #64739b;
-  --theme-nav-hover-bg: rgba(95, 127, 216, 0.12);
-  --theme-nav-active-bg: #5f7fd8;
+
+.app-shell.theme-sunset {
+  /* 8-färgsskala hämtad från Zaidas gula→magenta-mockup. c0/c1 = temats mörka
+     primärfärg (måste vara läsbara som gradient-text i t.ex.
+     .todos-bubble-header__title), c4 = ljus mellanton (bubblornas basfyllnad
+     bakom alltid-svart title-text, se .todo-thread__ball). Inte samma
+     ordning som originalbilden rakt av — se motivering i temats commit. */
+  --c0: #a81c7d;
+  --c1: #d6249f;
+  --c2: #eba540;
+  --c3: #e18d60;
+  --c4: #f5bc20;
+  --c5: #cd5ea0;
+  --c6: #c347c0;
+  --c7: #ffd400;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #fff6d9 0%, #fbdfe6 50%, #fbdff0 100%);
+  --theme-nav-border: #f3c9e8;
+  --theme-nav-fg: #6b2a5c;
+  --theme-nav-muted: #a1608f;
+  --theme-nav-hover-bg: rgba(214, 36, 158, 0.12);
+  --theme-nav-active-bg: #d6249f;
   --theme-nav-active-fg: #ffffff;
-  --primary: #5f7fd8;
-  --primary-dark: #3a5fc0;
+  --primary: #d6249f;
+  --primary-dark: #a81c7d;
   --primary-fg: #ffffff;
-  --background: color-mix(in oklch, #5f7fd8 12%, oklch(0.975 0.014 78));
-  --card: color-mix(in oklch, #5f7fd8 8%, oklch(0.982 0.012 78));
-  --muted: color-mix(in oklch, #5f7fd8 18%, oklch(0.94 0.018 78));
-  --border: color-mix(in oklch, #5f7fd8 45%, oklch(0.88 0.02 75));
-  --sidebar: color-mix(in oklch, #5f7fd8 18%, oklch(0.96 0.018 78));
+  --background: color-mix(in oklch, #d6249f 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklch, #d6249f 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklch, #d6249f 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklch, #d6249f 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklch, #d6249f 16%, oklch(0.96 0.018 78));
 }
 
-.app-shell.theme-warm {
-  --theme-nav-bg: linear-gradient(180deg, #fff4e6 0%, #fde2c6 100%);
-  --theme-nav-border: #f0cfa6;
-  --theme-nav-fg: #5a371d;
-  --theme-nav-muted: #9a7650;
-  --theme-nav-hover-bg: rgba(207, 125, 49, 0.12);
-  --theme-nav-active-bg: #cf7d31;
+.app-shell.theme-turquoise {
+  /* 8-färgsskala hämtad från Zaidas cyan/teal 50–900-mockup. Samma
+     c0/c1/c4-resonemang som Solnedgång ovan. */
+  --c0: #085850;
+  --c1: #0c7b70;
+  --c2: #12e4db;
+  --c3: #5ff5ee;
+  --c4: #b6fcf7;
+  --c5: #0c8f84;
+  --c6: #0c6a61;
+  --c7: #ecfeff;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--white);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #e3fffb 0%, #c3f5ee 100%);
+  --theme-nav-border: #a9e8df;
+  --theme-nav-fg: #0b4a44;
+  --theme-nav-muted: #4d8f86;
+  --theme-nav-hover-bg: rgba(12, 123, 112, 0.12);
+  --theme-nav-active-bg: #0c7b70;
   --theme-nav-active-fg: #ffffff;
-  --primary: #cf7d31;
-  --primary-dark: #a85e1a;
+  --primary: #0c7b70;
+  --primary-dark: #085850;
   --primary-fg: #ffffff;
-  --background: color-mix(in oklch, #cf7d31 12%, oklch(0.975 0.014 78));
-  --card: color-mix(in oklch, #cf7d31 8%, oklch(0.982 0.012 78));
-  --muted: color-mix(in oklch, #cf7d31 18%, oklch(0.94 0.018 78));
-  --border: color-mix(in oklch, #cf7d31 45%, oklch(0.88 0.02 75));
-  --sidebar: color-mix(in oklch, #cf7d31 18%, oklch(0.96 0.018 78));
+  --background: color-mix(in oklch, #0c7b70 12%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklch, #0c7b70 8%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklch, #0c7b70 18%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklch, #0c7b70 45%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklch, #0c7b70 18%, oklch(0.96 0.018 78));
 }
 
-.app-shell.theme-dark {
-  --theme-nav-bg: linear-gradient(180deg, #24312f 0%, #41514d 100%);
-  --theme-nav-border: rgba(255, 255, 255, 0.18);
-  --theme-nav-fg: #f4faf7;
-  --theme-nav-muted: rgba(244, 250, 247, 0.68);
-  --theme-nav-hover-bg: rgba(255, 255, 255, 0.1);
-  --theme-nav-active-bg: #d7eee4;
-  --theme-nav-active-fg: #24312f;
-  /* global token overrides — full dark mode */
-  --background: #1e2b29;
-  --foreground: #f4faf7;
-  --card: #2a3a37;
-  --card-foreground: #f4faf7;
-  --muted: #2e3e3b;
-  --muted-fg: rgba(244, 250, 247, 0.65);
-  --border: rgba(255, 255, 255, 0.12);
-  --primary: #d7eee4;
-  --primary-dark: #b5d9c9;
-  --primary-fg: #24312f;
-  --sidebar: #253330;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-}
+.app-shell.theme-lagoon {
+  /* 8-färgsskala hämtad från Zaidas grön→blå-mockup. Samma c0/c1/c4-resonemang
+     som Solnedgång ovan. */
+  --c0: #0f3b87;
+  --c1: #154fb2;
+  --c2: #2e84e1;
+  --c3: #3d98c3;
+  --c4: #7cea4b;
+  --c5: #4dada5;
+  --c6: #5dc187;
+  --c7: #8cff2d;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
 
-.app-shell.theme-nature {
-  --theme-nav-bg: linear-gradient(180deg, #e7f5df 0%, #cce8bc 100%);
-  --theme-nav-border: #bfd9b5;
-  --theme-nav-fg: #274b25;
-  --theme-nav-muted: #63845d;
-  --theme-nav-hover-bg: rgba(87, 135, 73, 0.12);
-  --theme-nav-active-bg: #578749;
+  --theme-nav-bg: linear-gradient(180deg, #eafff0 0%, #e7f6ff 100%);
+  --theme-nav-border: #c9e9f5;
+  --theme-nav-fg: #0d3b52;
+  --theme-nav-muted: #4c7d74;
+  --theme-nav-hover-bg: rgba(21, 79, 178, 0.12);
+  --theme-nav-active-bg: #154fb2;
   --theme-nav-active-fg: #ffffff;
-  /* global token overrides */
-  --primary: #578749;
-  --primary-dark: #3f6535;
+  --primary: #154fb2;
+  --primary-dark: #0f3b87;
   --primary-fg: #ffffff;
-  --background: color-mix(in oklch, #578749 12%, oklch(0.975 0.014 78));
-  --card: color-mix(in oklch, #578749 8%, oklch(0.982 0.012 78));
-  --muted: color-mix(in oklch, #578749 18%, oklch(0.94 0.018 78));
-  --border: color-mix(in oklch, #578749 45%, oklch(0.88 0.02 75));
-  --sidebar: color-mix(in oklch, #578749 18%, oklch(0.96 0.018 78));
+  --background: color-mix(in oklch, #154fb2 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklch, #154fb2 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklch, #154fb2 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklch, #154fb2 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklch, #154fb2 16%, oklch(0.96 0.018 78));
 }
 
 /* =========================================================
@@ -608,24 +667,49 @@
   color: oklch(0.24 0.028 50);
 }
 
-.theme-option.theme-focus {
-  background: linear-gradient(135deg, #eef4ff 30%, #d6e5ff 65%, #5f7fd8 100%);
-  color: #23375f;
+.theme-option.theme-sunset {
+  background: linear-gradient(
+    135deg,
+    #ffd400 0%,
+    #f5bc20 14%,
+    #eba540 28%,
+    #e18d60 43%,
+    #d77680 57%,
+    #cd5ea0 71%,
+    #c347c0 86%,
+    #b92fe0 100%
+  );
+  color: #4a1440;
 }
 
-.theme-option.theme-warm {
-  background: linear-gradient(135deg, #fff4e6 30%, #fde2c6 65%, #cf7d31 100%);
-  color: #5a371d;
+.theme-option.theme-turquoise {
+  background: linear-gradient(
+    135deg,
+    #ecfeff 0%,
+    #b6fcf7 14%,
+    #5ff5ee 28%,
+    #12e4db 43%,
+    #0bb6a9 57%,
+    #0c8f84 71%,
+    #0c6a61 86%,
+    #0a4841 100%
+  );
+  color: #063733;
 }
 
-.theme-option.theme-dark {
-  background: linear-gradient(135deg, #24312f 30%, #41514d 70%, #d7eee4 100%);
-  color: #f4faf7;
-}
-
-.theme-option.theme-nature {
-  background: linear-gradient(135deg, #e7f5df 30%, #cce8bc 65%, #578749 100%);
-  color: #274b25;
+.theme-option.theme-lagoon {
+  background: linear-gradient(
+    135deg,
+    #8cff2d 0%,
+    #7cea4b 14%,
+    #6dd669 28%,
+    #5dc187 43%,
+    #4dada5 57%,
+    #3d98c3 71%,
+    #2e84e1 86%,
+    #1e6fff 100%
+  );
+  color: #0d2b4d;
 }
 
 .theme-option.theme-space {

@@ -19,12 +19,6 @@
   background: var(--card);
 }
 
-:global(.dashboard.theme-dark) .card {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #f4faf7;
-}
-
 .header,
 .header div {
   display: flex;

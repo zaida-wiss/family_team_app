@@ -57,11 +57,10 @@ export type DashboardThemeId =
   | "superhero"
   | "animal-park"
   | "clear"
-  | "focus"
-  | "warm"
-  | "dark"
-  | "nature"
-  | "plunge-pool";
+  | "plunge-pool"
+  | "sunset"
+  | "turquoise"
+  | "lagoon";
 
 export type User = {
   id: Id;
