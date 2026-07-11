@@ -186,6 +186,11 @@ test("Bollar i tråd: både en boll tilldelad ett barn och en personlig boll vis
 });
 
 test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns eller redan gått ut", async ({ page }) => {
+  // Relativt "nu" (inte hårdkodade datum) — annars blir todoFuture/todoExpired
+  // tyst fel så fort det verkliga datumet passerar de hårdkodade datumen,
+  // samma fälla som upptäcktes 2026-07-08 i ett annat test i den här filen.
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
   const todoToday = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-today", title: "Idag" };
   const todoNoSchedule = {
     ...PERSONAL_TODO_NO_SUBTASKS,
@@ -199,7 +204,7 @@ test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns el
     ...PERSONAL_TODO_NO_SUBTASKS,
     id: "todo-future",
     title: "Om fem dagar",
-    visibleFrom: "2026-07-10T00:00:00.000Z",
+    visibleFrom: new Date(now + 5 * oneDayMs).toISOString(),
     expiresAt: null
   };
   // Gick ut för fyra dagar sedan — ska INTE visas idag.
@@ -208,7 +213,7 @@ test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns el
     id: "todo-expired",
     title: "För fyra dagar sedan",
     visibleFrom: null,
-    expiresAt: "2026-07-01T00:00:00.000Z"
+    expiresAt: new Date(now - 4 * oneDayMs).toISOString()
   };
 
   await mockAuthAndData(page);
@@ -230,25 +235,29 @@ test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns el
 // lista på allt i framtiden" — ny per-medlem-inställning todoThreadRange,
 // väljs i Inställningar → Utseende, precis som Todos-vy.
 test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos visas", async ({ page }) => {
+  // Relativt "nu" (inte hårdkodade datum) — samma fälla som upptäcktes
+  // 2026-07-08 i ett annat test i den här filen.
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
   const todoWeek = {
     ...PERSONAL_TODO_NO_SUBTASKS,
     id: "todo-week",
     title: "Om fem dagar",
-    visibleFrom: "2026-07-11T00:00:00.000Z",
+    visibleFrom: new Date(now + 5 * oneDayMs).toISOString(),
     expiresAt: null
   };
   const todoMonth = {
     ...PERSONAL_TODO_NO_SUBTASKS,
     id: "todo-month",
     title: "Om tjugo dagar",
-    visibleFrom: "2026-07-26T00:00:00.000Z",
+    visibleFrom: new Date(now + 20 * oneDayMs).toISOString(),
     expiresAt: null
   };
   const todoFarFuture = {
     ...PERSONAL_TODO_NO_SUBTASKS,
     id: "todo-far-future",
     title: "Om hundra dagar",
-    visibleFrom: "2026-10-14T00:00:00.000Z",
+    visibleFrom: new Date(now + 100 * oneDayMs).toISOString(),
     expiresAt: null
   };
   const todoExpired = {
@@ -256,7 +265,7 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
     id: "todo-expired-range",
     title: "Gick ut igår",
     visibleFrom: null,
-    expiresAt: "2026-07-05T00:00:00.000Z"
+    expiresAt: new Date(now - oneDayMs).toISOString()
   };
 
   await mockAuthAndData(page);
