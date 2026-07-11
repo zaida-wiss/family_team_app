@@ -198,17 +198,26 @@
   --sidebar: color-mix(in oklab, #b81fb0 16%, oklch(0.96 0.018 78));
 
   /* Zaidas önskemål 2026-07-11: gradient i sidbakgrunden istället för Klar/
-     Solnedgång/Turkos/Laguns platta ton. Skriver den literala background-
-     egenskapen direkt (inte --background-token, som måste förbli en enfärgad
-     <color> — CalendarView.css/CalendarEventModal.css/CalendarMonthGrid.css
-     blandar in den i color-mix() på tre ställen och skulle tappa hela
-     deklarationen om den blev en gradient). Två mjuka radiella glöd
-     (grön/magenta, temats bägge ändpunkter) ovanpå --background,
-     två klasser vinner över .app-shell { background: var(--background) }. */
-  background:
+     Solnedgång/Turkos/Laguns platta ton. Egen --orchid-bg-token (inte
+     --background självt, som måste förbli en enfärgad <color> —
+     CalendarView.css/CalendarEventModal.css/CalendarMonthGrid.css blandar in
+     den i color-mix() på tre ställen och skulle tappa hela deklarationen om
+     den blev en gradient). Två mjuka radiella glöd (grön/magenta, temats
+     bägge ändpunkter) ovanpå --background. */
+  --orchid-bg:
     radial-gradient(circle at 18% 15%, color-mix(in oklab, #8cff2a 20%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, color-mix(in oklab, #b81fb0 20%, transparent) 0%, transparent 50%),
     var(--background);
+  background: var(--orchid-bg);
+}
+
+/* .app-shell-content (grid-/flex-barnet i layout.css) täcker nästan hela
+   ytan med en egen platt background: var(--background) — utan den här
+   regeln syns .app-shell's gradient bara som en smal rand bakom sidonavet.
+   Tre klasser slår layout.css's mediefrågescopade .app-shell-content (1
+   klass) oavsett viewport-bredd. */
+.app-shell.theme-orchid .app-shell-content {
+  background: var(--orchid-bg);
 }
 
 /* Zaidas önskemål 2026-07-11: fryst, upplyst glas-look på modaler i Orkidé-
