@@ -60,7 +60,8 @@ export type DashboardThemeId =
   | "plunge-pool"
   | "sunset"
   | "turquoise"
-  | "lagoon";
+  | "lagoon"
+  | "orchid";
 
 export type User = {
   id: Id;

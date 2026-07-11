@@ -159,6 +159,73 @@
   --sidebar: color-mix(in oklab, #154fb2 16%, oklch(0.96 0.018 78));
 }
 
+.app-shell.theme-orchid {
+  /* 8-färgsskala hämtad från Zaidas grön→magenta mix chart (2026-07-11,
+     9 steg om 12.5%) — samma c0/c1/c4-resonemang som Solnedgång ovan, primary
+     satt till magenta-änden (blomman), c4 till grön-änden (bladen), som
+     Solnedgångs magenta-primary/gul-c4. */
+  --c0: #8e1490;
+  --c1: #b81fb0;
+  --c2: #c06bab;
+  --c3: #bb8285;
+  --c4: #8cff2a;
+  --c5: #cf46c6;
+  --c6: #dd20ea;
+  --c7: #aec24f;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #eafbe0 0%, #fbe4f7 100%);
+  --theme-nav-border: #f0c9ea;
+  --theme-nav-fg: #5c1257;
+  --theme-nav-muted: #8f5a89;
+  --theme-nav-hover-bg: rgba(184, 31, 176, 0.12);
+  --theme-nav-active-bg: #b81fb0;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #b81fb0;
+  --primary-dark: #8e1490;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #b81fb0 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #b81fb0 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #b81fb0 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #b81fb0 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #b81fb0 16%, oklch(0.96 0.018 78));
+
+  /* Zaidas önskemål 2026-07-11: gradient i sidbakgrunden istället för Klar/
+     Solnedgång/Turkos/Laguns platta ton. Skriver den literala background-
+     egenskapen direkt (inte --background-token, som måste förbli en enfärgad
+     <color> — CalendarView.css/CalendarEventModal.css/CalendarMonthGrid.css
+     blandar in den i color-mix() på tre ställen och skulle tappa hela
+     deklarationen om den blev en gradient). Två mjuka radiella glöd
+     (grön/magenta, temats bägge ändpunkter) ovanpå --background,
+     två klasser vinner över .app-shell { background: var(--background) }. */
+  background:
+    radial-gradient(circle at 18% 15%, color-mix(in oklab, #8cff2a 20%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, color-mix(in oklab, #b81fb0 20%, transparent) 0%, transparent 50%),
+    var(--background);
+}
+
+/* Zaidas önskemål 2026-07-11: fryst, upplyst glas-look på modaler i Orkidé-
+   temat. [role="dialog"] är gemensamt för alla modalers innehållsbox sedan
+   ADR-0012 (useModalA11y) — EN regel här istället för att duplicera i varje
+   modals egen CSS-fil (todo-creator-overlay/cal-form-overlay/bm-overlay m.fl.,
+   se ThemePicker/TodoCreatorModal/CalendarEventModal/ChildBanknotesModal…).
+   backdrop-filter stöds inte i CSS-testmiljön (jsdom) men bryter inget —
+   webbläsare utan stöd visar bara card-bakgrunden lite mer transparent. */
+.app-shell.theme-orchid [role="dialog"] {
+  background: color-mix(in oklab, var(--card) 65%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid color-mix(in oklab, var(--white) 45%, transparent);
+  box-shadow: 0 8px 40px color-mix(in oklab, var(--c1) 25%, transparent);
+}
+
 /* =========================================================
    CHILD THEME TOKENS
    8 colors + white/black + contrast text colors
@@ -719,6 +786,21 @@
     #1e6fff 100%
   );
   color: #0d2b4d;
+}
+
+.theme-option.theme-orchid {
+  background: linear-gradient(
+    135deg,
+    #8cff2a 0%,
+    #aec24f 14%,
+    #bb8285 28%,
+    #c06bab 43%,
+    #cf46c6 57%,
+    #dd20ea 71%,
+    #b81fb0 86%,
+    #8e1490 100%
+  );
+  color: #ffffff;
 }
 
 .theme-option.theme-space {

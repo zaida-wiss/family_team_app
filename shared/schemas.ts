@@ -40,7 +40,8 @@ export const DashboardThemeIdSchema = z.enum([
   "plunge-pool",
   "sunset",
   "turquoise",
-  "lagoon"
+  "lagoon",
+  "orchid"
 ]);
 
 export const MemberSchema = z.object({
