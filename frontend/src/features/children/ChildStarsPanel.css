@@ -24,9 +24,9 @@
 
 /* Pokal-knappen till höger om plånboken (2026-07-06) — öppnar Rekord-sidan. */
 .child-records-button {
-  background: #ffb000;
-  color: #7a4a00;
-  border-color: color-mix(in srgb, #7a4a00 40%, transparent);
+  background: var(--c1, #ffb000);
+  color: var(--on-c1, #7a4a00);
+  border-color: color-mix(in srgb, var(--on-c1, #7a4a00) 40%, transparent);
 }
 
 .child-stars-panel {

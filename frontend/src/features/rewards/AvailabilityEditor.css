@@ -101,6 +101,6 @@
 }
 
 .availability-editor__add-interval:hover {
-  border-color: var(--accent, #a855f7);
-  color: var(--accent, #a855f7);
+  border-color: var(--primary);
+  color: var(--primary);
 }

@@ -54,8 +54,8 @@
   place-items: center;
   border: none;
   border-radius: 50%;
-  background: #ffb000;
-  color: #7a4a00;
+  background: var(--c1, #ffb000);
+  color: var(--on-c1, #7a4a00);
   cursor: pointer;
 }
 

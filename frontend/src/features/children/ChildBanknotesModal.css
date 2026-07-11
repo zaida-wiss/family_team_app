@@ -632,16 +632,16 @@
 }
 
 .bm-wish-zone--hot {
-  background: color-mix(in srgb, #a855f7 15%, transparent);
-  border-color: #a855f7;
+  background: color-mix(in srgb, var(--c1, #a855f7) 15%, transparent);
+  border-color: var(--c1, #a855f7);
   border-style: solid;
   transform: scale(1.02);
 }
 
 .bm-wish-zone--filled {
   border-style: solid;
-  border-color: color-mix(in srgb, #a855f7 50%, var(--border));
-  background: color-mix(in srgb, #a855f7 6%, transparent);
+  border-color: color-mix(in srgb, var(--c1, #a855f7) 50%, var(--border));
+  background: color-mix(in srgb, var(--c1, #a855f7) 6%, transparent);
   justify-content: flex-start;
 }
 
@@ -671,7 +671,7 @@
 .bm-wish-total {
   font-size: 0.82rem;
   font-weight: 900;
-  color: #a855f7;
+  color: var(--c1, #a855f7);
 }
 
 .bm-wish-clear {
@@ -716,14 +716,14 @@
 }
 
 .bm-wish-add-btn:not(:disabled):hover {
-  border-color: #a855f7;
-  background: color-mix(in srgb, #a855f7 6%, transparent);
+  border-color: var(--c1, #a855f7);
+  background: color-mix(in srgb, var(--c1, #a855f7) 6%, transparent);
 }
 
 .bm-wish-input {
   flex: 1;
   padding: 9px 12px;
-  border: 1.5px solid #a855f7;
+  border: 1.5px solid var(--c1, #a855f7);
   border-radius: 10px;
   background: var(--card);
   color: var(--foreground);
@@ -735,8 +735,8 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 2px solid #a855f7;
-  background: color-mix(in srgb, #a855f7 12%, transparent);
+  border: 2px solid var(--c1, #a855f7);
+  background: color-mix(in srgb, var(--c1, #a855f7) 12%, transparent);
   font-size: 1.3rem;
   cursor: pointer;
   display: grid;
@@ -751,6 +751,6 @@
 }
 
 .bm-wish-submit-btn:not(:disabled):hover {
-  background: color-mix(in srgb, #a855f7 22%, transparent);
+  background: color-mix(in srgb, var(--c1, #a855f7) 22%, transparent);
   transform: scale(1.08);
 }

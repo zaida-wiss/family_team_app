@@ -15,11 +15,19 @@
   --secondary-fg: oklch(0.3 0.04 50);
   --muted: oklch(0.94 0.018 78);
   --muted-fg: oklch(0.5 0.025 60);
-  --accent: oklch(0.72 0.13 45);
   --border: oklch(0.88 0.02 75);
   --sidebar: oklch(0.96 0.018 78);
   --sidebar-border: oklch(0.88 0.02 75);
   --destructive: oklch(0.6 0.2 25);
+
+  /* Alias-tokens — flera komponenter (belöningsbutik, kalender m.fl.) refererar
+     dessa namn men de saknades helt, så deras var()-fallback (hårdkodad grå
+     hex) användes alltid oavsett tema. Pekar på redan existerande tokens
+     istället för att införa nya färgvärden. */
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-fg);
+  --bg-hover: var(--muted);
+  --bg-secondary: var(--muted);
 
   --cosmic-cobalt-square-0: #362783;
   --cosmic-cobalt-square-25: #832746;

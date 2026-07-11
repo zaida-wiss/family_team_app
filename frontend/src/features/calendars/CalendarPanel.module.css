@@ -154,13 +154,13 @@
 
 .categoryButtonOn {
   opacity: 1;
-  border-color: var(--accent, #2f7d6d);
-  background: color-mix(in srgb, var(--accent, #2f7d6d) 10%, transparent);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .categoryButtonPartial {
   opacity: 0.8;
-  border-color: var(--accent, #2f7d6d);
+  border-color: var(--primary);
   border-style: dashed;
 }
 

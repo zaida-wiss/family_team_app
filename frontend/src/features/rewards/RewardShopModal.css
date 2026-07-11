@@ -60,7 +60,7 @@
 .shop-wallet-denom[role="button"]:focus-visible,
 .reward-shop-modal__mode-btn:focus-visible,
 .reward-shop-card__claim-btn:focus-visible {
-  outline: 3px solid #a855f7;
+  outline: 3px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -92,7 +92,7 @@
 }
 
 .reward-shop-modal__mode-btn--active {
-  background: #a855f7;
+  background: var(--primary);
   color: #fff;
 }
 
@@ -108,9 +108,9 @@
   min-width: 44px;
   padding: 6px 14px;
   margin-top: 4px;
-  border: 2px solid #a855f7;
+  border: 2px solid var(--primary);
   border-radius: 10px;
-  background: #a855f7;
+  background: var(--primary);
   color: #fff;
   font-weight: 700;
   font-size: 0.8rem;
@@ -289,10 +289,10 @@
 }
 
 .reward-shop-card--drag-target {
-  border-color: #a855f7;
-  background: color-mix(in srgb, #a855f7 10%, var(--bg-secondary, #f8f8f8));
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-secondary));
   transform: scale(1.04);
-  box-shadow: 0 0 0 3px color-mix(in srgb, #a855f7 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 /* Grön flash vid köp — ::before opacity är composited (GPU), ingen layout/paint */
