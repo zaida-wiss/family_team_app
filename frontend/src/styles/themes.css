@@ -235,6 +235,22 @@
   box-shadow: 0 8px 40px color-mix(in oklab, var(--c1) 25%, transparent);
 }
 
+/* Zaidas önskemål 2026-07-11: kolumnbakgrunden bakom todo-bollarna i tråd-
+   vyn ska vara genomskinlig/svagt frostad i Orkidé, så gradient-bakgrunden
+   syns igenom — INTE helt transparent (ParentTodoThreadView.css:s
+   .todo-thread-regel dokumenterar varför den blev ogenomskinlig 2026-07-08:
+   utan NÅGON bakgrund syns bollarna genom den fasta (sticky) rubriken när de
+   scrollar bakom den). Frostat glas löser båda: gradienten skiner igenom,
+   men rubriken har fortfarande tillräcklig egen yta att fästa mot.
+   .todo-thread__category-menu (popup-menyn) berörs INTE — ska vara
+   fullt läsbar, inte en del av bakgrunden bakom bollarna. */
+.app-shell.theme-orchid .todo-thread,
+.app-shell.theme-orchid .todo-thread__header {
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+
 /* =========================================================
    CHILD THEME TOKENS
    8 colors + white/black + contrast text colors
