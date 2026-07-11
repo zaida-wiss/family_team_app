@@ -61,7 +61,8 @@ export type DashboardThemeId =
   | "sunset"
   | "turquoise"
   | "lagoon"
-  | "orchid";
+  | "orchid"
+  | "dusk";
 
 export type User = {
   id: Id;

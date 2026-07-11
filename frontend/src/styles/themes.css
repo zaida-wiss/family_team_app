@@ -198,36 +198,90 @@
   --sidebar: color-mix(in oklab, #b81fb0 16%, oklch(0.96 0.018 78));
 
   /* Zaidas önskemål 2026-07-11: gradient i sidbakgrunden istället för Klar/
-     Solnedgång/Turkos/Laguns platta ton. Egen --orchid-bg-token (inte
-     --background självt, som måste förbli en enfärgad <color> —
+     Solnedgång/Turkos/Laguns platta ton. Egen --theme-page-gradient-token
+     (inte --background självt, som måste förbli en enfärgad <color> —
      CalendarView.css/CalendarEventModal.css/CalendarMonthGrid.css blandar in
      den i color-mix() på tre ställen och skulle tappa hela deklarationen om
      den blev en gradient). Två mjuka radiella glöd (grön/magenta, temats
-     bägge ändpunkter) ovanpå --background. */
-  --orchid-bg:
+     bägge ändpunkter) ovanpå --background. Delad token-namn (inte
+     --orchid-bg) så "glas-temana"-reglerna nedan kan vara gemensamma för
+     Orkidé/Skymning/framtida tillskott istället för dupliceras per tema. */
+  --theme-page-gradient:
     radial-gradient(circle at 18% 15%, color-mix(in oklab, #8cff2a 20%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, color-mix(in oklab, #b81fb0 20%, transparent) 0%, transparent 50%),
     var(--background);
-  background: var(--orchid-bg);
+  background: var(--theme-page-gradient);
+}
+
+.app-shell.theme-dusk {
+  /* 8-färgsskala hämtad från Zaidas gul→lila mix chart (2026-07-11, 9 steg om
+     12.5%) — samma resonemang som Orkidé ovan, primary satt till den mättade
+     lila änden (skymningshimlen), c4 till den klargula änden (solen/
+     dagsljuset). */
+  --c0: #4d1099;
+  --c1: #7a1fd6;
+  --c2: #b06aa8;
+  --c3: #c17e84;
+  --c4: #f9e814;
+  --c5: #9c4dc4;
+  --c6: #8a2fe0;
+  --c7: #d4b93a;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #fdf6d0 0%, #f3e0fb 100%);
+  --theme-nav-border: #e6cdf5;
+  --theme-nav-fg: #4a1580;
+  --theme-nav-muted: #8a6a9e;
+  --theme-nav-hover-bg: rgba(122, 31, 214, 0.12);
+  --theme-nav-active-bg: #7a1fd6;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #7a1fd6;
+  --primary-dark: #4d1099;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #7a1fd6 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #7a1fd6 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #7a1fd6 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #7a1fd6 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #7a1fd6 16%, oklch(0.96 0.018 78));
+
+  /* Samma gradient-bakgrund-mönster som Orkidé (se kommentar ovan) — gul/lila
+     glöd istället för grön/magenta. */
+  --theme-page-gradient:
+    radial-gradient(circle at 18% 15%, color-mix(in oklab, #f9e814 20%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, color-mix(in oklab, #7a1fd6 20%, transparent) 0%, transparent 50%),
+    var(--background);
+  background: var(--theme-page-gradient);
 }
 
 /* .app-shell-content (grid-/flex-barnet i layout.css) täcker nästan hela
    ytan med en egen platt background: var(--background) — utan den här
    regeln syns .app-shell's gradient bara som en smal rand bakom sidonavet.
    Tre klasser slår layout.css's mediefrågescopade .app-shell-content (1
-   klass) oavsett viewport-bredd. */
-.app-shell.theme-orchid .app-shell-content {
-  background: var(--orchid-bg);
+   klass) oavsett viewport-bredd. Gäller alla "glas-teman" (Orkidé/Skymning)
+   — lägg till fler kommaseparerade selektorer här om ett nytt glas-tema
+   tillkommer istället för att duplicera hela regelblocket. */
+.app-shell.theme-orchid .app-shell-content,
+.app-shell.theme-dusk .app-shell-content {
+  background: var(--theme-page-gradient);
 }
 
-/* Zaidas önskemål 2026-07-11: fryst, upplyst glas-look på modaler i Orkidé-
-   temat. [role="dialog"] är gemensamt för alla modalers innehållsbox sedan
-   ADR-0012 (useModalA11y) — EN regel här istället för att duplicera i varje
-   modals egen CSS-fil (todo-creator-overlay/cal-form-overlay/bm-overlay m.fl.,
-   se ThemePicker/TodoCreatorModal/CalendarEventModal/ChildBanknotesModal…).
-   backdrop-filter stöds inte i CSS-testmiljön (jsdom) men bryter inget —
-   webbläsare utan stöd visar bara card-bakgrunden lite mer transparent. */
-.app-shell.theme-orchid [role="dialog"] {
+/* Zaidas önskemål 2026-07-11: fryst, upplyst glas-look på modaler i
+   glas-temana. [role="dialog"] är gemensamt för alla modalers innehållsbox
+   sedan ADR-0012 (useModalA11y) — EN regel här istället för att duplicera i
+   varje modals egen CSS-fil (todo-creator-overlay/cal-form-overlay/
+   bm-overlay m.fl., se ThemePicker/TodoCreatorModal/CalendarEventModal/
+   ChildBanknotesModal…). backdrop-filter stöds inte i CSS-testmiljön (jsdom)
+   men bryter inget — webbläsare utan stöd visar bara card-bakgrunden lite
+   mer transparent. */
+.app-shell.theme-orchid [role="dialog"],
+.app-shell.theme-dusk [role="dialog"] {
   background: color-mix(in oklab, var(--card) 65%, transparent);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
@@ -236,8 +290,8 @@
 }
 
 /* Zaidas önskemål 2026-07-11: kolumnbakgrunden bakom todo-bollarna i tråd-
-   vyn ska vara genomskinlig/svagt frostad i Orkidé, så gradient-bakgrunden
-   syns igenom — INTE helt transparent (ParentTodoThreadView.css:s
+   vyn ska vara genomskinlig/svagt frostad i glas-temana, så gradient-
+   bakgrunden syns igenom — INTE helt transparent (ParentTodoThreadView.css:s
    .todo-thread-regel dokumenterar varför den blev ogenomskinlig 2026-07-08:
    utan NÅGON bakgrund syns bollarna genom den fasta (sticky) rubriken när de
    scrollar bakom den). Frostat glas löser båda: gradienten skiner igenom,
@@ -245,7 +299,9 @@
    .todo-thread__category-menu (popup-menyn) berörs INTE — ska vara
    fullt läsbar, inte en del av bakgrunden bakom bollarna. */
 .app-shell.theme-orchid .todo-thread,
-.app-shell.theme-orchid .todo-thread__header {
+.app-shell.theme-orchid .todo-thread__header,
+.app-shell.theme-dusk .todo-thread,
+.app-shell.theme-dusk .todo-thread__header {
   background: color-mix(in oklab, var(--card) 55%, transparent);
   backdrop-filter: blur(10px) saturate(150%);
   -webkit-backdrop-filter: blur(10px) saturate(150%);
@@ -824,6 +880,21 @@
     #dd20ea 71%,
     #b81fb0 86%,
     #8e1490 100%
+  );
+  color: #ffffff;
+}
+
+.theme-option.theme-dusk {
+  background: linear-gradient(
+    135deg,
+    #f9e814 0%,
+    #d4b93a 14%,
+    #c17e84 28%,
+    #b06aa8 43%,
+    #9c4dc4 57%,
+    #8a2fe0 71%,
+    #7a1fd6 86%,
+    #4d1099 100%
   );
   color: #ffffff;
 }

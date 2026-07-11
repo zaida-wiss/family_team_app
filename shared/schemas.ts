@@ -41,7 +41,8 @@ export const DashboardThemeIdSchema = z.enum([
   "sunset",
   "turquoise",
   "lagoon",
-  "orchid"
+  "orchid",
+  "dusk"
 ]);
 
 export const MemberSchema = z.object({

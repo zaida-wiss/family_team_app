@@ -12,6 +12,7 @@ export const dashboardThemes: DashboardTheme[] = [
   { id: "turquoise",        name: "Turkos",         audience: "adult" },
   { id: "lagoon",           name: "Lagun",          audience: "adult" },
   { id: "orchid",           name: "Orkidé",         audience: "adult" },
+  { id: "dusk",             name: "Skymning",       audience: "adult" },
   { id: "space",            name: "Rymd",           audience: "child" },
   { id: "cosmic-cobalt",    name: "Cosmic cobalt",  audience: "child" },
   { id: "lavender-blossom", name: "Lavendelblom",   audience: "child" },
