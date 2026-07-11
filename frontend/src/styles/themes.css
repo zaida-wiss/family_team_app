@@ -37,7 +37,16 @@
 
 
 .app-shell.theme-sunset {
-  /* 8-färgsskala hämtad från Zaidas gula→magenta-mockup. c0/c1 = temats mörka
+  /* --background/--card/--muted/--border/--sidebar blandas "in oklab", inte
+     "in oklch" (2026-07-11-fynd, Zaida upptäckte att Lagun inte kändes
+     temafärgad): oklch tar alltid KORTASTE vägen runt färghjulet — för Laguns
+     blå (hue ~260) råkar den kortaste vägen från bakgrundens gulaktiga
+     bastoner (hue 78) gå via ROSA/magenta, så bakgrunden blev nästan
+     identisk med Solnedgångs. oklab blandar rakt i stället för runt hjulet
+     och undviker detta för alla tre teman (sunset/turquoise oförändrat i
+     praktiken, lagoon blir korrekt blåton). --c0…--c7 (blandas mot rent
+     vitt/svart, ingen konkurrerande hue) berörs inte av samma bugg.
+     8-färgsskala hämtad från Zaidas gula→magenta-mockup. c0/c1 = temats mörka
      primärfärg (måste vara läsbara som gradient-text i t.ex.
      .todos-bubble-header__title), c4 = ljus mellanton (bubblornas basfyllnad
      bakom alltid-svart title-text, se .todo-thread__ball). Inte samma
@@ -69,11 +78,11 @@
   --primary: #d6249f;
   --primary-dark: #a81c7d;
   --primary-fg: #ffffff;
-  --background: color-mix(in oklch, #d6249f 10%, oklch(0.975 0.014 78));
-  --card: color-mix(in oklch, #d6249f 6%, oklch(0.982 0.012 78));
-  --muted: color-mix(in oklch, #d6249f 16%, oklch(0.94 0.018 78));
-  --border: color-mix(in oklch, #d6249f 40%, oklch(0.88 0.02 75));
-  --sidebar: color-mix(in oklch, #d6249f 16%, oklch(0.96 0.018 78));
+  --background: color-mix(in oklab, #d6249f 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #d6249f 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #d6249f 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #d6249f 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #d6249f 16%, oklch(0.96 0.018 78));
 }
 
 .app-shell.theme-turquoise {
@@ -106,11 +115,11 @@
   --primary: #0c7b70;
   --primary-dark: #085850;
   --primary-fg: #ffffff;
-  --background: color-mix(in oklch, #0c7b70 12%, oklch(0.975 0.014 78));
-  --card: color-mix(in oklch, #0c7b70 8%, oklch(0.982 0.012 78));
-  --muted: color-mix(in oklch, #0c7b70 18%, oklch(0.94 0.018 78));
-  --border: color-mix(in oklch, #0c7b70 45%, oklch(0.88 0.02 75));
-  --sidebar: color-mix(in oklch, #0c7b70 18%, oklch(0.96 0.018 78));
+  --background: color-mix(in oklab, #0c7b70 12%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #0c7b70 8%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #0c7b70 18%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #0c7b70 45%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #0c7b70 18%, oklch(0.96 0.018 78));
 }
 
 .app-shell.theme-lagoon {
@@ -143,11 +152,11 @@
   --primary: #154fb2;
   --primary-dark: #0f3b87;
   --primary-fg: #ffffff;
-  --background: color-mix(in oklch, #154fb2 10%, oklch(0.975 0.014 78));
-  --card: color-mix(in oklch, #154fb2 6%, oklch(0.982 0.012 78));
-  --muted: color-mix(in oklch, #154fb2 16%, oklch(0.94 0.018 78));
-  --border: color-mix(in oklch, #154fb2 40%, oklch(0.88 0.02 75));
-  --sidebar: color-mix(in oklch, #154fb2 16%, oklch(0.96 0.018 78));
+  --background: color-mix(in oklab, #154fb2 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #154fb2 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #154fb2 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #154fb2 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #154fb2 16%, oklch(0.96 0.018 78));
 }
 
 /* =========================================================
