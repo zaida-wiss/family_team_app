@@ -14,6 +14,7 @@
 
         "errors-in-console": "off",
         "unused-javascript": "off",
+        "unused-css-rules": "off",
         "lcp-lazy-loaded": "off",
         "prioritize-lcp-image": "off",
         "non-composited-animations": "off"
