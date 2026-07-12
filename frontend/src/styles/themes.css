@@ -196,21 +196,6 @@
   --muted: color-mix(in oklab, #b81fb0 16%, oklch(0.94 0.018 78));
   --border: color-mix(in oklab, #b81fb0 40%, oklch(0.88 0.02 75));
   --sidebar: color-mix(in oklab, #b81fb0 16%, oklch(0.96 0.018 78));
-
-  /* Zaidas önskemål 2026-07-11: gradient i sidbakgrunden istället för Klar/
-     Solnedgång/Turkos/Laguns platta ton. Egen --theme-page-gradient-token
-     (inte --background självt, som måste förbli en enfärgad <color> —
-     CalendarView.css/CalendarEventModal.css/CalendarMonthGrid.css blandar in
-     den i color-mix() på tre ställen och skulle tappa hela deklarationen om
-     den blev en gradient). Två mjuka radiella glöd (grön/magenta, temats
-     bägge ändpunkter) ovanpå --background. Delad token-namn (inte
-     --orchid-bg) så "glas-temana"-reglerna nedan kan vara gemensamma för
-     Orkidé/Skymning/framtida tillskott istället för dupliceras per tema. */
-  --theme-page-gradient:
-    radial-gradient(circle at 18% 15%, color-mix(in oklab, #8cff2a 20%, transparent) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, color-mix(in oklab, #b81fb0 20%, transparent) 0%, transparent 50%),
-    var(--background);
-  background: var(--theme-page-gradient);
 }
 
 .app-shell.theme-dusk {
@@ -250,12 +235,30 @@
   --muted: color-mix(in oklab, #7a1fd6 16%, oklch(0.94 0.018 78));
   --border: color-mix(in oklab, #7a1fd6 40%, oklch(0.88 0.02 75));
   --sidebar: color-mix(in oklab, #7a1fd6 16%, oklch(0.96 0.018 78));
+}
 
-  /* Samma gradient-bakgrund-mönster som Orkidé (se kommentar ovan) — gul/lila
-     glöd istället för grön/magenta. */
+/* Zaidas önskemål 2026-07-12: gradient i sidbakgrunden på ALLA vuxenteman
+   (var tidigare bara Orkidé/Skymning, se historiken nedan) — istället för
+   att skriva en egen hårdkodad --theme-page-gradient per tema räcker EN
+   generisk regel: --c4/--primary är redan temats "båda ändpunkter" för
+   varje tema (se c0/c1/c4-kommentarerna i respektive block ovan), så samma
+   formel återanvänder dem direkt. Klar/Turkos har bara EN egen kulör (deras
+   c4 är bara en ljusare nyans av samma primary, inget mockup-motsatspar) —
+   blir då en mjuk enfärgad glöd istället för tvåfärgad, fortfarande en
+   gradient, inget fel. Egen --theme-page-gradient-token (inte --background
+   självt, som måste förbli en enfärgad <color> —
+   CalendarView.css/CalendarEventModal.css/CalendarMonthGrid.css blandar in
+   den i color-mix() på tre ställen och skulle tappa hela deklarationen om
+   den blev en gradient). */
+.app-shell.theme-clear,
+.app-shell.theme-sunset,
+.app-shell.theme-turquoise,
+.app-shell.theme-lagoon,
+.app-shell.theme-orchid,
+.app-shell.theme-dusk {
   --theme-page-gradient:
-    radial-gradient(circle at 18% 15%, color-mix(in oklab, #f9e814 20%, transparent) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, color-mix(in oklab, #7a1fd6 20%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 18% 15%, color-mix(in oklab, var(--c4) 20%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 50%),
     var(--background);
   background: var(--theme-page-gradient);
 }
@@ -263,10 +266,13 @@
 /* .app-shell-content (grid-/flex-barnet i layout.css) täcker nästan hela
    ytan med en egen platt background: var(--background) — utan den här
    regeln syns .app-shell's gradient bara som en smal rand bakom sidonavet.
-   Tre klasser slår layout.css's mediefrågescopade .app-shell-content (1
-   klass) oavsett viewport-bredd. Gäller alla "glas-teman" (Orkidé/Skymning)
-   — lägg till fler kommaseparerade selektorer här om ett nytt glas-tema
-   tillkommer istället för att duplicera hela regelblocket. */
+   Samma sex selektorer som ovan — lägg till fler kommaseparerade selektorer
+   här om ett nytt vuxentema tillkommer istället för att duplicera hela
+   regelblocket. */
+.app-shell.theme-clear .app-shell-content,
+.app-shell.theme-sunset .app-shell-content,
+.app-shell.theme-turquoise .app-shell-content,
+.app-shell.theme-lagoon .app-shell-content,
 .app-shell.theme-orchid .app-shell-content,
 .app-shell.theme-dusk .app-shell-content {
   background: var(--theme-page-gradient);
