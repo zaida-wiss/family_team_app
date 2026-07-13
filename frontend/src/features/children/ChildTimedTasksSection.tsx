@@ -10,7 +10,7 @@ import { TimedTaskRecordsModal } from "./TimedTaskRecordsModal";
 type Props = {
   timedTasks: TimedTaskWithBest[];
   timerNow: number;
-  onRecordAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onRecordAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
   onListAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
   onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
 };
@@ -97,10 +97,15 @@ export function ChildTimedTasksSection({
     const next = new Map(running);
     if (startedAt !== undefined) {
       const durationMs = Date.now() - startedAt;
+      // Fångas HÄR (inte i useTimedTasksState.ts, som inte vet när
+      // tidtagningen faktiskt stoppades) — den riktiga tidpunkten, så en
+      // offline-köad synk senare (se useTimedTasksState.ts) behåller sin
+      // sanna tid istället för synk-ögonblickets.
+      const achievedAt = new Date().toISOString();
       next.delete(task.id);
       setRunning(next);
       saveRunning(next);
-      onRecordAttempt(task.id, durationMs).then(({ isNewRecord }) => {
+      onRecordAttempt(task.id, durationMs, achievedAt).then(({ isNewRecord }) => {
         if (isNewRecord) {
           setFlashingId(task.id);
           window.setTimeout(() => setFlashingId(null), FLASH_MS);

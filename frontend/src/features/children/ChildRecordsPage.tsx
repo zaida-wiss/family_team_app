@@ -8,7 +8,7 @@ import { ChildTimedTasksSection } from "./ChildTimedTasksSection";
 type Props = {
   themeName: string;
   timedTasks: TimedTaskWithBest[];
-  onRecordAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onRecordAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
   onListAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
   onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
   onBack: () => void;

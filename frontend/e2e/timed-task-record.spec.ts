@@ -342,3 +342,46 @@ test("Barnets Rekord-vy: en pågående tidtagning överlever att man växlar bor
   await page.getByRole("button", { name: "Rekord" }).click();
   await expect(page.getByRole("button", { name: "Stoppa tidtagning för Springa ett varv" })).toBeVisible();
 });
+
+// 2026-07-13, Zaidas önskemål: "tiderna skall sparas i databasen, men om
+// internetuppkoppling saknas så skall det sparas i local storage, som då
+// rensas när data förs över i databasen" — route.abort() simulerar att
+// POST-anropet misslyckas av NÄTVERKSSKÄL (ingen uppkoppling), samma
+// felväg som client.ts:s "Servern är inte nåbar".
+test("Barnets Rekord-vy: köar ett försök i localStorage vid nätverksfel, synkar och rensar kön vid uppkoppling", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [TIMED_TASK] }));
+
+  let shouldFail = true;
+  let syncedDurationMs: number | null = null;
+  await page.route("**/api/timed-tasks/tt-1/attempts", (route) => {
+    if (shouldFail) return route.abort("failed");
+    const body = JSON.parse(route.request().postData() ?? "{}") as { durationMs: number; achievedAt: string };
+    syncedDurationMs = body.durationMs;
+    return route.fulfill({
+      status: 201,
+      json: { id: "ta-1", durationMs: body.durationMs, achievedAt: body.achievedAt, isNewRecord: true },
+    });
+  });
+
+  async function pendingCount() {
+    return page.evaluate(() => {
+      const raw = window.localStorage.getItem("timedTaskPendingAttempts");
+      return raw ? (JSON.parse(raw) as unknown[]).length : 0;
+    });
+  }
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
+  await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
+  await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "Stoppa tidtagning för Springa ett varv" }).click();
+
+  await expect.poll(pendingCount).toBe(1);
+
+  shouldFail = false;
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+
+  await expect.poll(pendingCount).toBe(0);
+  await expect.poll(() => syncedDurationMs).not.toBeNull();
+});

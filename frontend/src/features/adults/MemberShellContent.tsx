@@ -40,7 +40,7 @@ type Props = {
   calendars: Calendar[];
   shoppingLists: ShoppingList[];
   timedTasks: TimedTaskWithBest[];
-  onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onRecordTimedAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
   onListTimedAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
   onDeleteTimedAttempt: (id: Id, attemptId: Id) => Promise<void>;
   canSeeCalendar: boolean;

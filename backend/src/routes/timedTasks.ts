@@ -22,8 +22,8 @@ timedTasksRouter.delete("/:id", async (req, res) => {
 });
 
 timedTasksRouter.post("/:id/attempts", async (req, res) => {
-  const { durationMs } = RecordTimedAttemptBodySchema.parse(req.body);
-  const attempt = await timedTasks.recordAttempt(req.params.id, req.accountId!, req.memberId ?? "", durationMs);
+  const { durationMs, achievedAt } = RecordTimedAttemptBodySchema.parse(req.body);
+  const attempt = await timedTasks.recordAttempt(req.params.id, req.accountId!, req.memberId ?? "", durationMs, achievedAt);
   res.status(201).json(attempt);
 });
 

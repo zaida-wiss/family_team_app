@@ -72,11 +72,18 @@ export async function deleteTimedTask(id: string, accountId: string, memberId: s
 // Barnet mäter tiden klientsidan (Date.now() vid start/stopp) och skickar bara den
 // färdiga varaktigheten hit — inget "pågående försök"-tillstånd på servern som kan
 // bli övergivet om fliken stängs mitt i.
+// achievedAt (2026-07-13, offline-kö-stödet): klienten skickar sin egen
+// tidsstämpel (satt exakt när tidtagningen stoppades), inte servertid —
+// annars skulle ett försök som köades offline och synkades timmar senare
+// felaktigt få synk-ögonblickets tid istället för när det faktiskt hände.
+// Saknas den (t.ex. ett äldre cachat klientbygge) faller vi tillbaka på
+// servertid, oförändrat beteende.
 export async function recordAttempt(
   timedTaskId: string,
   accountId: string,
   memberId: string,
-  durationMs: number
+  durationMs: number,
+  achievedAt?: string
 ) {
   const task = await TimedTaskModel.findOne({ id: timedTaskId, accountId, deletedAt: null });
   if (!task) throw new AppError(404, "Tidtagen uppgift hittades inte");
@@ -89,7 +96,7 @@ export async function recordAttempt(
     timedTaskId,
     memberId,
     durationMs,
-    achievedAt: new Date().toISOString(),
+    achievedAt: achievedAt ?? new Date().toISOString(),
     isNewRecord,
     deletedAt: null,
     deletedBy: null

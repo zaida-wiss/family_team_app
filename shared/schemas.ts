@@ -404,5 +404,13 @@ export const CreateTimedTaskBodySchema = z.object({
 });
 
 export const RecordTimedAttemptBodySchema = z.object({
-  durationMs: z.number().int().min(1)
+  durationMs: z.number().int().min(1),
+  // Valfri (2026-07-13, offline-kö-stödet i useTimedTasksState.ts) —
+  // klienten mäter redan tiden själv (Date.now() vid start/stopp), så den
+  // vet det RIKTIGA ögonblicket ett försök avslutades. Skickas alltid med
+  // numera, men optional() håller schemat bakåtkompatibelt om ett äldre
+  // klientbygge (utan fältet) råkar vara kvar cachat i en webbläsare.
+  // Saknas den faller backend tillbaka på servertid (samma beteende som
+  // innan fältet fanns).
+  achievedAt: z.string().datetime().optional()
 });
