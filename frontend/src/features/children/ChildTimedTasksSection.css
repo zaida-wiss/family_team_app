@@ -36,7 +36,14 @@
   align-items: center;
   column-gap: 10px;
   row-gap: 8px;
-  padding: clamp(8px, 1.6vw, 12px);
+  /* Extra top-padding (2026-07-13, Zaidas fynd: "texten är bakom
+     redigera-knappen") — .child-timed-tasks__edit FLYTER (position:
+     absolute) ovanpå kortet, reserverar ingen egen grid-yta, så en lång
+     titel (grid-column:2, sträcker sig hela vägen till kortets högerkant)
+     kunde hamna rakt under den. Genom att ge HELA rad 1 (ikon+titel) mer
+     luft ovanför hamnar allt innehåll nedanför knappens 6–38px-zon
+     istället för bakom den, oavsett titellängd. */
+  padding: clamp(34px, 8vw, 40px) clamp(8px, 1.6vw, 12px) clamp(8px, 1.6vw, 12px);
   border: 2px solid color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff));
   border-radius: clamp(12px, 3vw, 20px);
   background:
@@ -48,13 +55,28 @@
   overflow: hidden;
 }
 
-/* Grön flash vid nytt personbästa — samma mönster som RewardShopModal.css:s
-   shop-card-blink (::before, composited opacity, ingen layout/paint). */
+/* Grön flash vid nytt personbästa (2026-07-13, Zaidas önskemål: "blinka
+   grönt tre gånger... 1 sekund, en halv sekund utan grönt, en sekund
+   grönt, en halv inte grönt, slutligen 1 sekund grönt") — tre 1s-pulser
+   avgränsade av 0,5s paus, totalt 4s. Varje "snap" (t.ex. 25%→25.1%) är två
+   keyframes 0,1 procentenheter isär (4s × 0,1% ≈ 4ms) istället för en
+   gradvis tOning, så det blir ett skarpt blink och inte en mjuk puls. Ingen
+   "forwards" — animationen ska sluta HELT avstängd (basregelns opacity:0),
+   inte fastna på grönt efter sista blinket. Samma ::before-mönster som
+   RewardShopModal.css:s shop-card-blink (composited opacity, ingen
+   layout/paint). */
 @keyframes child-timed-tasks-blink {
-  0%   { opacity: 0; }
-  25%  { opacity: 0.35; }
-  60%  { opacity: 0.35; }
-  100% { opacity: 0; }
+  0%     { opacity: 0; }
+  0.1%   { opacity: 0.35; }
+  25%    { opacity: 0.35; }
+  25.1%  { opacity: 0; }
+  37.5%  { opacity: 0; }
+  37.6%  { opacity: 0.35; }
+  62.5%  { opacity: 0.35; }
+  62.6%  { opacity: 0; }
+  75%    { opacity: 0; }
+  75.1%  { opacity: 0.35; }
+  100%   { opacity: 0.35; }
 }
 
 .child-timed-tasks__card::before {
@@ -68,7 +90,7 @@
 }
 
 .child-timed-tasks__card--flash::before {
-  animation: child-timed-tasks-blink 0.65s ease forwards;
+  animation: child-timed-tasks-blink 4s linear;
 }
 
 .child-timed-tasks__icon-circle {
@@ -159,31 +181,14 @@
   background: #e74c3c;
 }
 
-.child-timed-tasks__medal {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 2;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: var(--c1, #ffb000);
-  color: var(--on-c1, #7a4a00);
-  cursor: pointer;
-}
-
-/* Redigera-knapp (penna, 2026-07-13) — bredvid medaljen (INTE motsatt hörn:
-   det hörnet upptas redan av .child-timed-tasks__icon-circle, en badge där
-   hade lagt sig ovanpå ikonen), samma 32px-skala som medaljen så de får
-   plats sida vid sida utan att krocka med titel-texten under. */
+/* Redigera-knapp (penna, 2026-07-13) — enda vägen till rekord-info sedan
+   medaljens inline-utfällda detaljkort togs bort helt (Zaidas beslut: "det
+   ska inte stå någonting om rekordet utanför modalen"). Nu ensam i hörnet
+   (var tidigare bredvid medaljen) så flyttad till right:6px. */
 .child-timed-tasks__edit {
   position: absolute;
   top: 6px;
-  right: 44px;
+  right: 6px;
   z-index: 2;
   width: 32px;
   height: 32px;
@@ -197,18 +202,8 @@
   cursor: pointer;
 }
 
-.child-timed-tasks__medal:focus-visible,
 .child-timed-tasks__edit:focus-visible,
 .child-timed-tasks__toggle-btn:focus-visible {
   outline: 3px solid var(--c1, #6366f1);
   outline-offset: 2px;
-}
-
-.child-timed-tasks__detail {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  font-size: 0.78rem;
-  color: var(--muted-fg);
-  padding: 2px 6px;
 }

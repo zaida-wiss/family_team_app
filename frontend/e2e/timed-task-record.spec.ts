@@ -113,7 +113,6 @@ test("Barnets Rekord-vy: start/stopp spelar in ett försök", async ({ page }) =
   // pokal-knappen till vänster om profilbilden — inte längre alltid synlig.
   await page.getByRole("button", { name: "Rekord" }).click();
   await expect(page.getByText("Springa ett varv")).toBeVisible();
-  await expect(page.getByText("Inget rekord än")).toBeVisible();
 
   await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
   await page.waitForTimeout(1200);
@@ -197,7 +196,11 @@ test("Barnets Rekord-vy: skickar timed-task-started/completed till analytics", a
   await expect.poll(() => trackedEvents).toContain("timed-task-completed");
 });
 
-test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", async ({ page }) => {
+// 2026-07-13, Zaidas beslut: "det ska inte stå någonting om rekordet
+// utanför modalen... för att få information om tider, försök och datum
+// ska man trycka på ändra" — den tidigare medalj-knappen (inline-utfällt
+// detaljkort direkt på kortet) togs bort helt, pennan är nu enda vägen in.
+test("Barnets Rekord-vy: ingen rekord-info syns på kortet, bara via redigera-knappen", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/timed-tasks", (route) => {
     if (route.request().method() === "GET") {
@@ -212,15 +215,22 @@ test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", a
     }
     return route.fulfill({ json: [] });
   });
+  await page.route("**/api/timed-tasks/tt-1/attempts", (route) =>
+    route.fulfill({
+      json: [{ id: "ta-1", timedTaskId: "tt-1", memberId: "mem-child", durationMs: 12000, achievedAt: "2026-06-01T10:00:00.000Z", isNewRecord: true, deletedAt: null, deletedBy: null }],
+    })
+  );
 
   await page.goto("/");
   await page.getByRole("button", { name: "Rekord" }).click();
-  const medalBtn = page.getByRole("button", { name: "Visa rekorddetaljer för Springa ett varv" });
-  await expect(medalBtn).toBeVisible();
 
-  await medalBtn.click();
-  await expect(page.getByText("Antal försök: 4")).toBeVisible();
-  await expect(page.getByText(/Tid: 0:12/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Visa rekorddetaljer för Springa ett varv" })).toHaveCount(0);
+  await expect(page.getByText("Bästa:")).toHaveCount(0);
+  await expect(page.getByText("Antal försök")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Redigera tider för Springa ett varv" }).click();
+  const modal = page.getByRole("dialog", { name: "Springa ett varv" });
+  await expect(modal.locator(".timed-task-records-modal__duration").filter({ hasText: "0:12" })).toBeVisible();
 });
 
 // 2026-07-13, Zaidas önskemål: en redigera-ruta (penna) ska öppna en modal

@@ -1,6 +1,6 @@
 import "./ChildTimedTasksSection.css";
 import { useState } from "react";
-import { Pencil, Play, Square, Trophy } from "lucide-react";
+import { Pencil, Play, Square } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 import { useWakeLock } from "../../hooks/useWakeLock";
@@ -15,7 +15,9 @@ type Props = {
   onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
 };
 
-const FLASH_MS = 650;
+// Måste matcha CSS-animationens totala längd (child-timed-tasks-blink i
+// .css, 2026-07-13: tre 1s gröna blink med 0,5s paus emellan = 4s totalt).
+const FLASH_MS = 4000;
 const RUNNING_STORAGE_KEY = "timedTaskRunning";
 const THEME_ACCENT_COUNT = 8;
 
@@ -31,16 +33,6 @@ function fmtDuration(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("sv-SE", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
 }
 
 // running lagras som en Map (id → startedAt) i localStorage, inte en enda
@@ -87,11 +79,11 @@ export function ChildTimedTasksSection({
 }: Props) {
   const [running, setRunning] = useState<Map<Id, number>>(() => loadRunning());
   const [flashingId, setFlashingId] = useState<Id | null>(null);
-  const [expandedId, setExpandedId] = useState<Id | null>(null);
   // Redigera-modalen (2026-07-13, penna-knappen) — datum/antal försök per
-  // dag, ta bort tider, linjediagram. Egen state (inte samma som
-  // expandedId/trophy-panelen) eftersom det är en full modal, inte ett
-  // inline-utfällt kort.
+  // dag, ta bort tider, linjediagram. Enda stället rekord-info visas
+  // (2026-07-13, Zaidas beslut: "det ska inte stå någonting om rekordet
+  // utanför modalen" — den tidigare medalj-knappen med ett inline-utfällt
+  // detaljkort togs bort helt, se historiken i git).
   const [editingTask, setEditingTask] = useState<TimedTaskWithBest | null>(null);
 
   useWakeLock(running.size > 0);
@@ -133,8 +125,6 @@ export function ChildTimedTasksSection({
           // Date.now() man startade på precis efter en tryckning, vilket annars
           // visar en kort, förvirrande negativ tid ("-1:-1") tills nästa tick.
           const elapsed = isRunning ? Math.max(0, timerNow - startedAt) : null;
-          const hasRecord = task.bestDurationMs !== null;
-          const isExpanded = expandedId === task.id;
 
           return (
             <div key={task.id} className="child-timed-tasks__cell">
@@ -146,39 +136,22 @@ export function ChildTimedTasksSection({
                 }
                 style={{ "--task-accent": accentColorForIndex(index) } as React.CSSProperties}
               >
-                {hasRecord && (
-                  <button
-                    className="child-timed-tasks__medal"
-                    type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : task.id)}
-                    aria-label={`Visa rekorddetaljer för ${task.title}`}
-                    aria-expanded={isExpanded}
-                  >
-                    <Trophy size={16} />
-                  </button>
-                )}
-                {hasRecord && (
-                  <button
-                    className="child-timed-tasks__edit"
-                    type="button"
-                    onClick={() => setEditingTask(task)}
-                    aria-label={`Redigera tider för ${task.title}`}
-                  >
-                    <Pencil size={16} />
-                  </button>
-                )}
+                <button
+                  className="child-timed-tasks__edit"
+                  type="button"
+                  onClick={() => setEditingTask(task)}
+                  aria-label={`Redigera tider för ${task.title}`}
+                >
+                  <Pencil size={16} />
+                </button>
                 <div className="child-timed-tasks__icon-circle">
                   <span className="child-timed-tasks__icon">{task.symbol ?? "🏃"}</span>
                 </div>
                 <span className="child-timed-tasks__copy">
                   <strong className="child-timed-tasks__name">{task.title}</strong>
-                  <small className="child-timed-tasks__status">
-                    {isRunning
-                      ? fmtDuration(elapsed ?? 0)
-                      : hasRecord
-                        ? `Bästa: ${fmtDuration(task.bestDurationMs!)}`
-                        : "Inget rekord än"}
-                  </small>
+                  {isRunning && (
+                    <small className="child-timed-tasks__status">{fmtDuration(elapsed ?? 0)}</small>
+                  )}
                 </span>
                 <button
                   type="button"
@@ -192,13 +165,6 @@ export function ChildTimedTasksSection({
                   {isRunning ? "Klar" : "Starta"}
                 </button>
               </div>
-              {isExpanded && hasRecord && (
-                <div className="child-timed-tasks__detail">
-                  <span>🗓 Rekord satt: {fmtDate(task.bestAchievedAt!)}</span>
-                  <span>⏱ Tid: {fmtDuration(task.bestDurationMs!)}</span>
-                  <span>🔁 Antal försök: {task.attemptCount}</span>
-                </div>
-              )}
             </div>
           );
         })}
