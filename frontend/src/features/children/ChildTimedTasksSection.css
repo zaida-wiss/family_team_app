@@ -111,12 +111,27 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: clamp(0.78rem, 2.4vw, 1rem);
+  /* 2026-07-13, Zaidas fynd: "textfärgen är för ljus, den ska följa temat
+     och ha en bra kontrast" — texten saknade en egen färg och ärvde en
+     ljus färg avsedd för Dashboardens mörka bakgrund, som smälte in i
+     kortets egna ljusa/pastelliga gradient (--card blandat med
+     --task-accent). Samma lösning som ChildTasks.css:s uppdragskort
+     (.child-task-name), vars kort har exakt samma bakgrundsformel: svart
+     text, en tema-token (inte en hårdkodad hex) som redan är beprövad mot
+     den här specifika bakgrundstypen oavsett vilket tema som är aktivt. */
+  color: var(--black, #000);
 }
 
 .child-timed-tasks__status {
   font-variant-numeric: tabular-nums;
-  color: var(--muted-fg);
   font-size: clamp(0.68rem, 2vw, 0.85rem);
+  /* Samma resonemang som .child-timed-tasks__name ovan — var(--muted-fg)
+     är tonad för den mörka Dashboard-bakgrunden, inte kortets egen ljusa
+     gradient. En något genomskinlig svart ger fortfarande en tydlig
+     "sekundär text"-känsla (skiljer sig från den fetare titeln) men med
+     garanterad kontrast mot bakgrunden, till skillnad från en tema-baserad
+     ljus ton. */
+  color: color-mix(in srgb, var(--black, #000) 65%, transparent);
 }
 
 /* Fullbredds start/stopp-knapp istället för en liten 44px-cirkel (2026-07-13,
