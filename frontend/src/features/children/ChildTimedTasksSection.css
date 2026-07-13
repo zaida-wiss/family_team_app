@@ -181,11 +181,12 @@
   background: #e74c3c;
 }
 
-/* Redigera-knapp (penna, 2026-07-13) — enda vägen till rekord-info sedan
-   medaljens inline-utfällda detaljkort togs bort helt (Zaidas beslut: "det
-   ska inte stå någonting om rekordet utanför modalen"). Nu ensam i hörnet
-   (var tidigare bredvid medaljen) så flyttad till right:6px. */
-.child-timed-tasks__edit {
+/* Medalj-knapp (2026-07-13) — enda vägen till rekord-info (Zaidas beslut:
+   "det ska inte stå någonting om rekordet utanför modalen"). Provades
+   först som en penn-ikon ("Redigera"), men Zaida ville hellre trycka på
+   medaljen/pokalen för att komma till samma vy (följa utvecklingen +
+   redigera). Samma position/storlek som innan, bara ikon+namn ändrat. */
+.child-timed-tasks__medal {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -197,12 +198,12 @@
   place-items: center;
   border: none;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--card) 70%, transparent);
-  color: var(--foreground);
+  background: var(--c1, #ffb000);
+  color: var(--on-c1, #7a4a00);
   cursor: pointer;
 }
 
-.child-timed-tasks__edit:focus-visible,
+.child-timed-tasks__medal:focus-visible,
 .child-timed-tasks__toggle-btn:focus-visible {
   outline: 3px solid var(--c1, #6366f1);
   outline-offset: 2px;

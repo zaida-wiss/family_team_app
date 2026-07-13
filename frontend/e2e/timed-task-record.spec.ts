@@ -198,9 +198,11 @@ test("Barnets Rekord-vy: skickar timed-task-started/completed till analytics", a
 
 // 2026-07-13, Zaidas beslut: "det ska inte stå någonting om rekordet
 // utanför modalen... för att få information om tider, försök och datum
-// ska man trycka på ändra" — den tidigare medalj-knappen (inline-utfällt
-// detaljkort direkt på kortet) togs bort helt, pennan är nu enda vägen in.
-test("Barnets Rekord-vy: ingen rekord-info syns på kortet, bara via redigera-knappen", async ({ page }) => {
+// ska man trycka på ändra" — det inline-utfällda detaljkortet direkt på
+// kortet togs bort helt. Provades sedan som en penn-ikon ("Redigera"), men
+// Zaida ville hellre trycka på medaljen/pokalen för att komma till samma
+// vy (följa utvecklingen + redigera) — se medalj-knappen nedan.
+test("Barnets Rekord-vy: ingen rekord-info syns på kortet, bara via medalj-knappen", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/timed-tasks", (route) => {
     if (route.request().method() === "GET") {
@@ -224,11 +226,10 @@ test("Barnets Rekord-vy: ingen rekord-info syns på kortet, bara via redigera-kn
   await page.goto("/");
   await page.getByRole("button", { name: "Rekord" }).click();
 
-  await expect(page.getByRole("button", { name: "Visa rekorddetaljer för Springa ett varv" })).toHaveCount(0);
   await expect(page.getByText("Bästa:")).toHaveCount(0);
   await expect(page.getByText("Antal försök")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Redigera tider för Springa ett varv" }).click();
+  await page.getByRole("button", { name: "Visa rekord för Springa ett varv" }).click();
   const modal = page.getByRole("dialog", { name: "Springa ett varv" });
   await expect(modal.locator(".timed-task-records-modal__duration").filter({ hasText: "0:12" })).toBeVisible();
 });
@@ -257,7 +258,7 @@ test("Barnets Rekord-vy: pennan öppnar en redigera-modal med försök grupperad
 
   await page.goto("/");
   await page.getByRole("button", { name: "Rekord" }).click();
-  await page.getByRole("button", { name: "Redigera tider för Springa ett varv" }).click();
+  await page.getByRole("button", { name: "Visa rekord för Springa ett varv" }).click();
 
   const modal = page.getByRole("dialog", { name: "Springa ett varv" });
   await expect(modal.getByText("(2 försök)")).toBeVisible();
@@ -296,7 +297,7 @@ test("Barnets Rekord-vy: tar bort en tid i redigera-modalen", async ({ page }) =
 
   await page.goto("/");
   await page.getByRole("button", { name: "Rekord" }).click();
-  await page.getByRole("button", { name: "Redigera tider för Springa ett varv" }).click();
+  await page.getByRole("button", { name: "Visa rekord för Springa ett varv" }).click();
 
   const modal = page.getByRole("dialog", { name: "Springa ett varv" });
   const durations = modal.locator(".timed-task-records-modal__duration");

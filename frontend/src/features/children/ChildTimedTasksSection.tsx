@@ -1,6 +1,6 @@
 import "./ChildTimedTasksSection.css";
 import { useState } from "react";
-import { Pencil, Play, Square } from "lucide-react";
+import { Play, Square, Trophy } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 import { useWakeLock } from "../../hooks/useWakeLock";
@@ -79,11 +79,11 @@ export function ChildTimedTasksSection({
 }: Props) {
   const [running, setRunning] = useState<Map<Id, number>>(() => loadRunning());
   const [flashingId, setFlashingId] = useState<Id | null>(null);
-  // Redigera-modalen (2026-07-13, penna-knappen) — datum/antal försök per
-  // dag, ta bort tider, linjediagram. Enda stället rekord-info visas
-  // (2026-07-13, Zaidas beslut: "det ska inte stå någonting om rekordet
-  // utanför modalen" — den tidigare medalj-knappen med ett inline-utfällt
-  // detaljkort togs bort helt, se historiken i git).
+  // Rekord-modalen (2026-07-13) — datum/antal försök per dag, ta bort
+  // tider, linjediagram. Enda stället rekord-info visas (Zaidas beslut:
+  // "det ska inte stå någonting om rekordet utanför modalen"). Öppnas via
+  // medalj-knappen — provades först som en separat penn-ikon, men Zaida
+  // ville hellre ha tillbaka medaljen/pokalen som knapp, samma modal bakom.
   const [editingTask, setEditingTask] = useState<TimedTaskWithBest | null>(null);
 
   useWakeLock(running.size > 0);
@@ -137,12 +137,12 @@ export function ChildTimedTasksSection({
                 style={{ "--task-accent": accentColorForIndex(index) } as React.CSSProperties}
               >
                 <button
-                  className="child-timed-tasks__edit"
+                  className="child-timed-tasks__medal"
                   type="button"
                   onClick={() => setEditingTask(task)}
-                  aria-label={`Redigera tider för ${task.title}`}
+                  aria-label={`Visa rekord för ${task.title}`}
                 >
-                  <Pencil size={16} />
+                  <Trophy size={16} />
                 </button>
                 <div className="child-timed-tasks__icon-circle">
                   <span className="child-timed-tasks__icon">{task.symbol ?? "🏃"}</span>
