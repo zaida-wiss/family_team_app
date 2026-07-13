@@ -70,6 +70,24 @@
   padding-top: 2px;
 }
 
+/* Fast (sticky) footer med samlad andel avklarat (2026-07-13, Zaidas
+   önskemål) — samma resonemang som rubriken ovan: sticky mot kolumnens EGNA
+   scroll-behållare (.todo-thread), ogenomskinlig bakgrund så bollar inte
+   syns genom den när de scrollar bakom. */
+.todo-thread__completed-percent {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  width: 100%;
+  margin: 4px 0 0;
+  padding-top: 4px;
+  background: var(--card);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--muted-fg);
+}
+
 /* Kategorinamnets meny (2026-07-05, Zaidas beslut, utökad senare samma dag)
    — "Byt namn", "Lägg till uppgift", "Ladda ner" (CSV av kategorins
    uppgifter), "Göm" eller "Radera". Ersätter den tidigare håll-intryckt (2s)

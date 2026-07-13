@@ -61,6 +61,13 @@ type Thread = {
   // tilldelad" som filterkriterium, mest relevant i Barn-tråden där flera
   // barns uppgifter blandas.
   assignees: { id: Id; name: string }[];
+  // Samlad andel avklarat för kolumnen (2026-07-13, Zaidas önskemål) — andel
+  // av periodens uppgifter (samma tidsspann som resten av tråden) som är
+  // "done" eller "approved". Räknas från allTodos (ofiltrerad status), INTE
+  // thread.todos (bara pending) — annars skulle avklarade uppgifter aldrig
+  // synas i beräkningen eftersom de redan försvunnit ur bollistan.
+  // null = inga uppgifter i perioden alls (visar ingen procent).
+  completedPercent: number | null;
 };
 
 // Varje personlig kategori får en egen accentfärg, kopplad till det AKTIVA
@@ -107,6 +114,15 @@ function uniqueAssignees(todos: Todo[], members: Member[]): { id: Id; name: stri
   return [...seen.entries()]
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name, "sv"));
+}
+
+// Samlad andel avklarat för en tråds kolumn (2026-07-13) — matchTodos ska
+// vara OFILTRERAT på status (till skillnad från thread.todos, som bara
+// visar pending) så done/approved-uppgifter räknas med.
+function computeCompletedPercent(matchTodos: Todo[]): number | null {
+  if (matchTodos.length === 0) return null;
+  const completed = matchTodos.filter((t) => t.status === "done" || t.status === "approved").length;
+  return Math.round((completed / matchTodos.length) * 100);
 }
 
 function sortByEndThenStartTime(todos: Todo[]): Todo[] {
@@ -284,18 +300,27 @@ export function ParentTodoThreadView({
       return baseTodos.filter((t) => t.assignedTo !== null && filter.has(t.assignedTo));
     }
 
+    // Ofiltrerat på status (till skillnad från visibleTodos, som bara är
+    // pending+expired) — underlag för completedPercent, se computeCompletedPercent.
+    const allDueTodos = allTodos.filter((t) => !isRecurringTemplate(t) && isDueWithinRange(t, today, range));
+
     const showChildExpired = showExpiredThreadIds.has(CHILDREN_THREAD_ID);
     const childBaseTodos = visibleTodos.filter(
       (t) =>
         isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
         (t.status !== "expired" || showChildExpired)
     );
+    const childAllTodos = applyAssigneeFilter(
+      CHILDREN_THREAD_ID,
+      allDueTodos.filter((t) => isChildMember(members.find((m) => m.id === t.assignedTo), roles))
+    );
     const childThread: Thread = {
       id: CHILDREN_THREAD_ID,
       label: "Barn",
       deletable: false,
       assignees: uniqueAssignees(childBaseTodos, members),
-      todos: sortByEndThenStartTime(applyAssigneeFilter(CHILDREN_THREAD_ID, childBaseTodos))
+      todos: sortByEndThenStartTime(applyAssigneeFilter(CHILDREN_THREAD_ID, childBaseTodos)),
+      completedPercent: computeCompletedPercent(childAllTodos)
     };
 
     // Kategorier är kontobreda sedan 2026-07-07 (Zaidas beslut — alla vuxna ser
@@ -317,19 +342,29 @@ export function ParentTodoThreadView({
           !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
           (t.status !== "expired" || showExpired)
       );
+      const categoryAllTodos = applyAssigneeFilter(
+        category.id,
+        allDueTodos.filter(
+          (t) =>
+            t.personalCategoryId === category.id &&
+            (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+            !isChildMember(members.find((m) => m.id === t.assignedTo), roles)
+        )
+      );
       return {
         id: category.id,
         label: category.name,
         deletable: true,
         accentColor: accentColorForIndex(index),
         assignees: uniqueAssignees(categoryBaseTodos, members),
-        todos: sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos))
+        todos: sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
+        completedPercent: computeCompletedPercent(categoryAllTodos)
       };
     });
 
     return [childThread, ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters]);
+  }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters]);
 
   // Egen sparad ordning (drag-and-drop, 2026-07-06) — trådar som saknas i
   // listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga ordning.
@@ -722,6 +757,14 @@ export function ParentTodoThreadView({
                 );
               })}
             </ul>
+          )}
+
+          {/* Samlad andel avklarat (2026-07-13, Zaidas önskemål) — periodens
+              (samma tidsspann som resten av tråden) done/approved-uppgifter,
+              se computeCompletedPercent. null = inga uppgifter i perioden
+              alls, visar då ingenting istället för en missvisande "0%". */}
+          {thread.completedPercent !== null && (
+            <p className="todo-thread__completed-percent">{thread.completedPercent}% avklarat</p>
           )}
         </section>
       ))}
