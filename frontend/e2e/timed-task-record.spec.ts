@@ -51,6 +51,13 @@ const TIMED_TASK = {
   attemptCount: 0,
 };
 
+const TIMED_TASK_2 = {
+  ...TIMED_TASK,
+  id: "tt-2",
+  title: "Hoppa rep",
+  symbol: "🤸",
+};
+
 async function mockChildSession(page: Page) {
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD] }));
@@ -214,4 +221,40 @@ test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", a
   await medalBtn.click();
   await expect(page.getByText("Antal försök: 4")).toBeVisible();
   await expect(page.getByText(/Tid: 0:12/)).toBeVisible();
+});
+
+// 2026-07-13, Zaidas fynd: "jag behöver kunna starta flera tidtagningar
+// samtidigt utan att den föregående stoppas" — running var tidigare en enda
+// {id, startedAt}-variabel, så att starta ett andra kort tystade det första.
+test("Barnets Rekord-vy: kan starta flera tidtagningar samtidigt utan att den föregående stoppas", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [TIMED_TASK, TIMED_TASK_2] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
+
+  await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
+  await page.getByRole("button", { name: "Starta tidtagning för Hoppa rep" }).click();
+
+  await expect(page.getByRole("button", { name: "Stoppa tidtagning för Springa ett varv" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stoppa tidtagning för Hoppa rep" })).toBeVisible();
+});
+
+// 2026-07-13, Zaidas fynd: "som användare skall jag även kunna refrescha
+// eller växla vyer utan att tidtagningen stoppas" — running låg tidigare bara
+// i lokal useState, som nollställdes så fort ChildRecordsPage monterades ner
+// (växling till Dashboard och tillbaka igen).
+test("Barnets Rekord-vy: en pågående tidtagning överlever att man växlar bort och tillbaka till sidan", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [TIMED_TASK] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
+  await page.getByRole("button", { name: "Starta tidtagning för Springa ett varv" }).click();
+
+  await page.getByRole("button", { name: "Tillbaka" }).click();
+  await expect(page.getByRole("heading", { name: "🏆 Rekord" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Rekord" }).click();
+  await expect(page.getByRole("button", { name: "Stoppa tidtagning för Springa ett varv" })).toBeVisible();
 });

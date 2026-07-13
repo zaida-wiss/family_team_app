@@ -12,6 +12,15 @@ type Props = {
 };
 
 const FLASH_MS = 650;
+const RUNNING_STORAGE_KEY = "timedTaskRunning";
+const THEME_ACCENT_COUNT = 8;
+
+// Samma rotations-princip som ParentTodoThreadView.tsx:s accentColorForIndex
+// — varje kort får en egen accentfärg ur det AKTIVA temats --c0…--c7 istället
+// för en hårdkodad kulör, TimedTask saknar ett eget kategori-/färgfält.
+function accentColorForIndex(index: number): string {
+  return `var(--c${index % THEME_ACCENT_COUNT})`;
+}
 
 function fmtDuration(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -30,25 +39,60 @@ function fmtDate(iso: string): string {
   });
 }
 
+// running lagras som en Map (id → startedAt) i localStorage, inte en enda
+// useState-variabel (2026-07-13, Zaidas fynd: "jag behöver kunna starta
+// flera tidtagningar samtidigt utan att den föregående stoppas" + "refresha
+// eller växla vyer utan att tidtagningen stoppas"). En Map tillåter flera
+// samtidiga id:n. localStorage (inte bara React-state) gör att starttiden
+// överlever att ChildRecordsPage monteras ner helt (byte av panel,
+// sidomladdning) — samma "klienten mäter, ingen server-side pågående-status"-
+// princip som redan gäller (se ADR-0018), bara VAR den mellanlagras ändras.
+// Ett absolut startAt-tidsstämpel (inte "förfluten tid hittills") gör att
+// elapsed alltid räknas rätt mot Date.now() oavsett hur länge sidan var
+// omonterad.
+function loadRunning(): Map<Id, number> {
+  try {
+    const raw = window.localStorage.getItem(RUNNING_STORAGE_KEY);
+    if (!raw) return new Map();
+    return new Map(Object.entries(JSON.parse(raw) as Record<string, number>));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveRunning(running: Map<Id, number>) {
+  window.localStorage.setItem(RUNNING_STORAGE_KEY, JSON.stringify(Object.fromEntries(running)));
+}
+
 // Start/stopp-tryck, inte håll-in (Zaidas beslut, S9-spiken) — många tidtagna
 // uppgifter (t.ex. "spring ett varv") går inte att göra samtidigt som man håller
 // i skärmen. Flyttad till en egen sida (ChildRecordsPage, 2026-07-06, Zaidas
 // beslut) — timerNow kommer därför från den sidans egna tickande 1s-intervall.
+// Korten fick samma rektangulära grid-form som uppdragskorten (ChildTasks.css)
+// och en fullbredds start/stopp-knapp istället för en liten 44px-cirkel
+// (2026-07-13, Zaidas fynd: "lika form... rektangulära och lättare att trycka
+// på") — egna, enklare CSS-klasser (inte ChildTasks.css:s container-query-
+// beroende klasser) eftersom Rekord-sidan saknar Dashboardens fasta
+// grid-höjd som cqb/cqh-enheterna förutsätter.
 export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }: Props) {
-  const [running, setRunning] = useState<{ id: Id; startedAt: number } | null>(null);
+  const [running, setRunning] = useState<Map<Id, number>>(() => loadRunning());
   const [flashingId, setFlashingId] = useState<Id | null>(null);
   const [expandedId, setExpandedId] = useState<Id | null>(null);
 
-  useWakeLock(running !== null);
+  useWakeLock(running.size > 0);
 
   if (timedTasks.length === 0) {
     return <p className="empty-note">Inga rekorduppgifter ännu.</p>;
   }
 
   function toggle(task: TimedTaskWithBest) {
-    if (running?.id === task.id) {
-      const durationMs = Date.now() - running.startedAt;
-      setRunning(null);
+    const startedAt = running.get(task.id);
+    const next = new Map(running);
+    if (startedAt !== undefined) {
+      const durationMs = Date.now() - startedAt;
+      next.delete(task.id);
+      setRunning(next);
+      saveRunning(next);
       onRecordAttempt(task.id, durationMs).then(({ isNewRecord }) => {
         if (isNewRecord) {
           setFlashingId(task.id);
@@ -57,34 +101,37 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
       }).catch(console.error);
       return;
     }
-    setRunning({ id: task.id, startedAt: Date.now() });
+    next.set(task.id, Date.now());
+    setRunning(next);
+    saveRunning(next);
     trackEvent("timed-task-started");
   }
 
   return (
     <section className="child-timed-tasks" aria-label="Rekord">
-      <div className="child-timed-tasks__list">
-        {timedTasks.map((task) => {
-          const isRunning = running?.id === task.id;
-          const elapsed = isRunning ? timerNow - running.startedAt : null;
+      <div className="child-timed-tasks__grid">
+        {timedTasks.map((task, index) => {
+          const startedAt = running.get(task.id);
+          const isRunning = startedAt !== undefined;
+          // Math.max(0, ...) — timerNow tickar bara en gång per sekund
+          // (ChildRecordsPage.tsx), så den kan ligga en aning FÖRE det exakta
+          // Date.now() man startade på precis efter en tryckning, vilket annars
+          // visar en kort, förvirrande negativ tid ("-1:-1") tills nästa tick.
+          const elapsed = isRunning ? Math.max(0, timerNow - startedAt) : null;
           const hasRecord = task.bestDurationMs !== null;
           const isExpanded = expandedId === task.id;
 
           return (
-            <div key={task.id}>
-              <div className={`child-timed-tasks__card${flashingId === task.id ? " child-timed-tasks__card--flash" : ""}`}>
-                <span className="child-timed-tasks__symbol">{task.symbol ?? "🏃"}</span>
-                <div className="child-timed-tasks__info">
-                  <strong>{task.title}</strong>
-                  <small>
-                    {isRunning
-                      ? fmtDuration(elapsed ?? 0)
-                      : hasRecord
-                        ? `Bästa: ${fmtDuration(task.bestDurationMs!)}`
-                        : "Inget rekord än"}
-                  </small>
-                </div>
-                {hasRecord && !isRunning && (
+            <div key={task.id} className="child-timed-tasks__cell">
+              <div
+                className={
+                  "child-timed-tasks__card" +
+                  (isRunning ? " child-timed-tasks__card--running" : "") +
+                  (flashingId === task.id ? " child-timed-tasks__card--flash" : "")
+                }
+                style={{ "--task-accent": accentColorForIndex(index) } as React.CSSProperties}
+              >
+                {hasRecord && (
                   <button
                     className="child-timed-tasks__medal"
                     type="button"
@@ -92,16 +139,32 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
                     aria-label={`Visa rekorddetaljer för ${task.title}`}
                     aria-expanded={isExpanded}
                   >
-                    <Trophy size={20} />
+                    <Trophy size={16} />
                   </button>
                 )}
+                <div className="child-timed-tasks__icon-circle">
+                  <span className="child-timed-tasks__icon">{task.symbol ?? "🏃"}</span>
+                </div>
+                <span className="child-timed-tasks__copy">
+                  <strong className="child-timed-tasks__name">{task.title}</strong>
+                  <small className="child-timed-tasks__status">
+                    {isRunning
+                      ? fmtDuration(elapsed ?? 0)
+                      : hasRecord
+                        ? `Bästa: ${fmtDuration(task.bestDurationMs!)}`
+                        : "Inget rekord än"}
+                  </small>
+                </span>
                 <button
-                  className={`child-timed-tasks__btn${isRunning ? " child-timed-tasks__btn--stop" : ""}`}
                   type="button"
+                  className={
+                    "child-timed-tasks__toggle-btn" + (isRunning ? " child-timed-tasks__toggle-btn--stop" : "")
+                  }
                   onClick={() => toggle(task)}
                   aria-label={isRunning ? `Stoppa tidtagning för ${task.title}` : `Starta tidtagning för ${task.title}`}
                 >
-                  {isRunning ? <Square size={20} /> : <Play size={20} />}
+                  {isRunning ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+                  {isRunning ? "Klar" : "Starta"}
                 </button>
               </div>
               {isExpanded && hasRecord && (

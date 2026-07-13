@@ -5,21 +5,46 @@
   margin: 8px 0;
 }
 
-.child-timed-tasks__list {
+/* Samma rektangulära kort-grid-form som uppdragskorten (ChildTasks.css:s
+   .child-tasks-grid/.child-task-card), 2026-07-13, Zaidas fynd — egna
+   klasser istället för att återanvända ChildTasks.css:s eftersom de bygger
+   på container query-enheter (cqb/cqh) som förutsätter Dashboardens fasta
+   grid-höjd, vilket Rekord-sidans fritt flödande layout saknar. */
+.child-timed-tasks__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(8px, 1.5vw, 14px);
+}
+
+@media (min-width: 640px) {
+  .child-timed-tasks__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.child-timed-tasks__cell {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .child-timed-tasks__card {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 10px;
-  border: 2px solid var(--c1, #6366f1);
-  border-radius: var(--radius-lg, 16px);
-  padding: 8px 12px;
-  background: var(--bg-secondary, #f8f8f8);
+  column-gap: 10px;
+  row-gap: 8px;
+  padding: clamp(8px, 1.6vw, 12px);
+  border: 2px solid color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff));
+  border-radius: clamp(12px, 3vw, 20px);
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--card) 88%, var(--task-accent, var(--c1)) 12%),
+      color-mix(in srgb, var(--card) 58%, var(--task-accent, var(--c1)) 42%)
+    );
   overflow: hidden;
 }
 
@@ -46,9 +71,80 @@
   animation: child-timed-tasks-blink 0.65s ease forwards;
 }
 
+.child-timed-tasks__icon-circle {
+  grid-row: 1 / -1;
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  width: clamp(40px, 11vw, 60px);
+  height: clamp(40px, 11vw, 60px);
+  border-radius: 50%;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--task-accent, var(--c1)) 74%, var(--card) 26%),
+      color-mix(in srgb, var(--task-accent, var(--c1)) 92%, var(--black, #000) 8%)
+    );
+}
+
+.child-timed-tasks__icon {
+  font-size: clamp(20px, 5.5vw, 30px);
+  line-height: 1;
+}
+
+.child-timed-tasks__copy {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.child-timed-tasks__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.78rem, 2.4vw, 1rem);
+}
+
+.child-timed-tasks__status {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-fg);
+  font-size: clamp(0.68rem, 2vw, 0.85rem);
+}
+
+/* Fullbredds start/stopp-knapp istället för en liten 44px-cirkel (2026-07-13,
+   Zaidas fynd: "lättare att trycka på") — samma grid-row/column-mönster som
+   ChildTasks.css:s .child-task-timer-btn. */
+.child-timed-tasks__toggle-btn {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border: none;
+  border-radius: clamp(8px, 2vw, 14px);
+  background: #22c55e;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(0.7rem, 2.2vw, 0.9rem);
+  cursor: pointer;
+}
+
+.child-timed-tasks__toggle-btn--stop {
+  background: #e74c3c;
+}
+
 .child-timed-tasks__medal {
-  width: 44px;
-  height: 44px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -60,7 +156,7 @@
 }
 
 .child-timed-tasks__medal:focus-visible,
-.child-timed-tasks__btn:focus-visible {
+.child-timed-tasks__toggle-btn:focus-visible {
   outline: 3px solid var(--c1, #6366f1);
   outline-offset: 2px;
 }
@@ -69,42 +165,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
-  font-size: 0.8rem;
-  color: var(--text-secondary, #666);
-  padding: 6px 12px 2px;
-}
-
-.child-timed-tasks__symbol {
-  font-size: 1.8rem;
-  flex-shrink: 0;
-}
-
-.child-timed-tasks__info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-
-.child-timed-tasks__info strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.child-timed-tasks__btn {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: #22c55e;
-  color: #fff;
-  cursor: pointer;
-}
-
-.child-timed-tasks__btn--stop {
-  background: #e74c3c;
+  font-size: 0.78rem;
+  color: var(--muted-fg);
+  padding: 2px 6px;
 }
