@@ -109,6 +109,45 @@ describe.skipIf(!RUN)("Tidtagna uppgifter (Medaljer/Rekord) mot riktig MongoDB",
     expect(task?.attemptCount).toBe(3);
   });
 
+  let attemptToDeleteId: string;
+
+  it("hämtar attempts-listan för uppgiften, senast först", async () => {
+    const res = await request(app)
+      .get(`/api/timed-tasks/${taskId}/attempts`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(res.status).toBe(200);
+    const attempts = res.body as Array<{ id: string; durationMs: number; achievedAt: string }>;
+    expect(attempts).toHaveLength(3);
+    expect(attempts[0].durationMs).toBe(40000);
+    attemptToDeleteId = attempts.find((a) => a.durationMs === 50000)!.id;
+    expect(attemptToDeleteId).toBeDefined();
+  });
+
+  it("tar bort ett enskilt försök (mjukt) — försvinner ur listan, personbästa opåverkat", async () => {
+    const deleteRes = await request(app)
+      .delete(`/api/timed-tasks/${taskId}/attempts/${attemptToDeleteId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(deleteRes.status).toBe(200);
+
+    const listRes = await request(app)
+      .get(`/api/timed-tasks/${taskId}/attempts`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(listRes.body).toHaveLength(2);
+    expect((listRes.body as Array<{ id: string }>).some((a) => a.id === attemptToDeleteId)).toBe(false);
+
+    const taskListRes = await request(app)
+      .get("/api/timed-tasks")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const task = (taskListRes.body as Array<{ id: string; bestDurationMs: number | null; attemptCount: number }>)
+      .find((t) => t.id === taskId);
+    expect(task?.bestDurationMs).toBe(40000);
+    expect(task?.attemptCount).toBe(2);
+  });
+
   it("raderar uppgiften — försvinner från listan", async () => {
     const deleteRes = await request(app)
       .delete(`/api/timed-tasks/${taskId}`)

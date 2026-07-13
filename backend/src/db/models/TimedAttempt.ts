@@ -7,7 +7,9 @@ const timedAttemptSchema = new Schema<TimedAttempt>({
   memberId: { type: String, required: true },
   durationMs: { type: Number, required: true },
   achievedAt: { type: String, required: true },
-  isNewRecord: { type: Boolean, required: true }
+  isNewRecord: { type: Boolean, required: true },
+  deletedAt: { type: String, default: null },
+  deletedBy: { type: String, default: null }
 });
 
 timedAttemptSchema.index({ timedTaskId: 1, memberId: 1 });

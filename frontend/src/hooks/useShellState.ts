@@ -61,7 +61,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     removeItem: removeShopItem,
   } = useRewardShopState();
 
-  const { timedTasks, createTimedTask, removeTimedTask, recordAttempt } = useTimedTasksState();
+  const { timedTasks, createTimedTask, removeTimedTask, recordAttempt, listAttempts, deleteAttempt } =
+    useTimedTasksState();
 
   const {
     categories: personalTodoCategories,
@@ -106,7 +107,9 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDismissRejectedTodo: dismissRejectedTodo,
     onThemePickerOpen: setThemePickerMemberId,
     timedTasks,
-    onRecordTimedAttempt: recordAttempt
+    onRecordTimedAttempt: recordAttempt,
+    onListTimedAttempts: listAttempts,
+    onDeleteTimedAttempt: deleteAttempt
   };
 
   const childContentProps = {

@@ -1,14 +1,18 @@
 import "./ChildTimedTasksSection.css";
 import { useState } from "react";
-import { Play, Square, Trophy } from "lucide-react";
+import { Pencil, Play, Square, Trophy } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
+import type { TimedAttemptListItem } from "../../api/timedTasks";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { trackEvent } from "../../utils/analytics";
+import { TimedTaskRecordsModal } from "./TimedTaskRecordsModal";
 
 type Props = {
   timedTasks: TimedTaskWithBest[];
   timerNow: number;
   onRecordAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onListAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
+  onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
 };
 
 const FLASH_MS = 650;
@@ -74,10 +78,21 @@ function saveRunning(running: Map<Id, number>) {
 // på") — egna, enklare CSS-klasser (inte ChildTasks.css:s container-query-
 // beroende klasser) eftersom Rekord-sidan saknar Dashboardens fasta
 // grid-höjd som cqb/cqh-enheterna förutsätter.
-export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }: Props) {
+export function ChildTimedTasksSection({
+  timedTasks,
+  timerNow,
+  onRecordAttempt,
+  onListAttempts,
+  onDeleteAttempt
+}: Props) {
   const [running, setRunning] = useState<Map<Id, number>>(() => loadRunning());
   const [flashingId, setFlashingId] = useState<Id | null>(null);
   const [expandedId, setExpandedId] = useState<Id | null>(null);
+  // Redigera-modalen (2026-07-13, penna-knappen) — datum/antal försök per
+  // dag, ta bort tider, linjediagram. Egen state (inte samma som
+  // expandedId/trophy-panelen) eftersom det är en full modal, inte ett
+  // inline-utfällt kort.
+  const [editingTask, setEditingTask] = useState<TimedTaskWithBest | null>(null);
 
   useWakeLock(running.size > 0);
 
@@ -142,6 +157,16 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
                     <Trophy size={16} />
                   </button>
                 )}
+                {hasRecord && (
+                  <button
+                    className="child-timed-tasks__edit"
+                    type="button"
+                    onClick={() => setEditingTask(task)}
+                    aria-label={`Redigera tider för ${task.title}`}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                )}
                 <div className="child-timed-tasks__icon-circle">
                   <span className="child-timed-tasks__icon">{task.symbol ?? "🏃"}</span>
                 </div>
@@ -178,6 +203,15 @@ export function ChildTimedTasksSection({ timedTasks, timerNow, onRecordAttempt }
           );
         })}
       </div>
+
+      {editingTask && (
+        <TimedTaskRecordsModal
+          task={editingTask}
+          onListAttempts={onListAttempts}
+          onDeleteAttempt={onDeleteAttempt}
+          onClose={() => setEditingTask(null)}
+        />
+      )}
     </section>
   );
 }

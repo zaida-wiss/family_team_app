@@ -23,6 +23,7 @@ import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
+import type { TimedAttemptListItem } from "../../api/timedTasks";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -40,6 +41,8 @@ type Props = {
   shoppingLists: ShoppingList[];
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onListTimedAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
+  onDeleteTimedAttempt: (id: Id, attemptId: Id) => Promise<void>;
   canSeeCalendar: boolean;
   canSeeTodos: boolean;
   canSeeShopping: boolean;
@@ -108,6 +111,7 @@ export function MemberShellContent({
 
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
+  onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads, todoThreadRange,
@@ -312,6 +316,8 @@ export function MemberShellContent({
             themeName={selectedDashboardMember.dashboardTheme ?? "space"}
             timedTasks={timedTasks.filter((t) => t.assignedTo === selectedDashboardMember.id)}
             onRecordAttempt={onRecordTimedAttempt}
+            onListAttempts={onListTimedAttempts}
+            onDeleteAttempt={onDeleteTimedAttempt}
             onBack={() => setShowChildRecords(false)}
           />
         </Suspense>

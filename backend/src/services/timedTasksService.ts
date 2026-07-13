@@ -1,14 +1,17 @@
 import { TimedTaskModel } from "../db/models/TimedTask.js";
 import { TimedAttemptModel } from "../db/models/TimedAttempt.js";
 import { AppError } from "../utils/errors.js";
-import type { TimedTaskWithBest } from "../../../shared/types.js";
+import type { TimedAttempt, TimedTaskWithBest } from "../../../shared/types.js";
 
 export async function getAllTimedTasks(accountId: string): Promise<TimedTaskWithBest[]> {
   const tasks = await TimedTaskModel.find({ accountId, deletedAt: null }, { _id: 0, __v: 0 }).lean();
   if (tasks.length === 0) return [];
 
   const taskIds = tasks.map((t) => t.id);
-  const attempts = await TimedAttemptModel.find({ timedTaskId: { $in: taskIds } }, { _id: 0, __v: 0 }).lean();
+  const attempts = await TimedAttemptModel.find(
+    { timedTaskId: { $in: taskIds }, deletedAt: null },
+    { _id: 0, __v: 0 }
+  ).lean();
 
   const byTask = new Map<string, { bestDurationMs: number; bestAchievedAt: string; count: number }>();
   for (const attempt of attempts) {
@@ -78,7 +81,7 @@ export async function recordAttempt(
   const task = await TimedTaskModel.findOne({ id: timedTaskId, accountId, deletedAt: null });
   if (!task) throw new AppError(404, "Tidtagen uppgift hittades inte");
 
-  const best = await TimedAttemptModel.findOne({ timedTaskId }).sort({ durationMs: 1 }).lean();
+  const best = await TimedAttemptModel.findOne({ timedTaskId, deletedAt: null }).sort({ durationMs: 1 }).lean();
   const isNewRecord = !best || durationMs < best.durationMs;
 
   const attempt = new TimedAttemptModel({
@@ -87,7 +90,9 @@ export async function recordAttempt(
     memberId,
     durationMs,
     achievedAt: new Date().toISOString(),
-    isNewRecord
+    isNewRecord,
+    deletedAt: null,
+    deletedBy: null
   });
   await attempt.save();
 
@@ -97,4 +102,43 @@ export async function recordAttempt(
     achievedAt: attempt.achievedAt,
     isNewRecord: attempt.isNewRecord
   };
+}
+
+// Redigera-modalen (2026-07-13, "vi ska kunna se våra rekord datum och antal
+// försök per dag... vi ska kunna ta bort tider") — grupperingen (datum+antal
+// per dag) görs klientsidan på den råa listan, ingen egen aggregerings-
+// endpoint (listan är redan liten, en uppgifts alla försök).
+export async function getAttemptsForTask(
+  timedTaskId: string,
+  accountId: string
+): Promise<Omit<TimedAttempt, "deletedAt" | "deletedBy">[]> {
+  const task = await TimedTaskModel.findOne({ id: timedTaskId, accountId, deletedAt: null });
+  if (!task) throw new AppError(404, "Tidtagen uppgift hittades inte");
+
+  const attempts = await TimedAttemptModel.find(
+    { timedTaskId, deletedAt: null },
+    { _id: 0, __v: 0, deletedAt: 0, deletedBy: 0 }
+  )
+    .sort({ achievedAt: -1 })
+    .lean();
+  return attempts;
+}
+
+// Mjuk radering (aldrig hard delete, se CLAUDE.md) — timedTaskId i frågan
+// (inte bara attemptId) förhindrar att en manipulerad :id i URL:en raderar
+// ett försök som hör till en ANNAN tidtagen uppgift.
+export async function deleteAttempt(
+  attemptId: string,
+  timedTaskId: string,
+  accountId: string,
+  memberId: string | null
+) {
+  const task = await TimedTaskModel.findOne({ id: timedTaskId, accountId, deletedAt: null });
+  if (!task) throw new AppError(404, "Tidtagen uppgift hittades inte");
+
+  const attempt = await TimedAttemptModel.findOne({ id: attemptId, timedTaskId });
+  if (!attempt || attempt.deletedAt) throw new AppError(404, "Försök hittades inte");
+  attempt.deletedAt = new Date().toISOString();
+  attempt.deletedBy = memberId;
+  await attempt.save();
 }

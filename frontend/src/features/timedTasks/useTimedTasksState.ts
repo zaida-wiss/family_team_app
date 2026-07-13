@@ -34,5 +34,18 @@ export function useTimedTasksState() {
     return attempt;
   }
 
-  return { timedTasks, createTimedTask, removeTimedTask, recordAttempt };
+  // Redigera-modalen (2026-07-13, penna-knappen) — hämtas bara on-demand när
+  // modalen öppnas, ingen egen state (listan hålls i modalen själv).
+  function listAttempts(id: Id) {
+    return timedTasksApi.listAttempts(id);
+  }
+
+  // Kan ändra personbästa/antal försök (om det raderade försöket var
+  // rekordet) — hämtar om huvudlistan så kortet uppdateras direkt.
+  async function deleteAttempt(id: Id, attemptId: Id) {
+    await timedTasksApi.deleteAttempt(id, attemptId);
+    await refresh();
+  }
+
+  return { timedTasks, createTimedTask, removeTimedTask, recordAttempt, listAttempts, deleteAttempt };
 }

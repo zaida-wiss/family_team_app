@@ -2,12 +2,15 @@ import "./ChildRecordsPage.css";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
+import type { TimedAttemptListItem } from "../../api/timedTasks";
 import { ChildTimedTasksSection } from "./ChildTimedTasksSection";
 
 type Props = {
   themeName: string;
   timedTasks: TimedTaskWithBest[];
   onRecordAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onListAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
+  onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
   onBack: () => void;
 };
 
@@ -16,7 +19,7 @@ type Props = {
 // till vänster om profilbilden i ChildHero istället. Egen 1s-tickande klocka
 // här (självständig från ChildDashboard:s, eftersom sidorna är ömsesidigt
 // uteslutande — bara en av dem är monterad åt gången).
-export function ChildRecordsPage({ themeName, timedTasks, onRecordAttempt, onBack }: Props) {
+export function ChildRecordsPage({ themeName, timedTasks, onRecordAttempt, onListAttempts, onDeleteAttempt, onBack }: Props) {
   const [timerNow, setTimerNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -43,6 +46,8 @@ export function ChildRecordsPage({ themeName, timedTasks, onRecordAttempt, onBac
           timedTasks={timedTasks}
           timerNow={timerNow}
           onRecordAttempt={onRecordAttempt}
+          onListAttempts={onListAttempts}
+          onDeleteAttempt={onDeleteAttempt}
         />
       </div>
     </article>

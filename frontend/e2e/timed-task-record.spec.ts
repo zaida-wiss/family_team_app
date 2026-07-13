@@ -223,6 +223,79 @@ test("Barnets Rekord-vy: medalj visas vid nytt rekord och avslöjar detaljer", a
   await expect(page.getByText(/Tid: 0:12/)).toBeVisible();
 });
 
+// 2026-07-13, Zaidas önskemål: en redigera-ruta (penna) ska öppna en modal
+// med datum/antal försök per dag, och man ska kunna ta bort tider.
+test("Barnets Rekord-vy: pennan öppnar en redigera-modal med försök grupperade per dag", async ({ page }) => {
+  await mockChildSession(page);
+  const attempts = [
+    { id: "ta-1", timedTaskId: "tt-1", memberId: "mem-child", durationMs: 40000, achievedAt: "2026-07-10T09:00:00.000Z", isNewRecord: true, deletedAt: null, deletedBy: null },
+    { id: "ta-2", timedTaskId: "tt-1", memberId: "mem-child", durationMs: 50000, achievedAt: "2026-07-10T18:00:00.000Z", isNewRecord: false, deletedAt: null, deletedBy: null },
+    { id: "ta-3", timedTaskId: "tt-1", memberId: "mem-child", durationMs: 45000, achievedAt: "2026-07-11T09:00:00.000Z", isNewRecord: false, deletedAt: null, deletedBy: null },
+  ];
+  await page.route("**/api/timed-tasks", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        json: [{ ...TIMED_TASK, bestDurationMs: 40000, bestAchievedAt: "2026-07-10T09:00:00.000Z", attemptCount: 3 }],
+      });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.route("**/api/timed-tasks/tt-1/attempts", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: attempts });
+    return route.fulfill({ json: [] });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
+  await page.getByRole("button", { name: "Redigera tider för Springa ett varv" }).click();
+
+  const modal = page.getByRole("dialog", { name: "Springa ett varv" });
+  await expect(modal.getByText("(2 försök)")).toBeVisible();
+  await expect(modal.getByText("(1 försök)")).toBeVisible();
+  // .timed-task-records-modal__duration (inte modal.getByText) — undviker
+  // träffar på diagrammets egna axel-/slutpunkts-etiketter, som visar samma
+  // varaktighetstext.
+  const durations = modal.locator(".timed-task-records-modal__duration");
+  await expect(durations.filter({ hasText: "0:40" })).toBeVisible();
+  await expect(durations.filter({ hasText: "0:50" })).toBeVisible();
+  await expect(durations.filter({ hasText: "0:45" })).toBeVisible();
+});
+
+test("Barnets Rekord-vy: tar bort en tid i redigera-modalen", async ({ page }) => {
+  await mockChildSession(page);
+  let attempts = [
+    { id: "ta-1", timedTaskId: "tt-1", memberId: "mem-child", durationMs: 40000, achievedAt: "2026-07-10T09:00:00.000Z", isNewRecord: true, deletedAt: null, deletedBy: null },
+    { id: "ta-2", timedTaskId: "tt-1", memberId: "mem-child", durationMs: 50000, achievedAt: "2026-07-10T18:00:00.000Z", isNewRecord: false, deletedAt: null, deletedBy: null },
+  ];
+  await page.route("**/api/timed-tasks", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        json: [{ ...TIMED_TASK, bestDurationMs: 40000, bestAchievedAt: "2026-07-10T09:00:00.000Z", attemptCount: 2 }],
+      });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.route("**/api/timed-tasks/tt-1/attempts/ta-2", (route) => {
+    attempts = attempts.filter((a) => a.id !== "ta-2");
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/timed-tasks/tt-1/attempts", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: attempts });
+    return route.fulfill({ json: [] });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Rekord" }).click();
+  await page.getByRole("button", { name: "Redigera tider för Springa ett varv" }).click();
+
+  const modal = page.getByRole("dialog", { name: "Springa ett varv" });
+  const durations = modal.locator(".timed-task-records-modal__duration");
+  await expect(durations.filter({ hasText: "0:50" })).toBeVisible();
+  await modal.getByRole("button", { name: /Ta bort försöket klockan/ }).nth(1).click();
+  await expect(durations.filter({ hasText: "0:50" })).toHaveCount(0);
+  await expect(durations.filter({ hasText: "0:40" })).toBeVisible();
+});
+
 // 2026-07-13, Zaidas fynd: "jag behöver kunna starta flera tidtagningar
 // samtidigt utan att den föregående stoppas" — running var tidigare en enda
 // {id, startedAt}-variabel, så att starta ett andra kort tystade det första.

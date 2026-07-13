@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
+import type { TimedAttemptListItem } from "../../api/timedTasks";
 
 type Props = {
   currentMember: Member;
@@ -11,6 +12,8 @@ type Props = {
   categories: TodoCategory[];
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number) => Promise<{ isNewRecord: boolean }>;
+  onListTimedAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
+  onDeleteTimedAttempt: (id: Id, attemptId: Id) => Promise<void>;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
@@ -34,6 +37,8 @@ export function ChildShellContent({
   categories,
   timedTasks,
   onRecordTimedAttempt,
+  onListTimedAttempts,
+  onDeleteTimedAttempt,
   onCreateWish,
   onCompleteTodo,
   onDismissRejectedTodo,
@@ -72,6 +77,8 @@ export function ChildShellContent({
         themeName={currentMember.dashboardTheme ?? "space"}
         timedTasks={childTimedTasks}
         onRecordAttempt={onRecordTimedAttempt}
+        onListAttempts={onListTimedAttempts}
+        onDeleteAttempt={onDeleteTimedAttempt}
         onBack={() => setView("dashboard")}
       />
     );

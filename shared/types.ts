@@ -215,6 +215,11 @@ export type TimedAttempt = {
   durationMs: number;
   achievedAt: string;
   isNewRecord: boolean;
+  // Mjuk radering (2026-07-13, "vi ska kunna ta bort tider" i redigera-
+  // modalen) — samma deletedAt/deletedBy-mönster som alla andra raderbara
+  // entiteter i projektet, aldrig hard delete.
+  deletedAt: string | null;
+  deletedBy: Id | null;
 };
 
 export type TimedTaskWithBest = TimedTask & {

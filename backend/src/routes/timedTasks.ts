@@ -26,3 +26,14 @@ timedTasksRouter.post("/:id/attempts", async (req, res) => {
   const attempt = await timedTasks.recordAttempt(req.params.id, req.accountId!, req.memberId ?? "", durationMs);
   res.status(201).json(attempt);
 });
+
+// Redigera-modalen (2026-07-13) — datum/antal försök per dag samt
+// linjediagrammet byggs klientsidan av den här listan.
+timedTasksRouter.get("/:id/attempts", async (req, res) => {
+  res.json(await timedTasks.getAttemptsForTask(req.params.id, req.accountId!));
+});
+
+timedTasksRouter.delete("/:id/attempts/:attemptId", async (req, res) => {
+  await timedTasks.deleteAttempt(req.params.attemptId, req.params.id, req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});

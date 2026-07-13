@@ -72,7 +72,13 @@
 }
 
 .child-timed-tasks__icon-circle {
-  grid-row: 1 / -1;
+  /* grid-row: 1 (INTE 1/-1, 2026-07-13-fynd: "startknappen ska inte gömma
+     någon text") — spände tidigare över BÅDA raderna, samma cell som
+     .child-timed-tasks__toggle-btn (rad 2, kolumn 1/-1) delvis delar,
+     vilket kunde få knappens ogenomskinliga bakgrund att överlappa/dölja
+     ikonens nedre del. Ikonen delar nu bara rad 1 med titel/status-texten,
+     ingen cell krockar längre med knappraden. */
+  grid-row: 1;
   grid-column: 1;
   display: grid;
   place-items: center;
@@ -155,7 +161,29 @@
   cursor: pointer;
 }
 
+/* Redigera-knapp (penna, 2026-07-13) — bredvid medaljen (INTE motsatt hörn:
+   det hörnet upptas redan av .child-timed-tasks__icon-circle, en badge där
+   hade lagt sig ovanpå ikonen), samma 32px-skala som medaljen så de får
+   plats sida vid sida utan att krocka med titel-texten under. */
+.child-timed-tasks__edit {
+  position: absolute;
+  top: 6px;
+  right: 44px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
 .child-timed-tasks__medal:focus-visible,
+.child-timed-tasks__edit:focus-visible,
 .child-timed-tasks__toggle-btn:focus-visible {
   outline: 3px solid var(--c1, #6366f1);
   outline-offset: 2px;
