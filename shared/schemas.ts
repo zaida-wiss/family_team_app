@@ -167,14 +167,25 @@ export const CalendarEventSchema = z.object({
   deletedBy: IdSchema.nullable()
 });
 
-// Fält en klient får patcha på en befintlig kalenderhändelse. calendarId/id/
-// createdBy/deletedAt/deletedBy sätts av servern eller har egna dedikerade
-// endpoints (delete/restore/rsvp), aldrig via den generiska PATCH-routen.
+// Fält en klient får patcha på en befintlig kalenderhändelse. id/createdBy/
+// deletedAt/deletedBy sätts av servern eller har egna dedikerade endpoints
+// (delete/restore/rsvp), aldrig via den generiska PATCH-routen.
+// calendarId FÅR sättas här (2026-07-15, buggfix — redigera-modalens
+// kalenderväljare skickade den redan, men den saknades i schemat och
+// stripptes tyst av Zod, så ett kalenderbyte såg ut att spara men
+// försvann vid nästa hämtning) — service-lagret tolkar ett avvikande
+// calendarId som "flytta händelsen till den kalendern".
 export const CalendarEventPatchSchema = CalendarEventSchema.pick({
+  calendarId: true,
   title: true,
   startsAt: true,
   endsAt: true,
-  notes: true
+  isAllDay: true,
+  location: true,
+  notes: true,
+  recurrence: true,
+  attendees: true,
+  symbol: true
 }).partial();
 
 export const ImportedCalendarSourceSchema = z.object({

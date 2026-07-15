@@ -166,12 +166,34 @@ export async function updateEvent(calendarId: string, accountId: string, eventId
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
-  const event = calendar.events.find((e) => e.id === eventId);
-  if (!event) throw new AppError(404, "Händelse hittades inte");
+  const eventIndex = calendar.events.findIndex((e) => e.id === eventId);
+  if (eventIndex === -1) throw new AppError(404, "Händelse hittades inte");
+  const event = calendar.events[eventIndex];
 
   const validated = CalendarEventPatchSchema.parse(patch);
   if (validated.title !== undefined) validated.title = encryptField(accountId, validated.title);
   if ("notes" in validated) validated.notes = encryptNullable(accountId, validated.notes) ?? null;
+
+  // Kalenderbyte (2026-07-15, buggfix): redigera-modalens kalenderväljare
+  // skickar calendarId i patchen om användaren valt en annan kalender än
+  // händelsens nuvarande. events ligger inbäddat per kalender-dokument, så
+  // ett byte innebär att flytta hela subdokumentet till målkalenderns
+  // events-array, inte bara ett fältvärde.
+  if (validated.calendarId !== undefined && validated.calendarId !== calendarId) {
+    const targetCalendar = await CalendarModel.findOne({ id: validated.calendarId, accountId });
+    if (!targetCalendar) throw new AppError(404, "Målkalender hittades inte");
+
+    const moved = { ...event, ...validated };
+    calendar.events.splice(eventIndex, 1);
+    calendar.markModified("events");
+    await calendar.save();
+
+    targetCalendar.events.push(moved);
+    targetCalendar.markModified("events");
+    await targetCalendar.save();
+    return;
+  }
+
   Object.assign(event, validated);
   calendar.markModified("events");
   await calendar.save();

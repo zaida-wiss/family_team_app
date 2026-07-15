@@ -166,6 +166,32 @@ export function useCalendarsState() {
     updates: Partial<Calendar["events"][number]>
   ) {
     calendarsApi.updateEvent(calendarId, eventId, updates).catch(console.error);
+
+    // Kalenderbyte (2026-07-15, buggfix): ett avvikande updates.calendarId
+    // betyder att händelsen ska flyttas till en annan kalender, inte bara
+    // få ett nytt fältvärde — den ligger inbäddad i sin kalenders egen
+    // events-array, så flytten görs genom att ta bort den ur den gamla
+    // arrayen och lägga in den (med uppdaterade fält) i den nya.
+    if (updates.calendarId && updates.calendarId !== calendarId) {
+      const targetCalendarId = updates.calendarId;
+      setCalendars((current) => {
+        const source = current.find((c) => c.id === calendarId);
+        const movedEvent = source?.events.find((ev) => ev.id === eventId);
+        if (!movedEvent) return current;
+        const merged = { ...movedEvent, ...updates };
+        return current.map((calendar) => {
+          if (calendar.id === calendarId) {
+            return { ...calendar, events: calendar.events.filter((ev) => ev.id !== eventId) };
+          }
+          if (calendar.id === targetCalendarId) {
+            return { ...calendar, events: [...calendar.events, merged] };
+          }
+          return calendar;
+        });
+      });
+      return;
+    }
+
     setCalendars((current) =>
       current.map((calendar) =>
         calendar.id !== calendarId

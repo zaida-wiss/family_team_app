@@ -252,6 +252,7 @@ export function useCalendarView(
     } else if (modal?.kind === "edit") {
       const baseId = modal.event.id.split("~")[0];
       onUpdateEvent?.(modal.event.calendarId, baseId, {
+        calendarId: form.calendarId,
         title: trimmed,
         isAllDay: form.isAllDay,
         startsAt: isoStart,
