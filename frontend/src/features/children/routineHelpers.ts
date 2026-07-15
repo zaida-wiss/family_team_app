@@ -1,4 +1,5 @@
 import type { Id, Member, Todo, Weekday } from "@shared/types";
+import { generateId } from "../../utils/uuid";
 
 export const WEEKDAYS: { key: Weekday; short: string }[] = [
   { key: "monday",    short: "M" },
@@ -89,4 +90,45 @@ export function findExistingRoutines(todos: Todo[], childIds: Set<Id>): Todo[] {
       t.recurringSourceId === null &&
       t.deletedAt === null
   );
+}
+
+// Kopiera en befintlig rutinmall till ett annat barn (2026-07-15, Zaidas
+// önskemål: kunna kryssa i vilka av ett barns rutiner ett NYTT barn ska få).
+// Kopierar alla serie-definierande fält (samma uppsättning som
+// TodoImportExport.tsx:s buildUpdatePatch/extractPatchFields), aldrig
+// framsteg (createdBy/status/completedAt m.fl. — det nya barnet börjar
+// alltid från ett rent blad). Delmoment får egna nya id:n och nollställs
+// till obockade — annars skulle det kopierade barnets checklista visa
+// källbarnets redan avklarade bockar.
+export function copyRoutineTemplate(source: Todo, targetChildId: Id, createdBy: Id): Todo {
+  return {
+    id: `routine-${generateId()}` as Id,
+    title: source.title,
+    createdBy,
+    assignedTo: targetChildId,
+    isShared: false,
+    status: "pending",
+    starValue: source.starValue,
+    visual: source.visual,
+    recurrence: source.recurrence,
+    recurringSourceId: null,
+    occurrenceDate: null,
+    visibleFrom: source.visibleFrom,
+    expiresAt: source.expiresAt,
+    completedAt: null,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    rejectedReason: null,
+    deletedAt: null,
+    deletedBy: null,
+    personalCategoryId: source.personalCategoryId,
+    notes: source.notes,
+    timeWindows: source.timeWindows,
+    timerEnabled: source.timerEnabled,
+    plannedDurationMinutes: source.plannedDurationMinutes,
+    elapsedMs: null,
+    subtasks: source.subtasks?.map((s) => ({ id: `subtask-${generateId()}` as Id, title: s.title, done: false }))
+  };
 }

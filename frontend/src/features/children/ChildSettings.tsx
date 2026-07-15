@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, Pencil, Save, Star, X, XCircle } from "lucide-react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
+import { CopyRoutinesModal } from "./CopyRoutinesModal";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { hasPermission } from "../../utils/permissions";
 import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
@@ -63,6 +64,7 @@ export function ChildSettings({
   const [editWishSymbol, setEditWishSymbol] = useState("");
   const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [showCopyRoutines, setShowCopyRoutines] = useState(false);
 
   function startRejecting(todoId: Id) {
     setRejectingTodoId(todoId);
@@ -303,6 +305,24 @@ export function ChildSettings({
       {canManageChildTodos && (
         <div className="settings-sub">
           <h3 className="settings-sub-title">Rutiner</h3>
+          {childMembers.length > 1 && (
+            <button
+              className="secondary-button"
+              onClick={() => setShowCopyRoutines(true)}
+              type="button"
+            >
+              Kopiera rutiner från ett annat barn
+            </button>
+          )}
+          {showCopyRoutines && (
+            <CopyRoutinesModal
+              currentMember={currentMember}
+              children={childMembers}
+              todos={todos}
+              onCreateTodo={onCreateTodo}
+              onClose={() => setShowCopyRoutines(false)}
+            />
+          )}
           <ChildRoutineCreator
             currentMember={currentMember}
             children={childMembers}

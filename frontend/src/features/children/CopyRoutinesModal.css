@@ -1,0 +1,127 @@
+.copy-routines-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.copy-routines-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.copy-routines-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copy-routines-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.copy-routines-pickers {
+  display: flex;
+  gap: 10px;
+}
+
+.copy-routines-pickers .field-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.copy-routines-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.copy-routines-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.copy-routines-row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+}
+
+.copy-routines-row-label:hover {
+  background: color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+
+.copy-routines-row-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.copy-routines-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.copy-routines-row-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+  flex-shrink: 0;
+}
+
+.copy-routines-row-days {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.copy-routines-day {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 0.6rem;
+  border-radius: 4px;
+  color: var(--muted-fg);
+  background: color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+
+.copy-routines-day--on {
+  color: var(--on-c1, #fff);
+  background: var(--c1);
+  font-weight: 700;
+}
+
+.copy-routines-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
