@@ -183,12 +183,21 @@ export async function updateEvent(calendarId: string, accountId: string, eventId
     const targetCalendar = await CalendarModel.findOne({ id: validated.calendarId, accountId });
     if (!targetCalendar) throw new AppError(404, "Målkalender hittades inte");
 
-    const moved = { ...event, ...validated };
+    // event är typad som ren CalendarEvent (Schema<Calendar> exponerar inget
+    // Mongoose-subdokument-API mot TS), men är i praktiken ett
+    // subdokument — ett spread `{...event}` fångar bara egna enumerable
+    // properties och missar all faktisk data (Mongoose lagrar fälten bakom
+    // interna getters), vilket gav ett "moved"-objekt utan title/startsAt/
+    // etc och en Mongoose-valideringskrasch vid push. `.toObject()` (samma
+    // mönster som redan används på hela Calendar-dokument i denna fil) ger
+    // det riktiga, fullständiga fältinnehållet.
+    const plainEvent = (event as unknown as { toObject(): typeof event }).toObject();
+    const moved = { ...plainEvent, ...validated };
     calendar.events.splice(eventIndex, 1);
     calendar.markModified("events");
     await calendar.save();
 
-    targetCalendar.events.push(moved);
+    targetCalendar.events.push(moved as any);
     targetCalendar.markModified("events");
     await targetCalendar.save();
     return;
