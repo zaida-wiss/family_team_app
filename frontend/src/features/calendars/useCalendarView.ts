@@ -189,8 +189,17 @@ export function useCalendarView(
   function openNew(dateStr?: string) {
     if (editableCalendars.length === 0) return;
     const base = dateStr ?? todayStr;
+    // Förvalt värde: den egna kalendern, inte bara den första i listan
+    // (2026-07-15, buggfix — Zaidas fynd: nya händelser föreslog en
+    // ICS-PRENUMERERAD kalender som förval, bara för att den råkade komma
+    // först i arrayen från backend. En prenumererad kalender synkas
+    // automatiskt mot en extern källa och är fel plats för en egen
+    // händelse). Faller tillbaka på den första redigerbara kalendern om
+    // ingen ägs av mig själv (t.ex. en delad familjekalender).
+    const defaultCalendar =
+      editableCalendars.find((cal) => cal.ownerId === currentMember.id) ?? editableCalendars[0];
     setForm(blankForm({
-      calendarId: editableCalendars[0].id,
+      calendarId: defaultCalendar.id,
       startsAt: `${base}T09:00`,
       endsAt: `${base}T10:00`,
     }));
