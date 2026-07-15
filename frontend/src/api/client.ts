@@ -21,6 +21,13 @@ export function setApiErrorHandler(handler: (message: string) => void) {
   onApiError = handler;
 }
 
+// Låter kod utanför apiFetch (t.ex. uppladdningar mot tredjepartstjänster som
+// Cloudinary, inte en /api-anrop) visa samma globala felbanner istället för
+// att tyst svälja felet.
+export function reportApiError(message: string) {
+  onApiError?.(message);
+}
+
 export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
 }

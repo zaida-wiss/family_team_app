@@ -7,7 +7,8 @@ export {
   setApiMemberId,
   setApiErrorHandler,
   setRefreshSessionHandler,
-  setUnauthorizedHandler
+  setUnauthorizedHandler,
+  reportApiError
 } from "./client";
 export { authApi } from "./auth";
 export { invitationsApi } from "./invitations";

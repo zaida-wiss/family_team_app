@@ -3,6 +3,7 @@ import { Eraser, Filter, ImagePlus, Loader, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { uploadImage } from "../../utils/uploadImage";
+import { reportApiError } from "../../api";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import { generateId } from "../../utils/uuid";
@@ -87,7 +88,11 @@ export function AccountSettings({
       const avatarUrl = await uploadImage(file, "avatars");
       onUpdateMemberAvatar(memberId, avatarUrl);
     } catch {
-      // uppladdning misslyckades — behåll befintlig bild
+      // Uppladdning misslyckades — behåll befintlig bild. Visa felet i
+      // appens globala banner (2026-07-15 buggfix) istället för att svälja
+      // det helt tyst, vilket tidigare gjorde en trasig uppladdning (t.ex.
+      // CSP-blockerad) omöjlig att skilja från "inget hände".
+      reportApiError("Bilden kunde inte laddas upp");
     } finally {
       setUploadingMemberId(null);
     }
