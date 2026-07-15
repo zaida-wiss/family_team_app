@@ -105,17 +105,29 @@ export function useTodosState() {
     const currentDate = new Date();
     const currentTime = currentDate.getTime();
     const occurrences = getDueRecurringTodoOccurrences(baseTodos, currentDate);
-    const savedOccurrences = await Promise.all(
-      occurrences.map(async (todo) => {
-        try {
-          await todosApi.create(todo);
-          return todo;
-        } catch (error) {
-          console.error(error);
-          return null;
-        }
-      })
-    );
+    // Skapas i småbuntar om 4 i taget istället för alla samtidigt (2026-07-16,
+    // produktionsincident) — ett konto med många återkommande mallar (t.ex.
+    // strax efter "Kopiera rutiner" till ett nytt barn) kunde annars skjuta
+    // iväg tiotals parallella POST-anrop i en enda Promise.all, vilket i
+    // kombination med resten av en aktiv familjs samtidiga trafik (delad
+    // hem-IP, se app.ts:s globalLimiter-kommentar) kunde trigga 429:or.
+    const BATCH_SIZE = 4;
+    const savedOccurrences: (Todo | null)[] = [];
+    for (let i = 0; i < occurrences.length; i += BATCH_SIZE) {
+      const batch = occurrences.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (todo) => {
+          try {
+            await todosApi.create(todo);
+            return todo;
+          } catch (error) {
+            console.error(error);
+            return null;
+          }
+        })
+      );
+      savedOccurrences.push(...results);
+    }
 
     setTodos((current) =>
       expirePendingTodos(

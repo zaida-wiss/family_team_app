@@ -27,9 +27,20 @@ import { todoTemplatesRouter } from "./routes/todoTemplates.js";
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
 
+// 200/15min (2026-07-16, ADR-0023, produktionsincident) visade sig vara för
+// lågt för en riktig familj — begränsningen är PER IP, och en hel familj på
+// samma hem-wifi delar en enda publik IP. Flera medlemmar aktiva samtidigt,
+// kombinerat med legitima klusterade skrivningar (t.ex. "Kopiera rutiner"
+// eller ett CSV-import av flera rader, plus syncScheduledTodos's
+// engångsgenerering av dagens förfallna rutiner för varje mall) kunde nå
+// taket på minuter och blockerade DÅ hela hushållet, inte bara en angripare.
+// Höjd till 1000 — fortsatt orimligt för ett skriptat missbruk mot en
+// enskild IP (inloggning har sin egen mycket striktare authLimiter nedan,
+// opåverkad av denna höjning), men gott om marginal för legitim, klustrad
+// familjeanvändning.
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, forwardedHeader: false },
