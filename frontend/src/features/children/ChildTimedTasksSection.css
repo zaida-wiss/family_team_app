@@ -64,7 +64,11 @@
    "forwards" — animationen ska sluta HELT avstängd (basregelns opacity:0),
    inte fastna på grönt efter sista blinket. Samma ::before-mönster som
    RewardShopModal.css:s shop-card-blink (composited opacity, ingen
-   layout/paint). */
+   layout/paint).
+   Mörkare grön (2026-07-15, Zaidas önskemål) — bytt från #22c55e
+   (Tailwind green-500) till #15803d (green-700), samma färg återanvänd för
+   den nya ramfärgs-blinkningen nedan så flash och ram är visuellt samma
+   "grön". */
 @keyframes child-timed-tasks-blink {
   0%     { opacity: 0; }
   0.1%   { opacity: 0.35; }
@@ -79,18 +83,44 @@
   100%   { opacity: 0.35; }
 }
 
+/* Ramen (kortets border) blinkar grönt i takt med ::before-flashen ovan
+   (2026-07-15, Zaidas önskemål: "ramen skall få grön border medans det
+   blinkar") — samma procent-snapmönster/timing, men på border-color
+   istället för opacity, eftersom border ligger på kortet självt (inte
+   ::before-overlayn). Startar/slutar på kortets vanliga
+   temafärgade border (samma color-mix som .child-timed-tasks__card),
+   så ramen återgår till normalt utseende mellan/efter blinken. Ingen
+   "forwards" av samma anledning som ovan. */
+@keyframes child-timed-tasks-border-blink {
+  0%     { border-color: color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff)); }
+  0.1%   { border-color: #15803d; }
+  25%    { border-color: #15803d; }
+  25.1%  { border-color: color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff)); }
+  37.5%  { border-color: color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff)); }
+  37.6%  { border-color: #15803d; }
+  62.5%  { border-color: #15803d; }
+  62.6%  { border-color: color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff)); }
+  75%    { border-color: color-mix(in srgb, var(--task-accent, var(--c1)) 32%, var(--white, #fff)); }
+  75.1%  { border-color: #15803d; }
+  100%   { border-color: #15803d; }
+}
+
 .child-timed-tasks__card::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: #22c55e;
+  background: #15803d;
   opacity: 0;
   pointer-events: none;
 }
 
 .child-timed-tasks__card--flash::before {
   animation: child-timed-tasks-blink 4s linear;
+}
+
+.child-timed-tasks__card--flash {
+  animation: child-timed-tasks-border-blink 4s linear;
 }
 
 .child-timed-tasks__icon-circle {
