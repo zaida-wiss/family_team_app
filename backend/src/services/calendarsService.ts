@@ -193,13 +193,21 @@ export async function updateEvent(calendarId: string, accountId: string, eventId
     // det riktiga, fullständiga fältinnehållet.
     const plainEvent = (event as unknown as { toObject(): typeof event }).toObject();
     const moved = { ...plainEvent, ...validated };
-    calendar.events.splice(eventIndex, 1);
-    calendar.markModified("events");
-    await calendar.save();
 
+    // Målet sparas FÖRE källan rensas (2026-07-15, incident-fix) — en
+    // produktionsbugg i ett tidigare försök gjorde tvärtom (källan sparades
+    // rensad FÖRST), så när målets save() sedan kastade ett
+    // Mongoose-valideringsfel var händelsen redan borta ur källan men aldrig
+    // skriven till målet — permanent dataförlust. Med den här ordningen är
+    // värsta möjliga utfall av ett misslyckande istället en ofarlig
+    // dubblett (finns kvar i båda), aldrig att händelsen försvinner helt.
     targetCalendar.events.push(moved as any);
     targetCalendar.markModified("events");
     await targetCalendar.save();
+
+    calendar.events.splice(eventIndex, 1);
+    calendar.markModified("events");
+    await calendar.save();
     return;
   }
 
