@@ -10,6 +10,15 @@ export function AppRouter() {
   if (nav.screen === "loading") {
     return <main className="app-shell"><p style={{ padding: "2rem" }}>Laddar…</p></main>;
   }
+  if (nav.screen === "offline") {
+    return (
+      <main className="app-shell">
+        <p style={{ padding: "2rem" }}>
+          Ingen internetanslutning just nu — försöker igen automatiskt så fort uppkopplingen är tillbaka.
+        </p>
+      </main>
+    );
+  }
   if (nav.screen === "invite") {
     return <AcceptInvitePage token={nav.token} onAccepted={nav.onAccepted} />;
   }

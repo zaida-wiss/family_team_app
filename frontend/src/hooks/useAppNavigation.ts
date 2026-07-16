@@ -6,6 +6,7 @@ import type { Membership, User } from "@shared/types";
 
 type Screen =
   | { screen: "loading" }
+  | { screen: "offline" }
   | { screen: "invite"; token: string; onAccepted: (s: AcceptedSession) => void }
   | { screen: "auth"; onLogin: ReturnType<typeof useAuth>["login"]; onRegister: ReturnType<typeof useAuth>["register"]; resetToken?: string }
   | { screen: "picker"; user: User; memberships: Membership[]; onSelect: (m: Membership) => void; onLogout: () => void; onMembershipsUpdated: (ms: Membership[]) => void }
@@ -54,6 +55,10 @@ export function useAppNavigation(): Screen {
 
   if (authState.status === "loading") {
     return { screen: "loading" };
+  }
+
+  if (authState.status === "offline") {
+    return { screen: "offline" };
   }
 
   if (authState.status === "unauthenticated") {
