@@ -36,6 +36,17 @@ export function useTodosState() {
   // optimistiska uppdateringen. Todo-id:n med en pågående mutation skyddas här
   // tills mutationen själv bekräftat resultatet.
   const pendingMutationIds = useRef<Set<Id>>(new Set());
+  // syncScheduledTodos triggas oberoende från FEM källor (mount/SSE/
+  // visibilitychange/30s-intervallet/efter-mutation, se refreshTodos-
+  // kommentaren ovan) — utan detta skydd kan två anrop råka köra samtidigt,
+  // båda läsa samma todos-ögonblicksbild INNAN någonderas skapade
+  // occurrences hunnit synas, och båda avgöra att samma mall "saknar" dagens
+  // occurrence — resultat: en riktig dubblett-uppgift i databasen (2026-07-16,
+  // Zaidas fynd, sannolikt utlöst av att "Kopiera rutiner" skapar många nya
+  // mallar på en gång, vilket ökar risken för att SSE-anrop och intervallet
+  // kolliderar). Ett enda in-flight-lås räcker — en överhoppad körning tas
+  // igen av nästa trigger, ingen data går förlorad.
+  const syncInFlightRef = useRef(false);
 
   useEffect(() => {
     refreshTodos().catch(console.error);
@@ -102,42 +113,48 @@ export function useTodosState() {
   }
 
   async function syncScheduledTodos(baseTodos = todosRef.current) {
-    const currentDate = new Date();
-    const currentTime = currentDate.getTime();
-    const occurrences = getDueRecurringTodoOccurrences(baseTodos, currentDate);
-    // Skapas i småbuntar om 4 i taget istället för alla samtidigt (2026-07-16,
-    // produktionsincident) — ett konto med många återkommande mallar (t.ex.
-    // strax efter "Kopiera rutiner" till ett nytt barn) kunde annars skjuta
-    // iväg tiotals parallella POST-anrop i en enda Promise.all, vilket i
-    // kombination med resten av en aktiv familjs samtidiga trafik (delad
-    // hem-IP, se app.ts:s globalLimiter-kommentar) kunde trigga 429:or.
-    const BATCH_SIZE = 4;
-    const savedOccurrences: (Todo | null)[] = [];
-    for (let i = 0; i < occurrences.length; i += BATCH_SIZE) {
-      const batch = occurrences.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(
-        batch.map(async (todo) => {
-          try {
-            await todosApi.create(todo);
-            return todo;
-          } catch (error) {
-            console.error(error);
-            return null;
-          }
-        })
-      );
-      savedOccurrences.push(...results);
-    }
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
+    try {
+      const currentDate = new Date();
+      const currentTime = currentDate.getTime();
+      const occurrences = getDueRecurringTodoOccurrences(baseTodos, currentDate);
+      // Skapas i småbuntar om 4 i taget istället för alla samtidigt (2026-07-16,
+      // produktionsincident) — ett konto med många återkommande mallar (t.ex.
+      // strax efter "Kopiera rutiner" till ett nytt barn) kunde annars skjuta
+      // iväg tiotals parallella POST-anrop i en enda Promise.all, vilket i
+      // kombination med resten av en aktiv familjs samtidiga trafik (delad
+      // hem-IP, se app.ts:s globalLimiter-kommentar) kunde trigga 429:or.
+      const BATCH_SIZE = 4;
+      const savedOccurrences: (Todo | null)[] = [];
+      for (let i = 0; i < occurrences.length; i += BATCH_SIZE) {
+        const batch = occurrences.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          batch.map(async (todo) => {
+            try {
+              await todosApi.create(todo);
+              return todo;
+            } catch (error) {
+              console.error(error);
+              return null;
+            }
+          })
+        );
+        savedOccurrences.push(...results);
+      }
 
-    setTodos((current) =>
-      expirePendingTodos(
-        addMissingTodos(
-          current,
-          savedOccurrences.filter((todo): todo is Todo => todo !== null)
-        ),
-        currentTime
-      )
-    );
+      setTodos((current) =>
+        expirePendingTodos(
+          addMissingTodos(
+            current,
+            savedOccurrences.filter((todo): todo is Todo => todo !== null)
+          ),
+          currentTime
+        )
+      );
+    } finally {
+      syncInFlightRef.current = false;
+    }
   }
 
   function createTodo(todo: Todo) {
