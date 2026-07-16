@@ -218,6 +218,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onCreateTaskTemplate={onCreateTaskTemplate}
           onDeleteTodo={onDeleteTodo}
           onRefreshRoutine={settingsProps.onRefreshRoutine}
+          fixedTodoTimes={activeAccount.fixedTodoTimes ?? false}
         />
       </SettingsSection>
 
