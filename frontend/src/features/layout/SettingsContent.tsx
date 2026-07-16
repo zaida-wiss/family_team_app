@@ -177,6 +177,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
           onUpdateMemberColor={settingsProps.onUpdateMemberColor}
           onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
+          onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
           onShareCalendar={memberContentProps.onShareCalendar}
           onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
         />
@@ -299,6 +300,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           onUpdateTodo={settingsProps.onUpdateTodo}
           onUpdateChildTimelineSettings={settingsProps.onUpdateChildTimelineSettings}
           onRefreshRoutine={settingsProps.onRefreshRoutine}
+          fixedTodoTimes={activeAccount.fixedTodoTimes ?? false}
           onDeleteTodo={settingsProps.onDeleteTodo}
         />
       </SettingsSection>

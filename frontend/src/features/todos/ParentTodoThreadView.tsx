@@ -46,6 +46,7 @@ type Props = {
   // en månad, eller en lång lista på allt i framtiden") — väljs i
   // Inställningar, samma per-medlem-mönster som todoViewMode.
   range: TodoThreadRange;
+  fixedTodoTimes: boolean;
 };
 
 type Thread = {
@@ -194,7 +195,8 @@ export function ParentTodoThreadView({
   onAddTodoToCategory,
   todoThreadOrder,
   onReorderThreads,
-  range
+  range,
+  fixedTodoTimes
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -798,6 +800,7 @@ export function ParentTodoThreadView({
           onDeleteTodo={onDeleteTodo}
           onRefreshRoutine={onRefreshRoutine}
           onClose={() => setEditTodoId(null)}
+          fixedTodoTimes={fixedTodoTimes}
         />
       )}
 

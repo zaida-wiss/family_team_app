@@ -18,6 +18,7 @@ type Props = {
   rewards: Reward[];
   canApproveTodos: boolean;
   canSeeTodos: boolean;
+  fixedTodoTimes: boolean;
   wishStars: Record<Id, number>;
   // Visningsläget (lista/tråd) väljs i Inställningar (2026-07-05, Zaidas
   // beslut) — ingen egen växlare i panelen, bara kategori/+-knappen/todos syns.
@@ -62,6 +63,7 @@ export function TodosView({
   rewards,
   canApproveTodos,
   canSeeTodos,
+  fixedTodoTimes,
   wishStars,
   todoViewMode,
   todoThreadOrder,
@@ -158,6 +160,7 @@ export function TodosView({
             taskTemplates={taskTemplates}
             categoryTemplates={categoryTemplates}
             onClose={closeCreateModal}
+            fixedTodoTimes={fixedTodoTimes}
           />
         )}
 
@@ -175,6 +178,7 @@ export function TodosView({
             onDeleteTodo={onSoftDeleteTodo}
             onRefreshRoutine={onRefreshRoutine}
             onClose={() => setEditTodoId(null)}
+            fixedTodoTimes={fixedTodoTimes}
           />
         )}
 
@@ -201,6 +205,7 @@ export function TodosView({
             todoThreadOrder={todoThreadOrder}
             onReorderThreads={onReorderThreads}
             range={todoThreadRange}
+            fixedTodoTimes={fixedTodoTimes}
           />
         )}
 

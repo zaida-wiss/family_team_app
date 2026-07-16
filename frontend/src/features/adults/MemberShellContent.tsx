@@ -39,6 +39,7 @@ type Props = {
   rewards: Reward[];
   calendars: Calendar[];
   shoppingLists: ShoppingList[];
+  fixedTodoTimes: boolean;
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
   onListTimedAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
@@ -110,7 +111,7 @@ export function MemberShellContent({
   activePanel, accountName,
 
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
-  todos, rewards, calendars, shoppingLists, timedTasks, onRecordTimedAttempt,
+  todos, rewards, calendars, shoppingLists, fixedTodoTimes, timedTasks, onRecordTimedAttempt,
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
@@ -245,6 +246,7 @@ export function MemberShellContent({
           rewards={rewards}
           canApproveTodos={canApproveTodos}
           canSeeTodos={canSeeTodos}
+          fixedTodoTimes={fixedTodoTimes}
           wishStars={wishStars}
           todoViewMode={todoViewMode}
           todoThreadOrder={todoThreadOrder}

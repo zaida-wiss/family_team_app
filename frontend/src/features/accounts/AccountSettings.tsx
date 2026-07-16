@@ -29,6 +29,7 @@ type AccountSettingsProps = {
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
   onUpdateMemberColor: (memberId: string, color: string | null) => void;
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
+  onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => void;
   onShareCalendar: (calendarId: string, memberId: string, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
 };
@@ -45,6 +46,7 @@ export function AccountSettings({
   onUpdateMemberAvatar,
   onUpdateMemberColor,
   onUpdateCalendarSettings,
+  onUpdateFixedTodoTimes,
   onShareCalendar,
   onRemoveCalendarShare,
 }: AccountSettingsProps) {
@@ -295,6 +297,25 @@ export function AccountSettings({
               onChange={(e) => onUpdateCalendarSettings({ ...calSettings, subscriptionUrl: e.target.value || null })}
             />
           </label>
+        </div>
+      )}
+
+      {canManageMembers && (
+        <div className="settings-sub">
+          <h3 className="settings-sub-title">Klockslag på todos/rutiner</h3>
+          <label className="field-label toggle-label">
+            <span>Fast klockslag oavsett var enheten befinner sig</span>
+            <input
+              type="checkbox"
+              checked={account.fixedTodoTimes ?? false}
+              onChange={(e) => onUpdateFixedTodoTimes(e.target.checked)}
+            />
+          </label>
+          <p className="settings-sub-desc">
+            {account.fixedTodoTimes
+              ? "På: ett klockslag (t.ex. 10:00) förblir alltid detsamma, oavsett var enheten befinner sig."
+              : "Av: ett klockslag (t.ex. 10:00) visas i enhetens egen tidszon — reser familjen till ett annat land kan tiden visas en eller flera timmar fel."}
+          </p>
         </div>
       )}
 

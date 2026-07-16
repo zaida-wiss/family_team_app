@@ -30,7 +30,7 @@ export function useAppState(initialMembership: ActiveMembership) {
     assignRole,
     clearMemberAvatar
   } = useMembersState();
-  const todosState = useTodosState();
+  const todosState = useTodosState(activeAccount.fixedTodoTimes ?? false);
   const calendarsState = useCalendarsState();
   const shoppingState = useShoppingState();
   const rewardsState = useRewardsState();

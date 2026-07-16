@@ -32,6 +32,7 @@ type Props = {
   onUpdateTodo: (todoId: string, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: string) => void;
   onDeleteTodo: (todoId: string) => void;
+  fixedTodoTimes: boolean;
 };
 
 export function ChildRoutineCreator({
@@ -46,6 +47,7 @@ export function ChildRoutineCreator({
   onUpdateTodo,
   onRefreshRoutine,
   onDeleteTodo,
+  fixedTodoTimes,
 }: Props) {
   const canCreate = hasPermission(currentMember, roles, "canScheduleRecurringTodos");
 
@@ -135,8 +137,8 @@ export function ChildRoutineCreator({
       recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: days },
       recurringSourceId: null,
       occurrenceDate: null,
-      visibleFrom: timeToAnchorISO(startTime),
-      expiresAt: timeToAnchorISO(endTime),
+      visibleFrom: timeToAnchorISO(startTime, fixedTodoTimes),
+      expiresAt: timeToAnchorISO(endTime, fixedTodoTimes),
       completedAt: null,
       approvedBy: null,
       approvedAt: null,
@@ -178,8 +180,8 @@ export function ChildRoutineCreator({
         starValue: stars,
         visual: { type: "lucide-icon" as const, value: emoji },
         personalCategoryId: categoryId,
-        visibleFrom: timeToAnchorISO(startTime),
-        expiresAt: timeToAnchorISO(endTime),
+        visibleFrom: timeToAnchorISO(startTime, fixedTodoTimes),
+        expiresAt: timeToAnchorISO(endTime, fixedTodoTimes),
       };
       const patch: Partial<Todo> = {
         ...templateFields,
@@ -209,7 +211,7 @@ export function ChildRoutineCreator({
                 assignedTo: childId,
                 timerEnabled: existing.timerEnabled,
                 plannedDurationMinutes: existing.plannedDurationMinutes
-              })
+              }, fixedTodoTimes)
             );
           }
         } else {
@@ -242,8 +244,8 @@ export function ChildRoutineCreator({
     setStarsRaw(String(todo.starValue));
     setSelectedCategoryId(todo.personalCategoryId ?? NO_CATEGORY_VALUE);
     setSelectedChildIds(group.children.map((child) => child.id));
-    setStartTime(isoToTimeInput(todo.visibleFrom));
-    setEndTime(isoToTimeInput(todo.expiresAt));
+    setStartTime(isoToTimeInput(todo.visibleFrom, fixedTodoTimes));
+    setEndTime(isoToTimeInput(todo.expiresAt, fixedTodoTimes));
     setDays(todo.recurrence.type === "recurring" ? todo.recurrence.daysOfWeek ?? [] : []);
   }
 

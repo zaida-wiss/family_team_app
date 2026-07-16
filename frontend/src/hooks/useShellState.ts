@@ -131,6 +131,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     rewards,
     calendars,
     shoppingLists,
+    fixedTodoTimes: activeAccount.fixedTodoTimes ?? false,
     ...permissions,
     wishStars,
     onSelectMember: setSelectedDashboardMemberId,
@@ -228,6 +229,15 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onUpdateAccount: setActiveAccount,
     onUpdateCalendarSettings: (settings: CalendarSettings) =>
       setActiveAccount({ ...activeAccount, calendarSettings: settings }),
+    // Till skillnad från onUpdateCalendarSettings ovan (som bara sätter
+    // lokal state — en redan existerande lucka, calendarSettings-ändringar
+    // går aldrig till servern och försvinner vid omladdning) sparar denna
+    // faktiskt till kontot, eftersom fixedTodoTimes annars skulle falla
+    // tillbaka till av vid nästa inloggning.
+    onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => {
+      setActiveAccount({ ...activeAccount, fixedTodoTimes });
+      accountsApi.update(activeAccount.id, { fixedTodoTimes }).catch(console.error);
+    },
     onCreateMember: createMember,
     onDeleteMember: (id: string) => softDeleteMember(id, currentMember.id),
     onDeleteOwnData: deleteOwnData,

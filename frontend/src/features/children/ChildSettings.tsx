@@ -27,6 +27,7 @@ type Props = {
   onUpdateChildTimelineSettings: (memberId: Id, settings: ChildTimelineSettings) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onDeleteTodo: (todoId: Id) => void;
+  fixedTodoTimes: boolean;
 };
 
 const DEFAULT_CHILD_TIMELINE_SETTINGS: ChildTimelineSettings = {
@@ -53,6 +54,7 @@ export function ChildSettings({
   onUpdateChildTimelineSettings,
   onRefreshRoutine,
   onDeleteTodo,
+  fixedTodoTimes,
 }: Props) {
   const [wishChildId, setWishChildId] = useState("");
   const [timelineChildId, setTimelineChildId] = useState("");
@@ -335,6 +337,7 @@ export function ChildSettings({
             onUpdateTodo={onUpdateTodo}
             onRefreshRoutine={onRefreshRoutine}
             onDeleteTodo={onDeleteTodo}
+            fixedTodoTimes={fixedTodoTimes}
           />
         </div>
       )}

@@ -17,6 +17,12 @@ export type Account = {
   createdBy: Id;
   deletedAt: string | null;
   calendarSettings?: CalendarSettings;
+  // Klockslag på todos/rutiner (2026-07-16, Zaidas önskemål efter en resa
+  // till Finland). false (standard): tolkas i ENHETENS aktuella tidszon —
+  // reser man ändras det visade klockslaget. true: tolkas alltid mot
+  // familjens hemtidszon (Europe/Stockholm, se utils/todoTimeZone.ts) — ett
+  // satt klockslag förblir detsamma oavsett var enheten fysiskt befinner sig.
+  fixedTodoTimes?: boolean;
 };
 
 export type AppPanel =

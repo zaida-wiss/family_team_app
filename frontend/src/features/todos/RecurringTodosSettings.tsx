@@ -17,6 +17,7 @@ type Props = {
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
   onDeleteTodo: (todoId: Id) => void;
   onRefreshRoutine: (routineId: Id) => void;
+  fixedTodoTimes: boolean;
 };
 
 const UNIT_LABEL: Record<RecurrenceUnit, string> = {
@@ -60,7 +61,8 @@ export function RecurringTodosSettings({
   onCreateCategory,
   onCreateTaskTemplate,
   onDeleteTodo,
-  onRefreshRoutine
+  onRefreshRoutine,
+  fixedTodoTimes
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
   // Strukturerad överblick i tidsordning (2026-07-07, Zaidas önskemål) —
@@ -125,6 +127,7 @@ export function RecurringTodosSettings({
           onClose={() => setEditingId(null)}
           onUpdateTodo={onUpdateTodo}
           todo={editingTodo}
+          fixedTodoTimes={fixedTodoTimes}
         />
       )}
     </>

@@ -33,6 +33,7 @@ type Props = {
   taskTemplates: TodoTemplate[];
   categoryTemplates: TodoCategoryTemplate[];
   onClose: () => void;
+  fixedTodoTimes?: boolean;
 };
 
 function toDateTimeString(value: string): string | null {
@@ -57,7 +58,8 @@ export function TodoCreatorModal({
   onCreateTodo,
   taskTemplates,
   categoryTemplates,
-  onClose
+  onClose,
+  fixedTodoTimes = false
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
@@ -599,7 +601,7 @@ export function TodoCreatorModal({
                   </label>
                   {isStartDateMissing && <p className="field-hint">Välj ett startdatum.</p>}
 
-                  <TimeWindowsPicker onChange={setTimeWindows} windows={timeWindows} />
+                  <TimeWindowsPicker fixedTodoTimes={fixedTodoTimes} onChange={setTimeWindows} windows={timeWindows} />
                 </>
               )}
 

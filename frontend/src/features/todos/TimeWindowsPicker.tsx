@@ -6,13 +6,14 @@ import { isoToTimeInput, timeToAnchorISO } from "./recurringTodos";
 type Props = {
   windows: TodoTimeWindow[];
   onChange: (windows: TodoTimeWindow[]) => void;
+  fixedTodoTimes?: boolean;
 };
 
 // Flera tidsintervall per dag på samma återkommande uppgift (2026-07-05,
 // Zaidas önskemål, t.ex. "borsta tänder" morgon OCH kväll som EN mall istället
 // för två separata uppgifter). Bara meningsfull när uppgiften är återkommande
 // — se TodoCreatorModal.tsx/TodoEditModal.tsx som bara visar den då.
-export function TimeWindowsPicker({ windows, onChange }: Props) {
+export function TimeWindowsPicker({ windows, onChange, fixedTodoTimes = false }: Props) {
   function addWindow() {
     onChange([...windows, { visibleFrom: null, expiresAt: null }]);
   }
@@ -22,11 +23,11 @@ export function TimeWindowsPicker({ windows, onChange }: Props) {
   }
 
   function updateStart(index: number, hhmm: string) {
-    onChange(windows.map((w, i) => (i === index ? { ...w, visibleFrom: timeToAnchorISO(hhmm) } : w)));
+    onChange(windows.map((w, i) => (i === index ? { ...w, visibleFrom: timeToAnchorISO(hhmm, fixedTodoTimes) } : w)));
   }
 
   function updateEnd(index: number, hhmm: string) {
-    onChange(windows.map((w, i) => (i === index ? { ...w, expiresAt: timeToAnchorISO(hhmm) } : w)));
+    onChange(windows.map((w, i) => (i === index ? { ...w, expiresAt: timeToAnchorISO(hhmm, fixedTodoTimes) } : w)));
   }
 
   return (
@@ -40,7 +41,7 @@ export function TimeWindowsPicker({ windows, onChange }: Props) {
               className="text-input"
               onChange={(e) => updateStart(index, e.target.value)}
               type="time"
-              value={isoToTimeInput(window.visibleFrom)}
+              value={isoToTimeInput(window.visibleFrom, fixedTodoTimes)}
             />
             <span aria-hidden="true">–</span>
             <input
@@ -48,7 +49,7 @@ export function TimeWindowsPicker({ windows, onChange }: Props) {
               className="text-input"
               onChange={(e) => updateEnd(index, e.target.value)}
               type="time"
-              value={isoToTimeInput(window.expiresAt)}
+              value={isoToTimeInput(window.expiresAt, fixedTodoTimes)}
             />
             {windows.length > 1 && (
               <button

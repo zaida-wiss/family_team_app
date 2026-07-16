@@ -38,6 +38,7 @@ type Props = {
   // useTodosState.ts:s refreshRoutineOccurrence).
   onRefreshRoutine: (routineId: Id) => void;
   onClose: () => void;
+  fixedTodoTimes?: boolean;
 };
 
 function isoToDateTimeLocal(iso: string | null): string {
@@ -67,7 +68,8 @@ export function TodoEditModal({
   onCreateTaskTemplate,
   onDeleteTodo,
   onRefreshRoutine,
-  onClose
+  onClose,
+  fixedTodoTimes = false
 }: Props) {
   function handleDelete() {
     onDeleteTodo(todo.id);
@@ -493,7 +495,7 @@ export function TodoEditModal({
               </label>
               {isStartDateMissing && <p className="field-hint">Välj ett startdatum.</p>}
 
-              <TimeWindowsPicker onChange={setTimeWindows} windows={timeWindows} />
+              <TimeWindowsPicker fixedTodoTimes={fixedTodoTimes} onChange={setTimeWindows} windows={timeWindows} />
             </>
           )}
 

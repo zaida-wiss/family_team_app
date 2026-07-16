@@ -1,4 +1,5 @@
 import type { RecurrenceRule, Todo, TodoTimeWindow, Weekday } from "@shared/types";
+import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput, withWallClockOnDate } from "../../utils/todoTimeZone";
 
 const weekdays: Weekday[] = [
   "sunday",
@@ -23,18 +24,15 @@ export const WEEKDAY_SHORT: Record<Weekday, string> = {
 };
 
 // Tid-input-hjälpare, delade mellan TimeWindowsPicker och skapa/redigera-
-// modalerna. Samma mönster som routineHelpers.ts (barnens rutinskapare)
-// använder, men duplicerad hellre än att skapa ett cross-feature-beroende
-// (children/routineHelpers.ts importerar redan FRÅN todos/recurringTodos.ts).
-export function timeToAnchorISO(hhmm: string): string | null {
-  if (!hhmm) return null;
-  return new Date(`2000-01-01T${hhmm}:00`).toISOString();
+// modalerna. Själva tidszons-logiken (fixedTodoTimes) ligger i utils/
+// todoTimeZone.ts — delad med routineHelpers.ts (barnens rutinskapare), som
+// tidigare hade en egen, icke tidszon-medveten kopia av samma konvertering.
+export function timeToAnchorISO(hhmm: string, fixedTodoTimes = false): string | null {
+  return sharedTimeToAnchorISO(hhmm, fixedTodoTimes);
 }
 
-export function isoToTimeInput(iso: string | null): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+export function isoToTimeInput(iso: string | null, fixedTodoTimes = false): string {
+  return sharedIsoToTimeInput(iso, fixedTodoTimes);
 }
 
 export function dateOnlyToISO(yyyyMmDd: string): string | null {
@@ -57,7 +55,8 @@ export function isoToDateOnly(iso: string | null): string {
 // som innan detta fältet fanns.
 export function getDueRecurringTodoOccurrences(
   todos: Todo[],
-  now = new Date()
+  now = new Date(),
+  fixedTodoTimes = false
 ): Todo[] {
   const dateKey = getDateKey(now);
   const dueTemplates = todos
@@ -74,7 +73,7 @@ export function getDueRecurringTodoOccurrences(
     windows.forEach((window, index) => {
       const id = occurrenceId(template.id, dateKey, windows.length > 1 ? index : null);
       if (todos.some((t) => t.id === id)) return;
-      occurrences.push(createOccurrence(template, dateKey, window, id));
+      occurrences.push(createOccurrence(template, dateKey, window, id, fixedTodoTimes));
     });
   }
   return occurrences;
@@ -207,13 +206,16 @@ function startOfWeek(date: Date): Date {
   return day;
 }
 
-function createOccurrence(template: Todo, dateKey: string, window: TodoTimeWindow, id: string): Todo {
-  const visibleFrom = withOccurrenceDate(window.visibleFrom, dateKey);
+function createOccurrence(
+  template: Todo, dateKey: string, window: TodoTimeWindow, id: string, fixedTodoTimes = false
+): Todo {
+  const visibleFrom = withWallClockOnDate(window.visibleFrom, dateKey, fixedTodoTimes);
   const expiresAt = createOccurrenceExpiresAt(
     window.visibleFrom,
     window.expiresAt,
     visibleFrom,
-    dateKey
+    dateKey,
+    fixedTodoTimes
   );
 
   return {
@@ -240,39 +242,23 @@ function createOccurrenceExpiresAt(
   templateVisibleFrom: string | null,
   templateExpiresAt: string | null,
   occurrenceVisibleFrom: string | null,
-  dateKey: string
+  dateKey: string,
+  fixedTodoTimes = false
 ) {
   if (!templateExpiresAt) {
     return null;
   }
 
   if (templateVisibleFrom && occurrenceVisibleFrom) {
+    // Ren ms-differens (varaktighet) — redan tidszon-oberoende, ingen
+    // fixedTodoTimes-hantering behövs i den här grenen.
     const duration =
       new Date(templateExpiresAt).getTime() - new Date(templateVisibleFrom).getTime();
 
     return new Date(new Date(occurrenceVisibleFrom).getTime() + duration).toISOString();
   }
 
-  return withOccurrenceDate(templateExpiresAt, dateKey);
-}
-
-function withOccurrenceDate(value: string | null, dateKey: string) {
-  if (!value) {
-    return `${dateKey}T00:00:00.000Z`;
-  }
-
-  const sourceDate = new Date(value);
-  const [year, month, day] = dateKey.split("-").map(Number);
-
-  return new Date(
-    year,
-    month - 1,
-    day,
-    sourceDate.getHours(),
-    sourceDate.getMinutes(),
-    sourceDate.getSeconds(),
-    sourceDate.getMilliseconds()
-  ).toISOString();
+  return withWallClockOnDate(templateExpiresAt, dateKey, fixedTodoTimes);
 }
 
 function startOfLocalDay(date: Date) {
@@ -298,11 +284,12 @@ export function applyTemplateToOccurrence(
     | "assignedTo"
     | "timerEnabled"
     | "plannedDurationMinutes"
-  >
+  >,
+  fixedTodoTimes = false
 ): Partial<Todo> {
   const dateKey = occurrence.occurrenceDate ?? getDateKey(new Date());
-  const visibleFrom = withOccurrenceDate(template.visibleFrom, dateKey);
-  const expiresAt = createOccurrenceExpiresAt(template.visibleFrom, template.expiresAt, visibleFrom, dateKey);
+  const visibleFrom = withWallClockOnDate(template.visibleFrom, dateKey, fixedTodoTimes);
+  const expiresAt = createOccurrenceExpiresAt(template.visibleFrom, template.expiresAt, visibleFrom, dateKey, fixedTodoTimes);
 
   return {
     title: template.title,

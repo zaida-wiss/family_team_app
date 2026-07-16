@@ -15,7 +15,8 @@ const accountSchema = new Schema<Account>({
   type: { type: String, enum: ["family"], required: true },
   createdBy: { type: String, required: true },
   deletedAt: { type: String, default: null },
-  calendarSettings: { type: calendarSettingsSchema, default: undefined }
+  calendarSettings: { type: calendarSettingsSchema, default: undefined },
+  fixedTodoTimes: { type: Boolean, default: false }
 });
 
 export const AccountModel = model<Account>("Account", accountSchema);

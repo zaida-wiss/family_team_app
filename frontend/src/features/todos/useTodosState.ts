@@ -14,7 +14,7 @@ export type ImportUndo = {
 
 export type ImportResult = { created: number; updated: number; errors: string[] };
 
-export function useTodosState() {
+export function useTodosState(fixedTodoTimes = false) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const todosRef = useRef<Todo[]>([]);
   // Senaste CSV-importens resultat + ångra-underlag (2026-07-08, Zaidas
@@ -118,7 +118,7 @@ export function useTodosState() {
     try {
       const currentDate = new Date();
       const currentTime = currentDate.getTime();
-      const occurrences = getDueRecurringTodoOccurrences(baseTodos, currentDate);
+      const occurrences = getDueRecurringTodoOccurrences(baseTodos, currentDate, fixedTodoTimes);
       // Skapas i småbuntar om 4 i taget istället för alla samtidigt (2026-07-16,
       // produktionsincident) — ett konto med många återkommande mallar (t.ex.
       // strax efter "Kopiera rutiner" till ett nytt barn) kunde annars skjuta
@@ -399,13 +399,13 @@ export function useTodosState() {
       // Synka samtidigt med mallens aktuella värden — annars visas fortsatt
       // gårdagens/en redigerad tid/titel trots att uppdraget "visas igen".
       updateTodo(existingOccurrence.id, {
-        ...applyTemplateToOccurrence(existingOccurrence, routine),
+        ...applyTemplateToOccurrence(existingOccurrence, routine, fixedTodoTimes),
         ...pendingPatch
       });
       return;
     }
 
-    const [newOccurrence] = getDueRecurringTodoOccurrences([routine], new Date());
+    const [newOccurrence] = getDueRecurringTodoOccurrences([routine], new Date(), fixedTodoTimes);
     if (newOccurrence) {
       todosApi.create(newOccurrence).catch(console.error);
       setTodos((items) => addMissingTodos(items, [newOccurrence]));
