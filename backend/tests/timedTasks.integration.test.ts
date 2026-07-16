@@ -162,3 +162,119 @@ describe.skipIf(!RUN)("Tidtagna uppgifter (Medaljer/Rekord) mot riktig MongoDB",
     expect(listRes.body).toEqual([]);
   });
 });
+
+/**
+ * Säkerhetsfynd fixat 2026-07-16 (samma klass av brist som ADR-0016/ADR-0009):
+ * POST/DELETE /api/timed-tasks saknade all behörighetskontroll utöver
+ * requireAuth+attachAccountId — vilket inloggat barn som helst kunde skapa/
+ * ta bort valfri tidtagen uppgift om de anropade API:t direkt (UI:t visar
+ * aldrig Medaljer/Rekord-inställningarna för barn). recordAttempt/
+ * deleteAttempt verifierade heller aldrig att den anropande medlemmen var
+ * uppgiftens mottagare (eller en förälder som hanterar det barnets konto) —
+ * vem som helst i kontot kunde logga/radera ett försök på ett ANNAT barns
+ * rekord.
+ */
+describe.skipIf(!RUN)("timedTasksService: server-side behörighetskontroll", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.db?.dropDatabase();
+    await mongoose.disconnect();
+  });
+
+  let accessToken: string;
+  let parentMemberId: string;
+  let childMemberId: string;
+  let otherChildMemberId: string;
+
+  it("sätter upp konto med förälder och två barn", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "timed-perm-int@bmad.test", password: "Lösenord1!", name: "Behörighetstest" });
+    accessToken = register.body.accessToken as string;
+
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: "Rekordfamiljen" });
+    parentMemberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
+
+    const roles = await request(app)
+      .get("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId);
+    const childRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>).find((r) => r.isChildRole)!.id;
+
+    const child = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ name: "Barnet", roleId: childRoleId, isChild: true, avatarUrl: null, color: null, dashboardTheme: null });
+    childMemberId = (child.body as { id: string }).id;
+
+    const otherChild = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ name: "Syskonet", roleId: childRoleId, isChild: true, avatarUrl: null, color: null, dashboardTheme: null });
+    otherChildMemberId = (otherChild.body as { id: string }).id;
+  });
+
+  it("nekar ett barn att skapa en tidtagen uppgift", async () => {
+    const res = await request(app)
+      .post("/api/timed-tasks")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childMemberId)
+      .send({ title: "Springa", symbol: "🏃", assignedTo: childMemberId });
+    expect(res.status).toBe(403);
+  });
+
+  let taskId: string;
+
+  it("tillåter föräldern att skapa en tidtagen uppgift åt barnet", async () => {
+    const res = await request(app)
+      .post("/api/timed-tasks")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ title: "Springa", symbol: "🏃", assignedTo: childMemberId });
+    expect(res.status).toBe(201);
+    taskId = (res.body as { id: string }).id;
+  });
+
+  it("nekar syskonet att logga ett försök på ett ANNAT barns uppgift", async () => {
+    const res = await request(app)
+      .post(`/api/timed-tasks/${taskId}/attempts`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", otherChildMemberId)
+      .send({ durationMs: 30000 });
+    expect(res.status).toBe(403);
+  });
+
+  it("tillåter barnet att logga ett försök på sin egen uppgift", async () => {
+    const res = await request(app)
+      .post(`/api/timed-tasks/${taskId}/attempts`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childMemberId)
+      .send({ durationMs: 30000 });
+    expect(res.status).toBe(201);
+  });
+
+  it("tillåter föräldern att logga ett försök åt barnet (canManageChildTodos)", async () => {
+    const res = await request(app)
+      .post(`/api/timed-tasks/${taskId}/attempts`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ durationMs: 25000 });
+    expect(res.status).toBe(201);
+  });
+
+  it("nekar syskonet att ta bort ett annat barns uppgift", async () => {
+    const res = await request(app)
+      .delete(`/api/timed-tasks/${taskId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", otherChildMemberId);
+    expect(res.status).toBe(403);
+  });
+});

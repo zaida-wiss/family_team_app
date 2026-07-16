@@ -1,7 +1,28 @@
 import { TimedTaskModel } from "../db/models/TimedTask.js";
 import { TimedAttemptModel } from "../db/models/TimedAttempt.js";
+import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
-import type { TimedAttempt, TimedTaskWithBest } from "../../../shared/types.js";
+import { requireAdultMember } from "./todoCategoriesService.js";
+import { getAllRoles } from "./rolesService.js";
+import { canManageChildAccount } from "../../../shared/permissions.js";
+import type { Member, TimedAttempt, TimedTaskWithBest } from "../../../shared/types.js";
+
+// Säkerhetsfynd fixat 2026-07-16 (samma klass av brist som ADR-0016/ADR-0009):
+// GET/POST /api/timed-tasks och DELETE /:id saknade all behörighetskontroll
+// utöver requireAuth+attachAccountId — vilken inloggad medlem som helst i
+// kontot (i praktiken: ett barn som anropade API:t direkt, UI:t visar aldrig
+// Medaljer/Rekord-inställningarna för barn) kunde skapa/ta bort VILKEN
+// tidtagen uppgift som helst. recordAttempt/deleteAttempt verifierade heller
+// aldrig att den anropande medlemmen faktiskt är uppgiftens mottagare (eller
+// en vuxen som hanterar det barnets konto) — vem som helst i kontot kunde
+// logga eller radera ett försök på ett ANNAT barns rekord.
+async function requireAttemptCaller(caller: Member, task: { assignedTo: string }) {
+  if (task.assignedTo === caller.id) return;
+  const roles = await getAllRoles(caller.accountId);
+  const assignee = await MemberModel.findOne({ id: task.assignedTo, accountId: caller.accountId, deletedAt: null });
+  if (assignee && canManageChildAccount(caller, assignee, roles)) return;
+  throw new AppError(403, "Åtkomst nekad");
+}
 
 export async function getAllTimedTasks(accountId: string): Promise<TimedTaskWithBest[]> {
   const tasks = await TimedTaskModel.find({ accountId, deletedAt: null }, { _id: 0, __v: 0 }).lean();
@@ -47,6 +68,7 @@ export async function createTimedTask(
   createdBy: string,
   data: { title: string; symbol?: string | null; assignedTo: string }
 ) {
+  await requireAdultMember(createdBy, accountId);
   const task = new TimedTaskModel({
     id: `tt-${crypto.randomUUID()}`,
     accountId,
@@ -62,6 +84,7 @@ export async function createTimedTask(
 }
 
 export async function deleteTimedTask(id: string, accountId: string, memberId: string | null) {
+  await requireAdultMember(memberId, accountId);
   const task = await TimedTaskModel.findOne({ id, accountId });
   if (!task || task.deletedAt) throw new AppError(404, "Tidtagen uppgift hittades inte");
   task.deletedAt = new Date().toISOString();
@@ -87,6 +110,10 @@ export async function recordAttempt(
 ) {
   const task = await TimedTaskModel.findOne({ id: timedTaskId, accountId, deletedAt: null });
   if (!task) throw new AppError(404, "Tidtagen uppgift hittades inte");
+
+  const caller = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
+  if (!caller) throw new AppError(403, "Åtkomst nekad");
+  await requireAttemptCaller(caller, task);
 
   const best = await TimedAttemptModel.findOne({ timedTaskId, deletedAt: null }).sort({ durationMs: 1 }).lean();
   const isNewRecord = !best || durationMs < best.durationMs;
@@ -142,6 +169,10 @@ export async function deleteAttempt(
 ) {
   const task = await TimedTaskModel.findOne({ id: timedTaskId, accountId, deletedAt: null });
   if (!task) throw new AppError(404, "Tidtagen uppgift hittades inte");
+
+  const caller = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
+  if (!caller) throw new AppError(403, "Åtkomst nekad");
+  await requireAttemptCaller(caller, task);
 
   const attempt = await TimedAttemptModel.findOne({ id: attemptId, timedTaskId });
   if (!attempt || attempt.deletedAt) throw new AppError(404, "Försök hittades inte");
