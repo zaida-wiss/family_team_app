@@ -184,7 +184,23 @@ export function TodoImportExport({
       const undoUpdated: ImportUndo["updated"] = [];
       const undoCreatedIds: Id[] = [];
 
+      // Bunta i grupper om 4 rader, samma mönster/orsak som ADR-0023
+      // (2026-07-16, ett konto delar ofta en enda hem-IP över flera
+      // medlemmar) — onCreateTodo/onUpdateTodo är fire-and-forget, så en
+      // stor import (t.ex. 500+ rader) kunde annars skjuta iväg lika många
+      // parallella POST/PATCH-anrop i en enda synkron loop, samma sorts
+      // burst som orsakade 429-incidenten. En kort paus var 4:e rad räcker
+      // för att sprida ut anropen utan att göra importen märkbart segare.
+      const BATCH_SIZE = 4;
+      let rowsSinceBatchPause = 0;
+
       for (const row of rows) {
+        rowsSinceBatchPause++;
+        if (rowsSinceBatchPause > BATCH_SIZE) {
+          rowsSinceBatchPause = 1;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+
         let assignedTo = row.assignedTo;
         if (row.unresolvedAssigneeLabel) {
           const resolution = resolutionMap[row.unresolvedAssigneeLabel];
