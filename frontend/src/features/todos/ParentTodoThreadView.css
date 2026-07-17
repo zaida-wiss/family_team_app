@@ -138,8 +138,17 @@
   white-space: nowrap;
   text-align: center;
   /* Kategorins accentfärg (kopplad till valt tema, se ParentTodoThreadView.tsx) —
-     saknas för Barn-tråden, som då faller tillbaka på vanlig textfärg. */
-  color: var(--thread-accent, inherit);
+     saknas för Barn-tråden, som då faller tillbaka på vanlig textfärg.
+     Tillgänglighetsfynd fixat (2026-07-17, Astrid, WCAG 1.4.3): flera av
+     temanas ljusare --c0…--c7-accentfärger (särskilt Solnedgång/Turkos/
+     Lagun) klarade inte 4,5:1-kontrastkravet mot --card-bakgrunden när de
+     användes rakt av som textfärg — vissa så lågt som ~1,0:1 (praktiskt
+     taget osynlig text). Mörkas nu alltid 70% mot svart innan den används
+     som text — en beräknad, uträknad kontrollpunkt (60% svart var minsta
+     mängd som fick ALLA 24 accentfärger i de tre temana att klara 4,5:1;
+     70% ger marginal). Temaoberoende formel, ingen risk att glömma
+     verifiera ett framtida nytt tema separat. */
+  color: color-mix(in srgb, var(--thread-accent, var(--foreground)) 30%, black 70%);
 }
 
 .todo-thread__category-button {
