@@ -289,10 +289,21 @@ export async function deleteTodo(id: string, accountId: string, memberId: string
   broadcastTodosChanged();
 }
 
-export async function restoreTodo(id: string, accountId: string) {
+// Sprint 8 S3 (2026-07-17), uppföljning noterad redan i ADR-0009/ADR-0016:
+// saknade helt server-side behörighetskontroll — vilken inloggad medlem som
+// helst i kontot kunde återställa VILKEN raderad todo som helst, oavsett
+// egen canRestoreFromTrash-behörighet (klienten gömde bara knappen, se
+// TrashView.tsx). Samma mönster som redan fixats för complete/approve/
+// reject/update/delete.
+export async function restoreTodo(id: string, accountId: string, memberId: string | null) {
   const todo = await TodoModel.findOne({ id, accountId });
   if (!todo) {
     throw new AppError(404, "Todo hittades inte");
+  }
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(member, roles, "canRestoreFromTrash")) {
+    throw new AppError(403, "Åtkomst nekad");
   }
   todo.deletedAt = null;
   todo.deletedBy = null;

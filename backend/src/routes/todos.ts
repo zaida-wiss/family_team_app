@@ -51,7 +51,7 @@ todosRouter.delete("/:id", requireAuth, attachAccountId, async (req, res) => {
 });
 
 todosRouter.patch("/:id/restore", requireAuth, attachAccountId, async (req, res) => {
-  await todos.restoreTodo(req.params.id, req.accountId!);
+  await todos.restoreTodo(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });
 });
 

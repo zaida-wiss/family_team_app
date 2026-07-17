@@ -279,4 +279,44 @@ describe.skipIf(!RUN)("todos.ts: server-side behörighetskontroll på complete/a
       .set("x-member-id", parentMemberId);
     expect(del.status).toBe(200);
   });
+
+  it("nekar PATCH .../restore för en medlem utan canRestoreFromTrash (Sprint 8 S3)", async () => {
+    const todoId = `todo-perm-restore-a-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ id: todoId, title: "Raderad todo", createdBy: parentMemberId, assignedTo: parentMemberId, ...todoPayload({}) });
+    await request(app)
+      .delete(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId);
+
+    const res = await request(app)
+      .patch(`/api/todos/${todoId}/restore`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({});
+    expect(res.status).toBe(403);
+  });
+
+  it("tillåter PATCH .../restore för en medlem med canRestoreFromTrash (Sprint 8 S3)", async () => {
+    const todoId = `todo-perm-restore-b-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ id: todoId, title: "Raderad todo 2", createdBy: parentMemberId, assignedTo: parentMemberId, ...todoPayload({}) });
+    await request(app)
+      .delete(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId);
+
+    const res = await request(app)
+      .patch(`/api/todos/${todoId}/restore`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({});
+    expect(res.status).toBe(200);
+  });
 });
