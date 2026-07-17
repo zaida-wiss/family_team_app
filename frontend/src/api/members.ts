@@ -1,5 +1,5 @@
 import type { Member } from "@shared/types";
-import { api, request } from "./client";
+import { api, request, subscribeToServerEvents } from "./client";
 
 export const membersApi = {
   getAll: () => request<Member[]>(api("members")),
@@ -24,5 +24,18 @@ export const membersApi = {
     request<{ ok: boolean }>(api(`members/${id}/restore`), {
       method: "PATCH",
       body: JSON.stringify({})
-    })
+    }),
+  // Realtidssynk (2026-07-17, Zaidas fynd: stjärnor uppdaterades inte förrän
+  // en omladdning) — samma SSE-mönster som todosApi redan använder.
+  subscribeToChanges: (onChange: () => void) => {
+    let initialConnect = true;
+    return subscribeToServerEvents(api("members/events"), (eventName) => {
+      if (eventName === "members-changed") {
+        onChange();
+      } else if (eventName === "connected") {
+        if (initialConnect) { initialConnect = false; return; }
+        onChange();
+      }
+    });
+  }
 };

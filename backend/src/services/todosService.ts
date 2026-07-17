@@ -2,6 +2,7 @@ import { TodoModel } from "../db/models/Todo.js";
 import { MemberModel } from "../db/models/Member.js";
 import { RoleModel } from "../db/models/Role.js";
 import { broadcastTodosChanged } from "../realtime/todoEvents.js";
+import { broadcastMembersChanged } from "../realtime/memberEvents.js";
 import { AppError } from "../utils/errors.js";
 import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
@@ -172,6 +173,7 @@ export async function completeTodo(
     todo.approvedAt = todo.completedAt;
     if (todo.assignedTo && todo.starValue) {
       await MemberModel.updateOne({ id: todo.assignedTo }, { $inc: { approvedStars: todo.starValue } });
+      broadcastMembersChanged();
     }
   }
 
@@ -226,6 +228,7 @@ export async function approveTodo(id: string, accountId: string, memberId: strin
       memberId,
       `Godkände ${todo.starValue} stjärnor för "${decryptField(accountId, todo.title)}" (${member?.name ?? "okänd medlem"})`
     );
+    broadcastMembersChanged();
   }
   broadcastTodosChanged();
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { membersApi } from "../../api";
+import { readCache, writeCache } from "../../utils/localCache";
 import type {
   AppPanel,
   CalendarFilterKey,
@@ -12,12 +13,32 @@ import type {
   TodoViewMode
 } from "@shared/types";
 
+const MEMBERS_CACHE_KEY = "members_v1";
+
 export function useMembersState() {
-  const [members, setMembers] = useState<Member[]>([]);
+  // Stale-while-revalidate + realtidssynk (2026-07-17, Zaidas fynd: "dagens
+  // stjärnor och framförallt totalt antal stjärnor i barnvyn uppdateras inte
+  // direkt, jag behöver refresha sidan... vi vill helt jobba i realtid").
+  // Medlemmar hämtades tidigare bara EN gång vid appstart — en stjärnökning
+  // (todo godkänd, belöning köpt) syntes aldrig förrän en manuell omladdning.
+  // Nu: cachad data visas direkt (funkar även utan nät), och en SSE-
+  // prenumeration (membersApi.subscribeToChanges) triggar en ny hämtning så
+  // fort servern faktiskt ändrat något — samma mönster som todos redan har.
+  const [members, setMembers] = useState<Member[]>(() => readCache(MEMBERS_CACHE_KEY, []));
 
   useEffect(() => {
     membersApi.getAll().then(setMembers).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    return membersApi.subscribeToChanges(() => {
+      membersApi.getAll().then(setMembers).catch(console.error);
+    });
+  }, []);
+
+  useEffect(() => {
+    writeCache(MEMBERS_CACHE_KEY, members);
+  }, [members]);
 
   function createMember(member: Member) {
     membersApi.create(member).catch(console.error);

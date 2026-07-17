@@ -7,6 +7,7 @@ import type { RewardShopItem } from "../../../shared/types.js";
 import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
 import { AppError } from "../utils/errors.js";
 import { broadcastRewardShopChanged } from "../realtime/rewardShopEvents.js";
+import { broadcastMembersChanged } from "../realtime/memberEvents.js";
 import { writeAuditLog } from "./auditLogService.js";
 
 export async function getShop(accountId: string) {
@@ -133,6 +134,7 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
   );
 
   broadcastRewardShopChanged();
+  broadcastMembersChanged();
   return purchased;
 }
 
@@ -172,5 +174,6 @@ export async function deletePurchasedReward(id: string, accountId: string) {
     await MemberModel.updateOne({ id: pr.memberId }, { $inc: { spentStars: -pr.starCost } });
     await PurchasedRewardModel.updateOne({ id }, { $set: { deletedAt: new Date().toISOString() } });
     broadcastRewardShopChanged();
+    broadcastMembersChanged();
   }
 }
