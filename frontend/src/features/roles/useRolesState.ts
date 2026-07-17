@@ -1,13 +1,23 @@
 import { useEffect, useState } from "react";
 import { rolesApi } from "../../api";
+import { readCache, writeCache } from "../../utils/localCache";
 import type { Id, PermissionKey, Role } from "@shared/types";
 
+const ROLES_CACHE_KEY = "roles_v1";
+
 export function useRolesState() {
-  const [roles, setRoles] = useState<Role[]>([]);
+  // Stale-while-revalidate (2026-07-17) — roller behövs för att avgöra
+  // behörigheter överallt i appen (hasPermission), måste finnas offline för
+  // att appen ens ska fungera meningsfullt utan nät.
+  const [roles, setRoles] = useState<Role[]>(() => readCache(ROLES_CACHE_KEY, []));
 
   useEffect(() => {
     rolesApi.getAll().then(setRoles).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    writeCache(ROLES_CACHE_KEY, roles);
+  }, [roles]);
 
   // accountId sätts alltid server-side (aldrig litat på klienten) — den optimistiska
   // lokala uppdateringen behöver ändå ett värde för typens skull tills nästa hämtning

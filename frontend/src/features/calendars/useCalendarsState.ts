@@ -3,20 +3,10 @@ import { calendarsApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { generateId } from "../../utils/uuid";
 import { useCalendarSubscriptions } from "./useCalendarSubscriptions";
+import { readCache, writeCache } from "../../utils/localCache";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
 
-const CALS_CACHE = "cals_v1";
-function readCalsCache(): Calendar[] {
-  try {
-    const raw = localStorage.getItem(CALS_CACHE);
-    return raw ? (JSON.parse(raw) as Calendar[]) : [];
-  } catch {
-    return [];
-  }
-}
-function writeCalsCache(data: Calendar[]) {
-  try { localStorage.setItem(CALS_CACHE, JSON.stringify(data)); } catch { /* quota */ }
-}
+const CALS_CACHE_KEY = "cals_v1";
 
 export type AddEventInput = {
   title: string;
@@ -48,7 +38,13 @@ function monthWindow(year: number, month: number) {
 
 export function useCalendarsState() {
   // Stale-while-revalidate: visa cachad data direkt, hämta färsk i bakgrunden
-  const [calendars, setCalendars] = useState<Calendar[]>(readCalsCache);
+  // (samma delade cache-hjälpare som övriga state-hookar sedan 2026-07-17,
+  // tidigare en egen lokal implementation här — enda stället som hade
+  // cachning innan dess). En enda skriv-effekt nedan (beroende på hela
+  // `calendars`) täcker ALLA ändringar (ny hämtning, loadEventsForMonth,
+  // samt varje create/update/delete-funktion i denna fil) istället för att
+  // varje mutation manuellt behöver komma ihåg att skriva till cachen.
+  const [calendars, setCalendars] = useState<Calendar[]>(() => readCache(CALS_CACHE_KEY, []));
   const loadedFrom = useRef<string>("");
   const loadedUntil = useRef<string>("");
 
@@ -57,11 +53,12 @@ export function useCalendarsState() {
     const { from, until } = monthWindow(now.getFullYear(), now.getMonth());
     loadedFrom.current = from;
     loadedUntil.current = until;
-    calendarsApi.getAll(from, until).then((fresh) => {
-      setCalendars(fresh);
-      writeCalsCache(fresh);
-    }).catch(console.error);
+    calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    writeCache(CALS_CACHE_KEY, calendars);
+  }, [calendars]);
 
   async function loadEventsForMonth(year: number, month: number) {
     const { from, until } = monthWindow(year, month);

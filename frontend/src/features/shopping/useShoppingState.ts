@@ -2,14 +2,22 @@ import { useEffect, useState } from "react";
 import { shoppingApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { generateId } from "../../utils/uuid";
+import { readCache, writeCache } from "../../utils/localCache";
 import type { AccessLevel, Id, ShoppingList } from "@shared/types";
 
+const SHOPPING_CACHE_KEY = "shopping_v1";
+
 export function useShoppingState() {
-  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
+  // Stale-while-revalidate (2026-07-17) — se useTodosState.ts för samma mönster.
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(() => readCache(SHOPPING_CACHE_KEY, []));
 
   useEffect(() => {
     shoppingApi.getAll().then(setShoppingLists).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    writeCache(SHOPPING_CACHE_KEY, shoppingLists);
+  }, [shoppingLists]);
 
   function createShoppingList(name: string, memberId: Id) {
     const newList: ShoppingList = {

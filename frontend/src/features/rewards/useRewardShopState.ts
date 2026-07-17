@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { rewardShopApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
+import { readCache, writeCache } from "../../utils/localCache";
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
 
 export type { PurchasedReward };
 
+const REWARD_SHOP_ITEMS_CACHE_KEY = "reward_shop_items_v1";
+
 export function useRewardShopState() {
-  const [items, setItems] = useState<RewardShopItem[]>([]);
+  // Stale-while-revalidate (2026-07-17) — bara katalogen (items) cachas, inte
+  // den paginerade köphistoriken (för invecklat för en enkel cache, lägre
+  // värde offline än att kunna BLÄDDRA butiken).
+  const [items, setItems] = useState<RewardShopItem[]>(() => readCache(REWARD_SHOP_ITEMS_CACHE_KEY, []));
   const [requireApprovalForCategories, setRequireApprovalForCategories] = useState(false);
 
   // Infinite-scroll-lista över uthämtade belöningar: sidor läggs till i slutet, ersätter inte varandra
@@ -21,6 +27,7 @@ export function useRewardShopState() {
   const refreshShop = useCallback(() => {
     return rewardShopApi.getShop().then(({ items: shopItems, requireApprovalForCategories: raf }) => {
       setItems(shopItems);
+      writeCache(REWARD_SHOP_ITEMS_CACHE_KEY, shopItems);
       setRequireApprovalForCategories(raf);
     }).catch(console.error);
   }, []);

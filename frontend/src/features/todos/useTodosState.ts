@@ -4,6 +4,9 @@ import { canCompleteTodo, canDeleteTodo } from "../../utils/permissions";
 import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences } from "./recurringTodos";
 import type { Id, Member, Role, Todo } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
+import { readCache, writeCache } from "../../utils/localCache";
+
+const TODOS_CACHE_KEY = "todos_v1";
 
 export type ImportUndo = {
   // Uppdaterade rader: id + de värden de hade INNAN denna import.
@@ -15,7 +18,13 @@ export type ImportUndo = {
 export type ImportResult = { created: number; updated: number; errors: string[] };
 
 export function useTodosState(fixedTodoTimes = false) {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  // Stale-while-revalidate (2026-07-17, Zaidas önskemål: "allt ska vara i
+  // local storage" — barnen kunde inte se sina uppgifter utan nät): visar
+  // senast kända todos direkt vid mount, uppdateras i bakgrunden. Cachen
+  // skrivs om varje gång todos-listan ändras (se effekten nedan) — även en
+  // rent optimistisk ändring (skapad/avklarad medan offline) sparas alltså
+  // lokalt, inte bara redan hämtad serverdata.
+  const [todos, setTodos] = useState<Todo[]>(() => readCache(TODOS_CACHE_KEY, []));
   const todosRef = useRef<Todo[]>([]);
   // Senaste CSV-importens resultat + ångra-underlag (2026-07-08, Zaidas
   // önskemål: "ångra senaste import måste vara kvar även om jag växlar vy,
@@ -76,6 +85,7 @@ export function useTodosState(fixedTodoTimes = false) {
 
   useEffect(() => {
     todosRef.current = todos;
+    writeCache(TODOS_CACHE_KEY, todos);
   }, [todos]);
 
   async function refreshTodos() {

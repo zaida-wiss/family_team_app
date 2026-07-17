@@ -2,14 +2,22 @@ import { useEffect, useState } from "react";
 import { rewardsApi } from "../../api";
 import type { Id, Reward } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
+import { readCache, writeCache } from "../../utils/localCache";
+
+const REWARDS_CACHE_KEY = "rewards_v1";
 
 export function useRewardsState() {
-  const [rewards, setRewards] = useState<Reward[]>([]);
+  // Stale-while-revalidate (2026-07-17) — se useTodosState.ts för samma mönster.
+  const [rewards, setRewards] = useState<Reward[]>(() => readCache(REWARDS_CACHE_KEY, []));
   const [wishStars, setWishStars] = useState<Record<Id, number>>({});
 
   useEffect(() => {
     rewardsApi.getAll().then(setRewards).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    writeCache(REWARDS_CACHE_KEY, rewards);
+  }, [rewards]);
 
   function createWish(childId: Id, starsNeeded = 10, titleInput = "") {
     const title = titleInput.trim();

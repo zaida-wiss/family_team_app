@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { timedTasksApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
+import { readCache, writeCache } from "../../utils/localCache";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 
 const PENDING_ATTEMPTS_KEY = "timedTaskPendingAttempts";
+const TIMED_TASKS_CACHE_KEY = "timed_tasks_v1";
 // Samma meddelande som client.ts:s nätverksfel (performRequest) — det enda
 // sättet att skilja "ingen uppkoppling" (ska köas) från ett riktigt
 // serverfel (t.ex. uppgiften raderad — ska INTE köas om i all evighet).
@@ -29,10 +31,17 @@ function isNetworkError(err: unknown): boolean {
 }
 
 export function useTimedTasksState() {
-  const [timedTasks, setTimedTasks] = useState<TimedTaskWithBest[]>([]);
+  // Stale-while-revalidate (2026-07-17) — se useTodosState.ts för samma
+  // mönster. Bara listan (personbästa/antal försök) cachas, inte den
+  // detaljerade försökshistoriken (listAttempts, hämtas on-demand i
+  // redigera-modalen) — kvarstående, känd begränsning.
+  const [timedTasks, setTimedTasks] = useState<TimedTaskWithBest[]>(() => readCache(TIMED_TASKS_CACHE_KEY, []));
 
   const refresh = useCallback(() => {
-    return timedTasksApi.getAll().then(setTimedTasks).catch(console.error);
+    return timedTasksApi.getAll().then((fresh) => {
+      setTimedTasks(fresh);
+      writeCache(TIMED_TASKS_CACHE_KEY, fresh);
+    }).catch(console.error);
   }, []);
 
   // Offline-kö (2026-07-13, Zaidas önskemål: "tiderna skall sparas i
