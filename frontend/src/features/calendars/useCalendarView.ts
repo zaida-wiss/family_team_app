@@ -52,6 +52,16 @@ export function useCalendarView(
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void,
   onDeleteEvent?: (calendarId: string, eventId: string) => void,
   onMonthChange?: (year: number, month: number) => void,
+  // Vilket barns/medlems dashboard som just nu är valt i medlemsväljaren
+  // (2026-07-21, Zaidas fynd: "om man först väljer familjemedlem och sedan
+  // går till kalendern så är det inte den personens kalender") — påverkar
+  // BARA vilken kalender som föreslås som förval för en ny händelse, aldrig
+  // behörighetskontroller (de körs fortsatt mot den riktiga inloggade
+  // currentMember, annars skulle en förälder plötsligt begränsas av ett
+  // valt barns egna, snävare behörigheter). Saknas den (t.ex. Hem-vyn, som
+  // medvetet INTE ska scopas om) faller allt tillbaka på currentMember,
+  // oförändrat beteende.
+  focusMemberId?: Id,
 ) {
   const now = new Date();
   const todayStr = toLocalDateStr(now);
@@ -197,7 +207,9 @@ export function useCalendarView(
     // händelse). Faller tillbaka på den första redigerbara kalendern om
     // ingen ägs av mig själv (t.ex. en delad familjekalender).
     const defaultCalendar =
-      editableCalendars.find((cal) => cal.ownerId === currentMember.id) ?? editableCalendars[0];
+      editableCalendars.find((cal) => cal.ownerId === focusMemberId) ??
+      editableCalendars.find((cal) => cal.ownerId === currentMember.id) ??
+      editableCalendars[0];
     setForm(blankForm({
       calendarId: defaultCalendar.id,
       startsAt: `${base}T09:00`,

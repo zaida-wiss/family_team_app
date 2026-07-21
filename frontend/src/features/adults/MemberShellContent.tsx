@@ -196,6 +196,16 @@ export function MemberShellContent({
   );
 
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
+  // Om ett barn/medlem är valt i medlemsväljaren (selectedDashboardMember)
+  // ska Kalender-panelen visa DEN personens kalender som förval (2026-07-21,
+  // Zaidas fynd: "om man först väljer familjemedlem och sedan går till
+  // kalendern så är det inte den personens kalender... Hem-vyn ska vara
+  // oförändrad"). Medvetet NOLL ändring i behörighetslogiken — currentMember
+  // (den riktiga inloggade föräldern) skickas fortfarande som currentMember,
+  // annars skulle en förälder plötsligt begränsas av ett valt barns egna
+  // snävare behörigheter. Bara vilken kalender som föreslås/visas som
+  // förval (focusMemberId, se useCalendarView.ts) och vy-läget (månad/vecka)
+  // följer den valda medlemmen istället.
   if (activePanel === "calendar") {
     return (
       <Suspense fallback={null}>
@@ -205,7 +215,7 @@ export function MemberShellContent({
           activeMembers={activeMembers}
           roles={roles}
           calendarSettings={calendarSettings}
-          calendarView={currentMember.calendarView ?? "month"}
+          calendarView={(selectedDashboardMember ?? currentMember).calendarView ?? "month"}
           filter={calendarFilter}
           onCalendarViewChange={onUpdateCalendarView}
           onAddEvent={onAddCalendarEvent}
@@ -213,6 +223,7 @@ export function MemberShellContent({
           onDeleteEvent={onDeleteCalendarEvent}
           onRsvpEvent={onRsvpCalendarEvent}
           onMonthChange={onLoadEventsForMonth}
+          focusMemberId={selectedDashboardMember?.id}
         />
       </Suspense>
     );
