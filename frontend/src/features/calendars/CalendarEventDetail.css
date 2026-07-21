@@ -18,7 +18,9 @@
   line-height: 1.25;
   margin: 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  /* Bryter bara mitt i ordet som sista utväg (2026-07-21, se ChildTasks.css
+     för samma fynd/motivering) — inte varje gång texten når kanten. */
+  overflow-wrap: break-word;
 }
 
 .cal-event-detail-location,
@@ -30,6 +32,6 @@
   font-size: 0.875rem;
   margin: 8px 0 0;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 

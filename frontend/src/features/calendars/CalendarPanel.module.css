@@ -25,7 +25,6 @@
 
 .toolCard h3 {
   overflow-wrap: break-word;
-  word-break: break-all;
   min-width: 0;
 }
 

@@ -192,8 +192,16 @@
   font-weight: 500;
   line-height: 1.2;
   text-align: left;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  /* Bryter bara mitt i ett ord som absolut sista utväg, om det inte får
+     plats ens ensamt på en rad (2026-07-21, Zaidas fynd: "text ska hellre
+     bryta före ordet istället för bara bokstaven") — overflow-wrap: anywhere
+     + word-break: break-word (i praktiken samma sak som anywhere) bröt
+     tidigare mitt i långa svenska sammansatta ord även när en radbrytning
+     FÖRE hela ordet hade fått plats fint. Fontstorleken är redan
+     container-relativ (6.5cqi ovan) och krymper med kortets bredd, så den
+     här mjukare brytningen behövs bara i sällsynta extremfall.
+     */
+  overflow-wrap: break-word;
 }
 
 .child-task-name--medium {
