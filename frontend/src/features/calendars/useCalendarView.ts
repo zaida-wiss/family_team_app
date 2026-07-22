@@ -76,8 +76,20 @@ export function useCalendarView(
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Permission filtering ──
+  // focusMemberId (2026-07-21, utökad 2026-07-22 — Zaidas rättelse: "jag ska
+  // ENDAST se den valda familjemedlemmens kalender... filtreringen skall
+  // motsvara kalendrar som tillhör den personen som den valt att dela med
+  // mig") — smalnar av vilka kalendrar som överhuvudtaget räknas som synliga
+  // till BARA de som ägs av den valda medlemmen, FÖRE den vanliga delnings-
+  // behörighetskontrollen nedan körs. canSeeAllCalendar/canSeeOwnCalendar +
+  // canViewResource avgör fortfarande om JAG (den riktiga inloggade
+  // currentMember) faktiskt får se just den kalendern — en kalender ägd av
+  // den valda medlemmen som inte delats med mig visas alltså fortfarande
+  // inte. editableCalendars nedan är redan en delmängd av visible, så
+  // redigeringsrätten smalnas av på samma gång, automatiskt.
   const visible = calendars.filter((cal) => {
     if (cal.deletedAt !== null) return false;
+    if (focusMemberId && cal.ownerId !== focusMemberId) return false;
     if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
     return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, cal);
   });
