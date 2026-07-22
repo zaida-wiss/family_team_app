@@ -200,7 +200,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRemoveCalendarShare: removeCalendarShare,
     onAddShoppingItem: (listId: string, title: string) =>
       addShoppingItem(listId, title, currentMember.id),
-    onCreateShoppingList: (name: string) => createShoppingList(name, currentMember.id),
+    onCreateShoppingList: (name: string, icon?: string | null) =>
+      createShoppingList(name, currentMember.id, icon ?? null),
     onDeleteShoppingList: (listId: string) => softDeleteShoppingList(listId, currentMember.id),
     onShareShoppingList: shareShoppingList,
     onRemoveShoppingListShare: removeShoppingListShare,

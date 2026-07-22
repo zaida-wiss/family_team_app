@@ -19,13 +19,19 @@ export function useShoppingState() {
     writeCache(SHOPPING_CACHE_KEY, shoppingLists);
   }, [shoppingLists]);
 
-  function createShoppingList(name: string, memberId: Id) {
+  // icon (2026-07-22, Zaidas önskemål: "välja symbol") — tidigare alltid
+  // hårdkodad till "ShoppingCart" (en Lucide-ikon-NAMN-sträng, aldrig
+  // faktiskt visad någonstans). Nya listor får nu en riktig emoji vald via
+  // samma delade EmojiPickerPortal som todos/belöningar/rutiner redan
+  // använder — se ShoppingView.tsx:s renderIcon för bakåtkompatibilitet med
+  // gamla listor som fortfarande har den gamla "ShoppingCart"-strängen.
+  function createShoppingList(name: string, memberId: Id, icon: string | null = null) {
     const newList: ShoppingList = {
       id: `shopping-${generateId()}`,
       name,
       ownerId: memberId,
       color: "#2f7d6d",
-      icon: "ShoppingCart",
+      icon,
       sharedWith: [],
       deletedAt: null,
       deletedBy: null,

@@ -84,7 +84,7 @@ type Props = {
   onShareCalendar: (calendarId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
   onAddShoppingItem: (listId: string, title: string) => void;
-  onCreateShoppingList: (name: string) => void;
+  onCreateShoppingList: (name: string, icon?: string | null) => void;
   onDeleteShoppingList: (listId: string) => void;
   onShareShoppingList: (listId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
@@ -125,6 +125,7 @@ export function MemberShellContent({
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onClearCompletedShoppingItems,
+  onCreateShoppingList, onShareShoppingList, onRemoveShoppingListShare,
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
 }: Props) {
@@ -310,18 +311,22 @@ export function MemberShellContent({
     );
   }
 
-  // ── Inköps-vy (nav) — bocka av, lägg till varor, ingen hantering ─────────
+  // ── Inköps-vy (nav) — bocka av, lägg till varor, skapa/dela listor ───────
   if (activePanel === "shopping") {
     return (
       <Suspense fallback={null}>
         <ShoppingView
           currentMember={currentMember}
+          members={activeMembers}
           roles={roles}
           shoppingLists={canSeeShopping ? shoppingLists : []}
           onAddItem={onAddShoppingItem}
           onToggleItem={onToggleShoppingItem}
           onDeleteItem={onDeleteShoppingItem}
           onClearCompleted={onClearCompletedShoppingItems}
+          onCreateList={onCreateShoppingList}
+          onShareList={onShareShoppingList}
+          onRemoveListShare={onRemoveShoppingListShare}
         />
       </Suspense>
     );

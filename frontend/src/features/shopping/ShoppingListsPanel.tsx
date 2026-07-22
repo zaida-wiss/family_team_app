@@ -157,7 +157,11 @@ export function ShoppingListsPanel({
           <div className={styles.card} key={list.id}>
             <div className={styles.header}>
               <div>
-                <ShoppingCart size={18} />
+                {list.icon && list.icon !== "ShoppingCart" ? (
+                  <span aria-hidden="true">{list.icon}</span>
+                ) : (
+                  <ShoppingCart size={18} />
+                )}
                 <strong>{list.name}</strong>
               </div>
               <button

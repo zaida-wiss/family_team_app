@@ -54,6 +54,58 @@
   color: #a13b2f;
 }
 
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Minimal toggle-switch (2026-07-22, Zaidas önskemål: "en minimal toggle,
+   inte knapp") — en vanlig checkbox omstylad som en glidande brytare.
+   Klickytan (hela .toggleSwitch-labeln) hålls på minst 44px höjd trots att
+   själva den visuella brytaren är mindre, för touch-målsregeln. */
+.toggleSwitch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--foreground);
+}
+
+.toggleSwitch input {
+  appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toggleSwitch input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s;
+}
+
+.toggleSwitch input:checked {
+  background: var(--primary);
+}
+
+.toggleSwitch input:checked::before {
+  transform: translateX(16px);
+}
+
 .items {
   display: grid;
   gap: 6px;

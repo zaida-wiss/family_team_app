@@ -34,6 +34,12 @@ const PARENT = {
   avatarUrl: null, color: null, dashboardTheme: null,
   spentStars: 0, deletedAt: null, deletedBy: null,
 };
+const OTHER_ADULT = {
+  id: "mem-2", accountId: "acc-1", userId: "user-2",
+  name: "Andra föräldern", roleId: "role-1", isChild: false,
+  avatarUrl: null, color: null, dashboardTheme: null,
+  spentStars: 0, deletedAt: null, deletedBy: null,
+};
 const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" };
 const LOGIN_RESPONSE = {
   accessToken: "fake-access-token",
@@ -47,7 +53,7 @@ function shoppingItem(overrides: Record<string, unknown>) {
 
 async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
-  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
@@ -124,7 +130,7 @@ test("bockade varor hamnar sist när de visas, kan döljas med en toggle", async
   await expect(items.first()).toHaveText(/Läsk/);
   await expect(items.last()).toHaveText(/Chips/);
 
-  await page.getByRole("button", { name: "Visa avklarade" }).click();
+  await page.getByRole("switch", { name: "Visa avklarade" }).click();
   await expect(page.getByText("Chips")).toHaveCount(0);
   await expect(page.getByText("Läsk")).toBeVisible();
 });
@@ -187,4 +193,53 @@ test("bockar bara av en vara genom att klicka på kryssrutan, inte genom att kli
 
   await page.getByRole("checkbox", { name: "Ägg" }).click();
   expect(toggleCalled).toBe(true);
+});
+
+// 2026-07-22, Zaidas önskemål: "vi ska även kunna göra nya listor och välja
+// symbol till dessa i shoppingvyn, samt dela listan med andra
+// familjemedlemmar." — tidigare gick det bara att skapa/dela listor via
+// Inställningar → Inköpslistor, inte i själva Inköp-panelen.
+test("kan skapa en ny lista med en vald symbol direkt i Inköp-panelen", async ({ page }) => {
+  await mockCommon(page);
+  let createdBody: Record<string, unknown> | null = null;
+  await page.route("**/api/shopping", (route) => {
+    if (route.request().method() === "POST") {
+      createdBody = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdBody.id } });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Ny lista" }).click();
+  await page.getByPlaceholder("Namn på listan").fill("Skolstart");
+  await page.getByRole("button", { name: "Skapa lista" }).click();
+
+  expect(createdBody).not.toBeNull();
+  expect((createdBody as { name: string }).name).toBe("Skolstart");
+});
+
+test("kan dela en lista med en annan familjemedlem direkt i Inköp-panelen", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-5", name: "Delad lista", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null, items: [],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  let shareBody: Record<string, unknown> | null = null;
+  await page.route("**/api/shopping/shop-5/share", (route) => {
+    shareBody = route.request().postDataJSON() as Record<string, unknown>;
+    route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Dela Delad lista" }).click();
+  await page.getByLabel("Välj medlem att dela med").selectOption("mem-2");
+  await page.getByRole("button", { name: "Dela lista" }).click();
+
+  expect(shareBody).toEqual({ memberId: "mem-2", access: "view" });
 });
