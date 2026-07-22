@@ -235,6 +235,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                     onRestoreMember={settingsProps.onRestoreMember}
                     onRestoreShoppingList={settingsProps.onRestoreShoppingList}
                     onRestoreTodo={settingsProps.onRestoreTodo}
+                    onPurgeAllTrash={settingsProps.onPurgeAllTrash}
                   />
                 )
               }

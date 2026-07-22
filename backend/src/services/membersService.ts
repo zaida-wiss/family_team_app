@@ -129,6 +129,23 @@ export async function restoreMember(id: string, accountId: string, callerMemberI
   await member.save();
 }
 
+// ADR-0025 (2026-07-23, Zaidas beslut): explicit, permanent tömning av
+// papperskorgen — ett medvetet undantag från "aldrig hard delete"-regeln,
+// scopat strikt till dokument som redan gått igenom mjuk radering. Samma
+// canRestoreFromTrash-behörighet som redan gate:ar Återställ-knappen, ingen
+// ny behörighetsnivå. Riktig deleteMany, ingen väg tillbaka.
+export async function purgeTrash(accountId: string, callerMemberId: string | null) {
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(caller, roles, "canRestoreFromTrash")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  await MemberModel.deleteMany({ accountId, deletedAt: { $ne: null } });
+}
+
 // Barn-inloggning (2026-07-22) — en förälder sätter/ändrar ett barns
 // användarnamn+lösenord. Skapar barnets User första gången (Member.userId
 // är null tills dess, precis som idag), uppdaterar samma User vid ändring.

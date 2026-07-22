@@ -43,6 +43,12 @@ membersRouter.patch("/:id/restore", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ADR-0025 — permanent tömning av papperskorgen.
+membersRouter.post("/purge-trash", async (req, res) => {
+  await members.purgeTrash(req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});
+
 membersRouter.put("/:id/credentials", async (req, res) => {
   const result = await members.setChildCredentials(req.accountId!, req.memberId ?? null, req.params.id, req.body);
   res.json(result);

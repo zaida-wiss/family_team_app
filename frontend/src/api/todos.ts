@@ -56,6 +56,9 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  purgeTrash: () =>
+    request<{ ok: boolean }>(api("todos/purge-trash"), { method: "POST", body: JSON.stringify({}) }),
   // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
   getSharedChildren: () => request<SharedChildTodos[]>(api("todos/shared-children")),
   completeShared: (

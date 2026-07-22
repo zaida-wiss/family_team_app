@@ -54,3 +54,9 @@ shoppingRouter.patch("/:id/restore", async (req, res) => {
   await shopping.restoreList(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });
 });
+
+// ADR-0025 — permanent tömning av papperskorgen.
+shoppingRouter.post("/purge-trash", async (req, res) => {
+  await shopping.purgeTrash(req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});

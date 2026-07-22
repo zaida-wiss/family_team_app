@@ -1,7 +1,10 @@
 import { CalendarModel } from "../db/models/Calendar.js";
+import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
 import { CalendarEventPatchSchema, CalendarEventSchema, ImportedCalendarSourceSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
+import { getAllRoles } from "./rolesService.js";
+import { hasPermission } from "../../../shared/permissions.js";
 
 // Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
 // title/notes krypteras precis innan de sparas och dekrypteras precis innan de
@@ -101,6 +104,24 @@ export async function restoreCalendar(calendarId: string, accountId: string) {
   calendar.deletedAt = null;
   calendar.deletedBy = null;
   await calendar.save();
+}
+
+// ADR-0025 (2026-07-23, Zaidas beslut): explicit, permanent tömning av
+// papperskorgen — ett medvetet undantag från "aldrig hard delete"-regeln,
+// scopat strikt till kalendrar som redan gått igenom mjuk radering. Riktig
+// deleteMany, ingen väg tillbaka. Övriga funktioner i den här filen saknar
+// fortfarande server-side behörighetskontroll (känt, ej fixat fynd, se
+// CLAUDE.md) — den kontrollen läggs bara till här, inte i hela filen.
+export async function purgeTrash(accountId: string, callerMemberId: string | null) {
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(caller, roles, "canRestoreFromTrash")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  await CalendarModel.deleteMany({ accountId, deletedAt: { $ne: null } });
 }
 
 export async function shareCalendar(calendarId: string, accountId: string, memberId: string, access: "view" | "edit") {

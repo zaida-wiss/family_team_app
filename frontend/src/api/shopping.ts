@@ -35,5 +35,8 @@ export const shoppingApi = {
     request<{ ok: boolean }>(api(`shopping/${id}/restore`), {
       method: "PATCH",
       body: JSON.stringify({})
-    })
+    }),
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  purgeTrash: () =>
+    request<{ ok: boolean }>(api("shopping/purge-trash"), { method: "POST", body: JSON.stringify({}) })
 };

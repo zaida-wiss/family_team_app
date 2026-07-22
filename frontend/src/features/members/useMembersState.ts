@@ -75,6 +75,14 @@ export function useMembersState() {
     );
   }
 
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  // Väntar in svaret (till skillnad från övriga fire-and-forget-funktioner
+  // ovan) så TrashView.tsx kan visa ett fel om anropet misslyckas.
+  async function purgeMembersTrash() {
+    await membersApi.purgeTrash();
+    setMembers((current) => current.filter((member) => member.deletedAt === null));
+  }
+
   function updateMemberTheme(memberId: Id, dashboardTheme: DashboardThemeId) {
     setMembers((current) =>
       current.map((member) => {
@@ -209,6 +217,7 @@ export function useMembersState() {
     createMember,
     softDeleteMember,
     restoreMember,
+    purgeMembersTrash,
     updateMemberTheme,
     updateMemberAvatar,
     updateMemberColor,

@@ -40,6 +40,9 @@ export const membersApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  purgeTrash: () =>
+    request<{ ok: boolean }>(api("members/purge-trash"), { method: "POST", body: JSON.stringify({}) }),
   setCredentials: (id: string, username: string, password: string) =>
     request<{ id: string; username: string }>(api(`members/${id}/credentials`), {
       method: "PUT",

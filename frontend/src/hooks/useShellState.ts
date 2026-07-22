@@ -17,7 +17,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
   const {
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
-    members, createMember, softDeleteMember, restoreMember,
+    members, createMember, softDeleteMember, restoreMember, purgeMembersTrash,
     updateMemberTheme, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
     setChildCredentials,
     updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
@@ -28,18 +28,18 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     activePanel, setActivePanel, apiError
   } = useAppState(activeMembership);
 
-  const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, approveTodo, rejectTodo,
+  const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, approveTodo, rejectTodo,
     dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, refreshRoutineOccurrence,
     lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, addCalendarEvent, updateCalendarEvent,
     deleteCalendarEvent, deleteCalendar, rsvpCalendarEvent, importCalendarEvents,
-    shareCalendar, removeCalendarShare, restoreCalendar,
+    shareCalendar, removeCalendarShare, restoreCalendar, purgeCalendarsTrash,
     softDeleteCalendarsForMember,
     addSubscription, updateSubscription, removeSubscription, syncSubscription } = calendarsState;
 
   const { shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
-    removeShoppingListShare, softDeleteShoppingList, restoreShoppingList,
+    removeShoppingListShare, softDeleteShoppingList, restoreShoppingList, purgeShoppingTrash,
     toggleShoppingItem, deleteShoppingItem, clearCompletedShoppingItems,
     softDeleteShoppingForMember } = shoppingState;
 
@@ -272,6 +272,13 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onRestoreMember: restoreMember,
     onRestoreShoppingList: restoreShoppingList,
     onRestoreTodo: restoreTodo,
+    // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av
+    // papperskorgen. Alla fyra resurstyper töms parallellt i ETT klick,
+    // matchar Zaidas egna ord ("radera ALLA raderade saker").
+    onPurgeAllTrash: () =>
+      Promise.all([purgeMembersTrash(), purgeShoppingTrash(), purgeCalendarsTrash(), purgeTodosTrash()]).then(
+        () => undefined
+      ),
     onDeleteAccount: deleteAccount,
     onCreateWish: createWish,
     onCreateTodo: createTodo,

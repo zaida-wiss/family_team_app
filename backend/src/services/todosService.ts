@@ -441,6 +441,20 @@ export async function restoreTodo(id: string, accountId: string, memberId: strin
   broadcastTodosChanged();
 }
 
+// ADR-0025 (2026-07-23, Zaidas beslut): explicit, permanent tömning av
+// papperskorgen — ett medvetet undantag från "aldrig hard delete"-regeln,
+// scopat strikt till todos som redan gått igenom mjuk radering. Riktig
+// deleteMany, ingen väg tillbaka.
+export async function purgeTrash(accountId: string, memberId: string | null) {
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(member, roles, "canRestoreFromTrash")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  await TodoModel.deleteMany({ accountId, deletedAt: { $ne: null } });
+  broadcastTodosChanged();
+}
+
 // Föräldravyn med delmoment (Sprint 6 S1) — bockar av/på ett enskilt delmoment,
 // oberoende av complete/approve/reject-flödet. Lika vikt, ingen viktning (se
 // discussions/2026-07-04-designspike-medaljer-och-foraldravy.md).

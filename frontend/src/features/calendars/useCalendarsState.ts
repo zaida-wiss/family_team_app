@@ -379,6 +379,12 @@ export function useCalendarsState() {
     );
   }
 
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  async function purgeCalendarsTrash() {
+    await calendarsApi.purgeTrash();
+    setCalendars((current) => current.filter((calendar) => calendar.deletedAt === null));
+  }
+
   function softDeleteCalendarsForMember(memberId: Id, deletedAt: string) {
     setCalendars((current) =>
       current.map((calendar) => {
@@ -425,6 +431,7 @@ export function useCalendarsState() {
     shareCalendar,
     removeCalendarShare,
     restoreCalendar,
+    purgeCalendarsTrash,
     softDeleteCalendarsForMember,
     addSubscription,
     updateSubscription,

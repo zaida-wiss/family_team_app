@@ -1,5 +1,6 @@
 import styles from "./TrashView.module.css";
 import { RotateCcw, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { hasPermission } from "../../utils/permissions";
 import { getDeletedItemsForTrash } from "./trash";
 import type { Calendar, Id, Member, Role, ShoppingList, Todo } from "@shared/types";
@@ -15,6 +16,8 @@ type TrashViewProps = {
   onRestoreMember: (memberId: Id) => void;
   onRestoreShoppingList: (listId: Id) => void;
   onRestoreTodo: (todoId: Id) => void;
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  onPurgeAllTrash: () => Promise<void>;
 };
 
 export function TrashView({
@@ -27,13 +30,34 @@ export function TrashView({
   roles,
   shoppingLists,
   todos,
-  onRestoreMember
+  onRestoreMember,
+  onPurgeAllTrash
 }: TrashViewProps) {
   const canViewTrash = hasPermission(currentMember, roles, "canViewTrash");
   const canRestore = hasPermission(currentMember, roles, "canRestoreFromTrash");
+  const [confirmPurge, setConfirmPurge] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [purgeError, setPurgeError] = useState<string | null>(null);
 
   if (!canViewTrash) {
     return null;
+  }
+
+  async function handlePurge() {
+    if (!confirmPurge) {
+      setConfirmPurge(true);
+      return;
+    }
+    setPurgeError(null);
+    setPurging(true);
+    try {
+      await onPurgeAllTrash();
+      setConfirmPurge(false);
+    } catch (err) {
+      setPurgeError(err instanceof Error ? err.message : "Något gick fel");
+    } finally {
+      setPurging(false);
+    }
   }
 
   const deletedMembers = getDeletedItemsForTrash(members, currentMember, roles);
@@ -60,7 +84,31 @@ export function TrashView({
       {isTrashEmpty ? (
         <p className="empty-note">Papperskorgen är tom.</p>
       ) : (
-        <div className={styles.trashList}>
+        <>
+          {canRestore && (
+            <div className={styles.purgeRow}>
+              <button
+                className={`secondary-button danger-action${confirmPurge ? " confirming" : ""}`}
+                disabled={purging}
+                onClick={handlePurge}
+                type="button"
+              >
+                <Trash2 size={16} />
+                {purging
+                  ? "…"
+                  : confirmPurge
+                    ? "Bekräfta — går inte att ångra"
+                    : "Töm papperskorgen permanent"}
+              </button>
+              {confirmPurge && !purging && (
+                <p className="field-hint">
+                  Tar bort allt i papperskorgen helt ur databasen. Går inte att ångra.
+                </p>
+              )}
+              {purgeError && <p className="field-hint" role="alert">{purgeError}</p>}
+            </div>
+          )}
+          <div className={styles.trashList}>
           {deletedMembers.map((member) => (
             <div className={styles.trashRow} key={member.id}>
               <div>
@@ -148,7 +196,8 @@ export function TrashView({
               </button>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </article>
   );

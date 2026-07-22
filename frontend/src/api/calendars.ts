@@ -61,6 +61,9 @@ export const calendarsApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  purgeTrash: () =>
+    request<{ ok: boolean }>(api("calendars/purge-trash"), { method: "POST", body: JSON.stringify({}) }),
   createSubscription: (calendarId: string, sub: { url: string; includeWords: string[]; excludeWords: string[]; dateFrom: string | null; dateTo: string | null }) =>
     request<IcsSubscription>(api(`calendars/${calendarId}/subscriptions`), {
       method: "POST",

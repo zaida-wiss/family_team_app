@@ -98,3 +98,9 @@ calendarsRouter.patch("/:id/restore", requireAuth, attachAccountId, async (req, 
   await calendars.restoreCalendar(req.params.id, req.accountId!);
   res.json({ ok: true });
 });
+
+// ADR-0025 — permanent tömning av papperskorgen.
+calendarsRouter.post("/purge-trash", requireAuth, attachAccountId, async (req, res) => {
+  await calendars.purgeTrash(req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});

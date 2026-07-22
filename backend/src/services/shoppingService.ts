@@ -178,3 +178,12 @@ export async function clearCompletedItems(listId: string, accountId: string, mem
     await list.save();
   }
 }
+
+// ADR-0025 (2026-07-23, Zaidas beslut): explicit, permanent tömning av
+// papperskorgen — ett medvetet undantag från "aldrig hard delete"-regeln,
+// scopat strikt till listor som redan gått igenom mjuk radering. Riktig
+// deleteMany, ingen väg tillbaka.
+export async function purgeTrash(accountId: string, memberId: string | null) {
+  await requirePermission(accountId, memberId, "canRestoreFromTrash");
+  await ShoppingListModel.deleteMany({ accountId, deletedAt: { $ne: null } });
+}

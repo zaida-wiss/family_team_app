@@ -272,6 +272,12 @@ export function useTodosState(fixedTodoTimes = false) {
     );
   }
 
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  async function purgeTodosTrash() {
+    await todosApi.purgeTrash();
+    setTodos((current) => current.filter((todo) => todo.deletedAt === null));
+  }
+
   async function approveTodo(todoId: Id, approverId: Id) {
     // Eligibiliteten avgörs mot todosRef.current (en vanlig ref, alltid synkront
     // läsbar) — INTE genom att läsa tillbaka en yttre variabel som muterats inuti
@@ -451,6 +457,7 @@ export function useTodosState(fixedTodoTimes = false) {
     completeTodo,
     softDeleteTodo,
     restoreTodo,
+    purgeTodosTrash,
     approveTodo,
     rejectTodo,
     dismissRejectedTodo,

@@ -81,6 +81,12 @@ todosRouter.patch("/:id/restore", requireAuth, attachAccountId, async (req, res)
   res.json({ ok: true });
 });
 
+// ADR-0025 — permanent tömning av papperskorgen.
+todosRouter.post("/purge-trash", requireAuth, attachAccountId, async (req, res) => {
+  await todos.purgeTrash(req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});
+
 todosRouter.patch("/:id/in-progress", requireAuth, attachAccountId, async (req, res) => {
   const { targetMemberId } = ToggleInProgressBodySchema.parse(req.body ?? {});
   const result = await todos.toggleInProgress(req.params.id, req.accountId!, req.memberId ?? null, targetMemberId);

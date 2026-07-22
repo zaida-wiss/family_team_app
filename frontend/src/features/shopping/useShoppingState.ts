@@ -132,6 +132,12 @@ export function useShoppingState() {
     );
   }
 
+  // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
+  async function purgeShoppingTrash() {
+    await shoppingApi.purgeTrash();
+    setShoppingLists((current) => current.filter((list) => list.deletedAt === null));
+  }
+
   function toggleShoppingItem(listId: Id, itemId: Id) {
     shoppingApi.toggleItem(listId, itemId).catch(console.error);
     trackEvent("shopping-item-checked");
@@ -230,6 +236,7 @@ export function useShoppingState() {
     removeShoppingListShare,
     softDeleteShoppingList,
     restoreShoppingList,
+    purgeShoppingTrash,
     toggleShoppingItem,
     deleteShoppingItem,
     clearCompletedShoppingItems,
