@@ -46,6 +46,11 @@ export function ChildShellContent({
 }: Props) {
   const childTimedTasks = timedTasks.filter((t) => t.assignedTo === currentMember.id);
   const now = Date.now();
+  // Gömda kategoriers uppgifter ska inte synas här (2026-07-22, Zaidas
+  // önskemål: "mallar till listor och undanlagda listor skall inte stå med
+  // i barnvyn ens för vuxna, endast assignade 2do") — samma fix som
+  // MemberShellContent.tsx:s motsvarande beräkning för en vuxen som tittar
+  // på ett barns dashboard.
   const activeChildTodos = todos
     .filter(
       (t) =>
@@ -53,7 +58,8 @@ export function ChildShellContent({
         t.status === "pending" &&
         t.recurrence.type === "none" &&
         t.deletedAt === null &&
-        isTodoVisibleNow(t, now)
+        isTodoVisibleNow(t, now) &&
+        !(t.personalCategoryId && categories.find((c) => c.id === t.personalCategoryId)?.hidden)
     )
     .sort((a, b) => {
       const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;

@@ -226,6 +226,14 @@ export function MemberShellContent({
 
   if ((selectedMemberIsChild || selectedMemberIsSelf) && selectedDashboardMember) {
     const now = Date.now();
+    // Ogömda/tilldelade uppgifter bara (2026-07-22, Zaidas önskemål: "mallar
+    // till listor och undanlagda listor skall inte stå med i barnvyn ens för
+    // vuxna, endast assignade 2do") — assignedTo===id och recurrence==="none"
+    // uteslöt redan MALLAR/ej tilldelade uppgifter (en mall har recurrence
+    // !=="none", en otilldelad uppgift matchar aldrig ett riktigt medlems-id).
+    // Det som SAKNADES: en uppgift i en GÖMD kategori ("Göm" i kategorimenyn,
+    // se ParentTodoThreadView.tsx) visades ändå på dashboarden — en gömd
+    // kategori ska vara "undanlagd" överallt, inte bara i tråd-vyn.
     const activeChildTodos = todos
       .filter(
         (t) =>
@@ -233,7 +241,8 @@ export function MemberShellContent({
           t.status === "pending" &&
           t.recurrence.type === "none" &&
           t.deletedAt === null &&
-          isTodoVisibleNow(t, now)
+          isTodoVisibleNow(t, now) &&
+          !(t.personalCategoryId && personalCategories.find((c) => c.id === t.personalCategoryId)?.hidden)
       )
       .sort((a, b) => {
         const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
