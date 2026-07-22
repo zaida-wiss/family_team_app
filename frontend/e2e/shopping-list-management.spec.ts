@@ -3,9 +3,15 @@ import { test, expect } from "@playwright/test";
 // Zaida (2026-07-22): "vi behöver kunna radera inköpslistor och rader i
 // inköpslistan, samt välja att dölja gjorda rader, alternativt placera
 // överstrukna rader längst ner", följt av "töm listan kan vara ett val".
-// Listradering fanns redan (Inställningar → Inköpslistor). Detta testar de
-// tre NYA delarna: radera enskild rad, visningsläge för bockade varor
-// (visa/bockade sist/dölj), och Töm listan (rensar bara bockade varor).
+// Listradering fanns redan (Inställningar → Inköpslistor). Testar de tre NYA
+// delarna: radera enskild rad (bara i redigeringsläge, se nedan), en enda
+// av/på-toggle för bockade varor (visas alltid sist när på, inte en
+// tre-lägen-väljare), och Töm listan (rensar bara bockade varor).
+//
+// Uppföljning samma dag (Zaidas begäran: "tänk minimalistiskt"): raderaknappen
+// per rad ligger bakom en Redigera-knapp istället för att alltid synas, och
+// visningsvalet förenklat till en enda toggle (bort/på) — bockade varor
+// hamnar automatiskt sist när de visas, ingen separat "bockade sist"-läge.
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -61,7 +67,7 @@ async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 }
 
-test("kan radera en enskild rad i inköpslistan", async ({ page }) => {
+test("kan radera en enskild rad i inköpslistan, bara i redigeringsläge", async ({ page }) => {
   await mockCommon(page);
   const list = {
     id: "shop-1", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
@@ -84,6 +90,9 @@ test("kan radera en enskild rad i inköpslistan", async ({ page }) => {
   await page.getByRole("button", { name: "Inköp" }).click();
 
   await expect(page.getByText("Mjölk")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ta bort Mjölk" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Redigera" }).click();
   await page.getByRole("button", { name: "Ta bort Mjölk" }).click();
 
   await expect(page.getByText("Mjölk")).toHaveCount(0);
@@ -91,7 +100,7 @@ test("kan radera en enskild rad i inköpslistan", async ({ page }) => {
   expect(deleteCalled).toBe(true);
 });
 
-test("visningsläge för bockade varor: dölj och bockade-sist", async ({ page }) => {
+test("bockade varor hamnar sist när de visas, kan döljas med en toggle", async ({ page }) => {
   await mockCommon(page);
   const list = {
     id: "shop-2", name: "Fredagsmys", ownerId: "mem-1", color: "#2f7d6d", icon: null,
@@ -108,22 +117,19 @@ test("visningsläge för bockade varor: dölj och bockade-sist", async ({ page }
   await page.goto("/");
   await page.getByRole("button", { name: "Inköp" }).click();
 
+  // Standard: bockade visas, men alltid sist (Chips är bockad, kom först i API-svaret).
   await expect(page.getByText("Chips")).toBeVisible();
   await expect(page.getByText("Läsk")).toBeVisible();
-
-  const select = page.getByRole("combobox", { name: "Visning av bockade varor i Fredagsmys" });
-  await select.selectOption("hidden");
-  await expect(page.getByText("Chips")).toHaveCount(0);
-  await expect(page.getByText("Läsk")).toBeVisible();
-
-  await select.selectOption("bottom");
-  await expect(page.getByText("Chips")).toBeVisible();
   const items = page.locator("li", { hasText: /Chips|Läsk/ });
   await expect(items.first()).toHaveText(/Läsk/);
   await expect(items.last()).toHaveText(/Chips/);
+
+  await page.getByRole("button", { name: "Visa avklarade" }).click();
+  await expect(page.getByText("Chips")).toHaveCount(0);
+  await expect(page.getByText("Läsk")).toBeVisible();
 });
 
-test("Töm listan rensar bara bockade varor", async ({ page }) => {
+test("Töm listan (i redigeringsläge) rensar bara bockade varor", async ({ page }) => {
   await mockCommon(page);
   const list = {
     id: "shop-3", name: "Storhandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
@@ -146,9 +152,39 @@ test("Töm listan rensar bara bockade varor", async ({ page }) => {
   await page.getByRole("button", { name: "Inköp" }).click();
 
   await expect(page.getByText("Ost")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Töm bockade varor i Storhandling" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Redigera" }).click();
   await page.getByRole("button", { name: "Töm bockade varor i Storhandling" }).click();
 
   await expect(page.getByText("Ost")).toHaveCount(0);
   await expect(page.getByText("Smör")).toBeVisible();
   expect(clearCalled).toBe(true);
+});
+
+test("bockar bara av en vara genom att klicka på kryssrutan, inte genom att klicka på texten", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-4", name: "Klick-test", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null,
+    items: [shoppingItem({ id: "item-agg", title: "Ägg" })],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  let toggleCalled = false;
+  await page.route("**/api/shopping/shop-4/items/item-agg/toggle", (route) => {
+    toggleCalled = true;
+    route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+
+  // Klick på själva texten ska INTE bocka av — bara kryssrutan.
+  await page.getByText("Ägg", { exact: true }).click();
+  expect(toggleCalled).toBe(false);
+
+  await page.getByRole("checkbox", { name: "Ägg" }).click();
+  expect(toggleCalled).toBe(true);
 });

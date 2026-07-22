@@ -49,16 +49,6 @@
   flex-wrap: wrap;
 }
 
-.displayModeSelect {
-  min-height: 38px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0 8px;
-  background: var(--muted);
-  color: var(--foreground);
-  font-size: 0.85rem;
-}
-
 .clearButton {
   border-color: #f2c3bd;
   color: #a13b2f;
@@ -79,11 +69,13 @@
   gap: 8px;
 }
 
-.itemRow label {
+.itemRow label,
+.itemRow .itemLabel {
   min-width: 0;
 }
 
-.items label {
+.items label,
+.items .itemLabel {
   display: flex;
   align-items: center;
   gap: 8px;

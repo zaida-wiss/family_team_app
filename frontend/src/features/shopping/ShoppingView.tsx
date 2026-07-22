@@ -1,4 +1,4 @@
-import { Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useState } from "react";
 import {
   canEditSharedResource,
@@ -8,12 +8,12 @@ import {
 import styles from "./ShoppingLists.module.css";
 import type { Id, Member, Role, ShoppingList } from "@shared/types";
 
-// Visning av bockade varor (2026-07-22, Zaidas önskemål) — bara ett lokalt,
-// icke-persisterat UI-val per lista, återställs vid ny sidomladdning/panelbyte.
-// Zaida bad inte om att det ska sparas, bara att kunna VÄLJA — ingen ny
-// medlemsinställning/backend-fält behövdes.
-type CompletedDisplayMode = "inline" | "bottom" | "hidden";
-
+// Visning av bockade varor + redigeringsläge (2026-07-22, Zaidas önskemål:
+// "tänk minimalistiskt") — bara lokalt, icke-persisterat UI-state per lista,
+// återställs vid ny sidomladdning/panelbyte. Ersätter en tidigare
+// tre-lägen-väljare (visa/bockade sist/dölj) med en enda av/på-toggle —
+// synliga bockade varor hamnar alltid sist, ingen separat "inline"-ordning.
+// Raderaknappen per rad visas bara i redigeringsläge, inte hela tiden.
 type Props = {
   currentMember: Member;
   roles: Role[];
@@ -34,7 +34,8 @@ export function ShoppingView({
   onClearCompleted
 }: Props) {
   const [draftItems, setDraftItems] = useState<Record<Id, string>>({});
-  const [displayModes, setDisplayModes] = useState<Record<Id, CompletedDisplayMode>>({});
+  const [showCompleted, setShowCompleted] = useState<Record<Id, boolean>>({});
+  const [editingLists, setEditingLists] = useState<Record<Id, boolean>>({});
 
   const canEdit = hasPermission(currentMember, roles, "canEditShoppingLists");
 
@@ -75,13 +76,11 @@ export function ShoppingView({
         const editable = canEditList(list);
         const activeItems = list.items.filter((i) => i.deletedAt === null);
         const doneCount = activeItems.filter((i) => i.done).length;
-        const displayMode = displayModes[list.id] ?? "inline";
-        const visibleItems =
-          displayMode === "hidden"
-            ? activeItems.filter((i) => !i.done)
-            : displayMode === "bottom"
-              ? [...activeItems].sort((a, b) => Number(a.done) - Number(b.done))
-              : activeItems;
+        const shouldShowCompleted = showCompleted[list.id] ?? true;
+        const isEditing = editable && (editingLists[list.id] ?? false);
+        const visibleItems = shouldShowCompleted
+          ? [...activeItems].sort((a, b) => Number(a.done) - Number(b.done))
+          : activeItems.filter((i) => !i.done);
 
         return (
           <article className={styles.card} key={list.id}>
@@ -99,30 +98,28 @@ export function ShoppingView({
 
             {activeItems.length > 0 && (
               <div className={styles.toolbar}>
-                <select
-                  aria-label={`Visning av bockade varor i ${list.name}`}
-                  className={styles.displayModeSelect}
-                  onChange={(e) =>
-                    setDisplayModes((prev) => ({
-                      ...prev,
-                      [list.id]: e.target.value as CompletedDisplayMode
-                    }))
+                <button
+                  aria-pressed={shouldShowCompleted}
+                  className={`secondary-button${shouldShowCompleted ? " icon-button--active" : ""}`}
+                  onClick={() =>
+                    setShowCompleted((prev) => ({ ...prev, [list.id]: !shouldShowCompleted }))
                   }
-                  value={displayMode}
+                  type="button"
                 >
-                  <option value="inline">Visa bockade</option>
-                  <option value="bottom">Bockade sist</option>
-                  <option value="hidden">Dölj bockade</option>
-                </select>
-                {editable && doneCount > 0 && (
+                  {shouldShowCompleted ? <Eye size={16} /> : <EyeOff size={16} />}
+                  Visa avklarade
+                </button>
+                {editable && (
                   <button
-                    aria-label={`Töm bockade varor i ${list.name}`}
-                    className={`secondary-button ${styles.clearButton}`}
-                    onClick={() => onClearCompleted(list.id)}
+                    aria-pressed={isEditing}
+                    className={`secondary-button${isEditing ? " icon-button--active" : ""}`}
+                    onClick={() =>
+                      setEditingLists((prev) => ({ ...prev, [list.id]: !isEditing }))
+                    }
                     type="button"
                   >
-                    <Trash2 size={14} />
-                    Töm listan
+                    <Pencil size={16} />
+                    {isEditing ? "Klar" : "Redigera"}
                   </button>
                 )}
               </div>
@@ -131,16 +128,17 @@ export function ShoppingView({
             <ul className={styles.items}>
               {visibleItems.map((item) => (
                 <li className={styles.itemRow} key={item.id}>
-                  <label className={item.done ? styles.done : undefined}>
+                  <span className={`${styles.itemLabel}${item.done ? ` ${styles.done}` : ""}`}>
                     <input
+                      aria-label={item.title}
                       checked={item.done}
                       disabled={!editable}
                       onChange={() => onToggleItem(list.id, item.id)}
                       type="checkbox"
                     />
                     <span>{item.title}</span>
-                  </label>
-                  {editable && (
+                  </span>
+                  {isEditing && (
                     <button
                       aria-label={`Ta bort ${item.title}`}
                       className="icon-button danger"
@@ -153,6 +151,18 @@ export function ShoppingView({
                 </li>
               ))}
             </ul>
+
+            {isEditing && doneCount > 0 && (
+              <button
+                aria-label={`Töm bockade varor i ${list.name}`}
+                className={`secondary-button ${styles.clearButton}`}
+                onClick={() => onClearCompleted(list.id)}
+                type="button"
+              >
+                <Trash2 size={14} />
+                Töm bockade varor
+              </button>
+            )}
 
             {editable && (
               <div className={styles.addRow}>
