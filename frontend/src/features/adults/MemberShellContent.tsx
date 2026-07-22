@@ -224,7 +224,19 @@ export function MemberShellContent({
   // personen" längre ner, oförändrat.
   const selectedMemberIsSelf = !!selectedDashboardMember && selectedDashboardMember.id === currentMember.id;
 
-  if ((selectedMemberIsChild || selectedMemberIsSelf) && selectedDashboardMember) {
+  // 2026-07-23 (Zaidas beslut, reverserar ovanstående 2026-07-22-önskemål):
+  // ett medlemsval ska bara ha effekt på Medlemmar-panelen — Hem/Kalender/
+  // Todos/Inköp visar alltid den inloggades EGEN vy. useAppState.ts:s
+  // setActivePanel rensar redan selectedDashboardMemberId vid varje
+  // nav-klick, så detta borde strukturellt aldrig triggas utanför
+  // activePanel==="members" — men kontrollen läggs ändå till explicit här,
+  // eftersom en medlem sparad FÖRE denna ändring kan ha ett gammalt
+  // lastActivePanel:"home" ihop med ett kvarvarande
+  // lastSelectedDashboardMemberId (då satte MembersView.tsx:s val alltid om
+  // lastActivePanel till "home") — utan denna extra spärr hade en sådan
+  // medlem sett barnets/den andras dashboard på Hem igen efter en enda
+  // sidomladdning, med fel nav-ikon markerad.
+  if ((selectedMemberIsChild || selectedMemberIsSelf) && selectedDashboardMember && activePanel === "members") {
     const now = Date.now();
     // Ogömda/tilldelade uppgifter bara (2026-07-22, Zaidas önskemål: "mallar
     // till listor och undanlagda listor skall inte stå med i barnvyn ens för
@@ -314,19 +326,10 @@ export function MemberShellContent({
   }
 
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
-  // Om ett barn/medlem är valt i medlemsväljaren (selectedDashboardMember)
-  // ska Kalender-panelen visa DEN personens kalender som förval (2026-07-21,
-  // Zaidas fynd: "om man först väljer familjemedlem och sedan går till
-  // kalendern så är det inte den personens kalender... Hem-vyn ska vara
-  // oförändrad"). Medvetet NOLL ändring i behörighetslogiken — currentMember
-  // (den riktiga inloggade föräldern) skickas fortfarande som currentMember,
-  // annars skulle en förälder plötsligt begränsas av ett valt barns egna
-  // snävare behörigheter. Bara vilken kalender som föreslås/visas som
-  // förval (focusMemberId, se useCalendarView.ts) och vy-läget (månad/vecka)
-  // följer den valda medlemmen istället.
-  //
-  // 2026-07-22: denna gren nås nu bara när INGET barn är valt (child-checken
-  // ovan tar över först) — kvar oförändrad för valda VUXNA medlemmar.
+  // Visar alltid den inloggades EGEN kalender (2026-07-23, Zaidas beslut
+  // reverserar 2026-07-21/22-beteendet där en vald medlem styrde förvalet
+  // här via focusMemberId — se useCalendarView.ts, propen finns kvar där men
+  // får aldrig längre ett värde från detta anropsställe).
   if (activePanel === "calendar") {
     return (
       <Suspense fallback={null}>
@@ -336,7 +339,7 @@ export function MemberShellContent({
           activeMembers={activeMembers}
           roles={roles}
           calendarSettings={calendarSettings}
-          calendarView={(selectedDashboardMember ?? currentMember).calendarView ?? "month"}
+          calendarView={currentMember.calendarView ?? "month"}
           filter={calendarFilter}
           onCalendarViewChange={onUpdateCalendarView}
           onAddEvent={onAddCalendarEvent}
@@ -344,7 +347,6 @@ export function MemberShellContent({
           onDeleteEvent={onDeleteCalendarEvent}
           onRsvpEvent={onRsvpCalendarEvent}
           onMonthChange={onLoadEventsForMonth}
-          focusMemberId={selectedDashboardMember?.id}
         />
       </Suspense>
     );
@@ -426,8 +428,10 @@ export function MemberShellContent({
   // Valt barn hanteras redan högst upp i funktionen (gäller alla paneler) —
   // härifrån och ner rör det sig bara om Hem utan valt barn.
 
-  // Vald vuxen → hemvy för den personen
-  if (selectedDashboardMember) {
+  // Vald vuxen → hemvy för den personen (bara på Medlemmar-panelen, se
+  // motiveringen vid barn-/själv-checken ovan — samma skydd mot gammal
+  // persisterad lastActivePanel:"home"-data).
+  if (selectedDashboardMember && activePanel === "members") {
     return (
       <HomePage
         key={selectedDashboardMember.id}

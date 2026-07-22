@@ -1,5 +1,4 @@
 import { MemberAvatar } from "../../components/MemberAvatar";
-import type { ShellPanel } from "../../hooks/useAppState";
 import type { Account, Member, Role } from "@shared/types";
 import styles from "./MembersView.module.css";
 
@@ -9,18 +8,23 @@ type Props = {
   members: Member[];
   roles: Role[];
   onSelectMember: (id: string) => void;
-  onNavigate: (panel: ShellPanel) => void;
 };
 
-export function MembersView({ account, currentMember, members, roles, onSelectMember, onNavigate }: Props) {
+// Medlemmar-panelen (2026-07-23, Zaidas beslut: "endast medlemmar symbolen
+// som skall vara markerad. Klickar vi på hemmet eller kalendern så ska det
+// inte längre vara barnvyn") — att klicka ett kort valde tidigare medlemmen
+// OCH navigerade till Hem, vilket visade dashboarden där (fel nav-ikon
+// markerad, och Hem/Kalender/Todos/Inköp visade sedan permanent den valda
+// personens vy tills man valde en annan medlem). Nu stannar valet kvar HÄR —
+// PanelRouter (Shell.tsx) visar dashboarden i samma panel (activePanel
+// förblir "members") så länge ett val finns. Hem/Kalender/Todos/Inköp
+// rensar alltid valet (se useAppState.ts:s setActivePanel) — de fungerar
+// därmed som en implicit "tillbaka till min egen vy"-väg, och att klicka
+// Medlemmar-ikonen igen (samma rensning) fungerar som "tillbaka till listan".
+export function MembersView({ account, currentMember, members, roles, onSelectMember }: Props) {
   const active = members.filter(
     (m) => m.accountId === account.id && m.deletedAt === null
   );
-
-  function openMember(member: Member) {
-    onSelectMember(member.id);
-    onNavigate("home");
-  }
 
   return (
     <div className={styles.page}>
@@ -41,7 +45,7 @@ export function MembersView({ account, currentMember, members, roles, onSelectMe
             <button
               className={`${styles.card}${isMe ? ` ${styles.cardMe}` : ""}`}
               key={member.id}
-              onClick={() => openMember(member)}
+              onClick={() => onSelectMember(member.id)}
               type="button"
             >
               <MemberAvatar member={member} size="small" />

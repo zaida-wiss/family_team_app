@@ -53,20 +53,21 @@ export function useAppState(initialMembership: ActiveMembership) {
 
   function setActivePanel(panel: ShellPanel) {
     setActivePanelRaw(panel);
-    updateMemberNavigation(initialMembership.member.id, { lastActivePanel: panel });
-    // Kalender-panelen (2026-07-21/22) respekterar vald familjemedlem
-    // (focusMemberId, se MemberShellContent.tsx/useCalendarView.ts) precis
-    // som Hem-vyn redan gjorde — och (2026-07-22, Zaidas önskemål: "även
-    // vuxna skall kunna se samma barnvy som om de vore ett barn") Todos/
-    // Inköp visar nu likaså barnets dashboard istället för den vuxna
-    // panelvyn när ett barn är valt. Valet får därför INTE nollställas när
-    // man navigerar till NÅGON av de fyra innehållspanelerna — bara
-    // Medlemmar/Inställningar (kontoadministration, inte per-medlem-vyer)
-    // nollställer fortfarande. Detta var den faktiska grundorsaken till att
-    // "kalendern visade fel persons kalender" (2026-07-21/22): valet
-    // försvann redan HÄR, innan panelen ens hann rendera.
-    const contentPanels: ShellPanel[] = ["home", "calendar", "shopping", "todos"];
-    if (!contentPanels.includes(panel)) setSelectedDashboardMemberIdRaw(null);
+    setSelectedDashboardMemberIdRaw(null);
+    updateMemberNavigation(initialMembership.member.id, {
+      lastActivePanel: panel,
+      // Ett explicit navigeringsklick (vilken nav-ikon som helst, inklusive
+      // Medlemmar-ikonen igen) rensar alltid en vald medlem (2026-07-23,
+      // Zaidas beslut: "endast medlemmar symbolen som skall vara markerad.
+      // Klickar vi på hemmet eller kalendern så ska det inte längre vara
+      // barnvyn") — ersätter 2026-07-21/22-beteendet där valet överlevde
+      // Hem/Kalender/Todos/Inköp, vilket gjorde att "fel" nav-ikon visades
+      // som aktiv medan en annan medlems vy syntes. Att VÄLJA en medlem
+      // (MembersView.tsx:s korta) går via setSelectedDashboardMemberId
+      // nedan, inte via denna funktion — så själva valet överlever alltså
+      // fint kvar så länge man stannar på Medlemmar-panelen.
+      lastSelectedDashboardMemberId: null
+    });
   }
 
   function setSelectedDashboardMemberId(memberId: Id | null) {

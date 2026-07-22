@@ -1,21 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-// Zaida (2026-07-21, rättad 2026-07-22, uppföljd 2026-07-22): "om man först
-// väljer familjemedlem och sedan går till kalendern så är det inte den
-// personens kalender... Jag ska ENDAST se den valda familjemedlemmens
-// kalender... Filtreringen skall motsvara kalendrar som tillhör den
-// personen som den valt att dela med mig", följt av "även andra vuxna
-// familjemedlemmars kalender skall visas på kalender". Grundorsaken var
-// TVÅFALDIG:
-// 1) Kalender-panelen använde bara currentMember, aldrig vald medlem
-//    (fixat 668ee03, otillräckligt — bara "vilken kalender föreslås"-delen).
-// 2) DEN FAKTISKA roten: useAppState.ts:s setActivePanel nollställde
-//    selectedDashboardMemberId varje gång man navigerade till NÅGOT ANNAT
-//    än Hem — inklusive Kalender — så valet försvann innan Kalender-panelen
-//    ens hann rendera. Detta testet klickar igenom det RIKTIGA flödet
-//    (Hem → Medlemmar → välj en VUXEN → Kalender) istället för att bara
-//    ladda appen redan stående på Kalender-panelen (som det tidigare,
-//    otillräckliga testet gjorde — det missade just denna nollställning).
+// Zaida (2026-07-23): "Klickar vi på hemmet eller kalendern så ska det inte
+// längre vara barnvyn" — reverserar 2026-07-21/22-beteendet som den här
+// filen tidigare testade (att Kalender-panelen visade en vald familjemedlems
+// kalender som förval). Med den nya designen (Shell.tsx:s PanelRouter,
+// useAppState.ts:s setActivePanel) rensas ett medlemsval alltid när man
+// navigerar till NÅGON av Hem/Kalender/Todos/Inköp — att välja någon i
+// Medlemmar-panelen påverkar bara den panelen. Kalender-panelen visar därför
+// alltid den INLOGGADE förälderns egen kalender, oavsett vem som senast
+// valdes i medlemsväljaren.
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -40,7 +33,6 @@ const PARENT = {
   spentStars: 0, deletedAt: null, deletedBy: null,
   lastActivePanel: "home", lastSelectedDashboardMemberId: null,
 };
-// En ANDRA vuxen (inte barn) — Zaidas uppföljning specifikt om vuxna.
 const OTHER_ADULT = {
   id: "mem-2", accountId: "acc-1", userId: "user-2",
   name: "Lars", roleId: "role-1", isChild: false,
@@ -99,24 +91,28 @@ async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
+  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
 }
 
-test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar bara den vuxnas kalender", async ({ page }) => {
+test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar min VANLIGA kalendervy, inte filtrerad till den valda personen", async ({ page }) => {
   await mockCommon(page);
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [PARENT_CALENDAR, LARS_CALENDAR] }));
 
   await page.goto("/");
 
-  // Hem → Medlemmar → klicka på Lars (onSelectMember + navigerar tillbaka
-  // till Hem, samma flöde som MembersView.tsx faktiskt gör).
+  // Hem → Medlemmar → klicka på Lars — visas nu i Medlemmar-panelen själv,
+  // navigerar inte längre bort.
   await page.getByRole("button", { name: "Medlemmar" }).click();
   await page.getByRole("button", { name: /Lars/ }).click();
 
-  // Nu på Kalender — om selectedDashboardMemberId nollställdes av
-  // navigeringen (den faktiska buggen) skulle förälderns egen kalender
-  // synas istället för Lars.
+  // Klicket på Kalender-ikonen rensar valet (useAppState.ts:s setActivePanel)
+  // — visar min vanliga, ofiltrerade kalendervy igen. Rollen har
+  // canSeeAllCalendar, så BÅDA kalendrarna syns (ingen filtrering på en
+  // specifik person längre) — det är just avsaknaden av en Lars-ENDAST-
+  // filtrering som visar att bugfixen fungerar, inte att Lars kalender
+  // försvinner helt.
   await page.getByRole("button", { name: "Kalender" }).click();
 
+  await expect(page.getByText("Förälderns möte")).toBeVisible();
   await expect(page.getByText("Lars tandläkarbesök")).toBeVisible();
-  await expect(page.getByText("Förälderns möte")).toHaveCount(0);
 });

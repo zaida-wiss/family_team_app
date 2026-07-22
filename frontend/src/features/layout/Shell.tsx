@@ -49,7 +49,14 @@ function PanelRouter({
   if (currentMember.isChild) {
     return <ChildShellContent {...childContentProps} />;
   }
-  if (activePanel === "members") {
+  // Medlemmar-panelen visar listan bara när INGEN är vald (2026-07-23,
+  // Zaidas beslut) — så fort en medlem väljs (MembersView.tsx:s kort)
+  // renderas MemberShellContent istället, med activePanel fortsatt
+  // "members" (håller Medlemmar-ikonen markerad, se HeroBar.tsx). Samma
+  // MemberShellContent som redan hanterar barn-/själv-/annan-vuxen-dashboard
+  // internt utifrån selectedDashboardMemberId, bara nådd via en annan panel
+  // nu än tidigare (var alltid "home").
+  if (activePanel === "members" && !memberContentProps.selectedDashboardMemberId) {
     return (
       <MembersView
         account={activeAccount}
@@ -57,7 +64,6 @@ function PanelRouter({
         members={settingsProps.members}
         roles={settingsProps.roles}
         onSelectMember={memberContentProps.onSelectMember}
-        onNavigate={setActivePanel}
       />
     );
   }
