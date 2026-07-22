@@ -29,7 +29,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
   } = useAppState(activeMembership);
 
   const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, approveTodo, rejectTodo,
-    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, refreshRoutineOccurrence,
+    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, refreshRoutineOccurrence,
     lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, addCalendarEvent, updateCalendarEvent,
@@ -139,6 +139,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onSelectMember: setSelectedDashboardMemberId,
     onCreateTodo: createTodo,
     onToggleSubtask: toggleSubtask,
+    onToggleTodoInProgress: toggleTodoInProgress,
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,
     personalCategories: personalTodoCategories,

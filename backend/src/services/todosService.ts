@@ -164,6 +164,11 @@ export async function completeTodo(
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
   }
+  // "Någon håller på med den här"-indikatorn är bara meningsfull medan
+  // uppgiften faktiskt är pending — rensas här, samma mönster som övriga
+  // engångstillstånd (t.ex. completedAt) som sätts vid samma övergång.
+  todo.inProgressBy = [];
+  todo.inProgressSince = null;
 
   if (await assignedMemberNeedsApproval(todo.assignedTo)) {
     todo.status = "done";
@@ -179,6 +184,40 @@ export async function completeTodo(
 
   await todo.save();
   broadcastTodosChanged();
+}
+
+// "Någon håller på med den här"-indikator (2026-07-22) — se shared/types.ts.
+// targetMemberId är avsiktligt SKILT från callerMemberId (den inloggade
+// anroparen): samma "delat hushållsdon"-modell som resten av tråd-vyns
+// håll-in-flöde redan bygger på (en förälder slutför redan ett barns
+// uppgift via samma UI, med barnets identitet, inte sin egen) — en
+// familjemedlem kan markera VILKEN annan medlem som helst som "på" en
+// uppgift via avatarväljaren, ingen extra behörighet utöver kontomedlemskap.
+export async function toggleInProgress(
+  id: string,
+  accountId: string,
+  callerMemberId: string | null,
+  targetMemberId: string
+) {
+  const todo = await TodoModel.findOne({ id, accountId });
+  if (!todo || todo.status !== "pending") {
+    throw new AppError(404, "Todo hittades inte eller är inte pending");
+  }
+  await requireMember(callerMemberId, accountId);
+  const target = await MemberModel.findOne({ id: targetMemberId, accountId, deletedAt: null });
+  if (!target) {
+    throw new AppError(404, "Medlem hittades inte");
+  }
+
+  const current = todo.inProgressBy ?? [];
+  const alreadyIn = current.includes(target.id);
+  const nextList = alreadyIn ? current.filter((m) => m !== target.id) : [...current, target.id];
+
+  todo.inProgressBy = nextList;
+  todo.inProgressSince = nextList.length > 0 ? todo.inProgressSince ?? new Date().toISOString() : null;
+  await todo.save();
+  broadcastTodosChanged();
+  return { inProgressBy: nextList, inProgressSince: todo.inProgressSince };
 }
 
 export async function updateTodo(id: string, accountId: string, data: unknown, memberId: string | null) {

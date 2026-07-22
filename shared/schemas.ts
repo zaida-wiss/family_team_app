@@ -365,6 +365,14 @@ export const CompleteTodoBodySchema = z.object({
   elapsedMs: z.number().int().min(0).nullable().optional()
 });
 
+// "Någon håller på med den här"-indikator (2026-07-22) — se Todo.inProgressBy
+// i shared/types.ts. targetMemberId är medlemmen som ska läggas till/tas
+// bort, inte nödvändigtvis den inloggade anroparen (samma "delat
+// hushållsdon"-mönster som resten av tråd-vyns håll-in-flöde).
+export const ToggleInProgressBodySchema = z.object({
+  targetMemberId: z.string().min(1, "targetMemberId krävs")
+});
+
 // Flyttade hit från route-filerna (Sprint 3 S6) — låg tidigare som tre separata
 // inline-scheman i analytics.ts/rewardShop.ts/rewards.ts.
 

@@ -473,6 +473,17 @@ export type Todo = {
   // ursprungliga öppna tidtagningen (Starta/Klar-knappar, räknar uppåt).
   plannedDurationMinutes?: number | null;
   elapsedMs?: number | null;
+  // "Någon håller på med den här"-indikator (2026-07-22, Zaidas önskemål,
+  // Sprint 7:s motivation löst inom EGNA familjen först) — dubbeltryck på
+  // bollen i vuxenvyns tråd-vy öppnar en avatarväljare (ParentTodoThreadView.tsx),
+  // tryck på en medlems bild lägger till/tar bort DEN medlemmen här. En
+  // ensam medlem visas som en tjock kant i medlemmens färg; två eller fler
+  // visar istället en delad klocka som räknar från inProgressSince (ingen
+  // tävling, bara transparens — se ADR-diskussionen). Rensas automatiskt när
+  // uppgiften markeras klar (completeTodo). Valfritt och bakåtkompatibelt —
+  // hanteras bara via PATCH .../in-progress, inte generisk TodoPatchSchema.
+  inProgressBy?: Id[];
+  inProgressSince?: string | null;
 };
 
 export type TodoTimeWindow = {

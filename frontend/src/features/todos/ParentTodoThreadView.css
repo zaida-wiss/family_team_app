@@ -347,6 +347,52 @@
   100% { transform: scale(1.6) translateY(-14px); opacity: 0; }
 }
 
+/* "Någon håller på med den här"-indikator (2026-07-22) — en tjock kant i
+   personens färg tar medvetet över den vanliga --assignee-color-kanten
+   (info om VEM som jobbar på den just nu är mer tidskänslig än vem den är
+   tilldelad). Två eller fler personer: se .todo-thread__in-progress nedan
+   för den delade klockan istället — själva bollens kant lämnas oförändrad
+   i det läget (ingen enskild färg att visa). */
+.todo-thread__ball--in-progress {
+  border: 3px solid var(--in-progress-color);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--in-progress-color) 35%, transparent),
+    0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 35%, transparent),
+    inset 0 -5px 9px color-mix(in srgb, var(--thread-accent, var(--primary)) 28%, transparent);
+}
+
+.todo-thread__in-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--muted-fg);
+}
+
+.todo-thread__in-progress-dots {
+  display: flex;
+  gap: 2px;
+}
+
+.todo-thread__in-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--card);
+}
+
+.todo-thread__in-progress-clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-thread__in-progress-picker-label {
+  margin: 0;
+  padding: 8px 14px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted-fg);
+}
+
 /* Ikon på bollen (2026-07-07, Zaidas begäran) — annars bara synlig i
    barnvyn, men uppgifter tilldelade ett barn ska alltid visa den här också,
    "så att de kan läsa" (barnet kan känna igen ikonen även om det inte kan

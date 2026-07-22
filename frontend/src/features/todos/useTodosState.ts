@@ -197,6 +197,26 @@ export function useTodosState(fixedTodoTimes = false) {
     );
   }
 
+  // "Någon håller på med den här"-indikator (2026-07-22) — targetMemberId är
+  // medlemmen som läggs till/tas bort, inte nödvändigtvis den inloggade
+  // (avatarväljaren i ParentTodoThreadView.tsx låter dig markera valfri
+  // familjemedlem, samma "delat hushållsdon"-mönster som håll-in-flödet).
+  function toggleTodoInProgress(todoId: Id, targetMemberId: Id) {
+    const todo = todos.find((t) => t.id === todoId);
+    if (!todo) return;
+    const current = todo.inProgressBy ?? [];
+    const alreadyIn = current.includes(targetMemberId);
+    const nextList = alreadyIn ? current.filter((m) => m !== targetMemberId) : [...current, targetMemberId];
+    const nextSince = nextList.length > 0 ? todo.inProgressSince ?? new Date().toISOString() : null;
+
+    todosApi.toggleInProgress(todoId, targetMemberId).catch(console.error);
+    setTodos((current) =>
+      current.map((t) =>
+        t.id === todoId ? { ...t, inProgressBy: nextList, inProgressSince: nextSince } : t
+      )
+    );
+  }
+
   function completeTodo(member: Member, todoId: Id, roles: Role[], elapsedMs: number | null = null) {
     const todoToComplete = todos.find((todo) => todo.id === todoId);
     if (!todoToComplete || !canCompleteTodo(member, roles, todoToComplete)) {
@@ -427,6 +447,7 @@ export function useTodosState(fixedTodoTimes = false) {
     createTodo,
     updateTodo,
     toggleSubtask,
+    toggleTodoInProgress,
     completeTodo,
     softDeleteTodo,
     restoreTodo,

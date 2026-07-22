@@ -62,7 +62,10 @@ const todoSchema = new Schema<Todo>({
   // uppgift, ingen personbästa-jämförelse.
   timerEnabled: { type: Boolean, default: undefined },
   plannedDurationMinutes: { type: Number, default: null },
-  elapsedMs: { type: Number, default: null }
+  elapsedMs: { type: Number, default: null },
+  // "Någon håller på med den här"-indikator (2026-07-22) — se shared/types.ts.
+  inProgressBy: { type: [String], default: [] },
+  inProgressSince: { type: String, default: null }
 });
 
 // Saknades tidigare helt (2026-07-08, Zaidas fynd: todos laddas segt) — till

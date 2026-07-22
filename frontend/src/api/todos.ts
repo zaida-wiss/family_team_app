@@ -32,6 +32,11 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
+  toggleInProgress: (id: string, targetMemberId: string) =>
+    request<{ inProgressBy: string[]; inProgressSince: string | null }>(api(`todos/${id}/in-progress`), {
+      method: "PATCH",
+      body: JSON.stringify({ targetMemberId })
+    }),
   restore: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}/restore`), {
       method: "PATCH",

@@ -16,6 +16,13 @@ const HOLD_DURATION_MS = 2000;
 const DISSOLVE_DURATION_MS = 500;
 const CHILDREN_THREAD_ID = "__children__";
 
+function formatElapsed(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 type Props = {
   todos: Todo[];
   // Ofiltrerad lista (2026-07-08) — den vanliga todos-propen ovan är redan
@@ -29,6 +36,7 @@ type Props = {
   currentMember: Member;
   categories: TodoCategory[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
@@ -182,6 +190,7 @@ export function ParentTodoThreadView({
   currentMember,
   categories,
   onToggleSubtask,
+  onToggleTodoInProgress,
   onUpdateTodo,
   onRefreshRoutine,
   onCompleteTodo,
@@ -205,6 +214,26 @@ export function ParentTodoThreadView({
   // vid pointerUp (samma nedtryck+släpp-par som click bygger på) — det skulle
   // öppna checklista-modalen direkt efter att uppgiften redan markerats klar.
   const suppressClickRef = useRef(false);
+  // "Någon håller på med den här"-indikator (2026-07-22) — dubbeltryck på
+  // bollen öppnar en liten avatarväljare istället för detaljvyn. Ett vanligt
+  // enkelt tryck fördröjs medvetet DOUBLE_TAP_MS (standard disambiguerings-
+  // mönster mellan klick/dubbelklick) — det gör detaljvyn en aning senare
+  // att öppna, en medveten avvägning för att kunna särskilja gesterna.
+  const DOUBLE_TAP_MS = 300;
+  const lastTapRef = useRef<{ id: Id; time: number } | null>(null);
+  const pendingClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [inProgressPickerTodoId, setInProgressPickerTodoId] = useState<Id | null>(null);
+  const [inProgressPickerPos, setInProgressPickerPos] = useState({ top: 0, left: 0 });
+  const inProgressPickerRef = useRef<HTMLDivElement>(null);
+  // Delad klocka (2026-07-22) — tickar bara medan minst en boll faktiskt har
+  // två eller fler på sig samtidigt, annars onödigt att rendera om varje sekund.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const hasSharedTimer = todos.some((t) => (t.inProgressBy?.length ?? 0) >= 2);
+  useEffect(() => {
+    if (!hasSharedTimer) return;
+    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [hasSharedTimer]);
   // Bollar som just markerats klara via långtryck — hålls kvar i renderingen
   // (även efter att de lämnat "pending" i props) medan bortdöende-animationen
   // ("gå upp i rök", Zaidas beslut 2026-07-05) spelas upp.
@@ -266,6 +295,23 @@ export function ParentTodoThreadView({
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [menuCategoryId]);
+
+  useEffect(() => {
+    if (!inProgressPickerTodoId) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (inProgressPickerRef.current?.contains(e.target as Node)) return;
+      setInProgressPickerTodoId(null);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [inProgressPickerTodoId]);
+
+  useEffect(
+    () => () => {
+      if (pendingClickTimerRef.current) window.clearTimeout(pendingClickTimerRef.current);
+    },
+    []
+  );
 
   const today = new Date();
   // Återkommande MALLAR (recurringSourceId===null, recurrence!=="none") ska
@@ -425,12 +471,34 @@ export function ParentTodoThreadView({
     setDragOverId(null);
   }
 
-  function handleBallClick(todo: Todo) {
+  // Dubbeltryck öppnar avatarväljaren istället för detaljvyn (2026-07-22) —
+  // ett vanligt enkelt tryck fördröjs medvetet DOUBLE_TAP_MS för att kunna
+  // särskilja gesterna, samma standardmönster som klick-kontra-dubbelklick.
+  function handleBallClick(todo: Todo, e: React.MouseEvent<HTMLButtonElement>) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
     }
-    setDetailTodoId(todo.id);
+
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && last.id === todo.id && now - last.time < DOUBLE_TAP_MS) {
+      if (pendingClickTimerRef.current) {
+        window.clearTimeout(pendingClickTimerRef.current);
+        pendingClickTimerRef.current = null;
+      }
+      lastTapRef.current = null;
+      const rect = e.currentTarget.getBoundingClientRect();
+      setInProgressPickerPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+      setInProgressPickerTodoId(todo.id);
+      return;
+    }
+
+    lastTapRef.current = { id: todo.id, time: now };
+    pendingClickTimerRef.current = window.setTimeout(() => {
+      setDetailTodoId(todo.id);
+      pendingClickTimerRef.current = null;
+    }, DOUBLE_TAP_MS);
   }
 
   function handleConfirmComplete(todo: Todo) {
@@ -718,11 +786,29 @@ export function ParentTodoThreadView({
                 // kategori-trådar (2026-07-06, Zaidas begäran) — golvat på
                 // 44px, det minsta tillåtna touch-målet (CLAUDE.md), inte lägre.
                 const isChildrenThread = thread.id === CHILDREN_THREAD_ID;
+                // "Någon håller på med den här"-indikator (2026-07-22) — en
+                // ensam person: tjock kant i personens färg. Två eller fler:
+                // ingen tävling, bara en delad klocka som räknar från
+                // inProgressSince (samma för alla, oavsett vem som gick med sist).
+                const inProgressMembers = (todo.inProgressBy ?? [])
+                  .map((id) => members.find((m) => m.id === id))
+                  .filter((m): m is Member => !!m);
+                const inProgressColor =
+                  inProgressMembers.length === 1 ? inProgressMembers[0].color ?? "var(--primary)" : null;
+                const sharedElapsedLabel =
+                  inProgressMembers.length >= 2 && todo.inProgressSince
+                    ? formatElapsed(nowTick - new Date(todo.inProgressSince).getTime())
+                    : null;
                 return (
                   <li
                     key={todo.id}
                     className="todo-thread__item"
-                    style={assigneeColor ? ({ "--assignee-color": assigneeColor } as React.CSSProperties) : undefined}
+                    style={
+                      {
+                        ...(assigneeColor ? { "--assignee-color": assigneeColor } : {}),
+                        ...(inProgressColor ? { "--in-progress-color": inProgressColor } : {})
+                      } as React.CSSProperties
+                    }
                   >
                     <button
                       type="button"
@@ -730,10 +816,11 @@ export function ParentTodoThreadView({
                         "todo-thread__ball" +
                         (isChildrenThread ? " todo-thread__ball--small" : "") +
                         (heldId === todo.id ? " todo-thread__ball--holding" : "") +
-                        (isDissolving ? " todo-thread__ball--dissolving" : "")
+                        (isDissolving ? " todo-thread__ball--dissolving" : "") +
+                        (inProgressColor ? " todo-thread__ball--in-progress" : "")
                       }
                       disabled={isDissolving}
-                      onClick={() => handleBallClick(todo)}
+                      onClick={(e) => handleBallClick(todo, e)}
                       onPointerDown={() => startHold(todo.id, () => handleConfirmComplete(todo))}
                       onPointerUp={clearHold}
                       onPointerLeave={clearHold}
@@ -742,7 +829,10 @@ export function ParentTodoThreadView({
                       aria-label={
                         `${todo.title}, tilldelad ${assignee}` +
                         (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
-                        ". Håll intryckt i två sekunder för att markera hela uppgiften klar."
+                        (inProgressMembers.length > 0
+                          ? `. ${inProgressMembers.map((m) => m.name).join(", ")} håller på med den här.`
+                          : "") +
+                        ". Håll intryckt i två sekunder för att markera hela uppgiften klar. Dubbeltryck för att markera att du håller på."
                       }
                     >
                       {todo.visual.value && (
@@ -755,6 +845,51 @@ export function ParentTodoThreadView({
                         <span className="todo-thread__ball-progress">{progress}%</span>
                       )}
                     </button>
+
+                    {inProgressMembers.length >= 2 && (
+                      <div className="todo-thread__in-progress" aria-hidden="true">
+                        <span className="todo-thread__in-progress-dots">
+                          {inProgressMembers.map((m) => (
+                            <span
+                              className="todo-thread__in-progress-dot"
+                              key={m.id}
+                              style={{ background: m.color ?? "var(--primary)" }}
+                            />
+                          ))}
+                        </span>
+                        <span className="todo-thread__in-progress-clock">{sharedElapsedLabel}</span>
+                      </div>
+                    )}
+
+                    {inProgressPickerTodoId === todo.id &&
+                      createPortal(
+                        <div
+                          className="todo-thread__category-menu"
+                          ref={inProgressPickerRef}
+                          role="menu"
+                          style={{ position: "fixed", top: inProgressPickerPos.top, left: inProgressPickerPos.left }}
+                        >
+                          <p className="todo-thread__in-progress-picker-label">Vem håller på med den här?</p>
+                          {members.map((m) => {
+                            const isOn = inProgressMembers.some((im) => im.id === m.id);
+                            return (
+                              <button
+                                aria-pressed={isOn}
+                                key={m.id}
+                                onClick={() => {
+                                  onToggleTodoInProgress(todo.id, m.id);
+                                  setInProgressPickerTodoId(null);
+                                }}
+                                type="button"
+                              >
+                                {isOn ? "✓ " : ""}
+                                {m.name}
+                              </button>
+                            );
+                          })}
+                        </div>,
+                        document.body
+                      )}
                   </li>
                 );
               })}

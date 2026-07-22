@@ -3,7 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
-import { CompleteTodoBodySchema, RejectTodoBodySchema } from "../../../shared/schemas.js";
+import { CompleteTodoBodySchema, RejectTodoBodySchema, ToggleInProgressBodySchema } from "../../../shared/schemas.js";
 
 export const todosRouter = Router();
 
@@ -53,6 +53,12 @@ todosRouter.delete("/:id", requireAuth, attachAccountId, async (req, res) => {
 todosRouter.patch("/:id/restore", requireAuth, attachAccountId, async (req, res) => {
   await todos.restoreTodo(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });
+});
+
+todosRouter.patch("/:id/in-progress", requireAuth, attachAccountId, async (req, res) => {
+  const { targetMemberId } = ToggleInProgressBodySchema.parse(req.body ?? {});
+  const result = await todos.toggleInProgress(req.params.id, req.accountId!, req.memberId ?? null, targetMemberId);
+  res.json(result);
 });
 
 todosRouter.patch("/:id/subtasks/:subtaskId", requireAuth, attachAccountId, async (req, res) => {

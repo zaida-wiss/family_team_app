@@ -30,6 +30,7 @@ type Props = {
   todoThreadRange: TodoThreadRange;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
+  onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
@@ -71,6 +72,7 @@ export function TodosView({
   todoThreadRange,
   onCreateTodo,
   onToggleSubtask,
+  onToggleTodoInProgress,
   onUpdateTodo,
   onRefreshRoutine,
   onCompleteTodo,
@@ -191,6 +193,7 @@ export function TodosView({
             currentMember={currentMember}
             categories={personalCategories}
             onToggleSubtask={onToggleSubtask}
+            onToggleTodoInProgress={onToggleTodoInProgress}
             onUpdateTodo={onUpdateTodo}
             onRefreshRoutine={onRefreshRoutine}
             onCompleteTodo={onCompleteTodo}
