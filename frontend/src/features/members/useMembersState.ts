@@ -128,6 +128,22 @@ export function useMembersState() {
     );
   }
 
+  // Barn-inloggning (2026-07-22) — till skillnad från övriga update*-funktioner
+  // ovan (fire-and-forget, optimistisk) väntar den här in svaret och kastar
+  // fel vidare, eftersom UI:t (AccountSettings.tsx) behöver visa ett
+  // felmeddelande direkt (t.ex. "användarnamnet är redan taget") istället för
+  // att bara logga tyst. member.userId sätts lokalt så knappen byter text
+  // från "Skapa inloggning" till "Ändra inloggning" utan en full omladdning.
+  async function setChildCredentials(memberId: Id, username: string, password: string) {
+    const result = await membersApi.setCredentials(memberId, username, password);
+    setMembers((current) =>
+      current.map((member) =>
+        member.id === memberId && !member.userId ? { ...member, userId: result.id } : member
+      )
+    );
+    return result;
+  }
+
   function updateCalendarFilterSettings(
     memberId: Id,
     filterKey: CalendarFilterKey,
@@ -188,6 +204,7 @@ export function useMembersState() {
     updateChildTimelineSettings,
     updateMemberNavigation,
     assignRole,
-    clearMemberAvatar
+    clearMemberAvatar,
+    setChildCredentials
   };
 }

@@ -25,6 +25,11 @@ export const membersApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
+  setCredentials: (id: string, username: string, password: string) =>
+    request<{ id: string; username: string }>(api(`members/${id}/credentials`), {
+      method: "PUT",
+      body: JSON.stringify({ username, password })
+    }),
   // Realtidssynk (2026-07-17, Zaidas fynd: stjärnor uppdaterades inte förrän
   // en omladdning) — samma SSE-mönster som todosApi redan använder.
   subscribeToChanges: (onChange: () => void) => {

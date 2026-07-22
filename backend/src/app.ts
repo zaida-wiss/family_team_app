@@ -83,6 +83,7 @@ app.use(express.json({ limit: "5mb" }));
 app.use("/api", globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/child-login", authLimiter);
 
 app.get("/health", (_req, res) => { res.json({ ok: true }); });
 

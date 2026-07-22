@@ -91,6 +91,12 @@ export function useAuth() {
     trackEvent("login");
   }
 
+  async function childLogin(parentEmail: string, username: string, password: string) {
+    const { accessToken, user, memberships } = await authApi.childLogin(parentEmail, username, password);
+    applySession(user, memberships ?? [], accessToken);
+    trackEvent("login");
+  }
+
   async function register(email: string, password: string, name: string) {
     const { accessToken, user } = await authApi.register(email, password, name);
     applySession(user, [], accessToken);
@@ -113,5 +119,5 @@ export function useAuth() {
     );
   }
 
-  return { state, login, register, logout, updateMemberships, updateUser, applySession };
+  return { state, login, childLogin, register, logout, updateMemberships, updateUser, applySession };
 }

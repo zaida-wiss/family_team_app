@@ -15,6 +15,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),
+  childLogin: (parentEmail: string, username: string, password: string) =>
+    request<LoginResponse>(api("auth/child-login"), {
+      method: "POST",
+      body: JSON.stringify({ parentEmail, username, password })
+    }),
   refresh: () => request<LoginResponse>(api("auth/refresh"), { method: "POST", body: "{}" }, true),
   logout: () => request<{ ok: boolean }>(api("auth/logout"), { method: "POST", body: "{}" }),
   updatePreferences: (patch: Pick<User, "lastActiveMemberId">) =>

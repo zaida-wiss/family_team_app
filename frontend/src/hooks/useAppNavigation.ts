@@ -8,12 +8,18 @@ type Screen =
   | { screen: "loading" }
   | { screen: "offline" }
   | { screen: "invite"; token: string; onAccepted: (s: AcceptedSession) => void }
-  | { screen: "auth"; onLogin: ReturnType<typeof useAuth>["login"]; onRegister: ReturnType<typeof useAuth>["register"]; resetToken?: string }
+  | {
+      screen: "auth";
+      onLogin: ReturnType<typeof useAuth>["login"];
+      onChildLogin: ReturnType<typeof useAuth>["childLogin"];
+      onRegister: ReturnType<typeof useAuth>["register"];
+      resetToken?: string;
+    }
   | { screen: "picker"; user: User; memberships: Membership[]; onSelect: (m: Membership) => void; onLogout: () => void; onMembershipsUpdated: (ms: Membership[]) => void }
   | { screen: "shell"; activeMembership: Membership; onLogout: () => Promise<void>; onSwitchAccount: () => void };
 
 export function useAppNavigation(): Screen {
-  const { state: authState, login, register, logout, updateMemberships, updateUser, applySession } = useAuth();
+  const { state: authState, login, childLogin, register, logout, updateMemberships, updateUser, applySession } = useAuth();
   const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
 
   const inviteToken = window.location.pathname.match(/^\/invite\/([^/]+)/)?.[1] ?? null;
@@ -62,7 +68,13 @@ export function useAppNavigation(): Screen {
   }
 
   if (authState.status === "unauthenticated") {
-    return { screen: "auth", onLogin: login, onRegister: register, resetToken: resetToken ?? undefined };
+    return {
+      screen: "auth",
+      onLogin: login,
+      onChildLogin: childLogin,
+      onRegister: register,
+      resetToken: resetToken ?? undefined
+    };
   }
 
   const { user, memberships } = authState;

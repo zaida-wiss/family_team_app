@@ -8,7 +8,7 @@ test.describe("Inloggningsformulär", () => {
     await expect(page.getByRole("heading", { name: "BMAD" })).toBeVisible();
     await expect(page.getByLabel("E-postadress")).toBeVisible();
     await expect(page.getByLabel("Lösenord")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Logga in" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Logga in", exact: true })).toBeVisible();
   });
 
   test("visar felmeddelande vid felaktiga uppgifter", async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe("Inloggningsformulär", () => {
     await page.goto("/");
     await page.getByLabel("E-postadress").fill("fel@exempel.se");
     await page.getByLabel("Lösenord").fill("feltlösenord");
-    await page.getByRole("button", { name: "Logga in" }).click();
+    await page.getByRole("button", { name: "Logga in", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("Inte autentiserad");
   });
 

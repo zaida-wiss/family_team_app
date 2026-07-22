@@ -177,6 +177,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 onDeleteOwnData={settingsProps.onDeleteOwnData}
                 onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
                 onUpdateMemberColor={settingsProps.onUpdateMemberColor}
+                onSetChildCredentials={settingsProps.onSetChildCredentials}
                 onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
                 onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
                 onShareCalendar={memberContentProps.onShareCalendar}

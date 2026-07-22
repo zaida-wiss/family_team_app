@@ -72,7 +72,10 @@ export type DashboardThemeId =
 
 export type User = {
   id: Id;
-  email: string;
+  // Ett barn (2026-07-22, se authService.ts:s childLogin) har ingen egen
+  // e-post — bara ett username, unikt inom familjen, inte globalt.
+  email: string | null;
+  username?: string | null;
   name: string;
   createdAt: string;
   lastActiveMemberId?: Id | null;

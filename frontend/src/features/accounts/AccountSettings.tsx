@@ -1,6 +1,6 @@
 import "./AccountSettings.css";
-import { Eraser, Filter, ImagePlus, Loader, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { Eraser, Filter, ImagePlus, KeyRound, Loader, Trash2, X } from "lucide-react";
+import { Fragment, useState } from "react";
 import { createPortal } from "react-dom";
 import { uploadImage } from "../../utils/uploadImage";
 import { reportApiError } from "../../api";
@@ -28,6 +28,7 @@ type AccountSettingsProps = {
   onDeleteOwnData: () => void;
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
   onUpdateMemberColor: (memberId: string, color: string | null) => void;
+  onSetChildCredentials: (memberId: string, username: string, password: string) => Promise<{ id: string; username: string }>;
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => void;
   onShareCalendar: (calendarId: string, memberId: string, access: AccessLevel) => void;
@@ -45,6 +46,7 @@ export function AccountSettings({
   onDeleteOwnData,
   onUpdateMemberAvatar,
   onUpdateMemberColor,
+  onSetChildCredentials,
   onUpdateCalendarSettings,
   onUpdateFixedTodoTimes,
   onShareCalendar,
@@ -56,6 +58,14 @@ export function AccountSettings({
   const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(null);
   const [openCalFilterId, setOpenCalFilterId] = useState<string | null>(null);
   const [calFilterPos, setCalFilterPos] = useState({ top: 0, left: 0 });
+
+  // Barn-inloggning (2026-07-22) — se AuthPage.tsx:s "Logga in som barn".
+  const [credentialsMemberId, setCredentialsMemberId] = useState<string | null>(null);
+  const [credentialsUsername, setCredentialsUsername] = useState("");
+  const [credentialsPassword, setCredentialsPassword] = useState("");
+  const [credentialsError, setCredentialsError] = useState<string | null>(null);
+  const [credentialsSaving, setCredentialsSaving] = useState(false);
+  const [credentialsSavedId, setCredentialsSavedId] = useState<string | null>(null);
 
   const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
   const calSettings: CalendarSettings = account.calendarSettings ?? DEFAULT_CALENDAR_SETTINGS;
@@ -97,6 +107,31 @@ export function AccountSettings({
       reportApiError("Bilden kunde inte laddas upp");
     } finally {
       setUploadingMemberId(null);
+    }
+  }
+
+  function openCredentials(memberId: string) {
+    setCredentialsMemberId((current) => (current === memberId ? null : memberId));
+    setCredentialsUsername("");
+    setCredentialsPassword("");
+    setCredentialsError(null);
+  }
+
+  async function saveChildCredentials(memberId: string) {
+    if (!credentialsUsername.trim() || !credentialsPassword || credentialsSaving) return;
+    setCredentialsError(null);
+    setCredentialsSaving(true);
+    try {
+      await onSetChildCredentials(memberId, credentialsUsername.trim(), credentialsPassword);
+      setCredentialsMemberId(null);
+      setCredentialsUsername("");
+      setCredentialsPassword("");
+      setCredentialsSavedId(memberId);
+      window.setTimeout(() => setCredentialsSavedId((current) => (current === memberId ? null : current)), 2500);
+    } catch (err) {
+      setCredentialsError(err instanceof Error ? err.message : "Något gick fel");
+    } finally {
+      setCredentialsSaving(false);
     }
   }
 
@@ -149,8 +184,11 @@ export function AccountSettings({
         <div className="settings-sub">
           <h3 className="settings-sub-title">Familjemedlemmar</h3>
           <div className="settings-member-list">
-            {activeMembers.map((member) => (
-              <div className="settings-member-row" key={member.id}>
+            {activeMembers.map((member) => {
+              const isChildMember = member.isChild || roles.find((r) => r.id === member.roleId)?.isChildRole;
+              return (
+              <Fragment key={member.id}>
+              <div className="settings-member-row">
                 <MemberAvatar member={member} size="small" />
                 <div className="settings-member-info">
                   <strong>{member.name}</strong>
@@ -198,7 +236,18 @@ export function AccountSettings({
                     <X size={16} />
                   </button>
                 ) : null}
-                {(member.isChild || roles.find((r) => r.id === member.roleId)?.isChildRole) && (() => {
+                {isChildMember && (
+                  <button
+                    aria-label={`${member.userId ? "Ändra" : "Skapa"} inloggning för ${member.name}`}
+                    className={`icon-button${credentialsMemberId === member.id ? " icon-button--active" : ""}`}
+                    onClick={() => openCredentials(member.id)}
+                    title={member.userId ? "Ändra barnets inloggning" : "Skapa barnets egen inloggning"}
+                    type="button"
+                  >
+                    <KeyRound size={16} />
+                  </button>
+                )}
+                {isChildMember && (() => {
                   const childCals = calendars.filter((c) => c.ownerId !== member.id && c.deletedAt === null);
                   if (childCals.length === 0) return null;
                   const isOpen = openCalFilterId === member.id;
@@ -237,7 +286,51 @@ export function AccountSettings({
                   <Trash2 size={16} />
                 </button>
               </div>
-            ))}
+              {credentialsSavedId === member.id && (
+                <p className="settings-sub-desc" role="status">Inloggning sparad för {member.name}.</p>
+              )}
+              {credentialsMemberId === member.id && (
+                <div className="settings-child-credentials">
+                  <label className="field-label">
+                    Användarnamn
+                    <input
+                      autoComplete="off"
+                      className="text-input"
+                      onChange={(e) => setCredentialsUsername(e.target.value)}
+                      placeholder="t.ex. nova"
+                      value={credentialsUsername}
+                    />
+                  </label>
+                  <label className="field-label">
+                    Lösenord
+                    <input
+                      autoComplete="new-password"
+                      className="text-input"
+                      minLength={4}
+                      onChange={(e) => setCredentialsPassword(e.target.value)}
+                      placeholder="Minst 4 tecken"
+                      type="password"
+                      value={credentialsPassword}
+                    />
+                  </label>
+                  {credentialsError && <p className="field-hint" role="alert">{credentialsError}</p>}
+                  <p className="settings-sub-desc">
+                    {member.name} loggar in med DIN e-postadress + användarnamnet + lösenordet ovan, via
+                    Logga in som barn på inloggningssidan.
+                  </p>
+                  <button
+                    className="secondary-button"
+                    disabled={credentialsSaving || !credentialsUsername.trim() || !credentialsPassword}
+                    onClick={() => saveChildCredentials(member.id)}
+                    type="button"
+                  >
+                    {credentialsSaving ? "…" : "Spara inloggning"}
+                  </button>
+                </div>
+              )}
+              </Fragment>
+              );
+            })}
           </div>
         </div>
       )}

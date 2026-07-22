@@ -19,6 +19,13 @@ authRouter.post("/login", async (req, res) => {
   res.json({ accessToken, user, memberships });
 });
 
+authRouter.post("/child-login", async (req, res) => {
+  const { parentEmail, username, password } = req.body;
+  const { refreshToken, accessToken, user, memberships } = await authService.childLogin(parentEmail, username, password);
+  setRefreshCookie(res, refreshToken);
+  res.json({ accessToken, user, memberships });
+});
+
 authRouter.post("/refresh", requireSameOrigin, async (req, res) => {
   const cookie = (req.cookies as Record<string, string>)["refresh_token"];
   const { refreshToken, accessToken, user, memberships } = await authService.refresh(cookie);

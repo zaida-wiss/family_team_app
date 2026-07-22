@@ -41,3 +41,8 @@ membersRouter.patch("/:id/restore", async (req, res) => {
   await members.restoreMember(req.params.id, req.accountId!);
   res.json({ ok: true });
 });
+
+membersRouter.put("/:id/credentials", async (req, res) => {
+  const result = await members.setChildCredentials(req.accountId!, req.memberId ?? null, req.params.id, req.body);
+  res.json(result);
+});

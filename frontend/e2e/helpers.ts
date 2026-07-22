@@ -91,5 +91,5 @@ export async function loginViaUI(page: Page) {
   );
   await page.getByLabel("E-postadress").fill("test@exempel.se");
   await page.getByLabel("Lösenord").fill("lösenord123");
-  await page.getByRole("button", { name: "Logga in" }).click();
+  await page.getByRole("button", { name: "Logga in", exact: true }).click();
 }

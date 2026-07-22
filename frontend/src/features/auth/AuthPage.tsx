@@ -2,19 +2,29 @@ import { useState } from "react";
 import { authApi } from "../../api";
 import styles from "./Auth.module.css";
 
-type Mode = "login" | "register" | "forgot" | "forgot-done";
+type Mode = "login" | "child-login" | "register" | "forgot" | "forgot-done";
 
 type Props = {
   onLogin: (email: string, password: string) => Promise<void>;
+  onChildLogin: (parentEmail: string, username: string, password: string) => Promise<void>;
   onRegister: (email: string, password: string, name: string) => Promise<void>;
   resetToken?: string;
 };
 
-export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
+// Barn-inloggning (2026-07-22, Zaidas önskemål: "vi använder mitt adminkonto
+// även på barnens telefoner") — ett eget, enklare formulär (förälderns
+// e-post + barnets användarnamn + lösenord) istället för e-post+lösenord,
+// eftersom barn inte har någon egen e-postadress. Se authService.ts:s
+// childLogin för varför förälderns e-post behövs (username är bara unikt
+// INOM familjen, inte globalt).
+export function AuthPage({ onLogin, onChildLogin, onRegister, resetToken }: Props) {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+  const [childUsername, setChildUsername] = useState("");
+  const [childPassword, setChildPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,6 +39,8 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
     try {
       if (mode === "login") {
         await onLogin(email, password);
+      } else if (mode === "child-login") {
+        await onChildLogin(parentEmail, childUsername, childPassword);
       } else if (mode === "register") {
         await onRegister(email, password, name);
       } else if (mode === "forgot") {
@@ -40,6 +52,71 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (mode === "child-login") {
+    return (
+      <main className={styles.page}>
+        <div className={styles.card}>
+          <h1 className={styles.title}>BMAD</h1>
+          <p className="eyebrow">Logga in som barn</p>
+
+          <form className={styles.form} onSubmit={handleSubmit}>
+            <label className="field-label">
+              Förälders e-postadress
+              <input
+                autoComplete="email"
+                className="text-input"
+                onChange={(e) => setParentEmail(e.target.value)}
+                placeholder="förälderns namn@exempel.se"
+                required
+                type="email"
+                value={parentEmail}
+              />
+            </label>
+
+            <label className="field-label">
+              Användarnamn
+              <input
+                autoComplete="username"
+                className="text-input"
+                onChange={(e) => setChildUsername(e.target.value)}
+                placeholder="Ditt användarnamn"
+                required
+                type="text"
+                value={childUsername}
+              />
+            </label>
+
+            <label className="field-label">
+              Lösenord
+              <input
+                autoComplete="current-password"
+                className="text-input"
+                onChange={(e) => setChildPassword(e.target.value)}
+                required
+                type="password"
+                value={childPassword}
+              />
+            </label>
+
+            {error && <p className={styles.error} role="alert">{error}</p>}
+
+            <button className="primary-button" disabled={loading} type="submit">
+              {loading ? "…" : "Logga in"}
+            </button>
+          </form>
+
+          <button
+            className={styles.switchButton}
+            onClick={() => { setMode("login"); setError(null); }}
+            type="button"
+          >
+            Tillbaka till inloggning
+          </button>
+        </div>
+      </main>
+    );
   }
 
   if (mode === "forgot-done") {
@@ -120,9 +197,14 @@ export function AuthPage({ onLogin, onRegister, resetToken }: Props) {
         </form>
 
         {mode === "login" && (
-          <button className={styles.switchButton} onClick={() => { setMode("forgot"); setError(null); }} type="button">
-            Glömt lösenordet?
-          </button>
+          <>
+            <button className={styles.switchButton} onClick={() => { setMode("forgot"); setError(null); }} type="button">
+              Glömt lösenordet?
+            </button>
+            <button className={styles.switchButton} onClick={() => { setMode("child-login"); setError(null); }} type="button">
+              Logga in som barn
+            </button>
+          </>
         )}
 
         <button
