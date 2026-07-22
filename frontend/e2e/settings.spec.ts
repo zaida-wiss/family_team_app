@@ -43,6 +43,8 @@ test.describe("Inställningar", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Barn", exact: true }).click();
+    await page.getByRole("button", { name: "🏪 Belöningsbutiken" }).click();
 
     await expect(page.getByText("Belöningsbutiken", { exact: true })).toBeVisible();
     await expect(page.getByText("Uthämtade belöningar", { exact: true })).toBeVisible();

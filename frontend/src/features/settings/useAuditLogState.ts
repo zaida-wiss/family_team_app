@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { auditLogApi } from "../../api";
 import type { AuditLogEntry } from "@shared/types";
 
-// enabled=false (barn/utan canManageMembers) gör aldrig anropet — annars fick alla
-// utan behörighet ett garanterat 403 i konsolen bara för att Inställningar-panelen
-// alltid monterar sina sektioner, öppna eller inte (SettingsSection döljer bara med CSS).
+// enabled=false (barn/utan canManageMembers) gör aldrig anropet — komponenten
+// monteras numera bara när Aktivitetslogg faktiskt är den valda underkategorin
+// (SettingsCategoryNav.tsx, 2026-07-22), men guarden behövs oavsett: en
+// medlem utan behörighet ska aldrig anropa endpointen ens om de når hit.
 export function useAuditLogState(enabled: boolean) {
   const [items, setItems] = useState<AuditLogEntry[]>([]);
   const [total, setTotal] = useState<number | null>(null);

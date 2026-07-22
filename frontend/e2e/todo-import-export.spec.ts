@@ -16,6 +16,7 @@ const CHILD_MEMBER = {
 async function openImportExportSettings(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "📥 Importera/exportera uppgifter" }).click();
 }
 
@@ -390,6 +391,7 @@ test("Todos-import/export: importresultatet och Ångra-knappen ligger kvar efter
   // Byt till en annan panel och tillbaka till Inställningar.
   await page.getByRole("button", { name: "Todos" }).click();
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "📥 Importera/exportera uppgifter" }).click();
 
   await expect(page.getByText("1 uppgift importerade.")).toBeVisible();

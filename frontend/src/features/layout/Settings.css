@@ -26,11 +26,6 @@
   line-height: 1.4;
 }
 
-.settings-accordion {
-  display: grid;
-  gap: 10px;
-}
-
 .settings-logout-btn {
   display: flex;
   align-items: center;

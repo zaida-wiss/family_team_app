@@ -89,6 +89,8 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     // Inställningar (ingen egen växlare i panelen) — den här testen
     // kontrollerar listlägets aktiva/historik-filtrering, växlar dit explicit.
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Konto & familj" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Todos-vy").selectOption("list");
     await page.getByRole("button", { name: "Todos" }).click();
 
@@ -97,6 +99,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await expect(page.getByText("Duka undan")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Todo-lista" }).click();
     await page.getByRole("button", { name: "📋 Todo-historik" }).click();
 
     await expect(page.getByText("Diska")).toBeVisible();
@@ -118,6 +121,8 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Konto & familj" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Todos-vy").selectOption("list");
     await page.getByRole("button", { name: "Todos" }).click();
 
@@ -163,6 +168,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Todo-lista" }).click();
     await page.getByRole("button", { name: "📌 Engångsuppgifter" }).click();
 
     const rows = page.locator(".one-off-todos-settings__row");
@@ -183,6 +189,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Todo-lista" }).click();
     await page.getByRole("button", { name: "📌 Engångsuppgifter" }).click();
 
     await page.getByRole("button", { name: "Redigera Dammsuga" }).click();

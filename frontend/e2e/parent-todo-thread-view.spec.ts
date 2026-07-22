@@ -77,6 +77,8 @@ async function openThreadView(page: import("@playwright/test").Page) {
 
 async function switchToListViewInSettings(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto & familj" }).click();
+  await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByLabel("Todos-vy").selectOption("list");
   await page.getByRole("button", { name: "Todos" }).click();
 }
@@ -285,6 +287,8 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
 
   async function selectRange(label: string) {
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Konto & familj" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Hur mycket ska visas i tråd-vyn?").selectOption(label);
     await page.getByRole("button", { name: "Todos" }).click();
   }
@@ -1163,6 +1167,7 @@ test("Bollar i tråd: 'Göm' i kategorimenyn döljer tråden, 'Visa igen' i Inst
   await expect(page.getByRole("region", { name: "Tråd: Träning" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "🙈 Gömda kategorier" }).click();
   await expect(page.getByText("Träning")).toBeVisible();
   await page.getByRole("button", { name: "Visa igen" }).click();
@@ -1607,6 +1612,7 @@ test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en eg
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
 
   const row = page.getByText("Borsta tänderna").locator("../..");
@@ -1648,6 +1654,7 @@ test("Inställningar: återkommande uppgifter listas i tidsordning (tidigast sta
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
 
   const rows = page.locator(".recurring-todos-settings__row");

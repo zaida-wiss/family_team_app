@@ -46,6 +46,7 @@ async function openChildApproval(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Barn", exact: true }).click();
+  await page.getByRole("button", { name: "Barnkonton" }).click();
 }
 
 test.describe("Todo-godkännande — rollback vid API-fel", () => {

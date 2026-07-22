@@ -61,6 +61,8 @@ test("Todos: uppgift som tillhör ett borttaget barn visar barnets namn, inte Ok
   // Inställningar (ingen egen växlare i panelen) — den här testen
   // kontrollerar listlägets assignee-namn, växlar dit explicit.
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto & familj" }).click();
+  await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByLabel("Todos-vy").selectOption("list");
   await page.getByRole("button", { name: "Todos" }).click();
 

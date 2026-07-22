@@ -1,0 +1,114 @@
+.settings-nav {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.settings-breadcrumb__segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-breadcrumb__segment > span[aria-hidden] {
+  color: var(--muted-fg);
+}
+
+.settings-breadcrumb__item {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-breadcrumb__item--current {
+  color: var(--foreground);
+  font-weight: 800;
+  cursor: default;
+}
+
+.settings-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.settings-category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 96px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  cursor: pointer;
+  padding: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.settings-category-card:hover {
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  border-color: var(--primary);
+}
+
+.settings-subcategory-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-subcategory-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--foreground);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.settings-subcategory-btn:hover {
+  background: color-mix(in oklch, var(--primary) 6%, var(--card));
+  border-color: var(--primary);
+}
+
+.settings-subcategory-btn svg {
+  color: var(--muted-fg);
+  flex-shrink: 0;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 759px) {
+  .settings-category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

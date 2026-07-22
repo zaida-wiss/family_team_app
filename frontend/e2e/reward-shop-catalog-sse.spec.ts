@@ -43,6 +43,8 @@ test("Belöningsbutikens katalog synkas via SSE — en ny vara på en annan enhe
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Barn", exact: true }).click();
+  await page.getByRole("button", { name: "🏪 Belöningsbutiken" }).click();
   await expect(page.getByText("Biobiljett", { exact: true })).toBeVisible();
 
   await expect(page.getByText("Extra godnattsaga", { exact: true })).toBeVisible();

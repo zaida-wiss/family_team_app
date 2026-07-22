@@ -23,6 +23,7 @@ test("Aktivitetslogg i Inställningar visar händelser och filtrerar per typ", a
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto & familj" }).click();
   await page.getByRole("button", { name: "🗂 Aktivitetslogg" }).click();
 
   await expect(page.getByText(/Godkände 5 stjärnor/)).toBeVisible();
@@ -102,6 +103,7 @@ test("Vuxen utan canManageMembers ser ingen Aktivitetslogg-sektion och gör inge
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto & familj" }).click();
 
   await expect(page.getByRole("button", { name: "🗂 Aktivitetslogg" })).toHaveCount(0);
   expect(called).toBe(false);

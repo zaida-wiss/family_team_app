@@ -50,6 +50,7 @@ async function openChildApproval(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Barn", exact: true }).click();
+  await page.getByRole("button", { name: "Barnkonton" }).click();
 }
 
 test("Godkänd todo förblir godkänd även om en oberoende bakgrundsrefresh svarar med gammal data mitt i", async ({ page }) => {

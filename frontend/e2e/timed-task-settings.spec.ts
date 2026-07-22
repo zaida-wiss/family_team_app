@@ -32,6 +32,7 @@ test("Inställningar: skapa en tidtagen uppgift åt ett barn", async ({ page }) 
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Barn", exact: true }).click();
   await page.getByRole("button", { name: "🏃 Medaljer/Rekord" }).click();
 
   const section = page.locator(".timed-task-settings");
