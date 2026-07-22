@@ -51,7 +51,14 @@ export function useAppState(initialMembership: ActiveMembership) {
   function setActivePanel(panel: ShellPanel) {
     setActivePanelRaw(panel);
     updateMemberNavigation(initialMembership.member.id, { lastActivePanel: panel });
-    if (panel !== "home") setSelectedDashboardMemberIdRaw(null);
+    // Kalender-panelen (2026-07-21/22) respekterar numera vald familjemedlem
+    // (focusMemberId, se MemberShellContent.tsx/useCalendarView.ts) precis
+    // som Hem-vyn redan gjorde — valet får därför INTE nollställas när man
+    // navigerar dit. Detta var den faktiska grundorsaken till att "kalendern
+    // visade fel persons kalender": valet av familjemedlem gjordes på Hem,
+    // men försvann redan HÄR, innan Kalender-panelen ens hann rendera, så
+    // fort man klickade på Kalender i navigeringen.
+    if (panel !== "home" && panel !== "calendar") setSelectedDashboardMemberIdRaw(null);
   }
 
   function setSelectedDashboardMemberId(memberId: Id | null) {

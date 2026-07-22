@@ -1,12 +1,21 @@
 import { test, expect } from "@playwright/test";
 
-// Zaida (2026-07-21, rättad 2026-07-22): "om man först väljer familjemedlem
-// och sedan går till kalendern så är det inte den personens kalender...
-// Jag ska ENDAST se den valda familjemedlemmens kalender... Filtreringen
-// skall motsvara kalendrar som tillhör den personen som den valt att dela
-// med mig." Kalender-panelen (till skillnad från Hem-vyn, som medvetet är
-// oförändrad) ska filtrera ner till BARA den valda medlemmens egna
-// kalender(ar) när en medlem är vald i medlemsväljaren.
+// Zaida (2026-07-21, rättad 2026-07-22, uppföljd 2026-07-22): "om man först
+// väljer familjemedlem och sedan går till kalendern så är det inte den
+// personens kalender... Jag ska ENDAST se den valda familjemedlemmens
+// kalender... Filtreringen skall motsvara kalendrar som tillhör den
+// personen som den valt att dela med mig", följt av "även andra vuxna
+// familjemedlemmars kalender skall visas på kalender". Grundorsaken var
+// TVÅFALDIG:
+// 1) Kalender-panelen använde bara currentMember, aldrig vald medlem
+//    (fixat 668ee03, otillräckligt — bara "vilken kalender föreslås"-delen).
+// 2) DEN FAKTISKA roten: useAppState.ts:s setActivePanel nollställde
+//    selectedDashboardMemberId varje gång man navigerade till NÅGOT ANNAT
+//    än Hem — inklusive Kalender — så valet försvann innan Kalender-panelen
+//    ens hann rendera. Detta testet klickar igenom det RIKTIGA flödet
+//    (Hem → Medlemmar → välj en VUXEN → Kalender) istället för att bara
+//    ladda appen redan stående på Kalender-panelen (som det tidigare,
+//    otillräckliga testet gjorde — det missade just denna nollställning).
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -23,22 +32,20 @@ const ROLE = {
     canCreateChildAccounts: true, canManageChildTodos: true,
   },
 };
-const CHILD_ROLE = { ...ROLE, id: "role-child", name: "Barn", isChildRole: true };
 
 const PARENT = {
   id: "mem-1", accountId: "acc-1", userId: "user-1",
   name: "Testförälder", roleId: "role-1", isChild: false,
   avatarUrl: null, color: null, dashboardTheme: null,
   spentStars: 0, deletedAt: null, deletedBy: null,
-  // Simulerar att föräldern redan står på barnets Kalender-panel (samma
-  // mönster som member-dashboard-refresh.spec.ts).
-  lastActivePanel: "calendar", lastSelectedDashboardMemberId: "mem-child",
+  lastActivePanel: "home", lastSelectedDashboardMemberId: null,
 };
-const CHILD = {
-  id: "mem-child", accountId: "acc-1", userId: null,
-  name: "Nova", roleId: "role-child", isChild: true,
+// En ANDRA vuxen (inte barn) — Zaidas uppföljning specifikt om vuxna.
+const OTHER_ADULT = {
+  id: "mem-2", accountId: "acc-1", userId: "user-2",
+  name: "Lars", roleId: "role-1", isChild: false,
   avatarUrl: null, color: null, dashboardTheme: null,
-  approvedStars: 0, spentStars: 0, deletedAt: null, deletedBy: null,
+  spentStars: 0, deletedAt: null, deletedBy: null,
 };
 const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" };
 const LOGIN_RESPONSE = {
@@ -64,18 +71,18 @@ const PARENT_CALENDAR = {
   events: [calendarEvent({ id: "ev-parent", calendarId: "cal-parent", title: "Förälderns möte" })],
   importedSources: [], subscriptions: [],
 };
-const CHILD_CALENDAR = {
-  id: "cal-child", name: "Novas kalender", ownerId: "mem-child", color: "#a855f7",
+const LARS_CALENDAR = {
+  id: "cal-lars", name: "Lars kalender", ownerId: "mem-2", color: "#a855f7",
   sharedWith: [], deletedAt: null, deletedBy: null, keepAllHistory: false,
-  events: [calendarEvent({ id: "ev-child", calendarId: "cal-child", title: "Novas fotbollsträning" })],
+  events: [calendarEvent({ id: "ev-lars", calendarId: "cal-lars", title: "Lars tandläkarbesök" })],
   importedSources: [], subscriptions: [],
 };
 
 async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
-  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, CHILD] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE, CHILD_ROLE] }));
+  await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
@@ -94,12 +101,22 @@ async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 }
 
-test("Kalender-panelen visar bara den valda familjemedlemmens egna kalender, inte hela familjens", async ({ page }) => {
+test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar bara den vuxnas kalender", async ({ page }) => {
   await mockCommon(page);
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [PARENT_CALENDAR, CHILD_CALENDAR] }));
+  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [PARENT_CALENDAR, LARS_CALENDAR] }));
 
   await page.goto("/");
 
-  await expect(page.getByText("Novas fotbollsträning")).toBeVisible();
+  // Hem → Medlemmar → klicka på Lars (onSelectMember + navigerar tillbaka
+  // till Hem, samma flöde som MembersView.tsx faktiskt gör).
+  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: /Lars/ }).click();
+
+  // Nu på Kalender — om selectedDashboardMemberId nollställdes av
+  // navigeringen (den faktiska buggen) skulle förälderns egen kalender
+  // synas istället för Lars.
+  await page.getByRole("button", { name: "Kalender" }).click();
+
+  await expect(page.getByText("Lars tandläkarbesök")).toBeVisible();
   await expect(page.getByText("Förälderns möte")).toHaveCount(0);
 });
