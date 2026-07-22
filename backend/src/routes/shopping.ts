@@ -24,6 +24,16 @@ shoppingRouter.patch("/:id/items/:itemId/toggle", async (req, res) => {
   res.json({ ok: true });
 });
 
+shoppingRouter.delete("/:id/items/:itemId", async (req, res) => {
+  await shopping.deleteItem(req.params.id, req.accountId!, req.params.itemId, req.memberId ?? null);
+  res.json({ ok: true });
+});
+
+shoppingRouter.post("/:id/clear-completed", async (req, res) => {
+  await shopping.clearCompletedItems(req.params.id, req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});
+
 shoppingRouter.post("/:id/share", async (req, res) => {
   const { memberId, access } = req.body;
   await shopping.shareList(req.params.id, req.accountId!, memberId, access);

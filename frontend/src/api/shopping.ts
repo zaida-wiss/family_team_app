@@ -15,6 +15,13 @@ export const shoppingApi = {
       method: "PATCH",
       body: JSON.stringify({})
     }),
+  removeItem: (listId: string, itemId: string) =>
+    request<{ ok: boolean }>(api(`shopping/${listId}/items/${itemId}`), { method: "DELETE" }),
+  clearCompleted: (listId: string) =>
+    request<{ ok: boolean }>(api(`shopping/${listId}/clear-completed`), {
+      method: "POST",
+      body: JSON.stringify({})
+    }),
   share: (listId: string, memberId: string, access: string) =>
     request<{ ok: boolean }>(api(`shopping/${listId}/share`), {
       method: "POST",

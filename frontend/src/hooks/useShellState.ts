@@ -39,7 +39,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
 
   const { shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
     removeShoppingListShare, softDeleteShoppingList, restoreShoppingList,
-    toggleShoppingItem, softDeleteShoppingForMember } = shoppingState;
+    toggleShoppingItem, deleteShoppingItem, clearCompletedShoppingItems,
+    softDeleteShoppingForMember } = shoppingState;
 
   const { rewards, createWish, wishStars, setWishStars,
     approveWish, rejectWish, updateWish } = rewardsState;
@@ -203,6 +204,10 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onShareShoppingList: shareShoppingList,
     onRemoveShoppingListShare: removeShoppingListShare,
     onToggleShoppingItem: toggleShoppingItem,
+    onDeleteShoppingItem: (listId: string, itemId: string) =>
+      deleteShoppingItem(listId, itemId, currentMember.id),
+    onClearCompletedShoppingItems: (listId: string) =>
+      clearCompletedShoppingItems(listId, currentMember.id),
     ...sharedChildProps
   };
 

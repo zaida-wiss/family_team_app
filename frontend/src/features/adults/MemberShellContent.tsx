@@ -89,6 +89,8 @@ type Props = {
   onShareShoppingList: (listId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
   onToggleShoppingItem: (listId: string, itemId: string) => void;
+  onDeleteShoppingItem: (listId: string, itemId: string) => void;
+  onClearCompletedShoppingItems: (listId: string) => void;
   calendarSettings?: CalendarSettings;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
@@ -122,7 +124,8 @@ export function MemberShellContent({
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
-  onAddShoppingItem, onToggleShoppingItem, onThemePickerOpen, onCompleteTodo,
+  onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onClearCompletedShoppingItems,
+  onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
@@ -239,6 +242,8 @@ export function MemberShellContent({
           shoppingLists={canSeeShopping ? shoppingLists : []}
           onAddItem={onAddShoppingItem}
           onToggleItem={onToggleShoppingItem}
+          onDeleteItem={onDeleteShoppingItem}
+          onClearCompleted={onClearCompletedShoppingItems}
         />
       </Suspense>
     );

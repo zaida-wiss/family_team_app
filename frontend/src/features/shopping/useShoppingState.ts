@@ -149,6 +149,47 @@ export function useShoppingState() {
     );
   }
 
+  // Radera enskild rad (2026-07-22, Zaidas önskemål) — mjuk radering, samma
+  // mönster som övriga borttagningar i appen.
+  function deleteShoppingItem(listId: Id, itemId: Id, memberId: Id) {
+    shoppingApi.removeItem(listId, itemId).catch(console.error);
+    setShoppingLists((current) =>
+      current.map((list) => {
+        if (list.id !== listId) {
+          return list;
+        }
+
+        return {
+          ...list,
+          items: list.items.map((item) =>
+            item.id === itemId ? { ...item, deletedAt: new Date().toISOString(), deletedBy: memberId } : item
+          )
+        };
+      })
+    );
+  }
+
+  // Töm listan (2026-07-22, Zaidas önskemål: "töm listan kan vara ett val")
+  // — rensar bara BOCKADE varor, en enskild rad tas bort via deleteShoppingItem.
+  function clearCompletedShoppingItems(listId: Id, memberId: Id) {
+    shoppingApi.clearCompleted(listId).catch(console.error);
+    const now = new Date().toISOString();
+    setShoppingLists((current) =>
+      current.map((list) => {
+        if (list.id !== listId) {
+          return list;
+        }
+
+        return {
+          ...list,
+          items: list.items.map((item) =>
+            item.done && item.deletedAt === null ? { ...item, deletedAt: now, deletedBy: memberId } : item
+          )
+        };
+      })
+    );
+  }
+
   function softDeleteShoppingForMember(memberId: Id, deletedAt: string) {
     setShoppingLists((current) =>
       current.map((list) => {
@@ -184,6 +225,8 @@ export function useShoppingState() {
     softDeleteShoppingList,
     restoreShoppingList,
     toggleShoppingItem,
+    deleteShoppingItem,
+    clearCompletedShoppingItems,
     softDeleteShoppingForMember
   };
 }

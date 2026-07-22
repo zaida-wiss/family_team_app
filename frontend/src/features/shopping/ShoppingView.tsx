@@ -1,4 +1,4 @@
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useState } from "react";
 import {
   canEditSharedResource,
@@ -8,12 +8,20 @@ import {
 import styles from "./ShoppingLists.module.css";
 import type { Id, Member, Role, ShoppingList } from "@shared/types";
 
+// Visning av bockade varor (2026-07-22, Zaidas önskemål) — bara ett lokalt,
+// icke-persisterat UI-val per lista, återställs vid ny sidomladdning/panelbyte.
+// Zaida bad inte om att det ska sparas, bara att kunna VÄLJA — ingen ny
+// medlemsinställning/backend-fält behövdes.
+type CompletedDisplayMode = "inline" | "bottom" | "hidden";
+
 type Props = {
   currentMember: Member;
   roles: Role[];
   shoppingLists: ShoppingList[];
   onAddItem: (listId: Id, title: string) => void;
   onToggleItem: (listId: Id, itemId: Id) => void;
+  onDeleteItem: (listId: Id, itemId: Id) => void;
+  onClearCompleted: (listId: Id) => void;
 };
 
 export function ShoppingView({
@@ -21,9 +29,12 @@ export function ShoppingView({
   roles,
   shoppingLists,
   onAddItem,
-  onToggleItem
+  onToggleItem,
+  onDeleteItem,
+  onClearCompleted
 }: Props) {
   const [draftItems, setDraftItems] = useState<Record<Id, string>>({});
+  const [displayModes, setDisplayModes] = useState<Record<Id, CompletedDisplayMode>>({});
 
   const canEdit = hasPermission(currentMember, roles, "canEditShoppingLists");
 
@@ -64,6 +75,13 @@ export function ShoppingView({
         const editable = canEditList(list);
         const activeItems = list.items.filter((i) => i.deletedAt === null);
         const doneCount = activeItems.filter((i) => i.done).length;
+        const displayMode = displayModes[list.id] ?? "inline";
+        const visibleItems =
+          displayMode === "hidden"
+            ? activeItems.filter((i) => !i.done)
+            : displayMode === "bottom"
+              ? [...activeItems].sort((a, b) => Number(a.done) - Number(b.done))
+              : activeItems;
 
         return (
           <article className={styles.card} key={list.id}>
@@ -79,9 +97,40 @@ export function ShoppingView({
               )}
             </div>
 
+            {activeItems.length > 0 && (
+              <div className={styles.toolbar}>
+                <select
+                  aria-label={`Visning av bockade varor i ${list.name}`}
+                  className={styles.displayModeSelect}
+                  onChange={(e) =>
+                    setDisplayModes((prev) => ({
+                      ...prev,
+                      [list.id]: e.target.value as CompletedDisplayMode
+                    }))
+                  }
+                  value={displayMode}
+                >
+                  <option value="inline">Visa bockade</option>
+                  <option value="bottom">Bockade sist</option>
+                  <option value="hidden">Dölj bockade</option>
+                </select>
+                {editable && doneCount > 0 && (
+                  <button
+                    aria-label={`Töm bockade varor i ${list.name}`}
+                    className={`secondary-button ${styles.clearButton}`}
+                    onClick={() => onClearCompleted(list.id)}
+                    type="button"
+                  >
+                    <Trash2 size={14} />
+                    Töm listan
+                  </button>
+                )}
+              </div>
+            )}
+
             <ul className={styles.items}>
-              {activeItems.map((item) => (
-                <li key={item.id}>
+              {visibleItems.map((item) => (
+                <li className={styles.itemRow} key={item.id}>
                   <label className={item.done ? styles.done : undefined}>
                     <input
                       checked={item.done}
@@ -91,6 +140,16 @@ export function ShoppingView({
                     />
                     <span>{item.title}</span>
                   </label>
+                  {editable && (
+                    <button
+                      aria-label={`Ta bort ${item.title}`}
+                      className="icon-button danger"
+                      onClick={() => onDeleteItem(list.id, item.id)}
+                      type="button"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
