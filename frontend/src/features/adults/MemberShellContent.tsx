@@ -10,6 +10,9 @@ const ChildDashboard = lazy(() =>
 const ChildRecordsPage = lazy(() =>
   import("../children/ChildRecordsPage").then((m) => ({ default: m.ChildRecordsPage }))
 );
+const PersonalDashboard = lazy(() =>
+  import("./PersonalDashboard").then((m) => ({ default: m.PersonalDashboard }))
+);
 const CalendarPage = lazy(() =>
   import("../../pages/CalendarPage").then((m) => ({ default: m.CalendarPage }))
 );
@@ -213,8 +216,14 @@ export function MemberShellContent({
   // samma ChildDashboard/ChildRecordsPage som barnet self ser inloggat.
   const selectedMemberIsChild =
     !!selectedDashboardMember && (selectedDashboardMember.isChild || !!selectedMemberRole?.isChildRole);
+  // Vuxnas eget profilklick (2026-07-22, Zaidas önskemål: "jag vill kunna se
+  // mina uppgifter och kalendrar på samma sätt som barnen gör när jag
+  // trycker på min profilbild") — bara vid SJÄLV-val, en vuxen som väljer en
+  // ANNAN vuxen ser fortfarande den vanliga HomePage/"hemvy för den
+  // personen" längre ner, oförändrat.
+  const selectedMemberIsSelf = !!selectedDashboardMember && selectedDashboardMember.id === currentMember.id;
 
-  if (selectedMemberIsChild && selectedDashboardMember) {
+  if ((selectedMemberIsChild || selectedMemberIsSelf) && selectedDashboardMember) {
     const now = Date.now();
     const activeChildTodos = todos
       .filter(
@@ -237,7 +246,7 @@ export function MemberShellContent({
         t.deletedAt === null
     );
 
-    if (showChildRecords) {
+    if (selectedMemberIsChild && showChildRecords) {
       return (
         <Suspense fallback={null}>
           <ChildRecordsPage
@@ -252,23 +261,43 @@ export function MemberShellContent({
       );
     }
 
+    if (selectedMemberIsChild) {
+      return (
+        <Suspense fallback={null}>
+          <ChildDashboard
+            child={selectedDashboardMember}
+            calendars={calendars}
+            roles={roles}
+            categories={personalCategories}
+            timelineTodos={todos}
+            activeChildTodos={activeChildTodos}
+            rejectedTodos={rejectedTodos}
+            onOpenRecords={() => setShowChildRecords(true)}
+            onCreateWish={onCreateWish}
+            onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
+            onDismissRejectedTodo={(todoId) =>
+              onDismissRejectedTodo(todoId, selectedDashboardMember.id)
+            }
+            onThemePickerOpen={onThemePickerOpen}
+          />
+        </Suspense>
+      );
+    }
+
     return (
       <Suspense fallback={null}>
-        <ChildDashboard
-          child={selectedDashboardMember}
+        <PersonalDashboard
+          member={selectedDashboardMember}
           calendars={calendars}
           roles={roles}
           categories={personalCategories}
           timelineTodos={todos}
-          activeChildTodos={activeChildTodos}
+          activeTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}
-          onOpenRecords={() => setShowChildRecords(true)}
-          onCreateWish={onCreateWish}
           onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
           onDismissRejectedTodo={(todoId) =>
             onDismissRejectedTodo(todoId, selectedDashboardMember.id)
           }
-          onThemePickerOpen={onThemePickerOpen}
         />
       </Suspense>
     );
