@@ -1,13 +1,13 @@
 /**
- * Integrationstest (2026-07-22): DELETE /api/shopping/:id/items/:itemId och
- * POST /api/shopping/:id/clear-completed är de FÖRSTA skrivningarna i
- * shoppingService.ts som faktiskt kontrollerar canEditShoppingLists +
+ * Integrationstest: server-side behörighetskontroll i shoppingService.ts.
+ * DELETE .../items/:itemId och POST .../clear-completed (2026-07-22) var de
+ * FÖRSTA skrivningarna i filen som kontrollerade canEditShoppingLists +
  * delning (canEditSharedResource) server-side — samma mönster som redan
- * etablerats i todosService.ts (ADR-0009/ADR-0016). Övriga skrivningar i
- * samma fil (addItem/toggleItem/shareList/deleteList m.fl.) saknar
- * fortfarande all behörighetskontroll, ett känt, ej sprint-tilldelat fynd
- * (se CLAUDE.md) — inte fixat här, utanför dagens uppgift (nya
- * radera-rad/töm-listan-funktioner).
+ * etablerats i todosService.ts (ADR-0009/ADR-0016). Samma dag, uppföljning:
+ * resten av filen (createList/addItem/toggleItem/shareList/unshareList/
+ * deleteList/restoreList) saknade fortfarande all kontroll — vilken inloggad
+ * medlem som helst i kontot kunde skapa/ändra/dela/radera/återställa VILKEN
+ * INKÖPSLISTA SOM HELST. Fixat samma dag, se resterande describe-block nedan.
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -186,5 +186,189 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
       (l) => l.id === listId
     )!;
     expect(list.items.find((i) => i.id === itemBId)?.deletedAt).not.toBeNull();
+  });
+});
+
+describe.skipIf(!RUN)("shoppingService: server-side behörighetskontroll (createList/toggleItem/share/deleteList/restoreList)", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.db?.dropDatabase();
+    await mongoose.disconnect();
+  });
+
+  let accessToken: string;
+  let ownerMemberId: string;
+  let restrictedMemberId: string; // canCreateShoppingLists=false, canEditShoppingLists=false, canRestoreFromTrash=false
+  let listId: string;
+  let itemId: string;
+
+  it("sätter upp konto med ägare + en behörighetslös medlem", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "shopping-perm2-int@bmad.test", password: "Lösenord1!", name: "Behörighetstest 2" });
+    expect(register.status).toBe(201);
+    accessToken = register.body.accessToken as string;
+
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: "Behörighetsfamiljen 2" });
+    ownerMemberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
+
+    const restrictedRole = await request(app)
+      .post("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: `role-restricted2-${crypto.randomUUID()}`,
+        name: "Utan inköpsbehörigheter",
+        isChildRole: false,
+        permissions: {
+          canManageMembers: false, canManageRoles: false, canSeeAllTodos: false, canSeeOwnTodos: true,
+          canCreateTodos: true, canScheduleRecurringTodos: false, canCompleteAssignedTodos: false,
+          canEditAnyTodos: false, canDeleteAnyTodos: false, canApproveTodos: false, canSeeAllCalendar: false,
+          canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
+          canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
+          canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
+          canCreateChildAccounts: false, canManageChildTodos: false
+        }
+      });
+    expect(restrictedRole.status).toBe(201);
+
+    const restricted = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        name: "Begränsad medlem", roleId: (restrictedRole.body as { id: string }).id, isChild: false,
+        avatarUrl: null, color: null, dashboardTheme: null
+      });
+    expect(restricted.status).toBe(201);
+    restrictedMemberId = (restricted.body as { id: string }).id;
+  });
+
+  it("nekar createList utan canCreateShoppingLists, ignorerar spoofat ownerId annars", async () => {
+    listId = `shopping-perm2-${crypto.randomUUID()}`;
+    const denied = await request(app)
+      .post("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({
+        id: `shopping-perm2-denied-${crypto.randomUUID()}`, name: "Otillåten lista", ownerId: restrictedMemberId,
+        color: "#2f7d6d", icon: null, sharedWith: [], deletedAt: null, deletedBy: null, items: []
+      });
+    expect(denied.status).toBe(403);
+
+    // ownerId i body satt till restrictedMemberId trots att ownerMemberId är
+    // den riktiga anroparen — servern ska ignorera det och sätta ownerId till
+    // den autentiserade x-member-id, inte det klienten skickade (mass-
+    // assignment-skydd, ADR-0008-mönstret).
+    const allowed = await request(app)
+      .post("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: listId, name: "Veckohandling 2", ownerId: restrictedMemberId,
+        color: "#2f7d6d", icon: null, sharedWith: [], deletedAt: null, deletedBy: null, items: []
+      });
+    expect(allowed.status).toBe(201);
+
+    const lists = await request(app)
+      .get("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    const list = (lists.body as Array<{ id: string; ownerId: string }>).find((l) => l.id === listId)!;
+    expect(list.ownerId).toBe(ownerMemberId);
+  });
+
+  it("nekar toggleItem/shareList/unshareList/deleteList för en behörighetslös medlem", async () => {
+    itemId = `shopping-item-perm2-${crypto.randomUUID()}`;
+    const addItem = await request(app)
+      .post(`/api/shopping/${listId}/items`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({ id: itemId, title: "Ägg", createdBy: ownerMemberId, done: false, deletedAt: null, deletedBy: null });
+    expect(addItem.status).toBe(201);
+
+    const toggle = await request(app)
+      .patch(`/api/shopping/${listId}/items/${itemId}/toggle`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({});
+    expect(toggle.status).toBe(403);
+
+    const share = await request(app)
+      .post(`/api/shopping/${listId}/share`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ memberId: restrictedMemberId, access: "edit" });
+    expect(share.status).toBe(403);
+
+    const unshare = await request(app)
+      .delete(`/api/shopping/${listId}/share/${ownerMemberId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    expect(unshare.status).toBe(403);
+
+    const del = await request(app)
+      .delete(`/api/shopping/${listId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    expect(del.status).toBe(403);
+  });
+
+  it("tillåter toggleItem/shareList/deleteList för ägaren, delning ger mottagaren edit-åtkomst", async () => {
+    const toggle = await request(app)
+      .patch(`/api/shopping/${listId}/items/${itemId}/toggle`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({});
+    expect(toggle.status).toBe(200);
+
+    const share = await request(app)
+      .post(`/api/shopping/${listId}/share`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({ memberId: restrictedMemberId, access: "edit" });
+    expect(share.status).toBe(200);
+
+    // restrictedMemberId har fortfarande canEditShoppingLists=false på sin
+    // roll — en delning kan inte ge en behörighet rollen saknar helt.
+    const toggleAfterShare = await request(app)
+      .patch(`/api/shopping/${listId}/items/${itemId}/toggle`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({});
+    expect(toggleAfterShare.status).toBe(403);
+
+    const del = await request(app)
+      .delete(`/api/shopping/${listId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(del.status).toBe(200);
+  });
+
+  it("nekar restoreList utan canRestoreFromTrash, tillåter för ägaren", async () => {
+    const denied = await request(app)
+      .patch(`/api/shopping/${listId}/restore`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    expect(denied.status).toBe(403);
+
+    const allowed = await request(app)
+      .patch(`/api/shopping/${listId}/restore`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(allowed.status).toBe(200);
+
+    const lists = await request(app)
+      .get("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    const list = (lists.body as Array<{ id: string; deletedAt: string | null }>).find((l) => l.id === listId)!;
+    expect(list.deletedAt).toBeNull();
   });
 });

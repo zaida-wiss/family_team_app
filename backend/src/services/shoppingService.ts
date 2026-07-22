@@ -4,21 +4,34 @@ import { AppError } from "../utils/errors.js";
 import { ShoppingItemSchema } from "../../../shared/schemas.js";
 import { getAllRoles } from "./rolesService.js";
 import { canEditSharedResource, hasPermission } from "../../../shared/permissions.js";
-import type { ShoppingList } from "../../../shared/types.js";
+import type { PermissionKey, ShoppingList } from "../../../shared/types.js";
 
-// deleteItem/clearCompletedItems (2026-07-22) är de första skrivningarna i
-// den här filen som faktiskt kontrollerar canEditShoppingLists/delning
-// server-side — övriga funktioner nedan (addItem/toggleItem/shareList/
-// deleteList m.fl.) saknar fortfarande det helt, samma klass av brist som
-// ADR-0009/ADR-0016/timedTasks.ts-fyndet. Inte fixat här (utanför dagens
-// uppgift), se backlog-fyndet i CLAUDE.md.
-async function requireEditAccess(list: ShoppingList, accountId: string, memberId: string | null) {
+// Säkerhetsfynd 2026-07-22 (samma klass som ADR-0009/ADR-0016/timedTasks.ts):
+// samtliga skrivningar i den här filen saknade server-side behörighetskontroll,
+// bara addItem/toggleItem/shareList/unshareList/deleteList/createList/
+// restoreList. Fixat samma dag genom att återanvända requireEditAccess
+// (skrevs redan för deleteItem/clearCompletedItems) + en ny requirePermission
+// för de fall som inte utgår från en specifik listas ägar-/delningsstatus.
+async function requireMember(accountId: string, memberId: string | null) {
   const member = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
   if (!member) {
     throw new AppError(403, "Åtkomst nekad");
   }
+  return member;
+}
+
+async function requireEditAccess(list: ShoppingList, accountId: string, memberId: string | null) {
+  const member = await requireMember(accountId, memberId);
   const roles = await getAllRoles(accountId);
   if (!hasPermission(member, roles, "canEditShoppingLists") || !canEditSharedResource(member, list)) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+}
+
+async function requirePermission(accountId: string, memberId: string | null, permission: PermissionKey) {
+  const member = await requireMember(accountId, memberId);
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(member, roles, permission)) {
     throw new AppError(403, "Åtkomst nekad");
   }
 }
@@ -27,8 +40,12 @@ export async function getAllLists(accountId: string) {
   return ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
-export async function createList(data: unknown) {
-  const list = new ShoppingListModel(data);
+export async function createList(data: unknown, accountId: string, memberId: string | null) {
+  await requirePermission(accountId, memberId, "canCreateShoppingLists");
+  // ownerId sätts alltid till den riktiga anroparen — data.ownerId ignoreras
+  // (mass-assignment-skydd, samma mönster som ADR-0008) för att förhindra att
+  // en manipulerad body ger en lista bort till en annan medlem.
+  const list = new ShoppingListModel({ ...(data as object), accountId, ownerId: memberId });
   await list.save();
   return { id: list.id };
 }
@@ -38,16 +55,18 @@ export async function addItem(listId: string, accountId: string, memberId: strin
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
+  await requireEditAccess(list, accountId, memberId);
   const validated = ShoppingItemSchema.parse(item);
   list.items.push({ ...validated, createdBy: memberId } as any);
   await list.save();
 }
 
-export async function toggleItem(listId: string, accountId: string, itemId: string) {
+export async function toggleItem(listId: string, accountId: string, itemId: string, memberId: string | null) {
   const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
+  await requireEditAccess(list, accountId, memberId);
   const item = list.items.find((i) => i.id === itemId);
   if (!item) {
     throw new AppError(404, "Vara hittades inte");
@@ -57,27 +76,40 @@ export async function toggleItem(listId: string, accountId: string, itemId: stri
   await list.save();
 }
 
-export async function shareList(listId: string, accountId: string, memberId: string, access: "view" | "edit") {
+export async function shareList(
+  listId: string,
+  accountId: string,
+  callerMemberId: string | null,
+  targetMemberId: string,
+  access: "view" | "edit"
+) {
   const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
-  const existing = list.sharedWith.find((s) => s.memberId === memberId);
+  await requireEditAccess(list, accountId, callerMemberId);
+  const existing = list.sharedWith.find((s) => s.memberId === targetMemberId);
   if (existing) {
     existing.access = access;
   } else {
-    list.sharedWith.push({ memberId, access });
+    list.sharedWith.push({ memberId: targetMemberId, access });
   }
   list.markModified("sharedWith");
   await list.save();
 }
 
-export async function unshareList(listId: string, accountId: string, memberId: string) {
+export async function unshareList(
+  listId: string,
+  accountId: string,
+  callerMemberId: string | null,
+  targetMemberId: string
+) {
   const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
-  list.sharedWith = list.sharedWith.filter((s) => s.memberId !== memberId);
+  await requireEditAccess(list, accountId, callerMemberId);
+  list.sharedWith = list.sharedWith.filter((s) => s.memberId !== targetMemberId);
   list.markModified("sharedWith");
   await list.save();
 }
@@ -87,16 +119,21 @@ export async function deleteList(id: string, accountId: string, memberId: string
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
+  await requireEditAccess(list, accountId, memberId);
   list.deletedAt = new Date().toISOString();
   list.deletedBy = memberId;
   await list.save();
 }
 
-export async function restoreList(id: string, accountId: string) {
+// Sprint 8 S3 (2026-07-17) fixade samma lucka för restoreTodo — samma mönster
+// här: canRestoreFromTrash, inte requireEditAccess (en raderad lista har ingen
+// meningsfull delnings-status kvar att kontrollera mot).
+export async function restoreList(id: string, accountId: string, memberId: string | null) {
   const list = await ShoppingListModel.findOne({ id, accountId });
   if (!list) {
     throw new AppError(404, "Inköpslista hittades inte");
   }
+  await requirePermission(accountId, memberId, "canRestoreFromTrash");
   list.deletedAt = null;
   list.deletedBy = null;
   await list.save();
