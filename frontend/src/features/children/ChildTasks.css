@@ -37,7 +37,12 @@
   align-content: start;
   min-height: 0;
   gap: clamp(8px, 1.5vmin, 14px);
-  overflow: hidden;
+  /* Fler uppdrag än vad som får plats klipptes tidigare bort helt, utan
+     synlig indikation eller väg att nå dem (2026-07-23, Zaidas fynd) — den
+     omgivande .child-dashboard är medvetet fast/utan scroll (se
+     ChildDashboard.css), men just den här listan behöver kunna växa. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @container (min-width: 640px) {
