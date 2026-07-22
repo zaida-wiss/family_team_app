@@ -198,6 +198,81 @@ export function MemberShellContent({
     [activeMembers]
   );
 
+  // ── Valt barn → barnens dashboard, oavsett vald panel (2026-07-22, Zaidas
+  // önskemål: "Även vuxna skall kunna se samma barnvy som om de vore ett
+  // barn") ────────────────────────────────────────────────────────────────
+  // Ett inloggat barn har bara EN vy överhuvudtaget (ChildShellContent.tsx
+  // routar aldrig via HeroBar/activePanel — inget separat Todos/Kalender/
+  // Inköp-nav finns för barn). Den här kontrollen låg tidigare bara i
+  // Hem-panelens fallback-logik längst ner, så en vuxen som valt ett barn
+  // och sedan klickade Kalender/Todos/Inköp i sin EGEN navigering föll
+  // tillbaka på den vuxna panelvyn istället för barnets faktiska dashboard.
+  // Flyttad hit, FÖRE de panelspecifika grenarna, så valt barn alltid vinner
+  // oavsett vilken av adult-navens knappar som råkar vara aktiv — precis
+  // samma ChildDashboard/ChildRecordsPage som barnet self ser inloggat.
+  const selectedMemberIsChild =
+    !!selectedDashboardMember && (selectedDashboardMember.isChild || !!selectedMemberRole?.isChildRole);
+
+  if (selectedMemberIsChild && selectedDashboardMember) {
+    const now = Date.now();
+    const activeChildTodos = todos
+      .filter(
+        (t) =>
+          t.assignedTo === selectedDashboardMember.id &&
+          t.status === "pending" &&
+          t.recurrence.type === "none" &&
+          t.deletedAt === null &&
+          isTodoVisibleNow(t, now)
+      )
+      .sort((a, b) => {
+        const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
+        const bTime = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
+        return aTime - bTime;
+      });
+    const rejectedTodos = todos.filter(
+      (t) =>
+        t.assignedTo === selectedDashboardMember.id &&
+        t.status === "rejected" &&
+        t.deletedAt === null
+    );
+
+    if (showChildRecords) {
+      return (
+        <Suspense fallback={null}>
+          <ChildRecordsPage
+            themeName={selectedDashboardMember.dashboardTheme ?? "space"}
+            timedTasks={timedTasks.filter((t) => t.assignedTo === selectedDashboardMember.id)}
+            onRecordAttempt={onRecordTimedAttempt}
+            onListAttempts={onListTimedAttempts}
+            onDeleteAttempt={onDeleteTimedAttempt}
+            onBack={() => setShowChildRecords(false)}
+          />
+        </Suspense>
+      );
+    }
+
+    return (
+      <Suspense fallback={null}>
+        <ChildDashboard
+          child={selectedDashboardMember}
+          calendars={calendars}
+          roles={roles}
+          categories={personalCategories}
+          timelineTodos={todos}
+          activeChildTodos={activeChildTodos}
+          rejectedTodos={rejectedTodos}
+          onOpenRecords={() => setShowChildRecords(true)}
+          onCreateWish={onCreateWish}
+          onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
+          onDismissRejectedTodo={(todoId) =>
+            onDismissRejectedTodo(todoId, selectedDashboardMember.id)
+          }
+          onThemePickerOpen={onThemePickerOpen}
+        />
+      </Suspense>
+    );
+  }
+
   // ── Kalender-vy (nav) ────────────────────────────────────────────────────
   // Om ett barn/medlem är valt i medlemsväljaren (selectedDashboardMember)
   // ska Kalender-panelen visa DEN personens kalender som förval (2026-07-21,
@@ -209,6 +284,9 @@ export function MemberShellContent({
   // snävare behörigheter. Bara vilken kalender som föreslås/visas som
   // förval (focusMemberId, se useCalendarView.ts) och vy-läget (månad/vecka)
   // följer den valda medlemmen istället.
+  //
+  // 2026-07-22: denna gren nås nu bara när INGET barn är valt (child-checken
+  // ovan tar över först) — kvar oförändrad för valda VUXNA medlemmar.
   if (activePanel === "calendar") {
     return (
       <Suspense fallback={null}>
@@ -300,69 +378,8 @@ export function MemberShellContent({
   }
 
   // ── Hem-panel ─────────────────────────────────────────────────────────────
-  const selectedMemberIsChild =
-    !!selectedDashboardMember && (selectedDashboardMember.isChild || !!selectedMemberRole?.isChildRole);
-
-  // Valt barn → barnens dashboard (enda vyn som är annorlunda)
-  if (selectedMemberIsChild && selectedDashboardMember) {
-    const now = Date.now();
-    const activeChildTodos = todos
-      .filter(
-        (t) =>
-          t.assignedTo === selectedDashboardMember.id &&
-          t.status === "pending" &&
-          t.recurrence.type === "none" &&
-          t.deletedAt === null &&
-          isTodoVisibleNow(t, now)
-      )
-      .sort((a, b) => {
-        const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
-        const bTime = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
-        return aTime - bTime;
-      });
-    const rejectedTodos = todos.filter(
-      (t) =>
-        t.assignedTo === selectedDashboardMember.id &&
-        t.status === "rejected" &&
-        t.deletedAt === null
-    );
-
-    if (showChildRecords) {
-      return (
-        <Suspense fallback={null}>
-          <ChildRecordsPage
-            themeName={selectedDashboardMember.dashboardTheme ?? "space"}
-            timedTasks={timedTasks.filter((t) => t.assignedTo === selectedDashboardMember.id)}
-            onRecordAttempt={onRecordTimedAttempt}
-            onListAttempts={onListTimedAttempts}
-            onDeleteAttempt={onDeleteTimedAttempt}
-            onBack={() => setShowChildRecords(false)}
-          />
-        </Suspense>
-      );
-    }
-
-    return (
-      <Suspense fallback={null}>
-        <ChildDashboard
-          child={selectedDashboardMember}
-          calendars={calendars}
-          roles={roles}
-          categories={personalCategories}
-          timelineTodos={todos}
-          activeChildTodos={activeChildTodos}
-          rejectedTodos={rejectedTodos}
-          onOpenRecords={() => setShowChildRecords(true)}
-          onCreateWish={onCreateWish}
-          onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
-          onDismissRejectedTodo={(todoId) =>
-            onDismissRejectedTodo(todoId, selectedDashboardMember.id)
-          }
-          onThemePickerOpen={onThemePickerOpen}
-        />
-      </Suspense>
-    );
-  }
+  // Valt barn hanteras redan högst upp i funktionen (gäller alla paneler) —
+  // härifrån och ner rör det sig bara om Hem utan valt barn.
 
   // Vald vuxen → hemvy för den personen
   if (selectedDashboardMember) {

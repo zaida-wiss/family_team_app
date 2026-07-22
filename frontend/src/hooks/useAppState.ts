@@ -51,14 +51,19 @@ export function useAppState(initialMembership: ActiveMembership) {
   function setActivePanel(panel: ShellPanel) {
     setActivePanelRaw(panel);
     updateMemberNavigation(initialMembership.member.id, { lastActivePanel: panel });
-    // Kalender-panelen (2026-07-21/22) respekterar numera vald familjemedlem
+    // Kalender-panelen (2026-07-21/22) respekterar vald familjemedlem
     // (focusMemberId, se MemberShellContent.tsx/useCalendarView.ts) precis
-    // som Hem-vyn redan gjorde — valet får därför INTE nollställas när man
-    // navigerar dit. Detta var den faktiska grundorsaken till att "kalendern
-    // visade fel persons kalender": valet av familjemedlem gjordes på Hem,
-    // men försvann redan HÄR, innan Kalender-panelen ens hann rendera, så
-    // fort man klickade på Kalender i navigeringen.
-    if (panel !== "home" && panel !== "calendar") setSelectedDashboardMemberIdRaw(null);
+    // som Hem-vyn redan gjorde — och (2026-07-22, Zaidas önskemål: "även
+    // vuxna skall kunna se samma barnvy som om de vore ett barn") Todos/
+    // Inköp visar nu likaså barnets dashboard istället för den vuxna
+    // panelvyn när ett barn är valt. Valet får därför INTE nollställas när
+    // man navigerar till NÅGON av de fyra innehållspanelerna — bara
+    // Medlemmar/Inställningar (kontoadministration, inte per-medlem-vyer)
+    // nollställer fortfarande. Detta var den faktiska grundorsaken till att
+    // "kalendern visade fel persons kalender" (2026-07-21/22): valet
+    // försvann redan HÄR, innan panelen ens hann rendera.
+    const contentPanels: ShellPanel[] = ["home", "calendar", "shopping", "todos"];
+    if (!contentPanels.includes(panel)) setSelectedDashboardMemberIdRaw(null);
   }
 
   function setSelectedDashboardMemberId(memberId: Id | null) {
