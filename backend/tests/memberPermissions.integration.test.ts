@@ -201,7 +201,7 @@ describe.skipIf(!RUN)("membersService: server-side behörighetskontroll", () => 
       .patch(`/api/members/${childMemberId}`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", childCaretakerMemberId)
-      .send({ childTimelineSettings: { showCompleted: true } });
+      .send({ childTimelineSettings: { startsAt: "07:00", endsAt: "20:00" } });
     expect(timelineRes.status).toBe(200);
   });
 
