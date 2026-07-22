@@ -20,6 +20,17 @@ export default defineConfig({
         open: false,
       }),
   ],
+  // lucide-react har en @license-kommentar i VARJE ikonfil — esbuilds
+  // standardläge ("eof") behåller dem alla i den byggda icons-chunken,
+  // vilket Lighthouse CI:s unminified-javascript-granskning (2026-07-22,
+  // upptäckt när Lighthouse-jobbet plötsligt blev rött) räknar som
+  // outnyttjad whitespace/bloat (43% av chunkens storlek). "none" tar bort
+  // dem ur den levererade bundlen — ISC-licensen kräver inte att license-
+  // texten följer med i en minifierad produktionsbuild, bara i själva
+  // källkodsdistributionen (paketet på npm behåller sin egen LICENSE-fil).
+  esbuild: {
+    legalComments: "none"
+  },
   resolve: {
     alias: {
       "@shared": path.resolve(__dirname, "../shared"),
