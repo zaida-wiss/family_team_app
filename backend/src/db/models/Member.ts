@@ -21,6 +21,20 @@ const memberSchema = new Schema<Member>({
   todoThreadRange: { type: String, default: undefined },
   spentStars: { type: Number, default: 0 },
   approvedStars: { type: Number, default: 0 },
+  // Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22) — se
+  // shared/types.ts.
+  childSharedWith: {
+    type: [
+      {
+        memberId: { type: String, required: true },
+        accountId: { type: String, required: true },
+        access: { type: String, required: true },
+        grantedBy: { type: String, required: true },
+        grantedAt: { type: String, required: true }
+      }
+    ],
+    default: []
+  },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });

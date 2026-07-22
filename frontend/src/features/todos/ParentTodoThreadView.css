@@ -478,3 +478,10 @@
   gap: 8px;
   min-height: 44px;
 }
+
+/* Delade barn, "endast visning"-låset (ADR-0024, SharedChildrenThreads.tsx) */
+.shared-child-thread__lock {
+  margin-left: 4px;
+  vertical-align: middle;
+  opacity: 0.6;
+}

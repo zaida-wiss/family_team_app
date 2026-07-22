@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { CheckCircle2, Pencil, Save, Star, X, XCircle } from "lucide-react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
 import { CopyRoutinesModal } from "./CopyRoutinesModal";
+import { ChildShareSettings } from "./ChildShareSettings";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { hasPermission } from "../../utils/permissions";
 import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
@@ -96,6 +97,10 @@ export function ChildSettings({
   const childById = new Map(childMembers.map((child) => [child.id, child]));
   const canApprove = hasPermission(currentMember, roles, "canApproveTodos");
   const canManageChildTodos = hasPermission(currentMember, roles, "canManageChildTodos");
+  // Dela barn (ADR-0024) kräver samma canManageMembers som backend kollar
+  // (canManageChildShares i shared/permissions.ts) — annars visas knappen
+  // men serverns anrop 403:ar ändå, förvirrande.
+  const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
 
   const pendingWishes = rewards.filter(
     (reward) =>
@@ -341,6 +346,8 @@ export function ChildSettings({
           />
         </div>
       )}
+
+      {canManageMembers && <ChildShareSettings childMembers={childMembers} />}
 
       <div className="settings-sub">
         <h3 className="settings-sub-title">Godkännande</h3>

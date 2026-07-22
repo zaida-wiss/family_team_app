@@ -5,6 +5,7 @@ import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoCategoryTemplate
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
+import { SharedChildrenThreads } from "./SharedChildrenThreads";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
@@ -211,6 +212,13 @@ export function TodosView({
             fixedTodoTimes={fixedTodoTimes}
           />
         )}
+
+        {/* Delade barn (ADR-0024, 2026-07-22) — barn en ANNAN vuxen (i din
+            familj eller en helt annan familj) delat med dig. Egen, separat
+            radad tråd-rad under de vanliga trådarna — visas bara om minst en
+            delning finns, annars ingenting (oförändrat för alla som inte
+            använder funktionen). */}
+        {todoViewMode === "thread" && <SharedChildrenThreads />}
 
         {todoViewMode === "list" && visibleTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>

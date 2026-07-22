@@ -130,6 +130,23 @@ export type Member = {
   todoThreadRange?: TodoThreadRange;
   spentStars: number;
   approvedStars: number;
+  // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
+  // 2026-07-22, Zaidas önskemål: "separerade föräldrar utan god relation
+  // ändå skall kunna dela information om ett gemensamt barn") — bara
+  // meningsfullt när isChild är true. memberId+accountId kan peka på en
+  // medlem i SAMMA konto (delad roll inom familjen) eller ETT ANNAT konto
+  // (mellan familjer) — samma fält, ingen strukturell skillnad. Icke-
+  // transitivt BY CONSTRUCTION: att skapa en delning kräver canManageMembers
+  // i BARNETS EGET konto (childSharesService.ts), en mottagare som bara har
+  // åtkomst via det här fältet uppfyller aldrig det villkoret och kan därför
+  // aldrig dela vidare, oavsett egen roll i sitt eget konto.
+  childSharedWith?: {
+    memberId: Id;
+    accountId: Id;
+    access: AccessLevel;
+    grantedBy: Id;
+    grantedAt: string;
+  }[];
   deletedAt: string | null;
   deletedBy: Id | null;
 };

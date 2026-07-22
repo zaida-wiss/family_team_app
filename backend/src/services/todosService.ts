@@ -8,7 +8,7 @@ import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { getAllRoles } from "./rolesService.js";
-import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, hasPermission } from "../../../shared/permissions.js";
+import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, getChildShareAccess, hasPermission } from "../../../shared/permissions.js";
 import type { Member, Role, Todo } from "../../../shared/types.js";
 
 // Servern litade tidigare bara på att frontend gömde knapparna bakom
@@ -76,6 +76,97 @@ export async function getAllTodos(accountId: string) {
     rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null,
     notes: decryptNullable(accountId, todo.notes) ?? null
   }));
+}
+
+// Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22) — hittar
+// alla barn (i VILKET konto som helst) som delat med den inloggade
+// medlemmen, och återanvänder getAllTodos ovan per barns EGET konto (samma
+// dekryptering/kvarhållningsfönster, ingen duplicerad logik) — filtrerar
+// sedan ner till just det barnets tilldelade uppgifter.
+export async function getSharedChildrenTodos(callerMemberId: string, callerAccountId: string) {
+  const children = await MemberModel.find({
+    isChild: true,
+    deletedAt: null,
+    childSharedWith: { $elemMatch: { memberId: callerMemberId, accountId: callerAccountId } }
+  });
+
+  const results = [];
+  for (const child of children) {
+    const grant = (child.childSharedWith ?? []).find(
+      (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
+    );
+    if (!grant) continue;
+    const accountTodos = await getAllTodos(child.accountId);
+    results.push({
+      child: {
+        id: child.id,
+        accountId: child.accountId,
+        name: child.name,
+        avatarUrl: child.avatarUrl,
+        color: child.color,
+        dashboardTheme: child.dashboardTheme
+      },
+      access: grant.access,
+      todos: accountTodos.filter((t) => t.assignedTo === child.id)
+    });
+  }
+  return results;
+}
+
+// Enda mutationen på ett delat barns todos i denna första version (ADR-0024s
+// uppföljningsavsnitt) — bara "markera klar", inte skapa/godkänna/neka/
+// delmoment/in-progress. assignedMemberNeedsApproval är alltid true för ett
+// barn, så resultatet blir alltid status "done" (väntar på godkännande) —
+// ALDRIG "approved" direkt, ingen stjärntilldelning sker här. Slutgiltigt
+// godkännande (och stjärnorna) sker bara via barnets EGET konto, som
+// tidigare, av en medlem DÄR. Ingen risk att en delning kringgår den
+// gränsen.
+export async function completeSharedChildTodo(
+  todoId: string,
+  childAccountId: string,
+  childMemberId: string,
+  callerMemberId: string,
+  callerAccountId: string,
+  elapsedMs: number | null
+) {
+  const child = await MemberModel.findOne({ id: childMemberId, accountId: childAccountId, deletedAt: null, isChild: true });
+  if (!child) {
+    throw new AppError(404, "Barnet hittades inte");
+  }
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  if (getChildShareAccess(caller, child) !== "edit") {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+
+  const todo = await TodoModel.findOne({ id: todoId, accountId: childAccountId, assignedTo: childMemberId });
+  if (!todo || todo.status !== "pending") {
+    throw new AppError(404, "Todo hittades inte eller är inte pending");
+  }
+
+  todo.completedAt = new Date().toISOString();
+  if (todo.timerEnabled && elapsedMs !== null) {
+    todo.elapsedMs = elapsedMs;
+  }
+  todo.inProgressBy = [];
+  todo.inProgressSince = null;
+
+  if (await assignedMemberNeedsApproval(todo.assignedTo)) {
+    todo.status = "done";
+  } else {
+    todo.status = "approved";
+    todo.approvedBy = callerMemberId;
+    todo.approvedAt = todo.completedAt;
+    if (todo.assignedTo && todo.starValue) {
+      await MemberModel.updateOne({ id: todo.assignedTo }, { $inc: { approvedStars: todo.starValue } });
+      broadcastMembersChanged();
+    }
+  }
+
+  await todo.save();
+  broadcastTodosChanged();
 }
 
 export async function createTodo(data: unknown) {

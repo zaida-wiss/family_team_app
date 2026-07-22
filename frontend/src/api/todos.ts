@@ -1,5 +1,19 @@
-import type { Todo } from "@shared/types";
+import type { AccessLevel, Todo } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
+
+// Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
+export type SharedChildTodos = {
+  child: {
+    id: string;
+    accountId: string;
+    name: string;
+    avatarUrl: string | null;
+    color: string | null;
+    dashboardTheme: string | null;
+  };
+  access: AccessLevel;
+  todos: Todo[];
+};
 
 export const todosApi = {
   getAll: () => request<Todo[]>(api("todos")),
@@ -41,6 +55,18 @@ export const todosApi = {
     request<{ ok: boolean }>(api(`todos/${id}/restore`), {
       method: "PATCH",
       body: JSON.stringify({})
+    }),
+  // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
+  getSharedChildren: () => request<SharedChildTodos[]>(api("todos/shared-children")),
+  completeShared: (
+    childAccountId: string,
+    childMemberId: string,
+    id: string,
+    elapsedMs: number | null = null
+  ) =>
+    request<{ ok: boolean }>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/complete`), {
+      method: "PATCH",
+      body: JSON.stringify({ elapsedMs })
     }),
   subscribeToChanges: (onChange: () => void) => {
     let initialConnect = true;

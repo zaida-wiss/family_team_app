@@ -108,6 +108,48 @@ export function canCreateChildAccount(member: Member, roles: Role[]): boolean {
   return hasPermission(member, roles, "canCreateChildAccounts");
 }
 
+// Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
+// 2026-07-22) — Member.childSharedWith. memberId+accountId kollas EXPLICIT
+// (inte bara memberId) som försvar på djupet, även om id:n redan är
+// globalt unika UUID:n.
+export function getChildShareAccess(caller: Member, child: Member): AccessLevel | null {
+  const grant = (child.childSharedWith ?? []).find(
+    (share) => share.memberId === caller.id && share.accountId === caller.accountId
+  );
+  return grant?.access ?? null;
+}
+
+// En förälder i barnets EGET konto med canManageChildTodos har redan full
+// åtkomst via den befintliga vägen (canManageChildAccount nedan) — den här
+// funktionen lägger till en KOMPLETTERANDE väg för scopade delningar (en
+// vuxen utan canManageChildTodos i samma konto, ELLER en vuxen i ETT ANNAT
+// konto helt och hållet).
+export function canAccessChildTodos(
+  caller: Member,
+  child: Member,
+  roles: Role[]
+): AccessLevel | null {
+  if (canManageChildAccount(caller, child, roles)) {
+    return "edit";
+  }
+  return getChildShareAccess(caller, child);
+}
+
+// Icke-transitivt BY CONSTRUCTION, inte en flagga (ADR-0024) — bara en
+// medlem i barnets EGET konto med canManageMembers får skapa/återkalla en
+// delning. En mottagare som bara har åtkomst via childSharedWith är per
+// definition INTE en fullvärdig medlem av barnets konto (annars hade de
+// redan haft vanlig kontoåtkomst och behövt ingen delning) — de kan därför
+// strukturellt aldrig uppfylla det här villkoret, oavsett egen roll i sitt
+// eget konto.
+export function canManageChildShares(
+  caller: Member,
+  child: Member,
+  roles: Role[]
+): boolean {
+  return isSameAccount(caller, child) && hasPermission(caller, roles, "canManageMembers");
+}
+
 export function canExportCalendar(
   member: Member,
   roles: Role[],

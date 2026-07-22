@@ -15,6 +15,32 @@ todosRouter.post("/", requireAuth, attachAccountId, async (req, res) => {
   res.status(201).json(await todos.createTodo({ ...req.body, accountId: req.accountId! }));
 });
 
+// Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024) — rör
+// INTE den vanliga kontoscopade GET / ovan alls, en helt separat, additiv
+// väg. Måste registreras FÖRE PATCH-rutterna med /:id nedan av samma skäl
+// som /events (annars matchar Express literalt fel segment).
+todosRouter.get("/shared-children", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await todos.getSharedChildrenTodos(req.memberId!, req.accountId!));
+});
+
+todosRouter.patch(
+  "/shared/:childAccountId/:childMemberId/:id/complete",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
+    await todos.completeSharedChildTodo(
+      req.params.id,
+      req.params.childAccountId,
+      req.params.childMemberId,
+      req.memberId!,
+      req.accountId!,
+      elapsedMs ?? null
+    );
+    res.json({ ok: true });
+  }
+);
+
 todosRouter.get("/events", requireAuth, async (_req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
