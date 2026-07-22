@@ -156,19 +156,14 @@ export function MemberEditModal({
                 <X size={16} />
               </button>
             ) : null}
-            <label
+            <input
               aria-label={`Välj färg för ${member.name}`}
-              className="member-color-picker"
-              style={{ background: member.color ?? "var(--border)" }}
+              className="member-edit-modal__color-input"
+              onChange={(e) => onUpdateColor(member.id, e.target.value)}
               title="Välj färg"
-            >
-              <input
-                hidden
-                onChange={(e) => onUpdateColor(member.id, e.target.value)}
-                type="color"
-                value={member.color ?? "#888888"}
-              />
-            </label>
+              type="color"
+              value={member.color ?? "#888888"}
+            />
           </div>
 
           <label className="field-label">

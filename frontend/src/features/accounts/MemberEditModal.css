@@ -61,3 +61,36 @@
   display: grid;
   gap: 6px;
 }
+
+/* Direkt synlig native <input type=color> (2026-07-23, Zaidas fynd: klick på
+   den tidigare dolda input-i-label-varianten öppnade ingen färgväljare) —
+   samma bevisat fungerande mönster som redan används för kalenderfärg
+   (CalendarPanel.module.css:s .colorInput), bara stylad rund istället för
+   den fyrkantiga kalender-varianten. En hidden-input bakom en label kräver
+   att webbläsaren vidarebefordrar labelns klick till en osynlig kontroll —
+   fungerar inte tillförlitligt i alla webbläsare för file/color-pickers. */
+.member-edit-modal__color-input {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: none;
+}
+
+.member-edit-modal__color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 50%;
+}
+
+.member-edit-modal__color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.member-edit-modal__color-input::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
