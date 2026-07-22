@@ -25,11 +25,11 @@ membersRouter.get("/events", async (_req, res) => {
 });
 
 membersRouter.post("/", async (req, res) => {
-  res.status(201).json(await members.createMember(req.accountId!, req.body));
+  res.status(201).json(await members.createMember(req.accountId!, req.memberId ?? null, req.body));
 });
 
 membersRouter.patch("/:id", async (req, res) => {
-  await members.updateMember(req.params.id, req.accountId!, req.body);
+  await members.updateMember(req.params.id, req.accountId!, req.memberId ?? null, req.body);
   res.json({ ok: true });
 });
 
@@ -39,7 +39,7 @@ membersRouter.delete("/:id", async (req, res) => {
 });
 
 membersRouter.patch("/:id/restore", async (req, res) => {
-  await members.restoreMember(req.params.id, req.accountId!);
+  await members.restoreMember(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });
 });
 

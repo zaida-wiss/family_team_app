@@ -5,15 +5,32 @@ import { UserModel, setChildCredentialsSchema } from "../db/models/User.js";
 import { AppError } from "../utils/errors.js";
 import { CreateMemberBodySchema, MemberPatchSchema } from "../../../shared/schemas.js";
 import { getAllRoles } from "./rolesService.js";
-import { hasPermission } from "../../../shared/permissions.js";
+import { canManageChildAccount, hasPermission } from "../../../shared/permissions.js";
 
 export async function getAllMembers(accountId: string) {
   return MemberModel.find({ accountId }, { _id: 0, __v: 0 });
 }
 
-// accountId, userId, spentStars, approvedStars, deletedAt, deletedBy sätts alltid
-// här — aldrig litat på från klientens body (se CreateMemberBodySchema).
-export async function createMember(accountId: string, data: unknown) {
+async function requireManager(accountId: string, memberId: string | null) {
+  const caller = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(caller, roles, "canManageMembers")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+}
+
+// Säkerhetsfynd 2026-07-22 (samma klass som ADR-0009/ADR-0016/timedTasks/
+// shoppingService): createMember/updateMember/deleteMember/restoreMember
+// saknade all server-side behörighetskontroll — vilken inloggad medlem som
+// helst i kontot (inklusive ett inloggat BARN, se barn-inloggningen samma
+// dag) kunde skapa nya medlemmar eller ändra/radera/återställa VILKEN ANNAN
+// MEDLEM SOM HELST, oavsett canManageMembers. Klienten (AccountSettings.tsx)
+// gömde bara knapparna, inget skydd mot ett direkt API-anrop.
+export async function createMember(accountId: string, callerMemberId: string | null, data: unknown) {
+  await requireManager(accountId, callerMemberId);
   const patch = CreateMemberBodySchema.parse(data);
   const member = new MemberModel({
     id: `member-${crypto.randomUUID()}`,
@@ -29,17 +46,62 @@ export async function createMember(accountId: string, data: unknown) {
   return { id: member.id };
 }
 
-export async function updateMember(id: string, accountId: string, data: unknown) {
+// MemberPatchSchema blandar identitetsfält (name/roleId/avatarUrl/color/
+// spentStars) med rena nav-/UI-inställningar (lastActivePanel/calendarView/
+// todoViewMode/todoThreadOrder/todoThreadRange/calendarFilterSettings) som
+// VARJE medlem — inklusive barn — måste kunna sätta för SIG SJÄLVA hela
+// tiden, utan canManageMembers (annars slås den vanliga self-service-
+// navigeringen sönder). roleId är MEDVETET INTE självbetjänat trots att man
+// tekniskt "äger sig själv" — annars kunde en medlem självutnämna sig till en
+// mer priviligierad roll (samma risk ADR-0009 en gång fixade).
+const SELF_NAV_FIELDS = new Set([
+  "lastActivePanel",
+  "lastSelectedDashboardMemberId",
+  "calendarView",
+  "todoViewMode",
+  "todoThreadOrder",
+  "todoThreadRange",
+  "calendarFilterSettings"
+]);
+
+// dashboardTheme/childTimelineSettings sätts antingen av medlemmen själv
+// (temaväljaren i headern, alltid currentMember.id) ELLER av en förälder med
+// canManageChildTodos som öppnar temaväljaren/tidslinje-inställningarna från
+// ETT BARNS dashboard/ChildSettings.tsx (samma canManageChildAccount-mönster
+// som redan styr complete/approve/reject på ett barns todos, ADR-0016) —
+// aldrig av en obesläktad admin på en annan vuxens vägnar.
+const CHILD_MANAGEABLE_FIELDS = new Set(["dashboardTheme", "childTimelineSettings"]);
+
+export async function updateMember(id: string, accountId: string, callerMemberId: string | null, data: unknown) {
   const patch = MemberPatchSchema.parse(data);
   const member = await MemberModel.findOne({ id, accountId });
   if (!member) {
     throw new AppError(404, "Medlem hittades inte");
   }
+
+  const fields = Object.keys(patch);
+  const isOwnNavState = callerMemberId === id && fields.every((f) => SELF_NAV_FIELDS.has(f));
+  const isOwnTheme = callerMemberId === id && fields.every((f) => f === "dashboardTheme");
+
+  if (!isOwnNavState && !isOwnTheme) {
+    const caller = await MemberModel.findOne({ id: callerMemberId, accountId, deletedAt: null });
+    if (!caller) {
+      throw new AppError(403, "Åtkomst nekad");
+    }
+    const roles = await getAllRoles(accountId);
+    const isChildManagedByCaller =
+      fields.every((f) => CHILD_MANAGEABLE_FIELDS.has(f)) && canManageChildAccount(caller, member, roles);
+    if (!isChildManagedByCaller && !hasPermission(caller, roles, "canManageMembers")) {
+      throw new AppError(403, "Åtkomst nekad");
+    }
+  }
+
   Object.assign(member, patch);
   await member.save();
 }
 
 export async function deleteMember(id: string, accountId: string, memberId: string | null) {
+  await requireManager(accountId, memberId);
   const member = await MemberModel.findOne({ id, accountId });
   if (!member) {
     throw new AppError(404, "Medlem hittades inte");
@@ -49,7 +111,15 @@ export async function deleteMember(id: string, accountId: string, memberId: stri
   await member.save();
 }
 
-export async function restoreMember(id: string, accountId: string) {
+export async function restoreMember(id: string, accountId: string, callerMemberId: string | null) {
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(caller, roles, "canRestoreFromTrash")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
   const member = await MemberModel.findOne({ id, accountId });
   if (!member) {
     throw new AppError(404, "Medlem hittades inte");
