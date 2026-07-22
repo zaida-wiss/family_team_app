@@ -39,7 +39,9 @@ describe.skipIf(!RUN)("Barn-inloggning: PUT /api/members/:id/credentials och POS
   let restrictedMemberId: string;
 
   it("sätter upp en familj med ett barn och en begränsad vuxen medlem", async () => {
-    parentEmail = `barnlogin-forälder-${crypto.randomUUID()}@bmad.test`;
+    // ASCII-only lokal del (2026-07-22-fyndet upprepat: Zods .email()-regex
+    // godkänner inte "ä" i lokala delen, se samma lärdom i e2e/helpers.ts).
+    parentEmail = `barnlogin-foralder-${crypto.randomUUID()}@bmad.test`;
     const register = await request(app)
       .post("/api/auth/register")
       .send({ email: parentEmail, password: "Lösenord1!", name: "Testförälder" });
@@ -159,7 +161,7 @@ describe.skipIf(!RUN)("Barn-inloggning: PUT /api/members/:id/credentials och POS
   });
 
   it("tillåter SAMMA username i en ANNAN, orelaterad familj", async () => {
-    const otherParentEmail = `barnlogin-annan-forälder-${crypto.randomUUID()}@bmad.test`;
+    const otherParentEmail = `barnlogin-annan-foralder-${crypto.randomUUID()}@bmad.test`;
     const register = await request(app)
       .post("/api/auth/register")
       .send({ email: otherParentEmail, password: "Lösenord1!", name: "Annan förälder" });
