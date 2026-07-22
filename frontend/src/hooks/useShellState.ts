@@ -18,7 +18,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember,
-    updateMemberTheme, updateMemberAvatar, updateMemberColor, assignRole, clearMemberAvatar,
+    updateMemberTheme, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
     setChildCredentials,
     updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
@@ -251,6 +251,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onDeleteOwnData: deleteOwnData,
     onUpdateMemberAvatar: updateMemberAvatar,
     onUpdateMemberColor: updateMemberColor,
+    onUpdateMemberName: updateMemberName,
     onUpdateMemberTheme: updateMemberTheme,
     onSetChildCredentials: setChildCredentials,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>

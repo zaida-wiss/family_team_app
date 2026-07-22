@@ -1,13 +1,11 @@
 import "./AccountSettings.css";
-import { Eraser, Filter, ImagePlus, KeyRound, Loader, Trash2, X } from "lucide-react";
-import { Fragment, useState } from "react";
-import { createPortal } from "react-dom";
-import { uploadImage } from "../../utils/uploadImage";
-import { reportApiError } from "../../api";
+import { Eraser, Pencil } from "lucide-react";
+import { useState } from "react";
 import { MemberAvatar } from "../../components/MemberAvatar";
-import { canViewResource, hasPermission } from "../../utils/permissions";
+import { MemberEditModal } from "./MemberEditModal";
+import { hasPermission } from "../../utils/permissions";
 import { generateId } from "../../utils/uuid";
-import type { AccessLevel, Account, Calendar, CalendarSettings, Member, Role } from "@shared/types";
+import type { AccessLevel, Account, Calendar, CalendarSettings, Id, Member, Role } from "@shared/types";
 
 const DEFAULT_CALENDAR_SETTINGS: CalendarSettings = {
   showWeekNumbers: false,
@@ -28,6 +26,7 @@ type AccountSettingsProps = {
   onDeleteOwnData: () => void;
   onUpdateMemberAvatar: (memberId: string, avatarUrl: string | null) => void;
   onUpdateMemberColor: (memberId: string, color: string | null) => void;
+  onUpdateMemberName: (memberId: string, name: string) => void;
   onSetChildCredentials: (memberId: string, username: string, password: string) => Promise<{ id: string; username: string }>;
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => void;
@@ -46,6 +45,7 @@ export function AccountSettings({
   onDeleteOwnData,
   onUpdateMemberAvatar,
   onUpdateMemberColor,
+  onUpdateMemberName,
   onSetChildCredentials,
   onUpdateCalendarSettings,
   onUpdateFixedTodoTimes,
@@ -55,17 +55,10 @@ export function AccountSettings({
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [confirmOwnDataDelete, setConfirmOwnDataDelete] = useState(false);
-  const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(null);
-  const [openCalFilterId, setOpenCalFilterId] = useState<string | null>(null);
-  const [calFilterPos, setCalFilterPos] = useState({ top: 0, left: 0 });
-
-  // Barn-inloggning (2026-07-22) — se AuthPage.tsx:s "Logga in som barn".
-  const [credentialsMemberId, setCredentialsMemberId] = useState<string | null>(null);
-  const [credentialsUsername, setCredentialsUsername] = useState("");
-  const [credentialsPassword, setCredentialsPassword] = useState("");
-  const [credentialsError, setCredentialsError] = useState<string | null>(null);
-  const [credentialsSaving, setCredentialsSaving] = useState(false);
-  const [credentialsSavedId, setCredentialsSavedId] = useState<string | null>(null);
+  // Redigera-medlem-modal (2026-07-22) — se MemberEditModal.tsx. Ersätter den
+  // tidigare raden separata ikon-knappar (färg/bild/inloggning/kalender/
+  // radera) per medlemsrad med EN pennikon som öppnar en modal med alla val.
+  const [editingMemberId, setEditingMemberId] = useState<Id | null>(null);
 
   const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
   const calSettings: CalendarSettings = account.calendarSettings ?? DEFAULT_CALENDAR_SETTINGS;
@@ -91,48 +84,6 @@ export function AccountSettings({
       deletedBy: null
     });
     setName("");
-  }
-
-  async function updateAvatar(memberId: string, file: File | null) {
-    if (!file || !canManageMembers || uploadingMemberId) return;
-    setUploadingMemberId(memberId);
-    try {
-      const avatarUrl = await uploadImage(file, "avatars");
-      onUpdateMemberAvatar(memberId, avatarUrl);
-    } catch {
-      // Uppladdning misslyckades — behåll befintlig bild. Visa felet i
-      // appens globala banner (2026-07-15 buggfix) istället för att svälja
-      // det helt tyst, vilket tidigare gjorde en trasig uppladdning (t.ex.
-      // CSP-blockerad) omöjlig att skilja från "inget hände".
-      reportApiError("Bilden kunde inte laddas upp");
-    } finally {
-      setUploadingMemberId(null);
-    }
-  }
-
-  function openCredentials(memberId: string) {
-    setCredentialsMemberId((current) => (current === memberId ? null : memberId));
-    setCredentialsUsername("");
-    setCredentialsPassword("");
-    setCredentialsError(null);
-  }
-
-  async function saveChildCredentials(memberId: string) {
-    if (!credentialsUsername.trim() || !credentialsPassword || credentialsSaving) return;
-    setCredentialsError(null);
-    setCredentialsSaving(true);
-    try {
-      await onSetChildCredentials(memberId, credentialsUsername.trim(), credentialsPassword);
-      setCredentialsMemberId(null);
-      setCredentialsUsername("");
-      setCredentialsPassword("");
-      setCredentialsSavedId(memberId);
-      window.setTimeout(() => setCredentialsSavedId((current) => (current === memberId ? null : current)), 2500);
-    } catch (err) {
-      setCredentialsError(err instanceof Error ? err.message : "Något gick fel");
-    } finally {
-      setCredentialsSaving(false);
-    }
   }
 
   function deleteOwnData() {
@@ -184,153 +135,24 @@ export function AccountSettings({
         <div className="settings-sub">
           <h3 className="settings-sub-title">Familjemedlemmar</h3>
           <div className="settings-member-list">
-            {activeMembers.map((member) => {
-              const isChildMember = member.isChild || roles.find((r) => r.id === member.roleId)?.isChildRole;
-              return (
-              <Fragment key={member.id}>
-              <div className="settings-member-row">
+            {activeMembers.map((member) => (
+              <div className="settings-member-row" key={member.id}>
                 <MemberAvatar member={member} size="small" />
                 <div className="settings-member-info">
                   <strong>{member.name}</strong>
                   <small>{roles.find((r) => r.id === member.roleId)?.name ?? (member.isChild ? "Barn" : "Medl")}</small>
                 </div>
-                <label
-                  aria-label={`Välj färg för ${member.name}`}
-                  className="member-color-picker"
-                  style={{ background: member.color ?? "var(--border)" }}
-                  title="Välj färg"
-                >
-                  <input
-                    hidden
-                    onChange={(e) => onUpdateMemberColor(member.id, e.target.value)}
-                    type="color"
-                    value={member.color ?? "#888888"}
-                  />
-                </label>
-                <label
-                  aria-label={`Välj bild för ${member.name}`}
-                  className={`icon-button${uploadingMemberId === member.id ? " icon-button--loading" : ""}`}
-                  title={`Välj bild för ${member.name}`}
-                >
-                  {uploadingMemberId === member.id
-                    ? <Loader size={16} className="spin" />
-                    : <ImagePlus size={16} />}
-                  <input
-                    accept="image/*"
-                    disabled={uploadingMemberId !== null}
-                    hidden
-                    onChange={(event) => {
-                      void updateAvatar(member.id, event.target.files?.[0] ?? null);
-                      event.target.value = "";
-                    }}
-                    type="file"
-                  />
-                </label>
-                {member.avatarUrl ? (
-                  <button
-                    aria-label={`Ta bort bild för ${member.name}`}
-                    className="icon-button"
-                    onClick={() => onUpdateMemberAvatar(member.id, null)}
-                    type="button"
-                  >
-                    <X size={16} />
-                  </button>
-                ) : null}
-                {isChildMember && (
-                  <button
-                    aria-label={`${member.userId ? "Ändra" : "Skapa"} inloggning för ${member.name}`}
-                    className={`icon-button${credentialsMemberId === member.id ? " icon-button--active" : ""}`}
-                    onClick={() => openCredentials(member.id)}
-                    title={member.userId ? "Ändra barnets inloggning" : "Skapa barnets egen inloggning"}
-                    type="button"
-                  >
-                    <KeyRound size={16} />
-                  </button>
-                )}
-                {isChildMember && (() => {
-                  const childCals = calendars.filter((c) => c.ownerId !== member.id && c.deletedAt === null);
-                  if (childCals.length === 0) return null;
-                  const isOpen = openCalFilterId === member.id;
-                  return (
-                    <button
-                      aria-label={`Kalenderåtkomst för ${member.name}`}
-                      className={`icon-button${isOpen ? " icon-button--active" : ""}`}
-                      onClick={(e) => {
-                        if (isOpen) {
-                          setOpenCalFilterId(null);
-                        } else {
-                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                          setCalFilterPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
-                          setOpenCalFilterId(member.id);
-                        }
-                      }}
-                      title={`Kalenderåtkomst för ${member.name}`}
-                      type="button"
-                    >
-                      <Filter size={16} />
-                    </button>
-                  );
-                })()}
                 <button
-                  aria-label={`Radera ${member.name}`}
-                  className="icon-button danger"
-                  disabled={member.id === currentMember.id}
-                  onClick={() => onDeleteMember(member.id)}
-                  title={
-                    member.id === currentMember.id
-                      ? "Du kan inte radera dig själv här"
-                      : "Flytta till papperskorg"
-                  }
+                  aria-label={`Redigera ${member.name}`}
+                  className="icon-button"
+                  onClick={() => setEditingMemberId(member.id)}
+                  title="Redigera"
                   type="button"
                 >
-                  <Trash2 size={16} />
+                  <Pencil size={16} />
                 </button>
               </div>
-              {credentialsSavedId === member.id && (
-                <p className="settings-sub-desc" role="status">Inloggning sparad för {member.name}.</p>
-              )}
-              {credentialsMemberId === member.id && (
-                <div className="settings-child-credentials">
-                  <label className="field-label">
-                    Användarnamn
-                    <input
-                      autoComplete="off"
-                      className="text-input"
-                      onChange={(e) => setCredentialsUsername(e.target.value)}
-                      placeholder="t.ex. nova"
-                      value={credentialsUsername}
-                    />
-                  </label>
-                  <label className="field-label">
-                    Lösenord
-                    <input
-                      autoComplete="new-password"
-                      className="text-input"
-                      minLength={4}
-                      onChange={(e) => setCredentialsPassword(e.target.value)}
-                      placeholder="Minst 4 tecken"
-                      type="password"
-                      value={credentialsPassword}
-                    />
-                  </label>
-                  {credentialsError && <p className="field-hint" role="alert">{credentialsError}</p>}
-                  <p className="settings-sub-desc">
-                    {member.name} loggar in med DIN e-postadress + användarnamnet + lösenordet ovan, via
-                    Logga in som barn på inloggningssidan.
-                  </p>
-                  <button
-                    className="secondary-button"
-                    disabled={credentialsSaving || !credentialsUsername.trim() || !credentialsPassword}
-                    onClick={() => saveChildCredentials(member.id)}
-                    type="button"
-                  >
-                    {credentialsSaving ? "…" : "Spara inloggning"}
-                  </button>
-                </div>
-              )}
-              </Fragment>
-              );
-            })}
+            ))}
           </div>
         </div>
       )}
@@ -427,38 +249,27 @@ export function AccountSettings({
         </button>
       </div>
 
-      {/* Calendar filter dropdown portal — renders outside the clipping SettingsSection */}
-      {openCalFilterId && (() => {
-        const m = activeMembers.find((am) => am.id === openCalFilterId);
-        if (!m) return null;
-        const childCals = calendars.filter((c) => c.ownerId !== m.id && c.deletedAt === null);
-        return createPortal(
-          <>
-            <div
-              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
-              onClick={() => setOpenCalFilterId(null)}
-            />
-            <div
-              className="cal-filter-dropdown"
-              style={{ position: "absolute", top: calFilterPos.top, left: calFilterPos.left, zIndex: 9999 }}
-            >
-              {childCals.map((cal) => (
-                <label className="cal-filter-item" key={cal.id}>
-                  <input
-                    type="checkbox"
-                    checked={canViewResource(m, cal)}
-                    onChange={(e) => {
-                      if (e.target.checked) onShareCalendar(cal.id, m.id, "view");
-                      else onRemoveCalendarShare(cal.id, m.id);
-                    }}
-                  />
-                  <span className="cal-filter-dot" style={{ background: cal.color }} />
-                  <span>{cal.name}</span>
-                </label>
-              ))}
-            </div>
-          </>,
-          document.body
+      {editingMemberId && (() => {
+        const editingMember = activeMembers.find((m) => m.id === editingMemberId);
+        if (!editingMember) return null;
+        return (
+          <MemberEditModal
+            calendars={calendars}
+            currentMember={currentMember}
+            member={editingMember}
+            onClose={() => setEditingMemberId(null)}
+            onDelete={(memberId) => {
+              onDeleteMember(memberId);
+              setEditingMemberId(null);
+            }}
+            onRemoveCalendarShare={onRemoveCalendarShare}
+            onSetChildCredentials={onSetChildCredentials}
+            onShareCalendar={onShareCalendar}
+            onUpdateAvatar={onUpdateMemberAvatar}
+            onUpdateColor={onUpdateMemberColor}
+            onUpdateName={onUpdateMemberName}
+            roles={roles}
+          />
         );
       })()}
     </>

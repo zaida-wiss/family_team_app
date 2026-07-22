@@ -128,6 +128,18 @@ export function useMembersState() {
     );
   }
 
+  function updateMemberName(memberId: Id, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) return member;
+        membersApi.update(memberId, { name: trimmed }).catch(console.error);
+        return { ...member, name: trimmed };
+      })
+    );
+  }
+
   // Barn-inloggning (2026-07-22) — till skillnad från övriga update*-funktioner
   // ovan (fire-and-forget, optimistisk) väntar den här in svaret och kastar
   // fel vidare, eftersom UI:t (AccountSettings.tsx) behöver visa ett
@@ -200,6 +212,7 @@ export function useMembersState() {
     updateMemberTheme,
     updateMemberAvatar,
     updateMemberColor,
+    updateMemberName,
     updateCalendarFilterSettings,
     updateChildTimelineSettings,
     updateMemberNavigation,

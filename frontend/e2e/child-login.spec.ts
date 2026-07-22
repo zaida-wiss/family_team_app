@@ -104,12 +104,13 @@ test("förälder skapar barnets inloggning, barnet loggar in och ser sin dashboa
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Konto & familj" }).click();
   await page.getByRole("button", { name: "Familjemedlemmar" }).click();
-  await page.getByRole("button", { name: "Skapa inloggning för Nova" }).click();
+  await page.getByRole("button", { name: "Redigera Nova" }).click();
   await page.getByPlaceholder("t.ex. nova").fill("Nova");
   await page.getByPlaceholder("Minst 4 tecken").fill("sommar2026");
   await page.getByRole("button", { name: "Spara inloggning" }).click();
-  await expect(page.getByText("Inloggning sparad för Nova.")).toBeVisible();
+  await expect(page.getByText("Inloggning sparad.")).toBeVisible();
   expect(credentialsSet).toBe(true);
+  await page.getByRole("button", { name: "Stäng" }).click();
 
   // Logga ut (tillbaka till underkategori-listan via brödsmulan, sedan Logga ut).
   await page.getByRole("button", { name: "Konto & familj" }).click();

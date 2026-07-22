@@ -1,0 +1,63 @@
+.member-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.member-edit-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.member-edit-modal__hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.member-edit-modal__body {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.member-edit-modal__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-edit-modal__role {
+  color: var(--muted-fg);
+  margin-top: -8px;
+}
+
+.member-edit-modal__section {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.member-edit-modal__cal-list {
+  display: grid;
+  gap: 6px;
+}
