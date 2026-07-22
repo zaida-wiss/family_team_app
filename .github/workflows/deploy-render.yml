@@ -1,0 +1,45 @@
+name: Deploy backend till Render
+
+# Sprint 8 S1 (2026-07-16, Diego): Render Auto-Deploy har visat sig opålitligt
+# flera gånger under projektet (fixar har legat oapplicerade i produktion i
+# dagar utan att någon märkt det, se t.ex. incidents/2026-07-07-render-minneskrasch-kalenderprenumerationer.md
+# och kalenderbyte-dataförlustincidenten 2026-07-15) — grundorsaken till VARFÖR
+# Render ibland missar en push har aldrig faktiskt diagnostiserats. Detta är
+# den andra av de två alternativ sprintplaneringen föreslog: istället för att
+# fortsätta gissa, triggar vi explicit Renders Deploy Hook själva efter att CI
+# gått grönt på main — Render behöver då bara ta emot en tydlig, uttrycklig
+# begäran istället för att (opålitligt) reagera på push-eventet självt.
+#
+# Kräver att RENDER_DEPLOY_HOOK_URL läggs till som ett repo-secret av Zaida
+# (GitHub → Settings → Secrets and variables → Actions) — hämtas från Render
+# → backend-tjänsten → Settings → Deploy Hook. Utan secreten gör workflowet
+# ingenting skadligt, bara ett tydligt fel i loggen.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  deploy:
+    name: Trigga Render Deploy Hook
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Kontrollera att secreten finns
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL saknas som repo-secret — lägg till den (Render → backend → Settings → Deploy Hook) för att aktivera automatisk deploy."
+            exit 1
+          fi
+
+      - name: Anropa Render Deploy Hook
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
+            echo "Deploy-hook anropad, Render svarade $status."
+          else
+            echo "::error::Deploy-hook-anropet misslyckades, Render svarade $status."
+            exit 1
+          fi
