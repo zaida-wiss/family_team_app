@@ -209,6 +209,12 @@ export function ParentTodoThreadView({
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
+  // members hålls medvetet ofiltrerad i hela filen (namn-/färguppslag mot
+  // historiska todos, se selectors.ts:s getAssigneeName-kommentar) — men
+  // "Vem håller på med den här?"-pickern (nedan) är ett VAL, inte ett
+  // uppslag, och ska inte erbjuda en redan raderad medlem (2026-07-23,
+  // Zaidas fynd).
+  const activeMembers = members.filter((m) => m.deletedAt === null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
   // Ett lyckat långtryck triggar annars även webbläsarens vanliga click-event
   // vid pointerUp (samma nedtryck+släpp-par som click bygger på) — det skulle
@@ -870,7 +876,7 @@ export function ParentTodoThreadView({
                           style={{ position: "fixed", top: inProgressPickerPos.top, left: inProgressPickerPos.left }}
                         >
                           <p className="todo-thread__in-progress-picker-label">Vem håller på med den här?</p>
-                          {members.map((m) => {
+                          {activeMembers.map((m) => {
                             const isOn = inProgressMembers.some((im) => im.id === m.id);
                             return (
                               <button

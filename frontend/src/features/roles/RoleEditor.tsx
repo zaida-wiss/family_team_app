@@ -28,6 +28,10 @@ export function RoleEditor({
   const [draftPermissions, setDraftPermissions] = useState<PermissionKey[]>([]);
   const [showDraftPerms, setShowDraftPerms] = useState(false);
   const [openRoleId, setOpenRoleId] = useState<string | null>(null);
+  // Soft-deletade medlemmar ska inte gå att tilldela en roll (2026-07-23,
+  // Zaidas fynd) — samma filtreringsprincip som redan används i
+  // AccountSettings.tsx/TodoCreatorModal.tsx m.fl.
+  const activeMembers = members.filter((m) => m.deletedAt === null);
 
   function toggleDraftPermission(permission: PermissionKey) {
     setDraftPermissions((current) =>
@@ -127,7 +131,7 @@ export function RoleEditor({
       <div className="settings-sub">
         <h3 className="settings-sub-title">Tilldela roll</h3>
         <div className={styles.memberRoleGrid}>
-          {members.map((member) => (
+          {activeMembers.map((member) => (
             <label className={styles.memberRoleRow} key={member.id}>
               <span>{member.name}</span>
               <select

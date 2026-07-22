@@ -64,6 +64,10 @@ export function ShoppingView({
 
   const canEdit = hasPermission(currentMember, roles, "canEditShoppingLists");
   const canCreate = hasPermission(currentMember, roles, "canCreateShoppingLists");
+  // Soft-deletade medlemmar ska inte gå att välja i delnings-listan
+  // (2026-07-23, Zaidas fynd) — namn-uppslaget för en redan gjord delning
+  // (nedan) förblir medvetet ofiltrerat.
+  const activeMembers = members.filter((m) => m.deletedAt === null);
 
   const visible = shoppingLists.filter((list) => {
     if (list.deletedAt !== null) return false;
@@ -96,7 +100,7 @@ export function ShoppingView({
 
   function getDefaultShareDraft(): ShareDraft {
     return {
-      memberId: members.find((m) => m.id !== currentMember.id)?.id ?? "",
+      memberId: activeMembers.find((m) => m.id !== currentMember.id)?.id ?? "",
       access: "view"
     };
   }
@@ -233,7 +237,7 @@ export function ShoppingView({
                     value={shareDraft.memberId}
                   >
                     <option value="">Välj medlem</option>
-                    {members
+                    {activeMembers
                       .filter((m) => m.id !== currentMember.id)
                       .map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>

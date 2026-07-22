@@ -45,6 +45,11 @@ export function ShoppingListsPanel({
   const [shareDrafts, setShareDrafts] = useState<Record<Id, ShareDraft>>({});
   const canCreateShoppingLists = hasPermission(currentMember, roles, "canCreateShoppingLists");
   const canEditShoppingLists = hasPermission(currentMember, roles, "canEditShoppingLists");
+  // Soft-deletade medlemmar ska inte gå att välja i delnings-listan
+  // (2026-07-23, Zaidas fynd) — getMemberName nedan förblir medvetet
+  // ofiltrerad (visar rätt namn för en redan gjord delning även om personen
+  // sedan raderats).
+  const activeMembers = members.filter((m) => m.deletedAt === null);
   const visibleLists = shoppingLists.filter((list) => {
     if (list.deletedAt !== null) {
       return false;
@@ -94,7 +99,7 @@ export function ShoppingListsPanel({
 
   function getDefaultShareDraft(): ShareDraft {
     return {
-      memberId: members.find((member) => member.id !== currentMember.id)?.id ?? "",
+      memberId: activeMembers.find((member) => member.id !== currentMember.id)?.id ?? "",
       access: "view"
     };
   }
@@ -238,7 +243,7 @@ export function ShoppingListsPanel({
                   value={shareDraft.memberId}
                 >
                   <option value="">Välj medlem</option>
-                  {members
+                  {activeMembers
                     .filter((member) => member.id !== currentMember.id)
                     .map((member) => (
                       <option key={member.id} value={member.id}>

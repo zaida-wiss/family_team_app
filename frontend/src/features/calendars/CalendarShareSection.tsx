@@ -20,8 +20,12 @@ export function CalendarShareSection({
   onShareCalendar,
   onRemoveCalendarShare,
 }: Props) {
+  // Soft-deletade medlemmar ska inte gå att välja i delnings-listan
+  // (2026-07-23, Zaidas fynd) — getMemberName (importerad) förblir medvetet
+  // ofiltrerad, för att visa rätt namn på en redan gjord delning.
+  const activeMembers = members.filter((m) => m.deletedAt === null);
   const [shareMemberId, setShareMemberId] = useState(
-    members.find((m) => m.id !== currentMemberId)?.id ?? ""
+    activeMembers.find((m) => m.id !== currentMemberId)?.id ?? ""
   );
   const [shareAccess, setShareAccess] = useState<AccessLevel>("view");
 
@@ -45,7 +49,7 @@ export function CalendarShareSection({
           value={shareMemberId}
         >
           <option value="">Välj medlem</option>
-          {members
+          {activeMembers
             .filter((m) => m.id !== currentMemberId)
             .map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
