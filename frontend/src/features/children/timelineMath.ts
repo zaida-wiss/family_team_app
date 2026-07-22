@@ -109,9 +109,26 @@ export function taskWindowPct(startsAt: string, expiresAt: string | null, range:
   return Math.max(0, endPct - startPct);
 }
 
-export function markerLeft(todoId: string): string {
-  const h = [...todoId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0x7fff, 0);
-  return `${4 + (h % 74)}%`;
+// Vågrät position för uppdrags-strecken/stjärnorna i tidslinjen. Var tidigare
+// en hash av todo-id:t, oberoende av alla ANDRA streck som råkade visas
+// samtidigt — kunde därför hamna nära eller ovanpå varandra rent slumpmässigt
+// (2026-07-23, Zaidas fynd: "stjärnorna och strecken i tidslinjen går nu
+// ibland ihop"). X-positionen har aldrig haft någon egen betydelse (bara Y,
+// via markerPct, kodar den faktiska tiden) — så en jämn spridning över HELA
+// bredden, given den mängd streck som faktiskt visas just nu, maximerar
+// avståndet mellan dem utan att tappa någon information.
+export function spreadMarkerLeft(todoIds: string[]): Map<string, string> {
+  const MIN_PCT = 4;
+  const MAX_PCT = 78;
+  const positions = new Map<string, string>();
+  if (todoIds.length === 0) return positions;
+  if (todoIds.length === 1) {
+    positions.set(todoIds[0], `${(MIN_PCT + MAX_PCT) / 2}%`);
+    return positions;
+  }
+  const step = (MAX_PCT - MIN_PCT) / (todoIds.length - 1);
+  todoIds.forEach((id, i) => positions.set(id, `${MIN_PCT + i * step}%`));
+  return positions;
 }
 
 // Ikoner för samma tidsfack radbryts (ny rad nedanför, ROW_HEIGHT_PX) istället

@@ -13,10 +13,10 @@ import {
   durPct,
   fmtHourLabel,
   getTimelineRange,
-  markerLeft,
   markerPct,
   minuteOfDay,
   pinPositions,
+  spreadMarkerLeft,
   timePct,
 } from "./timelineMath";
 
@@ -154,6 +154,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
     selectedDay,
     timelineRange
   );
+  const upcomingMarkerLeft = spreadMarkerLeft(upcomingTodoMarkers.map((m) => m.todo.id));
 
   const dayPurchased = purchased.filter(
     (pr) => toLocalDateStr(new Date(pr.startsAt)) === selectedDayStr
@@ -204,7 +205,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
                       style={{
                         top: `${markerPct(marker.startsAt, timelineRange)}%`,
                         height: marker.windowPct > 0 ? `${marker.windowPct}%` : undefined,
-                        left: markerLeft(marker.todo.id),
+                        left: upcomingMarkerLeft.get(marker.todo.id) ?? "4%",
                       } as React.CSSProperties}
                       title={`${marker.todo.title} · ${fmtTime(marker.startsAt)}${marker.todo.expiresAt ? `-${fmtTime(marker.todo.expiresAt)}` : ""}`}
                       aria-label={`${marker.todo.title} kommer ${fmtTime(marker.startsAt)}${marker.todo.expiresAt ? ` och kan göras till ${fmtTime(marker.todo.expiresAt)}` : ""}`}
