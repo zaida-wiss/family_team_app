@@ -105,13 +105,19 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     setFontId,
   } = useShellState(activeMembership, onLogout);
 
+  // 2026-07-23 (Zaidas beslut): ett medlemsval visas numera bara på
+  // Medlemmar-panelen, inte Hem (se useAppState.ts:s setActivePanel) — den
+  // här kontrollen följer samma villkor, annars skulle app-skalets tema
+  // aldrig längre spegla den vy man faktiskt tittar på. Läser den LIVA
+  // selectedDashboardMemberId (memberContentProps) istället för den
+  // persisterade lastSelectedDashboardMemberId, av samma anledning.
   const selectedDashboardMember =
     settingsProps.members.find(
-      (m) => m.id === currentMember.lastSelectedDashboardMemberId && m.deletedAt === null
+      (m) => m.id === memberContentProps.selectedDashboardMemberId && m.deletedAt === null
     ) ?? currentMember;
 
   const visibleThemeMember =
-    activePanel === "home" ? selectedDashboardMember : currentMember;
+    activePanel === "members" ? selectedDashboardMember : currentMember;
 
   const shellTheme =
     visibleThemeMember.dashboardTheme ?? (visibleThemeMember.isChild ? "space" : "clear");
