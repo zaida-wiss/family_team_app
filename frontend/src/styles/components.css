@@ -62,7 +62,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0 12px;
-  background: white;
+  background: var(--card);
   color: var(--foreground);
   /* Måste vara >=16px: iOS Safari zoomar automatiskt in HELA sidan när ett
      fokuserat textfält har mindre font-size än så. Utan denna rad ärver
@@ -198,7 +198,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px;
-  background: white;
+  background: var(--card);
 }
 
 .share-row span {

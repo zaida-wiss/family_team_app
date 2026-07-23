@@ -70,7 +70,11 @@ const SELF_NAV_FIELDS = new Set([
 // ETT BARNS dashboard/ChildSettings.tsx (samma canManageChildAccount-mönster
 // som redan styr complete/approve/reject på ett barns todos, ADR-0016) —
 // aldrig av en obesläktad admin på en annan vuxens vägnar.
-const CHILD_MANAGEABLE_FIELDS = new Set(["dashboardTheme", "childTimelineSettings"]);
+const CHILD_MANAGEABLE_FIELDS = new Set(["dashboardTheme", "darkMode", "childTimelineSettings"]);
+// darkMode (2026-07-23) är en oberoende på/av-växel ovanpå dashboardTheme
+// (se ThemePicker.tsx) — samma självbetjänings-/förälder-styr-barnets-tema-
+// resonemang som dashboardTheme redan har, se kommentaren ovan.
+const SELF_THEME_FIELDS = new Set(["dashboardTheme", "darkMode"]);
 
 export async function updateMember(id: string, accountId: string, callerMemberId: string | null, data: unknown) {
   const patch = MemberPatchSchema.parse(data);
@@ -81,7 +85,7 @@ export async function updateMember(id: string, accountId: string, callerMemberId
 
   const fields = Object.keys(patch);
   const isOwnNavState = callerMemberId === id && fields.every((f) => SELF_NAV_FIELDS.has(f));
-  const isOwnTheme = callerMemberId === id && fields.every((f) => f === "dashboardTheme");
+  const isOwnTheme = callerMemberId === id && fields.every((f) => SELF_THEME_FIELDS.has(f));
 
   if (!isOwnNavState && !isOwnTheme) {
     const caller = await MemberModel.findOne({ id: callerMemberId, accountId, deletedAt: null });

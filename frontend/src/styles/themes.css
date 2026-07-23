@@ -316,6 +316,105 @@
 }
 
 /* =========================================================
+   MÖRKT LÄGE (2026-07-23, Zaidas önskemål: "fortfarande samma tema, men
+   med omvänd färgordning, ljusa färger byter plats med mörka")
+   ========================================================= */
+
+/* Delen som är LIKA för alla sex vuxenteman: bakgrund/kort/text mixas mot
+   SVART istället för VITT/ljus, härlett ur samma --primary som temat redan
+   satt — ingen ny palett per tema behövs här, bara vilken ände av ljus/mörk-
+   skalan som används för vad byter plats. --primary/--primary-dark/
+   --primary-fg (temats "märke") lämnas MEDVETET orörda — det är fortfarande
+   samma tema, bara bakgrund/text som vänder. Denna regel har samma
+   specificitet (två klasser) som varje enskilt .app-shell.theme-X-block
+   ovan och avgörs därför av källkodsordning — måste stå EFTER dem här i
+   filen för att vinna. */
+.app-shell.dark-mode {
+  --background: color-mix(in oklch, var(--primary) 22%, black 78%);
+  --card: color-mix(in oklch, var(--primary) 30%, black 70%);
+  --muted: color-mix(in oklch, var(--primary) 38%, black 62%);
+  /* Egen, ljusare formel än bakgrund/kort/muted (inte bara "primary mixat
+     mot mindre svart") — annars blir kantlinjen nästan osynlig mot en redan
+     mörk bakgrund/kort, ett eget WCAG 1.4.11-problem (gränser för
+     UI-komponenter, inte textkontrast) utöver textkontrasten ovan. */
+  --border: color-mix(in oklch, var(--muted) 55%, white 45%);
+  --sidebar: color-mix(in oklch, var(--primary) 26%, black 74%);
+  --sidebar-border: var(--border);
+  --secondary: color-mix(in oklch, var(--primary) 42%, black 58%);
+
+  --foreground: color-mix(in oklch, white 92%, var(--primary) 8%);
+  --card-foreground: var(--foreground);
+  --secondary-fg: var(--foreground);
+  --muted-fg: color-mix(in oklch, white 68%, var(--primary) 32%);
+
+  /* Sidonavets EGNA tokens (ljusa pastellgradienter i ljust läge) — en
+     enfärgad mörk variant istället för att återskapa varje temas
+     tvåfärgade gradient i mörkt läge. */
+  --theme-nav-bg: color-mix(in oklch, var(--primary) 24%, black 76%);
+  --theme-nav-border: var(--border);
+  --theme-nav-fg: var(--foreground);
+  --theme-nav-muted: var(--muted-fg);
+  --theme-nav-hover-bg: color-mix(in oklch, var(--primary) 18%, transparent);
+}
+
+/* c0…c7/on-c0…on-c7 (mörk→ljus i ljust läge) speglas PER TEMA — c0 byter
+   plats med c7, c1 med c6, c2 med c5, c3 med c4 (samma par-princip som
+   redan fanns, se c0/c1/c4-kommentarerna i respektive temablock ovan).
+   on-cX flyttar med sin cX (rätt kontrasttext för just DEN färgen, oavsett
+   vilken "plats" den nu har) — inte en ren omkastning av on-c0/on-c7 var
+   för sig. Kan inte göras generiskt med en enda regel (--c0: var(--c7);
+   --c7: var(--c0); i SAMMA regel är en cirkulär var()-referens i CSS och
+   ogiltigförklarar båda) — varje tema återanvänder bara sina EGNA redan
+   skrivna färgvärden i ombytt ordning, ingen ny färg uppfunnen. */
+.app-shell.theme-clear.dark-mode {
+  --c0: color-mix(in oklch, var(--primary) 20%, white 80%);
+  --c1: color-mix(in oklch, var(--primary) 60%, white 40%);
+  --c2: color-mix(in oklch, var(--primary) 85%, white 15%);
+  --c3: color-mix(in oklch, var(--primary) 35%, white 65%);
+  --c4: color-mix(in oklch, var(--primary) 55%, white 45%);
+  --c5: color-mix(in oklch, var(--primary) 70%, white 30%);
+  --c6: var(--primary);
+  --c7: color-mix(in oklch, var(--primary) 100%, black 22%);
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--white); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-sunset.dark-mode {
+  --c0: #ffd400; --c1: #c347c0; --c2: #cd5ea0; --c3: #f5bc20;
+  --c4: #e18d60; --c5: #eba540; --c6: #d6249f; --c7: #a81c7d;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-turquoise.dark-mode {
+  --c0: #ecfeff; --c1: #0c6a61; --c2: #0c8f84; --c3: #b6fcf7;
+  --c4: #5ff5ee; --c5: #12e4db; --c6: #0c7b70; --c7: #085850;
+  --on-c0: var(--black); --on-c1: var(--white); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-lagoon.dark-mode {
+  --c0: #8cff2d; --c1: #5dc187; --c2: #4dada5; --c3: #7cea4b;
+  --c4: #3d98c3; --c5: #2e84e1; --c6: #154fb2; --c7: #0f3b87;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-orchid.dark-mode {
+  --c0: #aec24f; --c1: #dd20ea; --c2: #cf46c6; --c3: #8cff2a;
+  --c4: #bb8285; --c5: #c06bab; --c6: #b81fb0; --c7: #8e1490;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-dusk.dark-mode {
+  --c0: #d4b93a; --c1: #8a2fe0; --c2: #9c4dc4; --c3: #f9e814;
+  --c4: #c17e84; --c5: #b06aa8; --c6: #7a1fd6; --c7: #4d1099;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+/* =========================================================
    CHILD THEME TOKENS
    8 colors + white/black + contrast text colors
    ========================================================= */
@@ -714,17 +813,17 @@
   width: min(400px, calc(100% - 32px));
   max-height: calc(100dvh - 96px);
   overflow-y: auto;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
-  background: #ffffff;
+  background: var(--card);
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
 }
 
 .theme-picker-inline {
   width: 100%;
-  background: #ffffff;
-  color: oklch(0.24 0.028 50);
+  background: var(--card);
+  color: var(--foreground);
   border-radius: var(--radius-sm);
   padding: 4px 0;
 }
@@ -760,6 +859,29 @@
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
   margin: 12px 0;
+}
+
+/* Mörkt läge (2026-07-23) — samma på/av-radmönster som andra toggle-fält i
+   appen (t.ex. field-label toggle-label i Settings.css), egen klass här
+   eftersom ThemePicker.tsx inte importerar den delade stilen. */
+.theme-dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.theme-dark-mode-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
 }
 
 /* Font section */

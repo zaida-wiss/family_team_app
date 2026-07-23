@@ -96,6 +96,21 @@ export function useMembersState() {
     );
   }
 
+  // Mörkt läge (2026-07-23) — oberoende på/av-växel ovanpå dashboardTheme,
+  // samma optimistiska mönster.
+  function updateMemberDarkMode(memberId: Id, darkMode: boolean) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) {
+          return member;
+        }
+
+        membersApi.update(memberId, { darkMode }).catch(console.error);
+        return { ...member, darkMode };
+      })
+    );
+  }
+
   function updateMemberAvatar(memberId: Id, avatarUrl: string | null) {
     setMembers((current) =>
       current.map((member) => {
@@ -219,6 +234,7 @@ export function useMembersState() {
     restoreMember,
     purgeMembersTrash,
     updateMemberTheme,
+    updateMemberDarkMode,
     updateMemberAvatar,
     updateMemberColor,
     updateMemberName,

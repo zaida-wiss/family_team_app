@@ -56,7 +56,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px;
-  background: white;
+  background: var(--card);
 }
 
 .settings-member-info {

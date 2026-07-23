@@ -11,6 +11,7 @@ const memberSchema = new Schema<Member>({
   avatarUrl: { type: String, default: null },
   color: { type: String, default: null },
   dashboardTheme: { type: String, default: null },
+  darkMode: { type: Boolean, default: undefined },
   calendarFilterSettings: { type: Schema.Types.Mixed, default: undefined },
   childTimelineSettings: { type: Schema.Types.Mixed, default: undefined },
   lastActivePanel: { type: String, default: undefined },

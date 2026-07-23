@@ -95,6 +95,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     setActivePanel,
     themePickerMember,
     handleThemeSelect,
+    handleDarkModeToggle,
     closeThemePicker,
     apiError,
     childContentProps,
@@ -121,9 +122,11 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
 
   const shellTheme =
     visibleThemeMember.dashboardTheme ?? (visibleThemeMember.isChild ? "space" : "clear");
+  // Mörkt läge (2026-07-23) — bara vuxenteman, se ThemePicker.tsx.
+  const shellDarkMode = !visibleThemeMember.isChild && (visibleThemeMember.darkMode ?? false);
 
   return (
-    <main className={`app-shell theme-${shellTheme}`}>
+    <main className={`app-shell theme-${shellTheme}${shellDarkMode ? " dark-mode" : ""}`}>
       {apiError && (
         <div className="api-error-banner" role="alert">
           {apiError}
@@ -170,6 +173,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
             member={themePickerMember}
             onClose={closeThemePicker}
             onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
+            onToggleDarkMode={(darkMode) => handleDarkModeToggle(themePickerMember.id, darkMode)}
             fontId={fontId}
             onSelectFont={setFontId}
           />

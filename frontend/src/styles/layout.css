@@ -1,6 +1,16 @@
 .app-shell {
   width: 100%;
   min-height: 100vh;
+  /* Tvingar color att OMVÄRDERAS mot --foreground här (2026-07-23,
+     mörkt läge-fynd) — :root sätter redan color: var(--foreground), men den
+     beräknade färgen ÄRVS sedan som en fast egenskap nedåt i trädet.
+     .app-shell.dark-mode ändrar --foreground (en egenskaps-VARIABEL) på
+     DENNA nivå, inte på :root — utan en ny color-deklaration HÄR fortsätter
+     element som aldrig satt sin egen color (t.ex. ett bart <h2>) att ärva
+     :root:s redan uträknade LJUSA textfärg rakt igenom, osynligt mot en
+     mörk bakgrund. Element som redan explicit skriver color: var(--foreground)
+     själva (de flesta interaktiva ytorna) påverkades aldrig av detta. */
+  color: var(--foreground);
 }
 
 /* Child view (app-shell-full) — desktop: fixed height; mobile: flex child handles height */

@@ -8,18 +8,21 @@ type ThemePickerProps = {
   member: Member;
   onClose?: () => void;
   onSelectTheme: (themeId: DashboardThemeId) => void;
+  // Mörkt läge (2026-07-23) — bara relevant för vuxenteman, se ThemePickerBody.
+  onToggleDarkMode?: (darkMode: boolean) => void;
   fontId?: FontId;
   onSelectFont?: (fontId: FontId) => void;
   /** Hides the floating header/close button — use when embedding inline */
   compact?: boolean;
 };
 
-export function ThemePicker({ member, onClose, onSelectTheme, fontId, onSelectFont, compact = false }: ThemePickerProps) {
+export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, fontId, onSelectFont, compact = false }: ThemePickerProps) {
   return compact
     ? (
         <ThemePickerBody
           member={member}
           onSelectTheme={onSelectTheme}
+          onToggleDarkMode={onToggleDarkMode}
           fontId={fontId}
           onSelectFont={onSelectFont}
           compact
@@ -30,6 +33,7 @@ export function ThemePicker({ member, onClose, onSelectTheme, fontId, onSelectFo
           member={member}
           onClose={onClose ?? (() => {})}
           onSelectTheme={onSelectTheme}
+          onToggleDarkMode={onToggleDarkMode}
           fontId={fontId}
           onSelectFont={onSelectFont}
         />
@@ -40,6 +44,7 @@ function ThemePickerFloating({
   member,
   onClose,
   onSelectTheme,
+  onToggleDarkMode,
   fontId,
   onSelectFont,
 }: Omit<ThemePickerProps, "compact" | "onClose"> & { onClose: () => void }) {
@@ -55,7 +60,7 @@ function ThemePickerFloating({
           <X size={18} />
         </button>
       </div>
-      <ThemePickerBody member={member} onSelectTheme={onSelectTheme} fontId={fontId} onSelectFont={onSelectFont} />
+      <ThemePickerBody member={member} onSelectTheme={onSelectTheme} onToggleDarkMode={onToggleDarkMode} fontId={fontId} onSelectFont={onSelectFont} />
     </div>
   );
 }
@@ -63,6 +68,7 @@ function ThemePickerFloating({
 function ThemePickerBody({
   member,
   onSelectTheme,
+  onToggleDarkMode,
   fontId,
   onSelectFont,
   compact = false,
@@ -83,6 +89,20 @@ function ThemePickerBody({
         </button>
       ))}
     </div>
+  );
+
+  // Mörkt läge (2026-07-23, Zaidas önskemål: "fortfarande samma tema, men
+  // med omvänd färgordning, ljusa färger byter plats med mörka") — bara
+  // vuxenteman, en oberoende på/av-växel ovanpå det valda temat.
+  const darkModeSection = !member.isChild && onToggleDarkMode && (
+    <label className="theme-dark-mode-toggle">
+      <span>Mörkt läge</span>
+      <input
+        checked={member.darkMode ?? false}
+        onChange={(e) => onToggleDarkMode(e.target.checked)}
+        type="checkbox"
+      />
+    </label>
   );
 
   const fontSection = onSelectFont && fontId !== undefined && (
@@ -110,12 +130,14 @@ function ThemePickerBody({
     ? (
         <div className="theme-picker-inline">
           {grid}
+          {darkModeSection}
           {fontSection}
         </div>
       )
     : (
         <>
           {grid}
+          {darkModeSection}
           {fontSection}
         </>
       );

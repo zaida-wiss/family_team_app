@@ -18,7 +18,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember, purgeMembersTrash,
-    updateMemberTheme, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
+    updateMemberTheme, updateMemberDarkMode, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
     setChildCredentials,
     updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
@@ -92,6 +92,12 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
   function handleThemeSelect(memberId: Id, themeId: DashboardThemeId) {
     updateMemberTheme(memberId, themeId);
     setThemePickerMemberId(null);
+  }
+
+  // Mörkt läge (2026-07-23) — till skillnad från handleThemeSelect stängs
+  // INTE popovern, en av/på-växel är inget slutgiltigt val på samma sätt.
+  function handleDarkModeToggle(memberId: Id, darkMode: boolean) {
+    updateMemberDarkMode(memberId, darkMode);
   }
 
   function deleteOwnData() {
@@ -253,6 +259,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     onUpdateMemberColor: updateMemberColor,
     onUpdateMemberName: updateMemberName,
     onUpdateMemberTheme: updateMemberTheme,
+    onUpdateMemberDarkMode: updateMemberDarkMode,
     onSetChildCredentials: setChildCredentials,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
       updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
@@ -344,6 +351,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     setActivePanel,
     themePickerMember,
     handleThemeSelect,
+    handleDarkModeToggle,
     closeThemePicker: () => setThemePickerMemberId(null),
     apiError,
     childContentProps,

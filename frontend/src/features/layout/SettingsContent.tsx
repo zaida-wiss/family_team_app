@@ -122,6 +122,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 compact
                 member={currentMember}
                 onSelectTheme={(themeId) => settingsProps.onUpdateMemberTheme(currentMember.id, themeId)}
+                onToggleDarkMode={(darkMode) => settingsProps.onUpdateMemberDarkMode(currentMember.id, darkMode)}
                 fontId={fontId}
                 onSelectFont={setFontId}
               />

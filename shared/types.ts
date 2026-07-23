@@ -110,6 +110,12 @@ export type Member = {
   avatarUrl: string | null;
   color: string | null;
   dashboardTheme: DashboardThemeId | null;
+  // Mörkt läge (2026-07-23, Zaidas önskemål: "fortfarande samma tema, men
+  // med omvänd färgordning, ljusa färger byter plats med mörka") — en
+  // oberoende på/av-växel ovanpå dashboardTheme, inte en egen temaidentitet.
+  // Gäller bara vuxenteman (se ThemePicker.tsx). Standard av (osatt/false)
+  // om fältet saknas i äldre data.
+  darkMode?: boolean;
   calendarFilterSettings?: CalendarFilterSettings;
   childTimelineSettings?: ChildTimelineSettings;
   lastActivePanel?: AppPanel;
