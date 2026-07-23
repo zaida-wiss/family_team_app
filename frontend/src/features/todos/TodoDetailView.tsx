@@ -165,7 +165,11 @@ export function TodoDetailView({
                         <span
                           aria-hidden="true"
                           className="todo-detail-modal__checklist-item-assignee"
-                          style={subtaskAssignee.color ? { background: subtaskAssignee.color } : undefined}
+                          // Fallback till --primary när medlemmen saknar egen
+                          // färg (samma fix som SubtaskAssigneeButton.tsx) —
+                          // annars nästan osynlig vit initial mot en ljus
+                          // var(--muted)-bakgrund.
+                          style={{ background: subtaskAssignee.color ?? "var(--primary)" }}
                           title={subtaskAssignee.name}
                         >
                           {subtaskAssignee.name.charAt(0).toUpperCase()}

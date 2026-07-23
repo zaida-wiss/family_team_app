@@ -24,7 +24,11 @@ export function SubtaskAssigneeButton({ assignedTo, members, onCycle }: Props) {
       aria-label={assignee ? `Tilldelad ${assignee.name}. Klicka för att byta.` : "Ingen tilldelad. Klicka för att tilldela."}
       className="subtask-assignee-btn"
       onClick={() => onCycle(next?.id ?? null)}
-      style={assignee?.color ? { background: assignee.color, borderColor: assignee.color } : undefined}
+      // Fallback till --primary (inte bara när egen färg saknas) — annars
+      // blandades "tilldelad men utan egen färg" ihop med "otilldelad"
+      // (samma streckade/ljusa standardstil), upptäckt vid en visuell
+      // skärmdumpskontroll (nästan osynlig vit initial på ljus bakgrund).
+      style={assignee ? { background: assignee.color ?? "var(--primary)", borderColor: assignee.color ?? "var(--primary)" } : undefined}
       title={assignee ? assignee.name : "Ingen tilldelad"}
       type="button"
     >
