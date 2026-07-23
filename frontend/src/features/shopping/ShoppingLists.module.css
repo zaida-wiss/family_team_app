@@ -40,6 +40,15 @@
   white-space: nowrap;
 }
 
+/* Delning mellan familjer (ADR-0026, 2026-07-23) — låsikon för en
+   endast-visning-delad lista, samma stil som todos-trådens motsvarighet. */
+.lock {
+  margin-left: 4px;
+  vertical-align: middle;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
 .toolbar {
   display: flex;
   align-items: center;

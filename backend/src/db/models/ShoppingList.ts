@@ -9,6 +9,19 @@ const shoppingListSchema = new Schema<ShoppingList>({
   icon: { type: String, default: null },
   ownerId: { type: String, required: true },
   sharedWith: [{ memberId: String, access: String }],
+  // Delning mellan FAMILJER (ADR-0026, 2026-07-23) — se shared/types.ts.
+  externalSharedWith: {
+    type: [
+      {
+        memberId: { type: String, required: true },
+        accountId: { type: String, required: true },
+        access: { type: String, required: true },
+        grantedBy: { type: String, required: true },
+        grantedAt: { type: String, required: true }
+      }
+    ],
+    default: []
+  },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null },
   items: [

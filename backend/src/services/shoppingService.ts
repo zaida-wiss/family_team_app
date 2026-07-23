@@ -3,7 +3,7 @@ import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
 import { ShoppingItemSchema } from "../../../shared/schemas.js";
 import { getAllRoles } from "./rolesService.js";
-import { canEditSharedResource, hasPermission } from "../../../shared/permissions.js";
+import { canEditSharedResource, getExternalShoppingListAccess, hasPermission } from "../../../shared/permissions.js";
 import type { PermissionKey, ShoppingList } from "../../../shared/types.js";
 
 // Säkerhetsfynd 2026-07-22 (samma klass som ADR-0009/ADR-0016/timedTasks.ts):
@@ -186,4 +186,101 @@ export async function clearCompletedItems(listId: string, accountId: string, mem
 export async function purgeTrash(accountId: string, memberId: string | null) {
   await requirePermission(accountId, memberId, "canRestoreFromTrash");
   await ShoppingListModel.deleteMany({ accountId, deletedAt: { $ne: null } });
+}
+
+// Delning mellan FAMILJER (ADR-0026, 2026-07-23) — se shoppingSharesService.ts
+// för hantering av SJÄLVA delningen (lookup/dela/återkalla, alltid inom
+// listans EGET konto). Funktionerna nedan rör INTE den vanliga
+// kontoscopade getAllLists ovan alls, en helt separat, additiv väg — samma
+// mönster som todosService.ts:s getSharedChildrenTodos/completeSharedChildTodo
+// (ADR-0024).
+async function requireCallerWithAccess(
+  listId: string,
+  listAccountId: string,
+  callerMemberId: string,
+  callerAccountId: string,
+  needed: "view" | "edit"
+) {
+  const list = await ShoppingListModel.findOne({ id: listId, accountId: listAccountId, deletedAt: null });
+  if (!list) {
+    throw new AppError(404, "Inköpslista hittades inte");
+  }
+  const caller = await requireMember(callerAccountId, callerMemberId);
+  const access = getExternalShoppingListAccess(caller, list);
+  if (access === null || (needed === "edit" && access !== "edit")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return list;
+}
+
+export async function getExternallySharedLists(callerMemberId: string, callerAccountId: string) {
+  const lists = await ShoppingListModel.find({
+    deletedAt: null,
+    externalSharedWith: { $elemMatch: { memberId: callerMemberId, accountId: callerAccountId } }
+  });
+
+  return lists.map((list) => {
+    const grant = (list.externalSharedWith ?? []).find(
+      (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
+    );
+    return {
+      list: {
+        id: list.id,
+        accountId: list.accountId,
+        name: list.name,
+        color: list.color,
+        icon: list.icon,
+        items: list.items.filter((item) => item.deletedAt === null)
+      },
+      access: grant?.access ?? "view"
+    };
+  });
+}
+
+export async function addItemToExternalList(
+  listId: string,
+  listAccountId: string,
+  callerMemberId: string,
+  callerAccountId: string,
+  item: unknown
+) {
+  const list = await requireCallerWithAccess(listId, listAccountId, callerMemberId, callerAccountId, "edit");
+  const validated = ShoppingItemSchema.parse(item);
+  list.items.push({ ...validated, createdBy: callerMemberId } as any);
+  await list.save();
+}
+
+export async function toggleExternalItem(
+  listId: string,
+  listAccountId: string,
+  itemId: string,
+  callerMemberId: string,
+  callerAccountId: string
+) {
+  const list = await requireCallerWithAccess(listId, listAccountId, callerMemberId, callerAccountId, "edit");
+  const item = list.items.find((i) => i.id === itemId);
+  if (!item) {
+    throw new AppError(404, "Vara hittades inte");
+  }
+  item.done = !item.done;
+  list.markModified("items");
+  await list.save();
+}
+
+export async function deleteExternalItem(
+  listId: string,
+  listAccountId: string,
+  itemId: string,
+  callerMemberId: string,
+  callerAccountId: string
+) {
+  const list = await requireCallerWithAccess(listId, listAccountId, callerMemberId, callerAccountId, "edit");
+  const item = list.items.find((i) => i.id === itemId);
+  if (!item) {
+    throw new AppError(404, "Vara hittades inte");
+  }
+  item.deletedAt = new Date().toISOString();
+  item.deletedBy = callerMemberId;
+  list.markModified("items");
+  await list.save();
 }

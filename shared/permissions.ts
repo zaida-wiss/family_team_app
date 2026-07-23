@@ -5,6 +5,7 @@ import type {
   OwnedSharedResource,
   PermissionKey,
   Role,
+  ShoppingList,
   Todo
 } from "./types.js";
 
@@ -156,6 +157,37 @@ export function canManageChildShares(
   roles: Role[]
 ): boolean {
   return isSameAccount(caller, child) && hasPermission(caller, roles, "canManageMembers");
+}
+
+// Delning av inköpslistor mellan FAMILJER (ADR-0026, 2026-07-23) — samma
+// icke-transitiva mönster som childSharedWith ovan, fast för ShoppingList.
+export function getExternalShoppingListAccess(
+  caller: Member,
+  list: ShoppingList
+): AccessLevel | null {
+  const grant = (list.externalSharedWith ?? []).find(
+    (share) => share.memberId === caller.id && share.accountId === caller.accountId
+  );
+  return grant?.access ?? null;
+}
+
+// Lägre tröskel än canManageChildShares (som kräver canManageMembers) — en
+// inköpslista är en lägre-insats-resurs än ett barns konto, så samma
+// behörighet som redan gate:ar VANLIG (intern) delning av listan räcker:
+// den som redan får redigera/dela listan inom familjen får också dela den
+// UTANFÖR familjen. Kräver ändå att anroparen är i listans EGET konto —
+// en mottagare som bara har åtkomst via externalSharedWith kan därför
+// strukturellt aldrig dela vidare, oavsett egen roll i sitt eget konto.
+export function canManageExternalShoppingListShares(
+  caller: Member,
+  list: ShoppingList,
+  roles: Role[]
+): boolean {
+  return (
+    caller.accountId === list.accountId &&
+    hasPermission(caller, roles, "canEditShoppingLists") &&
+    canEditSharedResource(caller, list)
+  );
 }
 
 export function canExportCalendar(

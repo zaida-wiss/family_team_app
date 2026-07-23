@@ -374,6 +374,22 @@ export type ShoppingList = OwnedSharedResource & {
   color: string;
   icon: string | null;
   items: ShoppingItem[];
+  // Delning mellan FAMILJER (2026-07-23, ADR-0026, Zaidas önskemål: "även
+  // shoppinglistor skall kunna delas mellan olika familjer") — sharedWith
+  // (ovan, ärvt från OwnedSharedResource) är bara INOM samma konto. Samma
+  // icke-transitiva mönster som Member.childSharedWith (ADR-0024): en
+  // mottagare som bara har åtkomst hit kan strukturellt aldrig dela vidare,
+  // se canManageExternalShoppingListShares i shared/permissions.ts. "edit"
+  // ger full varu-hantering (lägga till/bocka av/radera), inte omdöpning/
+  // radering av själva listan eller delnings-hantering — det stannar hos
+  // ägarens EGET konto.
+  externalSharedWith?: {
+    memberId: Id;
+    accountId: Id;
+    access: AccessLevel;
+    grantedBy: Id;
+    grantedAt: string;
+  }[];
 };
 
 export type ShoppingItem = {

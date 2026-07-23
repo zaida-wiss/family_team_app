@@ -1,0 +1,13 @@
+.shopping-external-share {
+  margin-top: 8px;
+}
+
+.shopping-external-share__panel {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

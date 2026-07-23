@@ -1,6 +1,8 @@
 import { Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
+import { SharedShoppingLists } from "./SharedShoppingLists";
+import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import {
   canEditSharedResource,
   canViewResource,
@@ -288,6 +290,7 @@ export function ShoppingView({
                     ))}
                   </ul>
                 )}
+                <ShoppingListExternalShare listId={list.id} />
               </div>
             )}
 
@@ -354,6 +357,8 @@ export function ShoppingView({
           </article>
         );
       })}
+
+      <SharedShoppingLists currentMember={currentMember} />
     </div>
   );
 }

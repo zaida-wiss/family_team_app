@@ -1,5 +1,6 @@
 import { Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import {
   canEditSharedResource,
   canViewResource,
@@ -301,6 +302,8 @@ export function ShoppingListsPanel({
               ) : (
                 <p className="empty-note">Listan är privat.</p>
               )}
+
+              {canEditThisList && <ShoppingListExternalShare listId={list.id} />}
             </div>
           </div>
         );
