@@ -170,6 +170,25 @@ export function TodoEditModal({
     setSubtasks((prev) => [...prev, { id: generateId(), title: "", done: false }]);
   }
 
+  // Enter i delmomentets titelfält räcker för att lägga till nästa (2026-07-23,
+  // Zaidas önskemål: "det ska räcka med att trycka enter") — samma mönster
+  // som TodoCreatorModal.tsx.
+  const subtaskInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const pendingFocusIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const index = pendingFocusIndexRef.current;
+    if (index !== null) {
+      subtaskInputRefs.current[index]?.focus();
+      pendingFocusIndexRef.current = null;
+    }
+  }, [subtasks.length]);
+
+  function addSubtaskAndFocusNext() {
+    pendingFocusIndexRef.current = subtasks.length;
+    addSubtask();
+  }
+
   function updateSubtaskTitle(id: Id, title: string) {
     setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
   }
@@ -557,7 +576,14 @@ export function TodoEditModal({
                     aria-label="Delmomentets titel"
                     className="text-input"
                     onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && subtask.title.trim()) {
+                        e.preventDefault();
+                        addSubtaskAndFocusNext();
+                      }
+                    }}
                     placeholder="Till exempel Uppvärmning"
+                    ref={(el) => { subtaskInputRefs.current[index] = el; }}
                     value={subtask.title}
                   />
                   <button

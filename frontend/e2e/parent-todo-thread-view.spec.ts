@@ -683,6 +683,45 @@ test("Redigera uppgift: lägger till ett delmoment via den nya checklista-hanter
   ]);
 });
 
+// 2026-07-23 (Zaidas önskemål: "det ska räcka med att trycka enter") —
+// samma Enter-till-nästa-rad-beteende som skapa-modalen, men i
+// redigera-modalen (autosparas).
+test("Redigera uppgift: Enter i delmomentets titelfält lägger till nästa delmoment", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2", (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Löpning/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  await editDialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+
+  const titleInputs = editDialog.getByLabel("Delmomentets titel");
+  await titleInputs.nth(0).fill("Vattenflaska");
+  await titleInputs.nth(0).press("Enter");
+
+  await expect(titleInputs).toHaveCount(2);
+  await expect(titleInputs.nth(1)).toBeFocused();
+  await page.keyboard.type("Löparskor");
+
+  await expect.poll(() => (updatedPatch?.subtasks as Array<{ title: string }> | undefined)?.map((s) => s.title)).toEqual([
+    "Vattenflaska", "Löparskor"
+  ]);
+});
+
 // 2026-07-08 (Zaidas önskemål: "jag behöver kunna flytta ordningen på
 // delmomenten") — pil-knapper flyttar en rad upp/ner i checklistan.
 test("Redigera uppgift: flyttar ett delmoment upp i checklistan med pilknappen", async ({ page }) => {
@@ -1521,6 +1560,55 @@ test("Ny uppgift-modalen: kan lägga till delmoment redan vid skapande", async (
 
   await expect.poll(() => createdTodo?.title).toBe("Städa rummet");
   expect(createdTodo?.subtasks).toEqual([{ id: expect.any(String), title: "Dammsuga", done: false }]);
+});
+
+// 2026-07-23 (Zaidas önskemål: "för att lägga till fler saker i
+// inköpslistor eller todolistor tex deluppgifter så ska det räcka med att
+// trycka enter") — Enter i delmomentets titelfält lägger till NÄSTA
+// delmoment och flyttar tangentbordsfokus dit, samma förväntan som
+// inköpslistans "Lägg till vara"-fält redan hade. Bara den allra FÖRSTA
+// raden kräver ett klick på "Lägg till delmoment" (ingen rad finns än).
+test("Ny uppgift-modalen: Enter i delmomentets titelfält lägger till nästa delmoment utan att klicka knappen", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  await dialog.getByLabel("Titel").fill("Packa väskan");
+  await dialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+
+  const titleInputs = dialog.getByLabel("Delmomentets titel");
+  await titleInputs.nth(0).fill("Tandborste");
+  await titleInputs.nth(0).press("Enter");
+
+  // Fokus ska nu ligga i den NYA (andra) raden — skriver direkt utan att
+  // klicka i fältet först.
+  await expect(titleInputs).toHaveCount(2);
+  await expect(titleInputs.nth(1)).toBeFocused();
+  await page.keyboard.type("Underkläder");
+  await titleInputs.nth(1).press("Enter");
+
+  await expect(titleInputs).toHaveCount(3);
+  await expect(titleInputs.nth(2)).toBeFocused();
+  await page.keyboard.type("Laddare");
+
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Packa väskan");
+  expect((createdTodo?.subtasks as Array<{ title: string }>).map((s) => s.title)).toEqual([
+    "Tandborste", "Underkläder", "Laddare"
+  ]);
 });
 
 // 2026-07-08 (Zaidas önskemål: "jag behöver kunna flytta ordningen på

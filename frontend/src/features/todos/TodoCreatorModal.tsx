@@ -1,5 +1,5 @@
 import "./TodoCreatorModal.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { suggestEmojiForTitle } from "../../components/emojiData";
@@ -198,6 +198,27 @@ export function TodoCreatorModal({
 
   function addSubtask() {
     setSubtasks((prev) => [...prev, { id: generateId(), title: "", done: false }]);
+  }
+
+  // Enter i delmomentets titelfält räcker för att lägga till nästa (2026-07-23,
+  // Zaidas önskemål: "det ska räcka med att trycka enter") — samma
+  // förväntan som redan fanns för inköpslistors "Lägg till vara"-fält.
+  // subtaskInputRefs/pendingFocusIndexRef flyttar tangentbordsfokus till den
+  // NYA raden direkt, annars måste man klicka i den för att fortsätta skriva.
+  const subtaskInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const pendingFocusIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const index = pendingFocusIndexRef.current;
+    if (index !== null) {
+      subtaskInputRefs.current[index]?.focus();
+      pendingFocusIndexRef.current = null;
+    }
+  }, [subtasks.length]);
+
+  function addSubtaskAndFocusNext() {
+    pendingFocusIndexRef.current = subtasks.length;
+    addSubtask();
   }
 
   function updateSubtaskTitle(id: Id, title: string) {
@@ -666,7 +687,14 @@ export function TodoCreatorModal({
                         aria-label="Delmomentets titel"
                         className="text-input"
                         onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && subtask.title.trim()) {
+                            e.preventDefault();
+                            addSubtaskAndFocusNext();
+                          }
+                        }}
                         placeholder="Till exempel Uppvärmning"
+                        ref={(el) => { subtaskInputRefs.current[index] = el; }}
                         value={subtask.title}
                       />
                       <button
