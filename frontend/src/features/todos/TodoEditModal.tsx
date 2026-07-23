@@ -13,6 +13,8 @@ import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask,
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
 const SELF_VALUE = "__self__";
+// Familjen (2026-07-23) — se TodoCreatorModal.tsx.
+const FAMILY_VALUE = "__family__";
 // Autospara (2026-07-08, Zaidas önskemål: "jag vill inte behöva trycka på
 // spara... det skall sparas ändå när jag skriver") — väntar ut en kort paus i
 // skrivandet innan ändringen skickas, istället för att spara vid VARJE
@@ -107,7 +109,7 @@ export function TodoEditModal({
   const seriesSource = template ?? todo;
 
   function isRecipientChild(id: string): boolean {
-    if (id === SELF_VALUE) return false;
+    if (id === SELF_VALUE || id === FAMILY_VALUE) return false;
     return isChildMember(members.find((m) => m.id === id), roles);
   }
 
@@ -122,11 +124,17 @@ export function TodoEditModal({
   const [newCategoryName, setNewCategoryName] = useState("");
   // Åt vem? (2026-07-08, Zaidas önskemål) — enval (till skillnad från
   // skapa-modalens flerval, som skapar en kopia PER mottagare) eftersom
-  // redigering rör EN befintlig uppgift/serie, inte flera nya.
+  // redigering rör EN befintlig uppgift/serie, inte flera nya. En otilldelad
+  // (Familjen-)todo behandlades tidigare som "antag att den är min egen"
+  // (samma villkor som SELF_VALUE) — en riktig bugg nu när Familjen finns
+  // som ett eget val (2026-07-23): att spara utan att röra "Åt vem?" hade
+  // tyst gjort om en delad familje-uppgift till en personlig.
   const [assigneeId, setAssigneeId] = useState<string>(
-    seriesSource.assignedTo === currentMember.id || !seriesSource.assignedTo
+    seriesSource.assignedTo === currentMember.id
       ? SELF_VALUE
-      : seriesSource.assignedTo
+      : seriesSource.assignedTo === null
+        ? FAMILY_VALUE
+        : seriesSource.assignedTo
   );
   const isForChild = isRecipientChild(assigneeId);
   // Sträng, inte tal (2026-07-07-fix) — se samma resonemang i TodoCreatorModal.tsx.
@@ -217,8 +225,9 @@ export function TodoEditModal({
     }
 
     const isRecurring = recurrence.type !== "none";
+    const isFamilyRecipient = assigneeId === FAMILY_VALUE;
     const isChildRecipient = isRecipientChild(assigneeId);
-    const resolvedAssignedTo = assigneeId === SELF_VALUE ? currentMember.id : assigneeId;
+    const resolvedAssignedTo = assigneeId === SELF_VALUE ? currentMember.id : isFamilyRecipient ? null : assigneeId;
     const cleanedSubtasks = subtasks
       .map((s) => ({ ...s, title: s.title.trim() }))
       .filter((s) => s.title.length > 0);
@@ -230,10 +239,12 @@ export function TodoEditModal({
     // Titel/ikon/kategori/mottagare/stjärnor/timer/återkommelse hör till HELA
     // serien, inte bara dagens boll (2026-07-08, Zaidas önskemål om full
     // fältparitet med skapa-modalen) — sparas på mallen om en sådan finns.
+    // En Familjen-todo hör bara hemma i Familjen-tråden, aldrig en personlig
+    // kategori-tråd (2026-07-23, samma princip som barnens uppgifter).
     const seriesPatch: Partial<Todo> = {
       title: title.trim(),
       visual: { type: "lucide-icon", value: emoji },
-      personalCategoryId: categoryId,
+      personalCategoryId: isFamilyRecipient ? null : categoryId,
       assignedTo: resolvedAssignedTo,
       starValue: isChildRecipient ? starValue : 0,
       timerEnabled: isChildRecipient ? timerEnabled : false,
@@ -357,6 +368,17 @@ export function TodoEditModal({
                   type="button"
                 >
                   Mig själv
+                </button>
+                <button
+                  aria-pressed={assigneeId === FAMILY_VALUE}
+                  className={
+                    "todo-assignee-picker__btn" +
+                    (assigneeId === FAMILY_VALUE ? " todo-assignee-picker__btn--on" : "")
+                  }
+                  onClick={() => setAssigneeId(FAMILY_VALUE)}
+                  type="button"
+                >
+                  Familjen
                 </button>
                 {assignableMembers.map((member) => (
                   <button

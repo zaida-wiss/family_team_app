@@ -135,6 +135,28 @@ export function CalendarEventModal({
             {otherMembers.length > 0 && (
               <div className="cal-attendees">
                 <p className="field-label">Bjud in familjemedlemmar</p>
+                <label
+                  className={
+                    "cal-attendee-item cal-attendee-item--all" +
+                    (otherMembers.every((m) => form.attendeeIds.includes(m.id)) ? " cal-attendee-item--checked" : "")
+                  }
+                >
+                  <input
+                    checked={otherMembers.every((m) => form.attendeeIds.includes(m.id))}
+                    // Hela familjen (2026-07-23, Zaidas önskemål: "just nu
+                    // så går det inte att välja att tilldela... kalendrar
+                    // till familjen, bara på familjemedlemmar") — kryssar i
+                    // eller ur alla på en gång istället för en person i
+                    // taget. attendeeIds sätts direkt (onSetField är redan
+                    // generisk), ingen ny prop/datamodell behövs.
+                    onChange={(e) =>
+                      onSetField("attendeeIds", e.target.checked ? otherMembers.map((m) => m.id) : [])
+                    }
+                    style={{ display: "none" }}
+                    type="checkbox"
+                  />
+                  <span>Hela familjen</span>
+                </label>
                 <div className="cal-attendee-list">
                   {otherMembers.map((member) => {
                     const checked = form.attendeeIds.includes(member.id);

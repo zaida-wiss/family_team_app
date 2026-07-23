@@ -1712,12 +1712,12 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await expect(traningBtn).toBeVisible();
   await expect(hushallBtn).toBeVisible();
 
-  // Utgångsordning (ingen sparad ordning ännu): Barn, Träning, Hushåll.
-  await expect(page.locator(".todo-thread")).toHaveCount(3);
+  // Utgångsordning (ingen sparad ordning ännu): Barn, Familjen, Träning, Hushåll.
+  await expect(page.locator(".todo-thread")).toHaveCount(4);
   const idsBefore = await page.locator(".todo-thread").evaluateAll((els) =>
     els.map((el) => el.getAttribute("data-thread-id"))
   );
-  expect(idsBefore).toEqual(["__children__", "cat-1", "cat-2"]);
+  expect(idsBefore).toEqual(["__children__", "__family__", "cat-1", "cat-2"]);
 
   const traningBox = (await traningBtn.boundingBox())!;
   const hushallBox = (await hushallBtn.boundingBox())!;
@@ -1730,12 +1730,12 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await page.mouse.up();
 
   await expect.poll(() => savedOrder).not.toBeNull();
-  expect(savedOrder).toEqual(["__children__", "cat-2", "cat-1"]);
+  expect(savedOrder).toEqual(["__children__", "__family__", "cat-2", "cat-1"]);
 
   const idsAfter = await page.locator(".todo-thread").evaluateAll((els) =>
     els.map((el) => el.getAttribute("data-thread-id"))
   );
-  expect(idsAfter).toEqual(["__children__", "cat-2", "cat-1"]);
+  expect(idsAfter).toEqual(["__children__", "__family__", "cat-2", "cat-1"]);
 
   // Kategorimenyn ska INTE ha öppnats av draget (bara ett vanligt klick ska
   // göra det).
@@ -1842,4 +1842,62 @@ test("Bollar i tråd: en daglig occurrence av en återkommande mall har full fä
   // Ändringen sparas till MALLEN (hela serien), inte bara dagens occurrence.
   await expect.poll(() => templatePatch?.title).toBe("Borsta tänderna extra noga");
   await expect.poll(() => occurrencePatch).not.toBeNull();
+});
+
+// Familjen (2026-07-23, Zaidas önskemål: "just nu så går det inte att välja
+// att tilldela todo eller kalendrar till familjen, bara på
+// familjemedlemmar", förtydligat: "då hamnar det på familjens gemensamma") —
+// en todo utan tilldelad mottagare (assignedTo: null) hamnar i en delad
+// Familjen-tråd, synlig och avklarbar av alla i kontot.
+const FAMILY_TODO = {
+  id: "todo-family-1", accountId: "acc-1", title: "Handla mat", createdBy: "mem-1",
+  assignedTo: null, isShared: false, status: "pending", starValue: 0,
+  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+  personalCategoryId: null
+};
+
+test("Ny uppgift-modalen: väljer Familjen skickar assignedTo:null, ingen personlig kategori", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
+  await assigneePicker.getByRole("button", { name: "Mig själv" }).click();
+  await assigneePicker.getByRole("button", { name: "Familjen" }).click();
+
+  await dialog.getByLabel("Titel").fill("Handla mat");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Handla mat");
+  expect(createdTodo?.assignedTo).toBeNull();
+  expect(createdTodo?.personalCategoryId).toBeNull();
+});
+
+test("Bollar i tråd: Familjen-tråden visar todos utan tilldelad mottagare, avklarbar av vem som helst", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [OTHER_ADULT_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [FAMILY_TODO] }));
+
+  await openThreadView(page);
+
+  const familyThread = page.getByRole("region", { name: "Tråd: Familjen" });
+  await expect(familyThread).toBeVisible();
+  await expect(familyThread.getByText("Handla mat")).toBeVisible();
 });

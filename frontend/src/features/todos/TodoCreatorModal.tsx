@@ -16,6 +16,11 @@ const DEFAULT_EMOJI = "⭐";
 const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
 const SELF_VALUE = "__self__";
+// Familjen (2026-07-23, Zaidas önskemål: "just nu så går det inte att välja
+// att tilldela todo... till familjen, bara på familjemedlemmar") — en todo
+// utan tilldelad mottagare (assignedTo: null), visas i en delad Familjen-tråd
+// (ParentTodoThreadView.tsx) istället för hos en specifik person.
+const FAMILY_VALUE = "__family__";
 
 type Props = {
   currentMember: Member;
@@ -76,7 +81,7 @@ export function TodoCreatorModal({
   );
 
   function isRecipientChild(id: string): boolean {
-    if (id === SELF_VALUE) return false;
+    if (id === SELF_VALUE || id === FAMILY_VALUE) return false;
     return isChildMember(members.find((m) => m.id === id), roles);
   }
 
@@ -291,12 +296,13 @@ export function TodoCreatorModal({
       // CSV-importen) — varje familjemedlem (eller jag själv) får sin egen
       // todo med eget id/status, inte en delad uppgift med flera tilldelade.
       for (const recipientId of assigneeIds) {
+        const isFamilyRecipient = recipientId === FAMILY_VALUE;
         const isChildRecipient = isRecipientChild(recipientId);
         onCreateTodo({
           id: `todo-${generateId()}`,
           title: trimmedTitle,
           createdBy: currentMember.id,
-          assignedTo: recipientId === SELF_VALUE ? currentMember.id : recipientId,
+          assignedTo: recipientId === SELF_VALUE ? currentMember.id : isFamilyRecipient ? null : recipientId,
           isShared: false,
           status: "pending",
           starValue: isChildRecipient ? starValue : 0,
@@ -317,7 +323,10 @@ export function TodoCreatorModal({
           rejectedReason: null,
           deletedAt: null,
           deletedBy: null,
-          personalCategoryId: categoryId,
+          // En Familjen-kopia hör bara hemma i Familjen-tråden, aldrig i en
+          // personlig kategori-tråd — samma princip som barnens uppgifter
+          // sedan 2026-07-08 (se ParentTodoThreadView.tsx:s kategori-filter).
+          personalCategoryId: isFamilyRecipient ? null : categoryId,
           notes: notes.trim() || null,
           subtasks: cleanedSubtasks.map((s) => ({ ...s, id: generateId() })),
           timerEnabled: isChildRecipient ? timerEnabled : false,
@@ -365,6 +374,17 @@ export function TodoCreatorModal({
                   type="button"
                 >
                   Mig själv
+                </button>
+                <button
+                  aria-pressed={assigneeIds.includes(FAMILY_VALUE)}
+                  className={
+                    "todo-assignee-picker__btn" +
+                    (assigneeIds.includes(FAMILY_VALUE) ? " todo-assignee-picker__btn--on" : "")
+                  }
+                  onClick={() => toggleAssignee(FAMILY_VALUE)}
+                  type="button"
+                >
+                  Familjen
                 </button>
                 {assignableMembers.map((member) => (
                   <button

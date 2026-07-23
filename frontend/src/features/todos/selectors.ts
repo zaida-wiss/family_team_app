@@ -26,19 +26,26 @@ export function getVisibleTodos(
   // permanent osynlig och oredigerbar för den som skapade den, utan felmeddelande.
   const isOwnCreation = (todo: Todo) => todo.createdBy === member.id;
 
+  // Familjen (2026-07-23): en todo utan tilldelad mottagare (assignedTo:
+  // null) hör inte till någon specifik person — ska vara synlig för ALLA i
+  // kontot, inte bara den som skapade den, annars kan en delad familje-
+  // uppgift bli osynlig för familjemedlemmar utan canSeeAllTodos.
+  const isFamilyTodo = (todo: Todo) => todo.assignedTo === null;
+
   if (hasPermission(member, roles, "canSeeOwnTodos")) {
     return activeTodos.filter((todo) => {
-      return todo.assignedTo === member.id || todo.isShared === true || isOwnCreation(todo);
+      return todo.assignedTo === member.id || todo.isShared === true || isOwnCreation(todo) || isFamilyTodo(todo);
     });
   }
 
-  return activeTodos.filter(isOwnCreation);
+  return activeTodos.filter((todo) => isOwnCreation(todo) || isFamilyTodo(todo));
 }
 
 // allMembers måste vara den ofiltrerade medlemslistan (inte activeMembers) — annars
 // kan en todo som tillhör ett borttaget barn inte slå upp namnet längre och visas
 // permanent som "Okänt barn" i historiken, trots att medlemmen bara är dold, inte raderad.
 export function getAssigneeName(todo: Todo, allMembers: Member[]) {
+  if (todo.assignedTo === null) return "Familjen";
   return allMembers.find((member) => member.id === todo.assignedTo)?.name ?? "Okänt barn";
 }
 

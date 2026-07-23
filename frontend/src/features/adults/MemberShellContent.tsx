@@ -402,8 +402,14 @@ export function MemberShellContent({
             // barns vägnar. Samma etablerade mönster som ChildDashboards onCompleteTodo
             // nedan: skickar med den TILLDELADE medlemmen (inte den inloggade föräldern)
             // som canCompleteTodo/completeTodo kontrollerar behörighet mot.
+            // Familjen-tråden (2026-07-23) har ingen tilldelad medlem alls
+            // (assignedTo===null) — faller då tillbaka på currentMember, den
+            // faktiskt inloggade personen som utför handlingen (shared/
+            // permissions.ts:s canCompleteTodo tillåter vem som helst att
+            // slutföra en otilldelad todo, så vilken riktig medlem som helst
+            // duger här).
             const todo = todos.find((t) => t.id === todoId);
-            const assignee = todo && members.find((m) => m.id === todo.assignedTo);
+            const assignee = todo?.assignedTo === null ? currentMember : members.find((m) => m.id === todo?.assignedTo);
             if (assignee) onCompleteTodo(assignee, todoId, roles);
           }}
           personalCategories={personalCategories}

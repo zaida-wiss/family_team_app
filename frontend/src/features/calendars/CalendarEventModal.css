@@ -134,6 +134,14 @@
   background: color-mix(in oklch, var(--primary) 7%, var(--background));
 }
 
+/* Hela familjen (2026-07-23) — en snabbknapp ovanför den individuella
+   listan, samma stil men fetstil så den läses som en genväg, inte ännu en
+   person i listan. */
+.cal-attendee-item--all {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
 .cal-form-actions {
   display: flex;
   align-items: center;

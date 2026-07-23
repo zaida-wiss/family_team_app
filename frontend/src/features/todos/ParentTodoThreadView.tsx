@@ -15,6 +15,10 @@ const HOLD_DURATION_MS = 2000;
 // faktiskt tas bort ur listan.
 const DISSOLVE_DURATION_MS = 500;
 const CHILDREN_THREAD_ID = "__children__";
+// Familjen (2026-07-23, Zaidas önskemål) — en delad tråd för todos utan
+// tilldelad mottagare (assignedTo: null), synlig/klarmarkeringsbar av vem
+// som helst i kontot (shared/permissions.ts:s canCompleteTodo).
+const FAMILY_THREAD_ID = "__family__";
 
 function formatElapsed(ms: number) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -96,6 +100,7 @@ function computeProgress(todo: Todo): number | null {
 }
 
 function assigneeNameFor(todo: Todo, members: Member[]): string {
+  if (todo.assignedTo === null) return "Familjen";
   return members.find((m) => m.id === todo.assignedTo)?.name ?? "Okänt barn";
 }
 
@@ -377,6 +382,26 @@ export function ParentTodoThreadView({
       completedPercent: computeCompletedPercent(childAllTodos)
     };
 
+    // Familjen (2026-07-23) — todos utan tilldelad mottagare (assignedTo:
+    // null), synliga för alla vuxna oavsett vem som skapade dem. Samma
+    // icke-döpbara/raderbara mönster som Barn-tråden.
+    const showFamilyExpired = showExpiredThreadIds.has(FAMILY_THREAD_ID);
+    const familyBaseTodos = visibleTodos.filter(
+      (t) => t.assignedTo === null && (t.status !== "expired" || showFamilyExpired)
+    );
+    const familyAllTodos = applyAssigneeFilter(
+      FAMILY_THREAD_ID,
+      allDueTodos.filter((t) => t.assignedTo === null)
+    );
+    const familyThread: Thread = {
+      id: FAMILY_THREAD_ID,
+      label: "Familjen",
+      deletable: false,
+      assignees: uniqueAssignees(familyBaseTodos, members),
+      todos: sortByEndThenStartTime(applyAssigneeFilter(FAMILY_THREAD_ID, familyBaseTodos)),
+      completedPercent: computeCompletedPercent(familyAllTodos)
+    };
+
     // Kategorier är kontobreda sedan 2026-07-07 (Zaidas beslut — alla vuxna ser
     // och kan redigera varandras kategorier i skapa-/redigera-modalen), men
     // tråd-vyns KOLUMNER visar fortsatt bara MINA egna — annars skulle varje
@@ -392,7 +417,9 @@ export function ParentTodoThreadView({
           // Barnens uppgifter hör alltid hemma i Barn-tråden, aldrig i en
           // personlig kategori-tråd — även om jag skapat uppgiften åt
           // barnet och satt en av mina egna kategorier på den
-          // (2026-07-08, Zaidas fynd/rättelse).
+          // (2026-07-08, Zaidas fynd/rättelse). Samma princip för Familjen-
+          // tråden (2026-07-23) — en otilldelad todo hör bara hemma där.
+          t.assignedTo !== null &&
           !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
           (t.status !== "expired" || showExpired)
       );
@@ -402,6 +429,7 @@ export function ParentTodoThreadView({
           (t) =>
             t.personalCategoryId === category.id &&
             (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+            t.assignedTo !== null &&
             !isChildMember(members.find((m) => m.id === t.assignedTo), roles)
         )
       );
@@ -416,7 +444,7 @@ export function ParentTodoThreadView({
       };
     });
 
-    return [childThread, ...categoryThreads];
+    return [childThread, familyThread, ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters]);
 

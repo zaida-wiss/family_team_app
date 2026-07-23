@@ -82,6 +82,14 @@ export function canCompleteTodo(
   roles: Role[],
   todo: Todo
 ): boolean {
+  // Familjen (2026-07-23) — en todo utan tilldelad mottagare (assignedTo:
+  // null) hör inte till någon specifik person, så vem som helst i kontot
+  // får markera den klar. Ingen risk för missbruk: assignedMemberNeedsApproval
+  // returnerar redan false för null, så ingen godkännande-väg kringgås, och
+  // inga stjärnor delas ut (kräver en riktig mottagare, se todosService.ts).
+  if (!todo.assignedTo) {
+    return true;
+  }
   return (
     todo.assignedTo === member.id &&
     hasPermission(member, roles, "canCompleteAssignedTodos")
