@@ -131,7 +131,7 @@ export function AccountSettings({
         </div>
       )}
 
-      {canManageMembers && activeMembers.length > 0 && (
+      {activeMembers.length > 0 && (
         <div className="settings-sub">
           <h3 className="settings-sub-title">Familjemedlemmar</h3>
           <div className="settings-member-list">
@@ -142,15 +142,17 @@ export function AccountSettings({
                   <strong>{member.name}</strong>
                   <small>{roles.find((r) => r.id === member.roleId)?.name ?? (member.isChild ? "Barn" : "Medl")}</small>
                 </div>
-                <button
-                  aria-label={`Redigera ${member.name}`}
-                  className="icon-button"
-                  onClick={() => setEditingMemberId(member.id)}
-                  title="Redigera"
-                  type="button"
-                >
-                  <Pencil size={16} />
-                </button>
+                {canManageMembers && (
+                  <button
+                    aria-label={`Redigera ${member.name}`}
+                    className="icon-button"
+                    onClick={() => setEditingMemberId(member.id)}
+                    title="Redigera"
+                    type="button"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                )}
               </div>
             ))}
           </div>

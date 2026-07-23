@@ -46,8 +46,11 @@ export function AppRouter() {
   return (
     <Shell
       activeMembership={nav.activeMembership}
+      memberships={nav.memberships}
       onLogout={nav.onLogout}
       onSwitchAccount={nav.onSwitchAccount}
+      onSelectMembership={nav.onSelectMembership}
+      onMembershipsUpdated={nav.onMembershipsUpdated}
     />
   );
 }

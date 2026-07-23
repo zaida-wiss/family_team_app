@@ -160,7 +160,13 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         {
           id: "account-name",
           label: "Konto",
-          content: <AccountSetup account={activeAccount} onUpdateAccount={settingsProps.onUpdateAccount} />
+          content: (
+            <AccountSetup
+              account={activeAccount}
+              onCreateFamily={settingsProps.onCreateFamily}
+              onUpdateAccount={settingsProps.onUpdateAccount}
+            />
+          )
         },
         {
           id: "members",

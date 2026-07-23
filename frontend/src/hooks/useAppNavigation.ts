@@ -16,7 +16,15 @@ type Screen =
       resetToken?: string;
     }
   | { screen: "picker"; user: User; memberships: Membership[]; onSelect: (m: Membership) => void; onLogout: () => void; onMembershipsUpdated: (ms: Membership[]) => void }
-  | { screen: "shell"; activeMembership: Membership; onLogout: () => Promise<void>; onSwitchAccount: () => void };
+  | {
+      screen: "shell";
+      activeMembership: Membership;
+      memberships: Membership[];
+      onLogout: () => Promise<void>;
+      onSwitchAccount: () => void;
+      onSelectMembership: (m: Membership) => void;
+      onMembershipsUpdated: (ms: Membership[]) => void;
+    };
 
 export function useAppNavigation(): Screen {
   const { state: authState, login, childLogin, register, logout, updateMemberships, updateUser, applySession } = useAuth();
@@ -93,7 +101,10 @@ export function useAppNavigation(): Screen {
   return {
     screen: "shell",
     activeMembership,
+    memberships,
     onLogout: handleLogout,
-    onSwitchAccount: () => setActiveMembership(null)
+    onSwitchAccount: () => setActiveMembership(null),
+    onSelectMembership: selectMembership,
+    onMembershipsUpdated: updateMemberships
   };
 }

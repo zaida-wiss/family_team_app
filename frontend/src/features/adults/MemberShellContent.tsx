@@ -25,7 +25,7 @@ const TodosView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Membership, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
@@ -96,6 +96,8 @@ type Props = {
   onDeleteShoppingItem: (listId: string, itemId: string) => void;
   onClearCompletedShoppingItems: (listId: string) => void;
   calendarSettings?: CalendarSettings;
+  otherFamilies: Membership[];
+  onSwitchFamily: (m: Membership) => void;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
@@ -132,6 +134,7 @@ export function MemberShellContent({
   onCreateShoppingList, onShareShoppingList, onRemoveShoppingListShare,
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
+  otherFamilies, onSwitchFamily,
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
@@ -463,6 +466,24 @@ export function MemberShellContent({
   // Ingen vald → översikten
   return (
     <>
+      {otherFamilies.length > 0 && (
+        <label className="field-label" style={{ maxWidth: 260, marginBottom: 12 }}>
+          Familj
+          <select
+            className="text-input"
+            onChange={(e) => {
+              const target = otherFamilies.find((f) => f.member.id === e.target.value);
+              if (target) onSwitchFamily(target);
+            }}
+            value={currentMember.id}
+          >
+            <option value={currentMember.id}>{accountName}</option>
+            {otherFamilies.map((f) => (
+              <option key={f.member.id} value={f.member.id}>{f.account?.name ?? "Okänt konto"}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <HomePage
         currentMember={currentMember}
         accountName={accountName}

@@ -8,7 +8,13 @@ import { useTodoTemplatesState } from "../features/todos/useTodoTemplatesState";
 import { useAppFont } from "../components/FontPicker";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TodoThreadRange, TodoViewMode } from "@shared/types";
 
-export function useShellState(activeMembership: Membership, onLogout: () => Promise<void>) {
+export function useShellState(
+  activeMembership: Membership,
+  onLogout: () => Promise<void>,
+  memberships: Membership[],
+  onSelectMembership: (m: Membership) => void,
+  onMembershipsUpdated: (ms: Membership[]) => void
+) {
   // En enda instans delad mellan flytande temaväljaren (Shell) och Inställningar-panelen
   // (SettingsContent) — annars visar de "aktiv"-markering utifrån varsin egen state och
   // ett typsnittsbyte i den ena syns inte som markerad i den andra förrän omladdning.
@@ -85,6 +91,20 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
 
   const permissions = useShellPermissions(currentMember, roles);
 
+  // Andra familjer man är medlem i (2026-07-23, Zaidas önskemål: kunna vara
+  // med i flera familjer och växla mellan dem i hemvyn) — memberships kommer
+  // från inloggnings-/refresh-svaret (useAuth.ts), inte från denna sessions
+  // egen activeAccount-state, så ett kontonamn ändrat i Inställningar syns
+  // här först efter nästa inloggning/refresh. Den AKTIVA familjen visas
+  // därför alltid via activeAccount.name, aldrig via denna lista.
+  const otherFamilies = memberships.filter((m) => m.account?.id !== activeAccount.id);
+
+  async function createFamily(name: string) {
+    const { membership } = await accountsApi.setup(name);
+    onMembershipsUpdated([...memberships, membership]);
+    onSelectMembership(membership);
+  }
+
   const themePickerMember = themePickerMemberId
     ? activeMembers.find((m) => m.id === themePickerMemberId) ?? null
     : null;
@@ -135,6 +155,8 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     members,
     selectedDashboardMemberId,
     roles,
+    otherFamilies,
+    onSwitchFamily: onSelectMembership,
     todos,
     rewards,
     calendars,
@@ -241,6 +263,7 @@ export function useShellState(activeMembership: Membership, onLogout: () => Prom
     canManageRoles: permissions.canManageRoles,
     canViewTrash: permissions.canViewTrash,
     onUpdateAccount: setActiveAccount,
+    onCreateFamily: createFamily,
     onUpdateCalendarSettings: (settings: CalendarSettings) =>
       setActiveAccount({ ...activeAccount, calendarSettings: settings }),
     // Till skillnad från onUpdateCalendarSettings ovan (som bara sätter

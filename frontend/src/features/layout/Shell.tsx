@@ -9,8 +9,11 @@ import type { Membership } from "@shared/types";
 
 export type ShellProps = {
   activeMembership: Membership;
+  memberships: Membership[];
   onLogout: () => Promise<void>;
   onSwitchAccount: () => void;
+  onSelectMembership: (m: Membership) => void;
+  onMembershipsUpdated: (ms: Membership[]) => void;
 };
 
 const ChildShellContent = lazy(() =>
@@ -87,7 +90,14 @@ function PanelRouter({
   );
 }
 
-export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProps) {
+export function Shell({
+  activeMembership,
+  memberships,
+  onLogout,
+  onSwitchAccount,
+  onSelectMembership,
+  onMembershipsUpdated,
+}: ShellProps) {
   const {
     activeAccount,
     currentMember,
@@ -104,7 +114,7 @@ export function Shell({ activeMembership, onLogout, onSwitchAccount }: ShellProp
     shopSettings,
     fontId,
     setFontId,
-  } = useShellState(activeMembership, onLogout);
+  } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated);
 
   // 2026-07-23 (Zaidas beslut): ett medlemsval visas numera bara på
   // Medlemmar-panelen, inte Hem (se useAppState.ts:s setActivePanel) — den
