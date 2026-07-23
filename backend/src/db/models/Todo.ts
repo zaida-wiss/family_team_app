@@ -40,7 +40,9 @@ const todoSchema = new Schema<Todo>({
       {
         id: { type: String, required: true },
         title: { type: String, required: true },
-        done: { type: Boolean, required: true }
+        done: { type: Boolean, required: true },
+        // Delmoment-tilldelning (2026-07-23) — se TodoSubtask i shared/types.ts.
+        assignedTo: { type: String, default: null }
       }
     ],
     default: undefined

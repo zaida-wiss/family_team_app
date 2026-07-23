@@ -1,0 +1,28 @@
+.subtask-assignee-btn {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--border);
+  background: var(--muted);
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+/* En riktig medlemsfärg gör kanten fylld i stället för streckad — samma
+   "otilldelad = streckad, tilldelad = fylld" princip som resten av appens
+   assignee-indikatorer (t.ex. todo-thread__ball). */
+.subtask-assignee-btn[style] {
+  border-style: solid;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.subtask-assignee-btn:hover {
+  border-color: var(--primary);
+}

@@ -3,7 +3,7 @@ import { Pencil, X } from "lucide-react";
 import { Fragment } from "react";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
-import type { Id, RecurrenceUnit, Todo } from "@shared/types";
+import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 
 type Props = {
@@ -11,6 +11,10 @@ type Props = {
   assigneeName: string;
   assigneeColor?: string;
   categoryName: string | null;
+  // Delmoment kan ha en egen tilldelad familjemedlem (2026-07-23) — bara
+  // behövd för att slå upp namn/färg till den lilla, icke-interaktiva
+  // markören i checklistan (redigeras i TodoEditModal, inte här).
+  members: Member[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onClose: () => void;
   onEdit: () => void;
@@ -79,6 +83,7 @@ export function TodoDetailView({
   assigneeName,
   assigneeColor,
   categoryName,
+  members,
   onToggleSubtask,
   onClose,
   onEdit
@@ -143,19 +148,32 @@ export function TodoDetailView({
               </div>
 
               <ul className="todo-detail-modal__checklist">
-                {subtasks.map((subtask) => (
-                  <li className="todo-detail-modal__checklist-item" key={subtask.id}>
-                    <input
-                      aria-label={subtask.title}
-                      checked={subtask.done}
-                      onChange={() => onToggleSubtask(todo.id, subtask.id)}
-                      type="checkbox"
-                    />
-                    <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
-                      {subtask.title}
-                    </span>
-                  </li>
-                ))}
+                {subtasks.map((subtask) => {
+                  const subtaskAssignee = members.find((m) => m.id === subtask.assignedTo);
+                  return (
+                    <li className="todo-detail-modal__checklist-item" key={subtask.id}>
+                      <input
+                        aria-label={subtaskAssignee ? `${subtask.title}, tilldelad ${subtaskAssignee.name}` : subtask.title}
+                        checked={subtask.done}
+                        onChange={() => onToggleSubtask(todo.id, subtask.id)}
+                        type="checkbox"
+                      />
+                      <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
+                        {subtask.title}
+                      </span>
+                      {subtaskAssignee && (
+                        <span
+                          aria-hidden="true"
+                          className="todo-detail-modal__checklist-item-assignee"
+                          style={subtaskAssignee.color ? { background: subtaskAssignee.color } : undefined}
+                          title={subtaskAssignee.name}
+                        >
+                          {subtaskAssignee.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </>
           ) : (

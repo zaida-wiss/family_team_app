@@ -263,7 +263,8 @@ export const TodoVisualSchema = z.object({
 export const TodoSubtaskSchema = z.object({
   id: IdSchema,
   title: z.string().min(1, "Delmomentets titel krävs"),
-  done: z.boolean()
+  done: z.boolean(),
+  assignedTo: IdSchema.nullable().optional()
 });
 
 // Flera tidsintervall per dag på samma återkommande mall (2026-07-05) — se

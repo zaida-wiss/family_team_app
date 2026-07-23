@@ -518,6 +518,14 @@ export type TodoSubtask = {
   id: Id;
   title: string;
   done: boolean;
+  // Delmoment kan tilldelas en enskild familjemedlem (2026-07-23, Zaidas
+  // önskemål: "deluppgifter skall gå att assigna av familjemedlemmar...
+  // så de blir färger som tillhör familjemedlemmen") — helt oberoende av
+  // vem/vad HELA uppgiften (Todo.assignedTo) är tilldelad, t.ex. en delad
+  // Familjen-uppgift "Handla mat" där olika delmoment görs av olika
+  // personer. Valfritt och bakåtkompatibelt, saknas fältet visas
+  // delmomentet som otilldelat.
+  assignedTo?: Id | null;
 };
 
 // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — en medlem kan skapa

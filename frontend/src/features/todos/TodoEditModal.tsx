@@ -7,6 +7,7 @@ import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
 import { isChildMember } from "./selectors";
+import { SubtaskAssigneeButton } from "./SubtaskAssigneeButton";
 import { generateId } from "../../utils/uuid";
 import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTemplate, TodoTemplateTask, TodoTimeWindow } from "@shared/types";
 
@@ -116,6 +117,10 @@ export function TodoEditModal({
   // Alla andra familjemedlemmar (samma mönster som TodoCreatorModal.tsx).
   const assignableMembers = members.filter((m) => m.deletedAt === null && m.id !== currentMember.id);
 
+  // Delmoment kan tilldelas VILKEN familjemedlem som helst (2026-07-23,
+  // samma mönster som TodoCreatorModal.tsx), inklusive mig själv.
+  const subtaskAssignableMembers = members.filter((m) => m.deletedAt === null);
+
   const [title, setTitle] = useState(seriesSource.title);
   const [emoji, setEmoji] = useState(seriesSource.visual.value);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
@@ -167,6 +172,10 @@ export function TodoEditModal({
 
   function updateSubtaskTitle(id: Id, title: string) {
     setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
+  }
+
+  function updateSubtaskAssignee(id: Id, nextAssignee: string | null) {
+    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, assignedTo: nextAssignee } : s)));
   }
 
   function removeSubtask(id: Id) {
@@ -537,6 +546,13 @@ export function TodoEditModal({
             <ul className="todo-edit-modal__subtasks">
               {subtasks.map((subtask, index) => (
                 <li key={subtask.id} className="todo-edit-modal__subtask-row">
+                  {subtaskAssignableMembers.length > 0 && (
+                    <SubtaskAssigneeButton
+                      assignedTo={subtask.assignedTo}
+                      members={subtaskAssignableMembers}
+                      onCycle={(next) => updateSubtaskAssignee(subtask.id, next)}
+                    />
+                  )}
                   <input
                     aria-label="Delmomentets titel"
                     className="text-input"

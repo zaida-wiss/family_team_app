@@ -376,6 +376,34 @@ test("Bollar i tråd: kort tryck öppnar visa-vyn med checklista, avbockning anr
   await expect(dialog).toHaveCount(0);
 });
 
+// Delmoment-tilldelning (2026-07-23) — visa-vyn visar en liten färgad
+// markör med tilldelad medlems initial bredvid ett tilldelat delmoment.
+test("Bollar i tråd: visa-vyn visar en färgad markör för ett tilldelat delmoment", async ({ page }) => {
+  const TODO_WITH_ASSIGNED_SUBTASK = {
+    ...PERSONAL_TODO_WITH_SUBTASKS,
+    subtasks: [
+      { id: "sub-1", title: "Uppvärmning", done: true, assignedTo: "mem-2" },
+      { id: "sub-2", title: "Bänkpress", done: false }
+    ]
+  };
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, OTHER_ADULT_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TODO_WITH_ASSIGNED_SUBTASK] });
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Styrketräning/ }).click();
+  const dialog = page.getByRole("dialog");
+
+  await expect(dialog.getByRole("checkbox", { name: "Uppvärmning, tilldelad Andra Föräldern" })).toBeVisible();
+  await expect(dialog.getByRole("checkbox", { name: "Bänkpress" })).toBeVisible();
+  await expect(dialog.locator(".todo-detail-modal__checklist-item-assignee")).toHaveCount(1);
+  await expect(dialog.locator(".todo-detail-modal__checklist-item-assignee")).toHaveText("A");
+});
+
 // 2026-07-07 (Zaidas fynd): "deluppgifter skall inte markeras som utförda av
 // att jag trycker på texten. Jag måste trycka i den lilla kryssrutan" — texten
 // låg tidigare INUTI samma <label> som kryssrutan, vilket gjorde att klick på
@@ -1900,4 +1928,80 @@ test("Bollar i tråd: Familjen-tråden visar todos utan tilldelad mottagare, avk
   const familyThread = page.getByRole("region", { name: "Tråd: Familjen" });
   await expect(familyThread).toBeVisible();
   await expect(familyThread.getByText("Handla mat")).toBeVisible();
+});
+
+// Delmoment-tilldelning (2026-07-23, Zaidas önskemål: "deluppgifter skall
+// gå att assigna av familjemedlemmar på ett minimalistiskt och snyggt sätt
+// så de blir färger som tillhör familjemedlemmen") — en liten cirkel per
+// delmoment cyklar Ingen → medlem 1 → medlem 2 → ... → Ingen vid klick.
+test("Ny uppgift-modalen: tilldelar ett delmoment en familjemedlem via cirkel-knappen, sparas med rätt assignedTo", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, OTHER_ADULT_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromBarnThread(page);
+  const dialog = page.getByRole("dialog");
+
+  await dialog.getByLabel("Titel").fill("Handla mat");
+  await dialog.getByRole("button", { name: "Lägg till delmoment" }).click();
+  await dialog.getByLabel("Delmomentets titel").fill("Handla mjölk");
+
+  const assigneeBtn = dialog.getByRole("button", { name: "Ingen tilldelad. Klicka för att tilldela." });
+  await expect(assigneeBtn).toBeVisible();
+  await assigneeBtn.click();
+  await expect(dialog.getByRole("button", { name: "Tilldelad Testförälder. Klicka för att byta." })).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Tilldelad Testförälder. Klicka för att byta." }).click();
+  await expect(dialog.getByRole("button", { name: "Tilldelad Andra Föräldern. Klicka för att byta." })).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Tilldelad Andra Föräldern. Klicka för att byta." }).click();
+  await expect(dialog.getByRole("button", { name: "Ingen tilldelad. Klicka för att tilldela." })).toBeVisible();
+
+  // Går tillbaka ett steg (Andra Föräldern) innan vi skapar uppgiften.
+  await dialog.getByRole("button", { name: "Ingen tilldelad. Klicka för att tilldela." }).click();
+  await dialog.getByRole("button", { name: "Tilldelad Testförälder. Klicka för att byta." }).click();
+
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Handla mat");
+  const subtasks = createdTodo?.subtasks as Array<{ title: string; assignedTo: string | null }>;
+  expect(subtasks[0].assignedTo).toBe("mem-2");
+});
+
+test("Redigera uppgift: cyklar ett delmoments tilldelning, autosparas", async ({ page }) => {
+  let updatedPatch: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, OTHER_ADULT_MEMBER] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route(`**/api/todos/${PERSONAL_TODO_WITH_SUBTASKS.id}`, (route) => {
+    if (route.request().method() === "PATCH") {
+      updatedPatch = route.request().postDataJSON() as Record<string, unknown>;
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Styrketräning/ }).click();
+  await page.getByRole("button", { name: "Redigera uppgift" }).click();
+  const dialog = page.getByRole("dialog");
+
+  const assigneeBtn = dialog.getByRole("button", { name: "Ingen tilldelad. Klicka för att tilldela." }).first();
+  await assigneeBtn.click();
+
+  await expect.poll(() => (updatedPatch?.subtasks as Array<{ assignedTo: string | null }> | undefined)?.[0]?.assignedTo)
+    .toBe("mem-1");
 });

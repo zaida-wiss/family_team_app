@@ -946,6 +946,7 @@ export function ParentTodoThreadView({
           assigneeName={assigneeNameFor(detailTodo, members)}
           assigneeColor={assigneeColorFor(detailTodo, members)}
           categoryName={categories.find((c) => c.id === detailTodo.personalCategoryId)?.name ?? null}
+          members={members}
           onToggleSubtask={onToggleSubtask}
           onClose={() => setDetailTodoId(null)}
           onEdit={() => {
