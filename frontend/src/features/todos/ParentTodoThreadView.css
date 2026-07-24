@@ -14,9 +14,22 @@
    (surfplattor, desktop) istället för att hoppa direkt till samma storlek
    oavsett om skärmen är 500px eller 5000px bred. */
 /* Redigeringsläge (2026-07-24, Zaidas önskemål) — en liten knapp uppe till
-   höger, ovanför själva tråd-raden, låser upp göm-genväg + bubbel-drag. */
+   höger, ovanför själva tråd-raden, låser upp göm-genväg + bubbel-drag.
+
+   min-width: 0 är INTE kosmetiskt (2026-07-25-fynd, Zaida: "bubbelvyn är
+   väldigt bred... det är endast bubbelsektionen som ska gå att skrolla
+   sidledes"). .dashboard-list (components.css) är ett CSS-grid — precis som
+   flex-items defaultar grid-items till min-width:auto, vilket betyder "så
+   bred som innehållets min-content-bredd". Innan denna wrapper fanns var
+   .todo-thread-view (med sin egen overflow-x:auto) DIREKT grid-item, och
+   fungerade. Nu är wrappern grid-item istället, och UTAN min-width:0 vinner
+   den wide flex-radens min-content-bredd — hela sidan blir scrollbar
+   sidledes istället för att bara .todo-thread-view scrollar internt, och
+   redigeringsknappen (första barnet, INTE del av den skrollande raden)
+   hamnar utanför synligt område. */
 .todo-thread-view-wrapper {
   position: relative;
+  min-width: 0;
 }
 
 .todo-thread-view__toolbar {
