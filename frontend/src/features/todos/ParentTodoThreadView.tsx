@@ -1,7 +1,7 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, EyeOff, Info, Pencil, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, EyeOff, Info, Pencil, Plus, X } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
@@ -649,6 +649,38 @@ export function ParentTodoThreadView({
     onReorderThreads(next);
   }
 
+  // Flytta-knappar som alternativ till håll-och-dra (2026-07-25, Zaidas
+  // önskemål: "det vore bättre om det gick att välja 'flytta' i
+  // kategorimenyn... flytta går att flytta både innehåll och kategori") —
+  // drag fungerar fortfarande, men ett explicit menyval är mer pålitligt på
+  // touch, samma resonemang som redan gjorde delmomentens ordning till
+  // pilknappar istället för drag (TodoCreatorModal.tsx:s moveSubtask).
+  function moveThread(threadId: Id, direction: -1 | 1) {
+    const ids = orderedThreads.map((t) => t.id);
+    const index = ids.indexOf(threadId);
+    const targetIndex = index + direction;
+    if (index === -1 || targetIndex < 0 || targetIndex >= ids.length) return;
+    const next = [...ids];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    onReorderThreads(next);
+  }
+
+  function handleMoveThreadFromMenu(threadId: Id, direction: -1 | 1) {
+    setMenuCategoryId(null);
+    moveThread(threadId, direction);
+  }
+
+  // Motsvarande för en bubbla INOM sin egen tråd (bara i redigeringsläge).
+  function moveBubble(threadTodos: Todo[], threadId: Id, key: Id, direction: -1 | 1) {
+    const keys = threadTodos.map(stableBubbleKey);
+    const index = keys.indexOf(key);
+    const targetIndex = index + direction;
+    if (index === -1 || targetIndex < 0 || targetIndex >= keys.length) return;
+    const next = [...keys];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    onReorderBubbles(threadId, next);
+  }
+
   function handleThreadPointerDown(e: React.PointerEvent<HTMLButtonElement>, threadId: Id) {
     dragStateRef.current = { id: threadId, x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -1127,6 +1159,20 @@ export function ParentTodoThreadView({
                   >
                     Lägg till uppgift
                   </button>
+                  <button
+                    disabled={orderedThreads.findIndex((t) => t.id === thread.id) === 0}
+                    onClick={() => handleMoveThreadFromMenu(thread.id, -1)}
+                    type="button"
+                  >
+                    ◀ Flytta vänster
+                  </button>
+                  <button
+                    disabled={orderedThreads.findIndex((t) => t.id === thread.id) === orderedThreads.length - 1}
+                    onClick={() => handleMoveThreadFromMenu(thread.id, 1)}
+                    type="button"
+                  >
+                    Flytta höger ▶
+                  </button>
                   <button onClick={() => handleToggleExpiredFromMenu(thread.id)} type="button">
                     {showExpiredThreadIds.has(thread.id) ? "Dölj utgångna" : "Visa utgångna"}
                   </button>
@@ -1249,6 +1295,29 @@ export function ParentTodoThreadView({
                         <span className="todo-thread__ball-progress">{progress}%</span>
                       )}
                     </button>
+
+                    {editMode && (
+                      <div className="todo-thread__move-buttons">
+                        <button
+                          aria-label={`Flytta "${todo.title}" uppåt`}
+                          className="icon-button"
+                          disabled={thread.todos.indexOf(todo) === 0}
+                          onClick={() => moveBubble(thread.todos, thread.id, bubbleKey, -1)}
+                          type="button"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          aria-label={`Flytta "${todo.title}" nedåt`}
+                          className="icon-button"
+                          disabled={thread.todos.indexOf(todo) === thread.todos.length - 1}
+                          onClick={() => moveBubble(thread.todos, thread.id, bubbleKey, 1)}
+                          type="button"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+                    )}
 
                     {inProgressMembers.length >= 2 && (
                       <div className="todo-thread__in-progress" aria-hidden="true">

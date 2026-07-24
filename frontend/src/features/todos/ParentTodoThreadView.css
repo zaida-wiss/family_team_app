@@ -72,7 +72,16 @@
 .todo-thread-view {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  /* 2026-07-25-fynd (Zaidas ord: "det skall inte vara någon border längst
+     ner med marginal nertill, bubbelsysslorna skall gå hela vägen ner") —
+     var flex-start, vilket lät varje kolumn krympa till sin EGEN
+     bollistas höjd istället för att fylla radens fulla höjd. En kortare
+     tråd (färre bubblor) slutade då mitt i ytan, med kolumnens
+     bakgrund/rundade kant synligt avslutad ovanför tomt sidutrymme — såg ut
+     som en oavsiktlig kant/marginal. stretch tvingar alla kolumner att
+     matcha radens höjd (den högsta kolumnen, eller min-height nedan om alla
+     är korta), var och en fortsatt begränsad av sin egen max-height nedan. */
+  align-items: stretch;
   --ball-size: clamp(80px, 11vw, 116px);
   gap: clamp(4px, 1vw, 8px);
   overflow-x: auto;
@@ -80,7 +89,7 @@
   /* Fyller kvarvarande yta ovanför bottenmenyn (2026-07-05, Zaidas begäran,
      efter att godkännande-sektionen togs bort ur panelen) — bara den här
      sektionen berörs, ingen annan panel delar klassen. */
-  min-height: 60vh;
+  min-height: 70vh;
 }
 
 /* Kolumnen matchar bollens bredd med en liten, konstant marginal — växer med
@@ -289,6 +298,17 @@
 .todo-thread__ball--edit {
   cursor: grab;
   touch-action: none;
+}
+
+/* Flytta-knappar som pålitligt alternativ till håll-och-dra (2026-07-25,
+   Zaidas önskemål) — samma princip som delmomentens upp/ner-pilar
+   (TodoCreatorModal.tsx), bara i redigeringsläge. Staplade vertikalt (inte
+   sida vid sida) så de får plats i den smala kolumnbredden utan att gå
+   under 44×44px touch-målet (CLAUDE.md, icke förhandlingsbart). */
+.todo-thread__move-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .todo-thread__category-input {
