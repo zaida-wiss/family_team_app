@@ -6,8 +6,9 @@ import type { ReactNode } from "react";
 export type SettingsSubcategory = {
   id: string;
   label: string;
-  content: ReactNode;
-};
+  icon?: ReactNode;
+  variant?: "danger";
+} & ({ content: ReactNode; onSelect?: never } | { content?: never; onSelect: () => void });
 
 export type SettingsCategory = {
   id: string;
@@ -113,13 +114,16 @@ export function SettingsCategoryNav({ categories }: Props) {
         <div className="settings-subcategory-list">
           {activeCategory.subcategories.map((sub) => (
             <button
-              className="settings-subcategory-btn"
+              className={`settings-subcategory-btn${sub.variant === "danger" ? " settings-subcategory-btn--danger" : ""}`}
               key={sub.id}
-              onClick={() => setActiveSubId(sub.id)}
+              onClick={() => (sub.onSelect ? sub.onSelect() : setActiveSubId(sub.id))}
               type="button"
             >
-              <span>{sub.label}</span>
-              <ChevronRight aria-hidden="true" size={18} />
+              <span className="settings-subcategory-btn__label">
+                {sub.icon}
+                {sub.label}
+              </span>
+              {!sub.onSelect && <ChevronRight aria-hidden="true" size={18} />}
             </button>
           ))}
         </div>

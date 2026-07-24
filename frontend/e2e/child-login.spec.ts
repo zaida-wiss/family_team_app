@@ -112,10 +112,10 @@ test("förälder skapar barnets inloggning, barnet loggar in och ser sin dashboa
   expect(credentialsSet).toBe(true);
   await page.getByRole("button", { name: "Stäng" }).click();
 
-  // Logga ut (tillbaka till underkategori-listan via brödsmulan, sedan Logga ut).
+  // Logga ut (tillbaka till underkategori-listan via brödsmulan, sedan Logga ut + bekräftelsemodal).
   await page.getByRole("button", { name: "Konto & familj" }).click();
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
-  await page.getByRole("button", { name: "Logga ut från Familjeappen" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Logga ut", exact: true }).click();
   await expect(page.locator("p.eyebrow", { hasText: "Logga in" })).toBeVisible();
 
   // Barnet loggar in via "Logga in som barn".

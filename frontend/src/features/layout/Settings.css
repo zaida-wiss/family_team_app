@@ -26,24 +26,6 @@
   line-height: 1.4;
 }
 
-.settings-logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--destructive);
-  transition: background 0.15s;
-  padding: 0;
-}
-
-.settings-logout-btn:hover {
-  opacity: 0.75;
-}
-
 .settings-member-list {
   display: grid;
   gap: 8px;

@@ -1,0 +1,45 @@
+.logout-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.logout-confirm-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 360px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logout-confirm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logout-confirm-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.logout-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.logout-confirm-actions .danger-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

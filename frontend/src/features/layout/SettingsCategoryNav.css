@@ -102,6 +102,20 @@
   flex-shrink: 0;
 }
 
+.settings-subcategory-btn__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-subcategory-btn--danger {
+  color: var(--destructive);
+}
+
+.settings-subcategory-btn--danger svg {
+  color: var(--destructive);
+}
+
 .settings-panel {
   display: grid;
   gap: 12px;
