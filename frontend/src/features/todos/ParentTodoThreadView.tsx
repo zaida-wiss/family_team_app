@@ -1,14 +1,15 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, EyeOff, Info, Pencil, X } from "lucide-react";
+import { Check, EyeOff, Info, Pencil, Plus, X } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { downloadCsv, todosToCsv } from "./todoCsv";
-import { isRecurringTemplate } from "./recurringTodos";
+import { dateOnlyToISO, isRecurringTemplate } from "./recurringTodos";
 import { isChildMember } from "./selectors";
+import { generateId } from "../../utils/uuid";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -51,6 +52,11 @@ type Props = {
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
   onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
+  // Ny kategori-knapp längst till höger i verktygsfältet (2026-07-25, Zaidas
+  // önskemål) — samma "tom eller från mall"-flöde som redan fanns inbäddat i
+  // TodoCreatorModal.tsx, nu även nåbart direkt från tråd-vyn.
+  categoryTemplates: TodoCategoryTemplate[];
+  onCreateTodo: (todo: Todo) => void;
   onDeleteTodo: (todoId: Id) => void;
   onAddTodoToCategory: (categoryId: Id | null) => void;
   todoThreadOrder: Id[];
@@ -231,6 +237,8 @@ export function ParentTodoThreadView({
   onSetCategoryHidden,
   onCreateTaskTemplate,
   onCreateCategoryTemplate,
+  categoryTemplates,
+  onCreateTodo,
   onDeleteTodo,
   onAddTodoToCategory,
   todoThreadOrder,
@@ -329,6 +337,78 @@ export function ParentTodoThreadView({
   // fasta undertexten "Dagens familjebubblor – pilla på en när den är
   // klar!" som togs bort ur TodosView.tsx samma dag).
   const [showInfo, setShowInfo] = useState(false);
+
+  // Ny kategori-knapp (+) längst till höger (2026-07-25, Zaidas önskemål:
+  // "lägga till en ny kategori eller hämta en från mall") — samma logik som
+  // submitCategoryFromTemplate i TodoCreatorModal.tsx, flyttad hit så den går
+  // att nå direkt från tråd-vyn utan att öppna hela uppgifts-skapa-flödet.
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryMode, setNewCategoryMode] = useState<"empty" | "template">("empty");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryTemplateId, setNewCategoryTemplateId] = useState("");
+  const [newCategoryTemplateStartDate, setNewCategoryTemplateStartDate] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
+
+  const canSubmitNewCategory =
+    newCategoryMode === "template"
+      ? Boolean(newCategoryTemplateId && newCategoryTemplateStartDate)
+      : newCategoryName.trim().length > 0;
+
+  function closeNewCategoryModal() {
+    setShowNewCategory(false);
+    setNewCategoryMode("empty");
+    setNewCategoryName("");
+    setNewCategoryTemplateId("");
+    setNewCategoryTemplateStartDate("");
+  }
+
+  async function submitNewCategory() {
+    if (!canSubmitNewCategory || creatingCategory) return;
+    setCreatingCategory(true);
+    try {
+      if (newCategoryMode === "template") {
+        const template = categoryTemplates.find((t) => t.id === newCategoryTemplateId);
+        if (!template) return;
+        const category = await onCreateCategory(template.name);
+        for (const task of template.tasks) {
+          onCreateTodo({
+            id: `todo-${generateId()}`,
+            title: task.title,
+            createdBy: currentMember.id,
+            assignedTo: currentMember.id,
+            isShared: false,
+            status: "pending",
+            starValue: task.starValue,
+            visual: task.visual,
+            recurrence: task.recurrence,
+            recurringSourceId: null,
+            occurrenceDate: null,
+            visibleFrom: dateOnlyToISO(newCategoryTemplateStartDate),
+            expiresAt: null,
+            completedAt: null,
+            approvedBy: null,
+            approvedAt: null,
+            rejectedBy: null,
+            rejectedAt: null,
+            rejectedReason: null,
+            deletedAt: null,
+            deletedBy: null,
+            personalCategoryId: category.id,
+            notes: null,
+            subtasks: task.subtasks.map((s) => ({ id: generateId(), title: s.title, done: false })),
+            timerEnabled: false,
+            plannedDurationMinutes: null,
+            elapsedMs: null
+          });
+        }
+      } else {
+        await onCreateCategory(newCategoryName.trim());
+      }
+    } finally {
+      setCreatingCategory(false);
+      closeNewCategoryModal();
+    }
+  }
   const bubbleDragStateRef = useRef<{ threadId: Id; key: Id; x: number; y: number } | null>(null);
   const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
   const [bubbleDragOverKey, setBubbleDragOverKey] = useState<Id | null>(null);
@@ -817,7 +897,109 @@ export function ParentTodoThreadView({
         >
           {editMode ? <Check size={16} /> : <Pencil size={16} />}
         </button>
+        <button
+          aria-label="Ny kategori"
+          className="icon-button"
+          onClick={() => setShowNewCategory(true)}
+          title="Ny kategori — tom eller från mall"
+          type="button"
+        >
+          <Plus size={16} />
+        </button>
       </div>
+
+      {showNewCategory && (
+        <div className="todo-thread-view__reuse-overlay" onClick={closeNewCategoryModal}>
+          <div
+            aria-labelledby="new-category-title"
+            aria-modal="true"
+            className="todo-thread-view__reuse-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <div className="todo-thread-view__info-header">
+              <h3 id="new-category-title">Ny kategori</h3>
+              <button aria-label="Stäng" className="icon-button" onClick={closeNewCategoryModal} type="button">
+                <X size={16} />
+              </button>
+            </div>
+
+            {categoryTemplates.length > 0 && (
+              <div aria-label="Ny kategori: tom eller från mall" className="todo-assignee-picker" role="group">
+                <button
+                  aria-pressed={newCategoryMode === "empty"}
+                  className={"todo-assignee-picker__btn" + (newCategoryMode === "empty" ? " todo-assignee-picker__btn--on" : "")}
+                  onClick={() => setNewCategoryMode("empty")}
+                  type="button"
+                >
+                  Tom kategori
+                </button>
+                <button
+                  aria-pressed={newCategoryMode === "template"}
+                  className={"todo-assignee-picker__btn" + (newCategoryMode === "template" ? " todo-assignee-picker__btn--on" : "")}
+                  onClick={() => setNewCategoryMode("template")}
+                  type="button"
+                >
+                  Från mall
+                </button>
+              </div>
+            )}
+
+            {newCategoryMode === "empty" ? (
+              <label className="field-label">
+                Namn på ny kategori
+                <input
+                  autoFocus
+                  className="text-input"
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && canSubmitNewCategory) void submitNewCategory(); }}
+                  placeholder="Till exempel Träning"
+                  value={newCategoryName}
+                />
+              </label>
+            ) : (
+              <>
+                <label className="field-label">
+                  Mall
+                  <select
+                    className="text-input"
+                    onChange={(e) => setNewCategoryTemplateId(e.target.value)}
+                    value={newCategoryTemplateId}
+                  >
+                    <option disabled value="">Välj en mall…</option>
+                    {categoryTemplates.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.tasks.length} uppgifter)</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field-label">
+                  Startdatum för uppgifterna
+                  <input
+                    className="text-input"
+                    onChange={(e) => setNewCategoryTemplateStartDate(e.target.value)}
+                    type="date"
+                    value={newCategoryTemplateStartDate}
+                  />
+                </label>
+              </>
+            )}
+
+            <div className="todo-thread-view__reuse-actions">
+              <button className="secondary-button" onClick={closeNewCategoryModal} type="button">
+                Avbryt
+              </button>
+              <button
+                className="primary-button"
+                disabled={!canSubmitNewCategory || creatingCategory}
+                onClick={() => void submitNewCategory()}
+                type="button"
+              >
+                {creatingCategory ? "Skapar…" : "Skapa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showInfo && (
         <div className="todo-thread-view__reuse-overlay" onClick={() => setShowInfo(false)}>

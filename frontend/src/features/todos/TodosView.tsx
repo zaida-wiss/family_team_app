@@ -205,6 +205,8 @@ export function TodosView({
             onSetCategoryHidden={onSetCategoryHidden}
             onCreateTaskTemplate={onCreateTaskTemplate}
             onCreateCategoryTemplate={onCreateCategoryTemplate}
+            categoryTemplates={categoryTemplates}
+            onCreateTodo={onCreateTodo}
             onDeleteTodo={onSoftDeleteTodo}
             onAddTodoToCategory={openCreateModalForCategory}
             todoThreadOrder={todoThreadOrder}
