@@ -6,13 +6,22 @@
    surfplatta fick samma små bollar som en smal telefon, eftersom storleken
    tidigare bara hade två fasta lägen — "mobil" (≤480px) och "allt annat" —
    istället för att växa kontinuerligt med tillgänglig bredd). --ball-size
-   är en enda källa till sanning: en `clamp()` som håller sig kvar vid
-   golvvärdet (80px) på de smalaste telefonerna (så "Barn + minst 3 kategorier
-   fyller skärmen"-kravet från tidigare samma dag fortfarande håller — fyra
-   84px-kolumner + tre 4px-mellanrum = 348px, ryms gott och väl inom 360px),
-   men växer sedan gradvis i takt med `vw` upp till ett tak på större skärmar
-   (surfplattor, desktop) istället för att hoppa direkt till samma storlek
-   oavsett om skärmen är 500px eller 5000px bred. */
+   är en enda källa till sanning: en `clamp()` som håller sig kvar vid ett
+   golvvärde på de smalaste telefonerna, men växer sedan gradvis i takt med
+   `vw` upp till ett tak på större skärmar (surfplattor, desktop) istället
+   för att hoppa direkt till samma storlek oavsett om skärmen är 500px eller
+   5000px bred.
+
+   rem, inte px (2026-07-25-ändring, Zaidas fynd: "även todo-bubblorna måste
+   förstoras... med ökad textstorlek så att texten ryms i bubblan") — bollens
+   titel/ikon/procent var redan rem-baserade (skalade redan automatiskt med
+   Shell.tsx:s textSize-effekt på document.documentElement), men SJÄLVA
+   BOLLENS DIAMETER var hårdkodad i px och växte aldrig med — texten fick då
+   allt trängre om plats vid större textstorlek. Golvet höjt samtidigt
+   (80px→88px) per Zaidas begäran om en större bubbla redan vid normal
+   textstorlek. Konsekvens: fyra kolumner ryms inte helt utan skroll på de
+   allra smalaste telefonerna längre (var ett uttalat mål 2026-07-06) — ett
+   medvetet accepterat pris, sidledes skroll är redan inbyggt stöd. */
 /* Redigeringsläge (2026-07-24, Zaidas önskemål) — en liten knapp uppe till
    höger, ovanför själva tråd-raden, låser upp göm-genväg + bubbel-drag.
 
@@ -82,7 +91,7 @@
      matcha radens höjd (den högsta kolumnen, eller min-height nedan om alla
      är korta), var och en fortsatt begränsad av sin egen max-height nedan. */
   align-items: stretch;
-  --ball-size: clamp(80px, 11vw, 116px);
+  --ball-size: clamp(5.5rem, 11vw, 8rem);
   gap: clamp(4px, 1vw, 8px);
   overflow-x: auto;
   padding-bottom: 8px;
@@ -403,8 +412,12 @@
    touch-målet (CLAUDE.md), inte lägre. Växer måttligt med skärmbredden precis
    som huvudbollen, men med ett lägre tak så den förblir tydligt mindre. */
 .todo-thread__ball--small {
-  width: clamp(44px, 6vw, 60px);
-  height: clamp(44px, 6vw, 60px);
+  /* rem, inte px (2026-07-25) — samma skäl som --ball-size ovan, växer med
+     textSize. Golvet (2.75rem = 44px vid normal textstorlek) är fortfarande
+     exakt det minsta tillåtna touch-målet, aldrig lägre — bara textSize kan
+     göra den större än så, aldrig mindre. */
+  width: clamp(2.75rem, 6vw, 3.75rem);
+  height: clamp(2.75rem, 6vw, 3.75rem);
   padding: 2px;
 }
 
