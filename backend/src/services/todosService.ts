@@ -512,10 +512,17 @@ export async function toggleSubtask(id: string, accountId: string, subtaskId: st
     throw new AppError(404, "Delmoment hittades inte");
   }
   subtask.done = !subtask.done;
+  // Recept-integration (2026-07-25, ADR-0028) — ett tidsstyrt delmoment
+  // (t.ex. "sätt in i ugnen, 25 min") startar sin nedräkning automatiskt
+  // här, samma stund det bockas av. Klienten mäter/visar (samma princip
+  // som ADR-0018), servern bara stämplar start-/nollställningstiden.
+  if (subtask.timedMinutes != null) {
+    subtask.timerStartedAt = subtask.done ? new Date().toISOString() : null;
+  }
   todo.markModified("subtasks");
   await todo.save();
   broadcastTodosChanged();
-  return { done: subtask.done };
+  return { done: subtask.done, timerStartedAt: subtask.timerStartedAt ?? null };
 }
 
 // Automatisk mjuk-radering av gamla, avslutade återkommande OCCURRENCES

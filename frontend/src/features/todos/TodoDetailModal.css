@@ -112,6 +112,25 @@
   color: var(--muted-fg);
 }
 
+/* Recept-integration (2026-07-25, ADR-0028) — live nedräkning för ett
+   tidsstyrt delmoment, se SubtaskCountdown.tsx. */
+.todo-detail-modal__subtask-timer {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.todo-detail-modal__subtask-timer--done {
+  color: #1e7d3c;
+  animation: todo-detail-timer-flash 1s ease-in-out 3;
+}
+
+@keyframes todo-detail-timer-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 /* Delmoment-tilldelning (2026-07-23) — en liten, icke-interaktiv färgprick
    (redigeras i TodoEditModal, inte här) längst till höger i raden. */
 .todo-detail-modal__checklist-item-assignee {

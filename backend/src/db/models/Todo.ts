@@ -42,7 +42,10 @@ const todoSchema = new Schema<Todo>({
         title: { type: String, required: true },
         done: { type: Boolean, required: true },
         // Delmoment-tilldelning (2026-07-23) — se TodoSubtask i shared/types.ts.
-        assignedTo: { type: String, default: null }
+        assignedTo: { type: String, default: null },
+        // Recept-integration (2026-07-25, ADR-0028) — se TodoSubtask i shared/types.ts.
+        timedMinutes: { type: Number, default: null },
+        timerStartedAt: { type: String, default: null }
       }
     ],
     default: undefined

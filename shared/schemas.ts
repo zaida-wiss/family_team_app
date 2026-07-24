@@ -273,7 +273,10 @@ export const TodoSubtaskSchema = z.object({
   id: IdSchema,
   title: z.string().min(1, "Delmomentets titel krävs"),
   done: z.boolean(),
-  assignedTo: IdSchema.nullable().optional()
+  assignedTo: IdSchema.nullable().optional(),
+  // Recept-integration (2026-07-25, ADR-0028) — se shared/types.ts.
+  timedMinutes: z.number().nullable().optional(),
+  timerStartedAt: z.string().nullable().optional()
 });
 
 // Flera tidsintervall per dag på samma återkommande mall (2026-07-05) — se

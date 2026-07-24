@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { flushSync } from "react-dom";
 import {
   CalendarDays,
+  ChefHat,
   Home,
   ListTodo,
   Palette,
@@ -94,6 +95,7 @@ export function HeroBar({
         <NavBtn icon={<CalendarDays size={20} />} label="Kalender" panel="calendar" active={activePanel === "calendar"} onNavigate={onNavigate} />
         <NavBtn icon={<ShoppingCart size={20} />} label="Inköp" panel="shopping" active={activePanel === "shopping"} onNavigate={onNavigate} />
         <NavBtn icon={<ListTodo size={20} />} label="Todos" panel="todos" active={activePanel === "todos"} onNavigate={onNavigate} />
+        <NavBtn icon={<ChefHat size={20} />} label="Recept" panel="recipes" active={activePanel === "recipes"} onNavigate={onNavigate} />
         {canManageMembers && (
           <button
             ref={membersRef}

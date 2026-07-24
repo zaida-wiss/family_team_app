@@ -1,0 +1,172 @@
+/* Recept (2026-07-25, ADR-0028). */
+
+.recipes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  min-height: 44px;
+  text-align: center;
+}
+
+.recipe-card:hover {
+  border-color: var(--primary);
+}
+
+.recipe-card__emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.recipe-card__name {
+  font-weight: 700;
+}
+
+.recipe-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.recipe-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recipe-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recipe-modal__header h3 {
+  margin: 0;
+}
+
+.recipe-form__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recipe-form__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recipe-form__row .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipe-form__step {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+}
+
+.recipe-form__step-number {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.recipe-form__timed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--muted-fg);
+}
+
+.recipe-form__minutes-input {
+  max-width: 100px;
+}
+
+.recipe-detail__ingredients,
+.recipe-detail__steps {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recipe-detail__step {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.recipe-detail__step-timer {
+  font-size: 0.78rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.recipe-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Delade med RecipeFormModal.tsx (kopierade från TodoCreatorModal.css,
+   inte ett cross-chunk-beroende — lazy-laddade paneler garanterar inte
+   inbördes CSS-laddningsordning). */
+.todo-emoji-title-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.todo-emoji-title-row__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-emoji-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.todo-emoji-btn:hover {
+  border-color: var(--primary);
+}

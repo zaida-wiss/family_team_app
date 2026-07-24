@@ -30,6 +30,7 @@ export type AppPanel =
   | "calendar"
   | "shopping"
   | "todos"
+  | "recipes"
   | "members"
   | "settings";
 
@@ -615,6 +616,43 @@ export type TodoSubtask = {
   // personer. Valfritt och bakåtkompatibelt, saknas fältet visas
   // delmomentet som otilldelat.
   assignedTo?: Id | null;
+  // Recept-integration (2026-07-25, ADR-0028) — kopieras rakt av från
+  // RecipeStep.timedMinutes när en uppgift skapas från ett recept. Satt =
+  // steget är tidsstyrt (t.ex. "sätt in i ugnen, 25 min"). Egen, medveten
+  // SKILD mekanism från Todo.plannedDurationMinutes (ADR-0018, en timer för
+  // HELA uppgiften) — den här gäller ETT delmoment.
+  timedMinutes?: number | null;
+  // Sätts AUTOMATISKT av backend (toggleSubtask) när ett delmoment med
+  // timedMinutes går från obockat→bockat, nollställs vid av-bockning.
+  // Klienten räknar ner från timerStartedAt+timedMinutes (samma
+  // "klienten mäter"-princip som ADR-0018).
+  timerStartedAt?: string | null;
+};
+
+// Recept (2026-07-25, ADR-0028) — kontobred som TodoCategory sedan
+// ADR-0019, mutationer kräver en vuxen. Ingredienser är fri text (samma
+// filosofi som CSV-importens rader), ingen strukturerad mängd/enhet.
+export type RecipeIngredient = {
+  id: Id;
+  text: string;
+};
+
+export type RecipeStep = {
+  id: Id;
+  text: string;
+  timedMinutes: number | null;
+};
+
+export type Recipe = {
+  id: Id;
+  accountId: Id;
+  name: string;
+  emoji: string | null;
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
+  createdBy: Id;
+  deletedAt: string | null;
+  deletedBy: Id | null;
 };
 
 // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — en medlem kan skapa

@@ -40,6 +40,10 @@ export function useShoppingState() {
 
     shoppingApi.create(newList).catch(console.error);
     setShoppingLists((current) => [...current, newList]);
+    // Returnerar det klientgenererade id:t (2026-07-25, ADR-0028) — så en
+    // anropare (t.ex. receptens "skapa ny lista och lägg till ingredienser
+    // direkt") kan fortsätta lägga till varor utan en extra hämtning.
+    return newList.id;
   }
 
   function addShoppingItem(listId: Id, title: string, memberId: Id) {

@@ -22,6 +22,9 @@ const ShoppingView = lazy(() =>
 const TodosView = lazy(() =>
   import("../todos/TodosView").then((m) => ({ default: m.TodosView }))
 );
+const RecipesView = lazy(() =>
+  import("../recipes/RecipesView").then((m) => ({ default: m.RecipesView }))
+);
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
@@ -90,7 +93,9 @@ type Props = {
   onShareCalendar: (calendarId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
   onAddShoppingItem: (listId: string, title: string) => void;
-  onCreateShoppingList: (name: string, icon?: string | null) => void;
+  // Returnerar det nya listans id (2026-07-25, ADR-0028) — recepts
+  // "handlingslista"-flöde behöver kunna lägga till varor direkt efter.
+  onCreateShoppingList: (name: string, icon?: string | null) => Id;
   onDeleteShoppingList: (listId: string) => void;
   onShareShoppingList: (listId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
@@ -437,6 +442,20 @@ export function MemberShellContent({
           onApproveWish={onApproveWish}
           onRejectWish={onRejectWish}
           onSetWishStars={onSetWishStars}
+        />
+      </Suspense>
+    );
+  }
+
+  if (activePanel === "recipes") {
+    return (
+      <Suspense fallback={null}>
+        <RecipesView
+          currentMember={currentMember}
+          onAddShoppingItem={onAddShoppingItem}
+          onCreateShoppingList={onCreateShoppingList}
+          onCreateTodo={onCreateTodo}
+          shoppingLists={canSeeShopping ? shoppingLists : []}
         />
       </Suspense>
     );

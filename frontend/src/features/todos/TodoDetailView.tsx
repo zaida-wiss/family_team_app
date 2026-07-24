@@ -5,6 +5,7 @@ import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
+import { SubtaskCountdown } from "./SubtaskCountdown";
 
 type Props = {
   todo: Todo;
@@ -161,6 +162,9 @@ export function TodoDetailView({
                       <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
                         {subtask.title}
                       </span>
+                      {subtask.done && subtask.timedMinutes != null && subtask.timerStartedAt && (
+                        <SubtaskCountdown timedMinutes={subtask.timedMinutes} timerStartedAt={subtask.timerStartedAt} />
+                      )}
                       {subtaskAssignee && (
                         <span
                           aria-hidden="true"
