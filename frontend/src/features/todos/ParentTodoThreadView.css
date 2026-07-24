@@ -35,6 +35,7 @@
 .todo-thread-view__toolbar {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
   margin-bottom: 4px;
 }
 
@@ -518,6 +519,31 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* Instruktionspanelen (2026-07-25) — återanvänder .todo-thread-view__reuse-
+   overlay/-modal-skalet för konsekvent utseende. */
+.todo-thread-view__info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.todo-thread-view__info-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.todo-thread-view__info-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--foreground);
 }
 
 /* Filtrera efter person (2026-07-08) — samma modal-skal som Återanvänd,

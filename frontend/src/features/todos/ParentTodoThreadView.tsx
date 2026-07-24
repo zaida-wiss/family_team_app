@@ -1,7 +1,7 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, EyeOff, Pencil } from "lucide-react";
+import { Check, EyeOff, Info, Pencil, X } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
@@ -325,6 +325,10 @@ export function ParentTodoThreadView({
   // dubbelklick/långtryck-gester stängs medvetet AV i redigeringsläge —
   // annars skulle de krocka med drag-gesten.
   const [editMode, setEditMode] = useState(false);
+  // Instruktionsknapp (2026-07-25, Zaidas önskemål — ersätter den tidigare
+  // fasta undertexten "Dagens familjebubblor – pilla på en när den är
+  // klar!" som togs bort ur TodosView.tsx samma dag).
+  const [showInfo, setShowInfo] = useState(false);
   const bubbleDragStateRef = useRef<{ threadId: Id; key: Id; x: number; y: number } | null>(null);
   const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
   const [bubbleDragOverKey, setBubbleDragOverKey] = useState<Id | null>(null);
@@ -796,6 +800,15 @@ export function ParentTodoThreadView({
     <div className="todo-thread-view-wrapper">
       <div className="todo-thread-view__toolbar">
         <button
+          aria-label="Hur fungerar bubbelsysslorna?"
+          className="icon-button"
+          onClick={() => setShowInfo(true)}
+          title="Hur fungerar bubbelsysslorna?"
+          type="button"
+        >
+          <Info size={16} />
+        </button>
+        <button
           aria-pressed={editMode}
           className={"icon-button todo-thread-view__edit-button" + (editMode ? " todo-thread-view__edit-button--active" : "")}
           onClick={() => setEditMode((v) => !v)}
@@ -805,6 +818,32 @@ export function ParentTodoThreadView({
           {editMode ? <Check size={16} /> : <Pencil size={16} />}
         </button>
       </div>
+
+      {showInfo && (
+        <div className="todo-thread-view__reuse-overlay" onClick={() => setShowInfo(false)}>
+          <div
+            aria-labelledby="bubble-info-title"
+            aria-modal="true"
+            className="todo-thread-view__reuse-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <div className="todo-thread-view__info-header">
+              <h3 id="bubble-info-title">Så fungerar bubbelsysslorna</h3>
+              <button aria-label="Stäng" className="icon-button" onClick={() => setShowInfo(false)} type="button">
+                <X size={16} />
+              </button>
+            </div>
+            <ul className="todo-thread-view__info-list">
+              <li><strong>Kort tryck</strong> på en bubbla öppnar uppgiften — anteckningar och delmoment.</li>
+              <li><strong>Dubbeltryck</strong> markerar att du håller på med uppgiften, så andra ser det.</li>
+              <li><strong>Håll intryckt i två sekunder</strong> markerar hela uppgiften klar.</li>
+              <li><strong>Håll och dra i ett kategorinamn</strong> för att ändra ordning på trådarna.</li>
+              <li><strong>Pennikonen</strong> öppnar redigeringsläge — där kan du göra en tråd osynlig och dra enskilda bubblor för att ändra ordning inom en kategori.</li>
+            </ul>
+          </div>
+        </div>
+      )}
       <div className="todo-thread-view">
       {orderedThreads.map((thread) => (
         <section

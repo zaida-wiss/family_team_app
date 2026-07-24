@@ -11,8 +11,3 @@
   color: transparent;
 }
 
-.todos-bubble-header__subtitle {
-  margin: 4px 0 0;
-  color: var(--muted-fg);
-  font-size: 0.9rem;
-}

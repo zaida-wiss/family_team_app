@@ -1489,7 +1489,6 @@ test("Bollar i tråd: visar Bubbelsysslor-rubriken bara i tråd-läget, inte i l
   await openThreadView(page);
   // Tråd-läget (bubbelvyn) är default sedan 2026-07-05 (Zaidas beslut).
   await expect(page.getByRole("heading", { name: "Bubbelsysslor ✨" })).toBeVisible();
-  await expect(page.getByText("Dagens familjebubblor")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Todos" })).toHaveCount(0);
 
   await switchToListViewInSettings(page);

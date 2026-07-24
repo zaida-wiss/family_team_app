@@ -136,9 +136,6 @@ export function TodosView({
         {todoViewMode === "thread" ? (
           <div className="todos-bubble-header">
             <h2 className="todos-bubble-header__title">Bubbelsysslor ✨</h2>
-            <p className="todos-bubble-header__subtitle">
-              Dagens familjebubblor – pilla på en när den är klar!
-            </p>
           </div>
         ) : (
           <div>
