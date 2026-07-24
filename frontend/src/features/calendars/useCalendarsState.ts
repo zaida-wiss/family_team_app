@@ -89,6 +89,7 @@ export function useCalendarsState() {
       sharedWith: [],
       importedSources: [],
       subscriptions: [],
+      calDavConnections: [],
       deletedAt: null,
       deletedBy: null,
       events: []

@@ -52,6 +52,7 @@ export function createCalendar(overrides: Partial<Calendar> = {}): Calendar {
     sharedWith: [],
     importedSources: [],
     subscriptions: [],
+    calDavConnections: [],
     deletedAt: null,
     deletedBy: null,
     events: [],

@@ -62,6 +62,7 @@ const ownedCalendar: Calendar = {
   sharedWith: [],
   importedSources: [],
   subscriptions: [],
+  calDavConnections: [],
   deletedAt: null,
   deletedBy: null,
   events: []

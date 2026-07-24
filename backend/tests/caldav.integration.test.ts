@@ -65,10 +65,10 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
     const setupRes = await request(app)
       .post("/api/accounts/setup")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ accountName: "CalDAV-familjen", memberName: "CalDAV-test" });
+      .send({ name: "CalDAV-familjen" });
     expect(setupRes.status).toBe(201);
-    memberId = setupRes.body.member.id as string;
-    accountId = setupRes.body.member.accountId as string;
+    memberId = setupRes.body.membership.member.id as string;
+    accountId = setupRes.body.membership.member.accountId as string;
 
     const calRes = await request(app)
       .post("/api/calendars")
