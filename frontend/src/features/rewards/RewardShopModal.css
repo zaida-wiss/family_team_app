@@ -163,7 +163,7 @@
 
 .reward-shop-modal__purchased-meta {
   font-size: 0.78rem;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
 }
 
 .reward-shop-modal__purchased-close {
@@ -271,7 +271,7 @@
 
 .reward-shop-card__timer {
   font-size: 0.72rem;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
 }
 
 .reward-shop-card--unavailable {
@@ -282,7 +282,7 @@
 
 .reward-shop-card__unavailable-label {
   font-size: 0.7rem;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
   font-weight: 600;
   margin-top: 2px;
   text-align: center;
@@ -290,7 +290,7 @@
 
 .reward-shop-card--drag-target {
   border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, var(--bg-secondary));
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
   transform: scale(1.04);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
 }
@@ -447,7 +447,7 @@
 
 .shop-wallet__empty {
   font-size: 0.82rem;
-  color: var(--text-secondary, #888);
+  color: var(--muted-fg);
   text-align: center;
   padding: 8px 0 4px;
   border-top: 1px solid var(--border, #eee);

@@ -313,7 +313,7 @@
   font-size: 1.1rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--card);
   cursor: pointer;
   line-height: 1;
 }

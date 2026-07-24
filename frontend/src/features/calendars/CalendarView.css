@@ -411,7 +411,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 10px;
@@ -428,7 +428,7 @@
   background: transparent;
   outline: none;
   font-size: 0.875rem;
-  color: var(--fg);
+  color: var(--foreground);
   width: 100%;
   min-width: 0;
 }
@@ -447,7 +447,7 @@
   max-height: var(--filter-max-height, 320px);
   overflow-y: auto;
   z-index: 9999;
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  background: color-mix(in srgb, var(--card) 95%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
@@ -467,7 +467,7 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 0.8rem;
-  color: var(--fg);
+  color: var(--foreground);
   user-select: none;
 }
 
