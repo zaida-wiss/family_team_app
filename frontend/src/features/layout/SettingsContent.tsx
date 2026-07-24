@@ -1,6 +1,6 @@
 import "./Settings.css";
 import { lazy, useState } from "react";
-import { Baby, CalendarDays, ListTodo, LogOut, ShoppingCart, UserCog } from "lucide-react";
+import { Baby, CalendarDays, KeyRound, ListTodo, LogOut, ShoppingCart, UserCog } from "lucide-react";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
 import type { SettingsCategory } from "./SettingsCategoryNav";
@@ -12,6 +12,7 @@ import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
 import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
+import { HouseholdSecretsSettings } from "../settings/HouseholdSecretsSettings";
 import { TemplatesSettings } from "../todos/TemplatesSettings";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
@@ -521,6 +522,23 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onDeletePurchased={onDeletePurchased}
             />
           )
+        }
+      ]
+    },
+    {
+      id: "household",
+      label: "Hushåll",
+      icon: <KeyRound aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "household-passwords",
+          label: "Lösenord",
+          content: <HouseholdSecretsSettings kind="password" />
+        },
+        {
+          id: "household-subscriptions",
+          label: "Abonnemang",
+          content: <HouseholdSecretsSettings kind="subscription" />
         }
       ]
     }

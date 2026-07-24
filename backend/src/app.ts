@@ -24,6 +24,7 @@ import { auditLogRouter } from "./routes/auditLog.js";
 import { todoCategoriesRouter } from "./routes/todoCategories.js";
 import { todoTemplatesRouter } from "./routes/todoTemplates.js";
 import { recipesRouter } from "./routes/recipes.js";
+import { householdSecretsRouter } from "./routes/householdSecrets.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
@@ -105,6 +106,7 @@ app.use("/api/audit-log", auditLogRouter);
 app.use("/api/todo-categories", todoCategoriesRouter);
 app.use("/api/todo-templates", todoTemplatesRouter);
 app.use("/api/recipes", recipesRouter);
+app.use("/api/household-secrets", householdSecretsRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);

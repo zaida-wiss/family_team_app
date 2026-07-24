@@ -655,6 +655,38 @@ export type Recipe = {
   deletedBy: Id | null;
 };
 
+// Hushållets lösenord + abonnemang (2026-07-25, Zaidas önskemål — två
+// separata "kategorier i Inställningar", samma underliggande modell med en
+// kind-diskriminator eftersom de delar samma behov: kontobrett, ENDAST
+// vuxna (till skillnad från Recept — dessa är ofta genuint känsliga:
+// wifi-lösenord, försäkringsinloggningar, bankinfo), fältkrypterade.
+// **Krypteringsmodell (Zaidas beslut):** samma server-hållna master-nyckel
+// som redan skyddar kalender/todos/belöningar (fieldEncryption.ts) — INTE
+// en riktig klientsidig/nolltillit-lösning. Det betyder: appens server
+// (och därmed Render/MongoDB-åtkomst) kan tekniskt dekryptera dessa fält —
+// kryptering VID LAGRING, inte en oberoende "bara ni har nyckeln"-garanti.
+// Dokumenterat tydligt för Zaida innan byggnation. secretEnc/username/notes
+// krypterade; ALDRIG med i GDPR-exporten (samma princip som ADR-0027:s
+// CalDAV-lösenord — riktiga tredjepartsuppgifter i en nedladdningsbar fil
+// vore ett läckage, till skillnad från vanligt appinnehåll som redan
+// dekrypteras där för dataportabilitet).
+export type HouseholdSecretKind = "password" | "subscription";
+
+export type HouseholdSecret = {
+  id: Id;
+  accountId: Id;
+  kind: HouseholdSecretKind;
+  title: string;
+  username: string | null;
+  secretEnc: string;
+  notes: string | null;
+  cost: number | null;
+  renewalDate: string | null;
+  createdBy: Id;
+  deletedAt: string | null;
+  deletedBy: Id | null;
+};
+
 // Vuxenvyns egna, personliga kategori-trådar (2026-07-05) — en medlem kan skapa
 // sina egna kategorier för att organisera sina egna todos i sida-vid-sida-trådar.
 // Kontobred sedan ADR-0019 (2026-07-07) — alla vuxna ser/redigerar varandras.
