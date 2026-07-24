@@ -92,10 +92,19 @@
 
 /* Flera mottagare samtidigt (2026-07-06) — togglebar knapp-grupp, samma
    mönster som RecurrencePicker.css:s veckodagar. */
+/* Skrollbar (2026-07-25, Zaidas fynd: "listan över familjemedlemmar ska
+   gå att skrolla i så att man kan se alla namn") — flex-wrap räckte inte
+   ensamt när en familj har många medlemmar (nu även utökat av "Mina
+   familjekonton"-arbetet samma dag), rader kunde växa förbi synligt
+   utrymme. Egen begränsad höjd + eget scroll, resten av formuläret
+   opåverkat. */
 .todo-assignee-picker {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 2px;
 }
 
 .todo-assignee-picker__btn {

@@ -1,7 +1,8 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, ChevronUp, EyeOff, Info, Pencil, Plus, X } from "lucide-react";
+import { BarChart3, Check, ChevronDown, ChevronUp, EyeOff, Info, Pencil, Plus, X } from "lucide-react";
+import { TodoStatsModal } from "./TodoStatsModal";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
@@ -337,6 +338,8 @@ export function ParentTodoThreadView({
   // fasta undertexten "Dagens familjebubblor – pilla på en när den är
   // klar!" som togs bort ur TodosView.tsx samma dag).
   const [showInfo, setShowInfo] = useState(false);
+  // Statistik-knapp (2026-07-25, Zaidas önskemål).
+  const [showStats, setShowStats] = useState(false);
 
   // Ny kategori-knapp (+) längst till höger (2026-07-25, Zaidas önskemål:
   // "lägga till en ny kategori eller hämta en från mall") — samma logik som
@@ -940,8 +943,21 @@ export function ParentTodoThreadView({
           >
             <Plus size={16} />
           </button>
+          <button
+            aria-label="Statistik"
+            className="icon-button"
+            onClick={() => setShowStats(true)}
+            title="Statistik — senaste 7 dagarna"
+            type="button"
+          >
+            <BarChart3 size={16} />
+          </button>
         </div>
       </div>
+
+      {showStats && (
+        <TodoStatsModal members={members} todos={allTodos} onClose={() => setShowStats(false)} />
+      )}
 
       {showNewCategory && (
         <div className="todo-thread-view__reuse-overlay" onClick={closeNewCategoryModal}>

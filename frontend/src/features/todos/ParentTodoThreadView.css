@@ -97,8 +97,17 @@
   padding-bottom: 8px;
   /* Fyller kvarvarande yta ovanför bottenmenyn (2026-07-05, Zaidas begäran,
      efter att godkännande-sektionen togs bort ur panelen) — bara den här
-     sektionen berörs, ingen annan panel delar klassen. */
-  min-height: 70vh;
+     sektionen berörs, ingen annan panel delar klassen.
+     2026-07-25-justering (Zaidas fynd: "bubbelsysslorna skall sträcka sig
+     ner till navbaren") — 70vh var en grov gissning, ofta kortare än
+     faktiskt tillgänglig yta. 100dvh (dynamisk viewport-höjd, hanterar
+     mobilwebbläsares chrome bättre än vh) minus ett uppskattat mått för
+     allt OVANFÖR raden (verktygsfältet med titel+knappar, marginaler) och
+     bottenmenyns egen höjd. En riktig pixelexakt lösning hade krävt att
+     .dashboard/.dashboard-list (delade klasser, components.css, används av
+     ALLA paneler) bygger om till en flex-fyll-kedja hela vägen — medvetet
+     inte gjort här för att inte riskera andra panelers layout. */
+  min-height: calc(100dvh - 170px);
 }
 
 /* Kolumnen matchar bollens bredd med en liten, konstant marginal — växer med
@@ -602,6 +611,53 @@
   font-size: 0.88rem;
   line-height: 1.4;
   color: var(--foreground);
+}
+
+/* Statistik-knapp (2026-07-25) — sekventiell enkel-nyans-kodning (opacitet
+   på --primary), ingen kategorisk palett, se TodoStatsModal.tsx. */
+.todo-stats-modal {
+  max-width: 380px;
+}
+
+.todo-stats-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.todo-stats-row__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.todo-stats-row__name {
+  font-weight: 700;
+}
+
+.todo-stats-row__total {
+  font-size: 0.8rem;
+  color: var(--muted-fg);
+}
+
+.todo-stats-row__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 40px;
+}
+
+.todo-stats-row__bar {
+  flex: 1;
+  height: var(--bar-height);
+  background: color-mix(in srgb, var(--primary) calc(var(--bar-opacity) * 100%), transparent);
+  border-radius: 3px 3px 0 0;
+  min-height: 6px;
 }
 
 /* Filtrera efter person (2026-07-08) — samma modal-skal som Återanvänd,

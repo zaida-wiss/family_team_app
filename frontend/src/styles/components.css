@@ -139,13 +139,24 @@
   cursor: not-allowed;
 }
 
+/* Runda, mindre-visuellt-bullriga knappar (2026-07-25, Zaidas önskemål:
+   "alla fyrkantiga knappar i appen skall bli små och runda istället... med
+   en rund border som knappt syns") — gäller globalt, appen igenom.
+
+   rem, inte px: touch-målet (44px = 2.75rem vid normal textstorlek) är
+   CLAUDE.md:s icke förhandlingsbara golv och rörs INTE nedåt — men Zaidas
+   andra krav ("knapparnas storlek skall dock vara större om man väljer
+   större textstorlek") uppfylls gratis genom att uttrycka måttet i rem,
+   samma mönster som redan användes för todo-bubblorna samma dag (Shell.tsx:s
+   textSize-effekt skalar document.documentElement, och rem följer alltid
+   med). */
 .icon-button {
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  border-radius: 50%;
   background: var(--muted);
   color: var(--foreground);
   cursor: pointer;
