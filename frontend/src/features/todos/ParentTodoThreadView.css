@@ -44,9 +44,21 @@
 /* Rubrik + knappar på samma rad (2026-07-25, Zaidas önskemål: "helst rymmas
    på samma rad... ge mer plats åt bubblorna") — titeln flyttad hit från
    TodosView.tsx/.css (var en egen rubrikrad ovanför hela panelen tidigare). */
+/* 2026-07-25-fynd (Zaida: "knapparna bredvid bubbelsysslorna måste vara
+   mycket mindre, annars försvinner texten") — knapparna själva får INTE
+   krympa under 44×44px (CLAUDE.md:s icke förhandlingsbara touch-mål), så
+   fyra knappar i rad (info/redigera/plus/statistik) tar en fast bredd som
+   på en smal telefon annars tvingade titeln (flex:1 mot en flex-shrink:0-
+   knapprad) ner mot 0 bredd — därav "texten försvinner". Löst utan att
+   röra knappstorleken: flex-wrap tillåter knapparna falla ner på en egen
+   rad bara när det verkligen inte finns plats (stannar på samma rad som
+   Zaidas tidigare önskemål på de flesta skärmar), och titelns font-size
+   krymper med clamp() istället för att vara ett fast 1.6rem som konkurrerar
+   om samma trånga utrymme. */
 .todo-thread-view__toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
@@ -55,11 +67,11 @@
 .todo-thread-view__toolbar-title {
   margin: 0;
   flex: 1;
-  min-width: 0;
+  min-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 1.6rem;
+  font-size: clamp(1.1rem, 5vw, 1.6rem);
   font-weight: 800;
   background: linear-gradient(90deg, var(--c0), var(--c1));
   -webkit-background-clip: text;
