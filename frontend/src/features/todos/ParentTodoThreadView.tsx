@@ -926,6 +926,15 @@ export function ParentTodoThreadView({
             <Info size={16} />
           </button>
           <button
+            aria-label="Statistik"
+            className="icon-button"
+            onClick={() => setShowStats(true)}
+            title="Statistik — senaste 7 dagarna"
+            type="button"
+          >
+            <BarChart3 size={16} />
+          </button>
+          <button
             aria-pressed={editMode}
             className={"icon-button todo-thread-view__edit-button" + (editMode ? " todo-thread-view__edit-button--active" : "")}
             onClick={() => setEditMode((v) => !v)}
@@ -942,15 +951,6 @@ export function ParentTodoThreadView({
             type="button"
           >
             <Plus size={16} />
-          </button>
-          <button
-            aria-label="Statistik"
-            className="icon-button"
-            onClick={() => setShowStats(true)}
-            title="Statistik — senaste 7 dagarna"
-            type="button"
-          >
-            <BarChart3 size={16} />
           </button>
         </div>
       </div>
