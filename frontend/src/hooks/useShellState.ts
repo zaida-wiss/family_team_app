@@ -6,7 +6,7 @@ import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
 import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState";
 import { useTodoTemplatesState } from "../features/todos/useTodoTemplatesState";
 import { useAppFont } from "../components/FontPicker";
-import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TodoThreadRange, TodoViewMode } from "@shared/types";
+import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TextSize, TodoThreadRange, TodoViewMode } from "@shared/types";
 
 export function useShellState(
   activeMembership: Membership,
@@ -24,7 +24,7 @@ export function useShellState(
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember, purgeMembersTrash,
-    updateMemberTheme, updateMemberDarkMode, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
+    updateMemberTheme, updateMemberDarkMode, updateMemberTextSize, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
     setChildCredentials,
     updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
@@ -119,6 +119,12 @@ export function useShellState(
   // INTE popovern, en av/på-växel är inget slutgiltigt val på samma sätt.
   function handleDarkModeToggle(memberId: Id, darkMode: boolean) {
     updateMemberDarkMode(memberId, darkMode);
+  }
+
+  // Textstorlek (2026-07-25) — samma "stäng inte popovern"-resonemang som
+  // handleDarkModeToggle.
+  function handleTextSizeSelect(memberId: Id, textSize: TextSize) {
+    updateMemberTextSize(memberId, textSize);
   }
 
   function deleteOwnData() {
@@ -293,6 +299,7 @@ export function useShellState(
     onUpdateMemberName: updateMemberName,
     onUpdateMemberTheme: updateMemberTheme,
     onUpdateMemberDarkMode: updateMemberDarkMode,
+    onUpdateMemberTextSize: updateMemberTextSize,
     onSetChildCredentials: setChildCredentials,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
       updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
@@ -385,6 +392,7 @@ export function useShellState(
     themePickerMember,
     handleThemeSelect,
     handleDarkModeToggle,
+    handleTextSizeSelect,
     closeThemePicker: () => setThemePickerMemberId(null),
     apiError,
     childContentProps,

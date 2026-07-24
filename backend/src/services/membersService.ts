@@ -71,11 +71,13 @@ const SELF_NAV_FIELDS = new Set([
 // ETT BARNS dashboard/ChildSettings.tsx (samma canManageChildAccount-mönster
 // som redan styr complete/approve/reject på ett barns todos, ADR-0016) —
 // aldrig av en obesläktad admin på en annan vuxens vägnar.
-const CHILD_MANAGEABLE_FIELDS = new Set(["dashboardTheme", "darkMode", "childTimelineSettings"]);
+const CHILD_MANAGEABLE_FIELDS = new Set(["dashboardTheme", "darkMode", "textSize", "childTimelineSettings"]);
 // darkMode (2026-07-23) är en oberoende på/av-växel ovanpå dashboardTheme
 // (se ThemePicker.tsx) — samma självbetjänings-/förälder-styr-barnets-tema-
-// resonemang som dashboardTheme redan har, se kommentaren ovan.
-const SELF_THEME_FIELDS = new Set(["dashboardTheme", "darkMode"]);
+// resonemang som dashboardTheme redan har, se kommentaren ovan. textSize
+// (2026-07-25) samma mönster igen, men gäller ALLA medlemmar (inte bara
+// vuxenteman som darkMode) — läsbarhet är inte kopplad till temats liv/färg.
+const SELF_THEME_FIELDS = new Set(["dashboardTheme", "darkMode", "textSize"]);
 
 export async function updateMember(id: string, accountId: string, callerMemberId: string | null, data: unknown) {
   const patch = MemberPatchSchema.parse(data);

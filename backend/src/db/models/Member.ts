@@ -12,6 +12,7 @@ const memberSchema = new Schema<Member>({
   color: { type: String, default: null },
   dashboardTheme: { type: String, default: null },
   darkMode: { type: Boolean, default: undefined },
+  textSize: { type: String, default: undefined },
   calendarFilterSettings: { type: Schema.Types.Mixed, default: undefined },
   childTimelineSettings: { type: Schema.Types.Mixed, default: undefined },
   lastActivePanel: { type: String, default: undefined },

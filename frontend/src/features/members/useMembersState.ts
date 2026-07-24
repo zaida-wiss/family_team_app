@@ -9,6 +9,7 @@ import type {
   DashboardThemeId,
   Id,
   Member,
+  TextSize,
   TodoThreadRange,
   TodoViewMode
 } from "@shared/types";
@@ -107,6 +108,22 @@ export function useMembersState() {
 
         membersApi.update(memberId, { darkMode }).catch(console.error);
         return { ...member, darkMode };
+      })
+    );
+  }
+
+  // Textstorlek (2026-07-25, Zaidas önskemål om bättre tillgänglighet för
+  // äldre) — samma oberoende på/av-liknande mönster som Mörkt läge, fast tre
+  // steg istället för två.
+  function updateMemberTextSize(memberId: Id, textSize: TextSize) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) {
+          return member;
+        }
+
+        membersApi.update(memberId, { textSize }).catch(console.error);
+        return { ...member, textSize };
       })
     );
   }
@@ -236,6 +253,7 @@ export function useMembersState() {
     purgeMembersTrash,
     updateMemberTheme,
     updateMemberDarkMode,
+    updateMemberTextSize,
     updateMemberAvatar,
     updateMemberColor,
     updateMemberName,

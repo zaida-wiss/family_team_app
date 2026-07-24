@@ -884,6 +884,41 @@
   accent-color: var(--primary);
 }
 
+/* Textstorlek (2026-07-25, Zaidas önskemål om bättre tillgänglighet för
+   äldre) — tre knappar, samma grid-mönster som typsnittsväljaren nedan. */
+.theme-text-size-section {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.theme-text-size-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.theme-text-size-option {
+  min-height: 44px;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  color: var(--foreground);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-text-size-option:hover {
+  border-color: var(--foreground);
+}
+
+.theme-text-size-option.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
 /* Font section */
 .theme-font-section {
   border-top: 1px solid var(--border);

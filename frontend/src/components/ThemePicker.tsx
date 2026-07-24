@@ -1,8 +1,14 @@
 import { X } from "lucide-react";
 import { getThemesForAudience } from "../features/members/themes";
 import { FONTS, type FontId } from "./FontPicker";
-import type { DashboardThemeId, Member } from "@shared/types";
+import type { DashboardThemeId, Member, TextSize } from "@shared/types";
 import { useModalA11y } from "../hooks/useModalA11y";
+
+const TEXT_SIZE_OPTIONS: { id: TextSize; label: string }[] = [
+  { id: "normal", label: "Normal" },
+  { id: "large", label: "Stor" },
+  { id: "extra-large", label: "Extra stor" }
+];
 
 type ThemePickerProps = {
   member: Member;
@@ -10,19 +16,23 @@ type ThemePickerProps = {
   onSelectTheme: (themeId: DashboardThemeId) => void;
   // Mörkt läge (2026-07-23) — bara relevant för vuxenteman, se ThemePickerBody.
   onToggleDarkMode?: (darkMode: boolean) => void;
+  // Textstorlek (2026-07-25, Zaidas önskemål om bättre tillgänglighet för
+  // äldre) — gäller alla medlemmar, till skillnad från Mörkt läge.
+  onSelectTextSize?: (textSize: TextSize) => void;
   fontId?: FontId;
   onSelectFont?: (fontId: FontId) => void;
   /** Hides the floating header/close button — use when embedding inline */
   compact?: boolean;
 };
 
-export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, fontId, onSelectFont, compact = false }: ThemePickerProps) {
+export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, onSelectTextSize, fontId, onSelectFont, compact = false }: ThemePickerProps) {
   return compact
     ? (
         <ThemePickerBody
           member={member}
           onSelectTheme={onSelectTheme}
           onToggleDarkMode={onToggleDarkMode}
+          onSelectTextSize={onSelectTextSize}
           fontId={fontId}
           onSelectFont={onSelectFont}
           compact
@@ -34,6 +44,7 @@ export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, 
           onClose={onClose ?? (() => {})}
           onSelectTheme={onSelectTheme}
           onToggleDarkMode={onToggleDarkMode}
+          onSelectTextSize={onSelectTextSize}
           fontId={fontId}
           onSelectFont={onSelectFont}
         />
@@ -45,6 +56,7 @@ function ThemePickerFloating({
   onClose,
   onSelectTheme,
   onToggleDarkMode,
+  onSelectTextSize,
   fontId,
   onSelectFont,
 }: Omit<ThemePickerProps, "compact" | "onClose"> & { onClose: () => void }) {
@@ -60,7 +72,7 @@ function ThemePickerFloating({
           <X size={18} />
         </button>
       </div>
-      <ThemePickerBody member={member} onSelectTheme={onSelectTheme} onToggleDarkMode={onToggleDarkMode} fontId={fontId} onSelectFont={onSelectFont} />
+      <ThemePickerBody member={member} onSelectTheme={onSelectTheme} onToggleDarkMode={onToggleDarkMode} onSelectTextSize={onSelectTextSize} fontId={fontId} onSelectFont={onSelectFont} />
     </div>
   );
 }
@@ -69,6 +81,7 @@ function ThemePickerBody({
   member,
   onSelectTheme,
   onToggleDarkMode,
+  onSelectTextSize,
   fontId,
   onSelectFont,
   compact = false,
@@ -105,6 +118,28 @@ function ThemePickerBody({
     </label>
   );
 
+  // Textstorlek (2026-07-25) — tre knappar, samma togglemönster som redan
+  // används på flera ställen i appen (t.ex. RecurrencePicker.css:s
+  // veckodagar) istället för en fri slider.
+  const textSizeSection = onSelectTextSize && (
+    <div className="theme-text-size-section">
+      <p className="eyebrow">Textstorlek</p>
+      <div className="theme-text-size-grid">
+        {TEXT_SIZE_OPTIONS.map((opt) => (
+          <button
+            key={opt.id}
+            aria-pressed={(member.textSize ?? "normal") === opt.id}
+            className={`theme-text-size-option${(member.textSize ?? "normal") === opt.id ? " active" : ""}`}
+            onClick={() => onSelectTextSize(opt.id)}
+            type="button"
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   const fontSection = onSelectFont && fontId !== undefined && (
     <div className="theme-font-section">
       <p className="eyebrow">Typsnitt</p>
@@ -131,6 +166,7 @@ function ThemePickerBody({
         <div className="theme-picker-inline">
           {grid}
           {darkModeSection}
+          {textSizeSection}
           {fontSection}
         </div>
       )
@@ -138,6 +174,7 @@ function ThemePickerBody({
         <>
           {grid}
           {darkModeSection}
+          {textSizeSection}
           {fontSection}
         </>
       );

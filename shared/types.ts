@@ -37,6 +37,10 @@ export type CalendarViewMode = "month" | "week" | "list" | "timeline";
 
 export type TodoViewMode = "list" | "thread";
 
+// Textstorlek (2026-07-25) — tre diskreta steg för bättre läsbarhet, se
+// Member.textSize.
+export type TextSize = "normal" | "large" | "extra-large";
+
 // Hur mycket som visas i "bollar i tråd" (2026-07-06, Zaidas begäran: "bara
 // idag, en vecka, en månad, eller en lång lista på allt i framtiden") — bara
 // tråd-vyn (bubblorna), listläget har aldrig haft ett datumfilter alls.
@@ -116,6 +120,12 @@ export type Member = {
   // Gäller bara vuxenteman (se ThemePicker.tsx). Standard av (osatt/false)
   // om fältet saknas i äldre data.
   darkMode?: boolean;
+  // Textstorlek (2026-07-25, Zaidas önskemål: "bättre tillgänglighet för de
+  // äldre") — tre diskreta steg, inte en fri slider (mindre att välja fel
+  // på). Skalar hela appens rem-baserade typografi via document.documentElement
+  // (Shell.tsx), samma självbetjänings-/förälder-styr-barnets-tema-mönster
+  // som dashboardTheme/darkMode. Standard "normal" om fältet saknas.
+  textSize?: TextSize;
   calendarFilterSettings?: CalendarFilterSettings;
   childTimelineSettings?: ChildTimelineSettings;
   lastActivePanel?: AppPanel;

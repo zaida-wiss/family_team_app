@@ -14,6 +14,9 @@ export const TodoViewModeSchema = z.enum(["list", "thread"]);
 // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål).
 export const TodoThreadRangeSchema = z.enum(["today", "week", "month", "all"]);
 
+// Textstorlek (2026-07-25, Zaidas önskemål om bättre tillgänglighet för äldre).
+export const TextSizeSchema = z.enum(["normal", "large", "extra-large"]);
+
 // Partial<Record<CalendarFilterKey, ...>> — z.record().partial() finns inte i denna
 // zod-version (ZodRecord saknar .partial(), bara ZodObject har den), och CalendarFilterKey
 // har bara två kända nycklar, så ett explicit objekt uttrycker exakt samma typ.
@@ -56,6 +59,7 @@ export const MemberSchema = z.object({
   color: z.string().nullable(),
   dashboardTheme: DashboardThemeIdSchema.nullable(),
   darkMode: z.boolean().optional(),
+  textSize: TextSizeSchema.optional(),
   calendarFilterSettings: CalendarFilterSettingsSchema.optional(),
   childTimelineSettings: ChildTimelineSettingsSchema.optional(),
   lastActivePanel: AppPanelSchema.optional(),
@@ -81,6 +85,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   color: true,
   dashboardTheme: true,
   darkMode: true,
+  textSize: true,
   calendarFilterSettings: true,
   childTimelineSettings: true,
   lastActivePanel: true,

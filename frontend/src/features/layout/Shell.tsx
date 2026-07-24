@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { HeroBar } from "./HeroBar";
 import { SettingsContent } from "./SettingsContent";
 import { ThemePicker } from "../../components/ThemePicker";
@@ -106,6 +106,7 @@ export function Shell({
     themePickerMember,
     handleThemeSelect,
     handleDarkModeToggle,
+    handleTextSizeSelect,
     closeThemePicker,
     apiError,
     childContentProps,
@@ -134,6 +135,19 @@ export function Shell({
     visibleThemeMember.dashboardTheme ?? (visibleThemeMember.isChild ? "space" : "clear");
   // Mörkt läge (2026-07-23) — bara vuxenteman, se ThemePicker.tsx.
   const shellDarkMode = !visibleThemeMember.isChild && (visibleThemeMember.darkMode ?? false);
+
+  // Textstorlek (2026-07-25, Zaidas önskemål om bättre tillgänglighet för
+  // äldre) — hela appens CSS är rem-baserad, och rem är alltid relativt
+  // <html>s EGEN font-size, oavsett hur djupt nästlat ett element är. Ett
+  // klass-/CSS-variabel-baserat sätt (som Mörkt läge använder för
+  // färger) fungerar därför INTE för font-size — måste sättas direkt på
+  // document.documentElement. Följer samma visibleThemeMember som
+  // tema/mörkt läge (en vuxen som tittar på ett barns dashboard ser barnets
+  // val, konsekvent med resten av personaliseringen).
+  const textSizeScale: Record<string, string> = { normal: "100%", large: "115%", "extra-large": "130%" };
+  useEffect(() => {
+    document.documentElement.style.fontSize = textSizeScale[visibleThemeMember.textSize ?? "normal"];
+  }, [visibleThemeMember.textSize]);
 
   return (
     <main className={`app-shell theme-${shellTheme}${shellDarkMode ? " dark-mode" : ""}`}>
@@ -184,6 +198,7 @@ export function Shell({
             onClose={closeThemePicker}
             onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
             onToggleDarkMode={(darkMode) => handleDarkModeToggle(themePickerMember.id, darkMode)}
+            onSelectTextSize={(textSize) => handleTextSizeSelect(themePickerMember.id, textSize)}
             fontId={fontId}
             onSelectFont={setFontId}
           />
