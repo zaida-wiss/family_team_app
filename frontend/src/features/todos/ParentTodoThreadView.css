@@ -32,11 +32,36 @@
   min-width: 0;
 }
 
+/* Rubrik + knappar på samma rad (2026-07-25, Zaidas önskemål: "helst rymmas
+   på samma rad... ge mer plats åt bubblorna") — titeln flyttad hit från
+   TodosView.tsx/.css (var en egen rubrikrad ovanför hela panelen tidigare). */
 .todo-thread-view__toolbar {
   display: flex;
-  justify-content: flex-end;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 4px;
+}
+
+.todo-thread-view__toolbar-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--c0), var(--c1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.todo-thread-view__toolbar-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .todo-thread-view__edit-button--active {

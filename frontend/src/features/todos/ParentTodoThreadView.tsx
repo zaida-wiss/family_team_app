@@ -879,33 +879,36 @@ export function ParentTodoThreadView({
   return (
     <div className="todo-thread-view-wrapper">
       <div className="todo-thread-view__toolbar">
-        <button
-          aria-label="Hur fungerar bubbelsysslorna?"
-          className="icon-button"
-          onClick={() => setShowInfo(true)}
-          title="Hur fungerar bubbelsysslorna?"
-          type="button"
-        >
-          <Info size={16} />
-        </button>
-        <button
-          aria-pressed={editMode}
-          className={"icon-button todo-thread-view__edit-button" + (editMode ? " todo-thread-view__edit-button--active" : "")}
-          onClick={() => setEditMode((v) => !v)}
-          title={editMode ? "Klar med redigering" : "Redigera trådar och ordning"}
-          type="button"
-        >
-          {editMode ? <Check size={16} /> : <Pencil size={16} />}
-        </button>
-        <button
-          aria-label="Ny kategori"
-          className="icon-button"
-          onClick={() => setShowNewCategory(true)}
-          title="Ny kategori — tom eller från mall"
-          type="button"
-        >
-          <Plus size={16} />
-        </button>
+        <h2 className="todo-thread-view__toolbar-title">Bubbelsysslor ✨</h2>
+        <div className="todo-thread-view__toolbar-actions">
+          <button
+            aria-label="Hur fungerar bubbelsysslorna?"
+            className="icon-button"
+            onClick={() => setShowInfo(true)}
+            title="Hur fungerar bubbelsysslorna?"
+            type="button"
+          >
+            <Info size={16} />
+          </button>
+          <button
+            aria-pressed={editMode}
+            className={"icon-button todo-thread-view__edit-button" + (editMode ? " todo-thread-view__edit-button--active" : "")}
+            onClick={() => setEditMode((v) => !v)}
+            title={editMode ? "Klar med redigering" : "Redigera trådar och ordning"}
+            type="button"
+          >
+            {editMode ? <Check size={16} /> : <Pencil size={16} />}
+          </button>
+          <button
+            aria-label="Ny kategori"
+            className="icon-button"
+            onClick={() => setShowNewCategory(true)}
+            title="Ny kategori — tom eller från mall"
+            type="button"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {showNewCategory && (

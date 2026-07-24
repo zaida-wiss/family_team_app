@@ -1,4 +1,3 @@
-import "./TodosView.css";
 import { CheckCircle2, Pencil, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode } from "@shared/types";
@@ -132,18 +131,19 @@ export function TodosView({
 
   return (
     <article className="dashboard">
-      <header className="section-header">
-        {todoViewMode === "thread" ? (
-          <div className="todos-bubble-header">
-            <h2 className="todos-bubble-header__title">Bubbelsysslor ✨</h2>
-          </div>
-        ) : (
+      {/* Tråd-läget (2026-07-25, Zaidas önskemål: "helst rymmas på samma
+          rad") visar ingen egen rubrikrad här — "Bubbelsysslor ✨" flyttad in
+          i ParentTodoThreadView.tsx:s eget verktygsfält istället, så titel
+          och info/redigera/plus-knapparna delar en rad och bubblorna får
+          mer plats på höjden. */}
+      {todoViewMode !== "thread" && (
+        <header className="section-header">
           <div>
             <p className="eyebrow">Uppgifter</p>
             <h2>Todos</h2>
           </div>
-        )}
-      </header>
+        </header>
+      )}
 
       <div className="dashboard-list">
         {/* Visningsläget (lista/tråd) väljs i Inställningar, ingen egen
