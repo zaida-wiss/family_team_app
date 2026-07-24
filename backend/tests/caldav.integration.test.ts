@@ -34,14 +34,11 @@ const RUN = uri.startsWith("mongodb://");
 
 describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", () => {
   let app: typeof import("../src/app.js").app;
-  let pushEventUpsert: typeof import("../src/services/appleCalDavService.js").pushEventUpsert;
 
   beforeAll(async () => {
     const appModule = await import("../src/app.js");
     const connModule = await import("../src/db/connection.js");
-    const caldavModule = await import("../src/services/appleCalDavService.js");
     app = appModule.app;
-    pushEventUpsert = caldavModule.pushEventUpsert;
     await connModule.connectDB();
   });
 
@@ -143,10 +140,12 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
       });
     expect(addRes.status).toBe(201);
 
-    // Routen pushar fire-and-forget — anropar samma funktion direkt och
-    // väntar in den, istället för att gissa på en timing-paus.
-    await pushEventUpsert(calendarId, accountId, eventId);
-    expect(createCalendarObject).toHaveBeenCalled();
+    // Routen pushar fire-and-forget (calendarsService.ts:s addEvent) — ett
+    // andra, direkt anrop av pushEventUpsert här skulle race:a mot det och
+    // ge en Mongoose VersionError (samma dokument laddat/muterat/sparat
+    // två gånger samtidigt). vi.waitFor pollar istället utan att gissa på
+    // en fast timing-paus eller dubbelanropa funktionen.
+    await vi.waitFor(() => expect(createCalendarObject).toHaveBeenCalled());
   });
 
   it("koppla bort tar bort anslutningen och mjuk-raderar dess händelser", async () => {

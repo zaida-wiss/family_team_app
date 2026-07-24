@@ -258,7 +258,15 @@ export async function pushEventUpsert(calendarId: string, accountId: string, eve
     return;
   }
 
-  const icsString = buildVeventIcs({ ...event, uid: event.uid as string });
+  // event är i praktiken ett Mongoose-subdokument (typcastat till
+  // CalendarEvent[] ovan, men fortfarande ett riktigt subdokument) — ett
+  // rått spread `{...event}` fångar bara egna enumerable properties och ger
+  // en trasig kopia (title/notes blir undefined), samma väldokumenterade
+  // fälla som redan fixades i calendarsService.ts:s updateEvent 2026-07-15.
+  // .toObject() ger de RIKTIGA fältvärdena. Görs EFTER mutation+save ovan så
+  // uid/subscriptionId redan är korrekta på den riktiga posten.
+  const plainEvent = (event as unknown as { toObject(): CalendarEvent }).toObject();
+  const icsString = buildVeventIcs({ ...plainEvent, uid: plainEvent.uid as string });
   let response: Response | null = null;
   try {
     if (event.calDavHref) {
