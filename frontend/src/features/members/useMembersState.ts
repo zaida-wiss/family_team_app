@@ -128,6 +128,22 @@ export function useMembersState() {
     );
   }
 
+  // Mina familjekonton (2026-07-25, Zaidas önskemål) — vilka av mina EGNA
+  // andra medlemskap som ska döljas i cross-account-vyer, samma optimistiska
+  // mönster som ovan.
+  function updateMemberHiddenCrossAccountIds(memberId: Id, hiddenCrossAccountIds: Id[]) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) {
+          return member;
+        }
+
+        membersApi.update(memberId, { hiddenCrossAccountIds }).catch(console.error);
+        return { ...member, hiddenCrossAccountIds };
+      })
+    );
+  }
+
   function updateMemberAvatar(memberId: Id, avatarUrl: string | null) {
     setMembers((current) =>
       current.map((member) => {
@@ -254,6 +270,7 @@ export function useMembersState() {
     updateMemberTheme,
     updateMemberDarkMode,
     updateMemberTextSize,
+    updateMemberHiddenCrossAccountIds,
     updateMemberAvatar,
     updateMemberColor,
     updateMemberName,

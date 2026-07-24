@@ -1,5 +1,6 @@
 import { TodoModel } from "../db/models/Todo.js";
 import { MemberModel } from "../db/models/Member.js";
+import { AccountModel } from "../db/models/Account.js";
 import { RoleModel } from "../db/models/Role.js";
 import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { broadcastMembersChanged } from "../realtime/memberEvents.js";
@@ -111,6 +112,49 @@ export async function getSharedChildrenTodos(callerMemberId: string, callerAccou
     });
   }
   return results;
+}
+
+// Mina familjekonton (2026-07-25, Zaidas önskemål) — till skillnad från
+// getSharedChildrenTodos ovan (en delnings-GRANT från någon annan) är det
+// här mina EGNA, riktiga medlemskap i andra konton (flera Member-poster med
+// samma userId). Ingen ny behörighetsmodell — anroparen ÄR redan en
+// fullvärdig medlem av målkontot, precis som om de bytt konto helt via
+// inloggningens familjeväxlare. Bara den delade "Familjen"-tråden (todo utan
+// tilldelad mottagare, ADR-2026-07-23) tas med, inte hela kontots todos.
+export async function getCrossAccountFamilyTodos(callerUserId: string, currentAccountId: string, currentMemberId: string) {
+  const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
+  const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
+
+  const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
+  const results = [];
+  for (const m of memberDocs) {
+    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    const account = await AccountModel.findOne({ id: m.accountId });
+    if (!account) continue;
+    const accountTodos = await getAllTodos(m.accountId);
+    const familyTodos = accountTodos.filter(
+      (t) => t.assignedTo === null && t.status === "pending" && t.deletedAt === null && t.recurrence.type === "none"
+    );
+    results.push({ accountId: m.accountId, accountName: account.name, todos: familyTodos });
+  }
+  return results;
+}
+
+// Slutför en Familjen-uppgift i ETT AV MINA ANDRA konton — hittar min egen
+// medlemspost DÄR via userId (inte via x-member-id/accountId, som bara
+// gäller det AKTIVA kontot) och återanvänder completeTodo rakt av, samma
+// väg som om jag bytt konto och klickat där direkt.
+export async function completeCrossAccountFamilyTodo(
+  callerUserId: string,
+  targetAccountId: string,
+  todoId: string,
+  elapsedMs: number | null
+) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  await completeTodo(todoId, targetAccountId, memberInTarget.id, elapsedMs);
 }
 
 // Enda mutationen på ett delat barns todos i denna första version (ADR-0024s

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { MemberModel } from "../db/models/Member.js";
+import { AccountModel } from "../db/models/Account.js";
 import { UserModel, setChildCredentialsSchema } from "../db/models/User.js";
 import { AppError } from "../utils/errors.js";
 import { CreateMemberBodySchema, MemberPatchSchema } from "../../../shared/schemas.js";
@@ -9,6 +10,27 @@ import { canManageChildAccount, hasPermission } from "../../../shared/permission
 
 export async function getAllMembers(accountId: string) {
   return MemberModel.find({ accountId }, { _id: 0, __v: 0 });
+}
+
+// Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
+// familjer du är med i") — alla riktiga medlemskap (Member-poster med samma
+// userId) den inloggade användaren har, oavsett vilket konto man just nu
+// befinner sig i. Skiljer sig från ADR-0024/dela-barn (en delnings-GRANT
+// från någon annan person) — det här är egna, fullvärdiga medlemskap, samma
+// lista som redan visas vid inloggning (AccountPicker.tsx) om man har fler
+// än ett konto.
+export async function getMyMemberships(userId: string) {
+  const memberDocs = await MemberModel.find({ userId, deletedAt: null });
+  const accountIds = [...new Set(memberDocs.map((m) => m.accountId).filter((id): id is string => !!id))];
+  const accounts = await AccountModel.find({ id: { $in: accountIds } });
+  const accountNameById = new Map(accounts.map((a) => [a.id, a.name]));
+  return memberDocs
+    .filter((m) => m.accountId)
+    .map((m) => ({
+      accountId: m.accountId as string,
+      accountName: accountNameById.get(m.accountId as string) ?? "Okänt konto",
+      memberId: m.id
+    }));
 }
 
 async function requireManager(accountId: string, memberId: string | null) {
@@ -62,7 +84,11 @@ const SELF_NAV_FIELDS = new Set([
   "todoThreadOrder",
   "todoBubbleOrder",
   "todoThreadRange",
-  "calendarFilterSettings"
+  "calendarFilterSettings",
+  // Mina familjekonton (2026-07-25) — vilka av mina EGNA andra medlemskap
+  // som ska döljas i cross-account-vyer, se todosService.ts:s
+  // getCrossAccountFamilyTodos.
+  "hiddenCrossAccountIds"
 ]);
 
 // dashboardTheme/childTimelineSettings sätts antingen av medlemmen själv

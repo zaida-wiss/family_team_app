@@ -41,6 +41,19 @@ export type TodoViewMode = "list" | "thread";
 // Member.textSize.
 export type TextSize = "normal" | "large" | "extra-large";
 
+// Mina familjekonton (2026-07-25) — se Member.hiddenCrossAccountIds.
+export type MyMembership = {
+  accountId: Id;
+  accountName: string;
+  memberId: Id;
+};
+
+export type CrossAccountFamilyThread = {
+  accountId: Id;
+  accountName: string;
+  todos: Todo[];
+};
+
 // Hur mycket som visas i "bollar i tråd" (2026-07-06, Zaidas begäran: "bara
 // idag, en vecka, en månad, eller en lång lista på allt i framtiden") — bara
 // tråd-vyn (bubblorna), listläget har aldrig haft ett datumfilter alls.
@@ -126,6 +139,14 @@ export type Member = {
   // (Shell.tsx), samma självbetjänings-/förälder-styr-barnets-tema-mönster
   // som dashboardTheme/darkMode. Standard "normal" om fältet saknas.
   textSize?: TextSize;
+  // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
+  // familjer du är med i... kunna avmarkera dessa när de inte används") —
+  // en lista av accountId:n vars innehåll (Familjen-todos) INTE ska dyka
+  // upp i vyer som visar över alla EGNA medlemskap (skiljer sig från
+  // ADR-0024/dela-barn, som är en delnings-GRANT från någon annan — det
+  // här är kontons EGNA, riktiga medlemskap). Standard: alla synliga
+  // (tomt/osatt) om fältet saknas.
+  hiddenCrossAccountIds?: Id[];
   calendarFilterSettings?: CalendarFilterSettings;
   childTimelineSettings?: ChildTimelineSettings;
   lastActivePanel?: AppPanel;

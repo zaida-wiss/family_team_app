@@ -11,6 +11,7 @@ import { TodoHistory } from "../todos/TodoHistory";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
+import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
 import { TemplatesSettings } from "../todos/TemplatesSettings";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
@@ -201,6 +202,16 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 </div>
               )}
             </>
+          )
+        },
+        {
+          id: "my-memberships",
+          label: "Mina familjekonton",
+          content: (
+            <MyMembershipsSettings
+              currentMember={currentMember}
+              onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
+            />
           )
         },
         ...(canManageRoles

@@ -1,4 +1,4 @@
-import type { AccessLevel, Todo } from "@shared/types";
+import type { AccessLevel, CrossAccountFamilyThread, Todo } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
@@ -68,6 +68,14 @@ export const todosApi = {
     elapsedMs: number | null = null
   ) =>
     request<{ ok: boolean }>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/complete`), {
+      method: "PATCH",
+      body: JSON.stringify({ elapsedMs })
+    }),
+  // Mina familjekonton (2026-07-25) — mina EGNA andra medlemskap, inte en
+  // delnings-grant (skiljer sig från getSharedChildren ovan).
+  getFamilyAcrossAccounts: () => request<CrossAccountFamilyThread[]>(api("todos/family-across-accounts")),
+  completeFamilyAcrossAccounts: (targetAccountId: string, id: string, elapsedMs: number | null = null) =>
+    request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),

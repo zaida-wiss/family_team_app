@@ -1,4 +1,4 @@
-import type { AccessLevel, Member } from "@shared/types";
+import type { AccessLevel, Member, MyMembership } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
 export type ChildShare = {
@@ -18,6 +18,8 @@ export type ChildShareCandidate = {
 
 export const membersApi = {
   getAll: () => request<Member[]>(api("members")),
+  // Mina familjekonton (2026-07-25).
+  getMyMemberships: () => request<MyMembership[]>(api("members/my-memberships")),
   create: (member: Member) =>
     request<{ id: string }>(api("members"), { method: "POST", body: JSON.stringify(member) }),
   update: (id: string, patch: Partial<Member>) =>

@@ -5,6 +5,7 @@ import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { SharedChildrenThreads } from "./SharedChildrenThreads";
+import { CrossAccountFamilyThreads } from "./CrossAccountFamilyThreads";
 import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
@@ -224,6 +225,12 @@ export function TodosView({
             delning finns, annars ingenting (oförändrat för alla som inte
             använder funktionen). */}
         {todoViewMode === "thread" && <SharedChildrenThreads />}
+
+        {/* Mina familjekonton (2026-07-25, Zaidas önskemål) — mina EGNA
+            andra medlemskap, en tråd per konto (inte per barn). Egen
+            radad tråd-rad, visas bara om jag faktiskt har fler konton och
+            inte dolt dem alla i Inställningar. */}
+        {todoViewMode === "thread" && <CrossAccountFamilyThreads />}
 
         {todoViewMode === "list" && visibleTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>

@@ -12,6 +12,13 @@ membersRouter.get("/", async (req, res) => {
   res.json(await members.getAllMembers(req.accountId!));
 });
 
+// Mina familjekonton (2026-07-25) — mina EGNA medlemskap, oavsett aktivt
+// konto. Måste registreras FÖRE "/:id"-rutterna av samma skäl som "/events"
+// nedan.
+membersRouter.get("/my-memberships", async (req, res) => {
+  res.json(await members.getMyMemberships(req.userId!));
+});
+
 // Realtidssynk (2026-07-17) — samma SSE-mönster som todos/reward-shop redan
 // använder. Måste registreras FÖRE "/:id"-rutterna nedan, annars matchar
 // Express "events" som ett :id-värde.

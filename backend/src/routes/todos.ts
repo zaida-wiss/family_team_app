@@ -41,6 +41,22 @@ todosRouter.patch(
   }
 );
 
+// Mina familjekonton (2026-07-25) — mina EGNA andra medlemskap, inte en
+// delnings-grant. Måste registreras FÖRE PATCH-rutterna med /:id nedan.
+todosRouter.get("/family-across-accounts", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await todos.getCrossAccountFamilyTodos(req.userId!, req.accountId!, req.memberId!));
+});
+
+todosRouter.patch(
+  "/family-across-accounts/:targetAccountId/:id/complete",
+  requireAuth,
+  async (req, res) => {
+    const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
+    await todos.completeCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id, elapsedMs ?? null);
+    res.json({ ok: true });
+  }
+);
+
 todosRouter.get("/events", requireAuth, async (_req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",

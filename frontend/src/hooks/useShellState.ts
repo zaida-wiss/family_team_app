@@ -24,7 +24,7 @@ export function useShellState(
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember, purgeMembersTrash,
-    updateMemberTheme, updateMemberDarkMode, updateMemberTextSize, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
+    updateMemberTheme, updateMemberDarkMode, updateMemberTextSize, updateMemberHiddenCrossAccountIds, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
     setChildCredentials,
     updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
@@ -300,6 +300,7 @@ export function useShellState(
     onUpdateMemberTheme: updateMemberTheme,
     onUpdateMemberDarkMode: updateMemberDarkMode,
     onUpdateMemberTextSize: updateMemberTextSize,
+    onUpdateMemberHiddenCrossAccountIds: updateMemberHiddenCrossAccountIds,
     onSetChildCredentials: setChildCredentials,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
       updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),
