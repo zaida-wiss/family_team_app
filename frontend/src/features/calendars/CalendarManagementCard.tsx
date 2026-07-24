@@ -7,6 +7,7 @@ import { filterByDateRange, parseIcsEvents, toIcs } from "./calendarIcs";
 import type { ImportedCalendarEvent } from "./calendarIcs";
 import { PreviewSelector } from "./PreviewSelector";
 import { CalendarSubscriptionsSection } from "./CalendarSubscriptionsSection";
+import { CalendarCalDavSection } from "./CalendarCalDavSection";
 
 type Props = {
   calendars: Calendar[];
@@ -30,6 +31,10 @@ type Props = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
+  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string) => Promise<void>;
+  onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
+  onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
+  onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
 };
 
 export function CalendarManagementCard({
@@ -54,6 +59,10 @@ export function CalendarManagementCard({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
+  onConnectAppleCalDav,
+  onDisconnectCalDav,
+  onUpdateCalDavInterval,
+  onSyncCalDavNow,
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(selectedCalendar.name);
@@ -311,6 +320,15 @@ export function CalendarManagementCard({
           onSyncSubscription={onSyncSubscription}
         />
       )}
+
+      <CalendarCalDavSection
+        selectedCalendar={selectedCalendar}
+        canEdit={canEdit}
+        onConnectAppleCalDav={onConnectAppleCalDav}
+        onDisconnectCalDav={onDisconnectCalDav}
+        onUpdateCalDavInterval={onUpdateCalDavInterval}
+        onSyncCalDavNow={onSyncCalDavNow}
+      />
     </section>
   );
 }

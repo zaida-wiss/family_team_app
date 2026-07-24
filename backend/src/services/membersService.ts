@@ -60,6 +60,7 @@ const SELF_NAV_FIELDS = new Set([
   "calendarView",
   "todoViewMode",
   "todoThreadOrder",
+  "todoBubbleOrder",
   "todoThreadRange",
   "calendarFilterSettings"
 ]);

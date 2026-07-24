@@ -1,9 +1,10 @@
 import "./Settings.css";
-import { lazy } from "react";
+import { lazy, useState } from "react";
 import { Baby, CalendarDays, ListTodo, LogOut, ShoppingCart, UserCog } from "lucide-react";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
 import type { SettingsCategory } from "./SettingsCategoryNav";
+import { LogoutConfirmModal } from "./LogoutConfirmModal";
 import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
 import { TodoHistory } from "../todos/TodoHistory";
@@ -99,6 +100,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     todoImportUndo,
     onSetTodoImportUndo,
   } = settingsProps;
+
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const hiddenCategories = personalCategories.filter((c) => c.hidden);
 
@@ -264,14 +267,9 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         {
           id: "logout",
           label: "Logga ut",
-          content: (
-            <div className="settings-sub">
-              <button className="settings-logout-btn" onClick={() => void onLogout()} type="button">
-                <LogOut size={18} />
-                Logga ut från Familjeappen
-              </button>
-            </div>
-          )
+          icon: <LogOut aria-hidden="true" size={16} />,
+          variant: "danger",
+          onSelect: () => setLogoutConfirmOpen(true)
         }
       ]
     },
@@ -304,6 +302,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onRemoveSubscription={memberContentProps.onRemoveSubscription}
               onSyncSubscription={memberContentProps.onSyncSubscription}
               onUpdateCalendarKeepAllHistory={memberContentProps.onUpdateCalendarKeepAllHistory}
+              onConnectAppleCalDav={memberContentProps.onConnectAppleCalDav}
+              onDisconnectCalDav={memberContentProps.onDisconnectCalDav}
+              onUpdateCalDavInterval={memberContentProps.onUpdateCalDavInterval}
+              onSyncCalDavNow={memberContentProps.onSyncCalDavNow}
             />
           )
         }
@@ -512,5 +514,15 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     }
   ];
 
-  return <SettingsCategoryNav categories={categories} />;
+  return (
+    <>
+      <SettingsCategoryNav categories={categories} />
+      {logoutConfirmOpen && (
+        <LogoutConfirmModal
+          onCancel={() => setLogoutConfirmOpen(false)}
+          onConfirm={onLogout}
+        />
+      )}
+    </>
+  );
 }

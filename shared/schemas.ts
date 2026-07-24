@@ -63,6 +63,7 @@ export const MemberSchema = z.object({
   calendarView: CalendarViewModeSchema.optional(),
   todoViewMode: TodoViewModeSchema.optional(),
   todoThreadOrder: z.array(IdSchema).optional(),
+  todoBubbleOrder: z.record(z.string(), z.array(IdSchema)).optional(),
   todoThreadRange: TodoThreadRangeSchema.optional(),
   spentStars: z.number().int().min(0),
   approvedStars: z.number().int().min(0),
@@ -87,6 +88,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   calendarView: true,
   todoViewMode: true,
   todoThreadOrder: true,
+  todoBubbleOrder: true,
   todoThreadRange: true,
   spentStars: true
 }).partial();

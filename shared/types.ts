@@ -131,6 +131,16 @@ export type Member = {
   // saknas i listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga
   // ordning. Saknas fältet helt = ingen anpassad ordning ännu.
   todoThreadOrder?: Id[];
+  // Manuell ordning på BUBBLORNA inom en enskild tråd (2026-07-24, Zaidas
+  // önskemål: "jag kanske vill flytta så att 'gå och lägg dig' kommer
+  // sist") — nyckel = tråd-id (kategori-id eller sentinel), värde = en lista
+  // av STABILA bubbel-nycklar i vald ordning. En stabil nyckel är
+  // recurringSourceId för en återkommande uppgift (occurrensen får ett NYTT
+  // eget id varje dag, mallens id överlever) annars uppgiftens eget id.
+  // Bubblor som saknas i listan hamnar sist, i sin vanliga automatiska
+  // sortering (sluttid/starttid) — samma "olistade hamnar sist"-princip som
+  // todoThreadOrder.
+  todoBubbleOrder?: Record<Id, Id[]>;
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode. Standard "today" om osatt.
   todoThreadRange?: TodoThreadRange;
@@ -318,6 +328,31 @@ export type IcsSubscription = {
   dateTo: string | null;
   lastSyncedAt: string | null;
   displaySymbol: string | null;
+  // Hur ofta appens server pollar den externa länken, i minuter (2026-07-24,
+  // Zaidas önskemål). Ingen koppling till användarens egen mobildata/roaming
+  // — synken sker på backend-servern, inte på enheten. Standard 60 (samma
+  // beteende som innan fältet fanns).
+  syncIntervalMinutes: number;
+};
+
+// Tvåvägs CalDAV-anslutning (ADR-0027, 2026-07-24) — till skillnad från
+// IcsSubscription (läs-bara, ingen autentisering) skriver appen HÄR aktivt
+// till en extern kalender också. accountEmail/appSpecificPasswordEnc är
+// riktiga tredjepartsuppgifter, krypterade (fieldEncryption) — ALDRIG med
+// i GDPR-exporten (se exportAccount), till skillnad från övriga krypterade
+// fält som dekrypteras där för dataportabilitet.
+export type CalDavConnection = {
+  id: Id;
+  calendarId: Id;
+  provider: "apple";
+  accountEmailEnc: string;
+  appSpecificPasswordEnc: string;
+  externalCalendarHref: string;
+  syncIntervalMinutes: number;
+  lastSyncedAt: string | null;
+  lastSyncError: string | null;
+  createdBy: Id;
+  connectedAt: string;
 };
 
 export type Calendar = OwnedSharedResource & {
@@ -328,6 +363,7 @@ export type Calendar = OwnedSharedResource & {
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
   subscriptions: IcsSubscription[];
+  calDavConnections: CalDavConnection[];
 };
 
 export type EventRecurrence = {
@@ -359,6 +395,12 @@ export type CalendarEvent = {
   createdBy: Id;
   deletedAt: string | null;
   deletedBy: Id | null;
+  // Sätts bara på händelser skrivna ut via en CalDavConnection (ADR-0027,
+  // 2026-07-24) — låter oss göra en villkorad PUT (If-Match) vid nästa
+  // ändring istället för att blint skriva över en samtidig extern ändring.
+  // null tills händelsen pushats minst en gång.
+  calDavEtag?: string | null;
+  calDavHref?: string | null;
 };
 
 export type ImportedCalendarSource = {

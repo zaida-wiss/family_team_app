@@ -51,10 +51,14 @@ export function ChildShellContent({
   // i barnvyn ens för vuxna, endast assignade 2do") — samma fix som
   // MemberShellContent.tsx:s motsvarande beräkning för en vuxen som tittar
   // på ett barns dashboard.
+  // 2026-07-24, Zaidas önskemål: skriver barnet upp sig ("håller på med",
+  // inProgressBy) på en otilldelad Familjen-uppgift ska den även dyka upp
+  // i barnets egen dashboard-lista, samma fix som MemberShellContent.tsx.
   const activeChildTodos = todos
     .filter(
       (t) =>
-        t.assignedTo === currentMember.id &&
+        (t.assignedTo === currentMember.id ||
+          (t.assignedTo === null && t.inProgressBy?.includes(currentMember.id))) &&
         t.status === "pending" &&
         t.recurrence.type === "none" &&
         t.deletedAt === null &&

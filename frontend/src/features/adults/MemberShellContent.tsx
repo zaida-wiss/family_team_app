@@ -56,6 +56,8 @@ type Props = {
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
+  todoBubbleOrder: Record<Id, Id[]>;
+  onReorderBubbles: (threadId: Id, order: Id[]) => void;
   todoThreadRange: TodoThreadRange;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
@@ -123,7 +125,7 @@ export function MemberShellContent({
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
-  todoThreadOrder, onReorderThreads, todoThreadRange,
+  todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate,
@@ -249,10 +251,15 @@ export function MemberShellContent({
     // Det som SAKNADES: en uppgift i en GÖMD kategori ("Göm" i kategorimenyn,
     // se ParentTodoThreadView.tsx) visades ändå på dashboarden — en gömd
     // kategori ska vara "undanlagd" överallt, inte bara i tråd-vyn.
+    // 2026-07-24, Zaidas önskemål: skriver ett barn upp sig ("håller på
+    // med", inProgressBy) på en otilldelad Familjen-uppgift ska den även
+    // dyka upp i barnets EGEN dashboard-lista, inte bara i vuxenvyns
+    // gemensamma Familjen-tråd.
     const activeChildTodos = todos
       .filter(
         (t) =>
-          t.assignedTo === selectedDashboardMember.id &&
+          (t.assignedTo === selectedDashboardMember.id ||
+            (t.assignedTo === null && t.inProgressBy?.includes(selectedDashboardMember.id))) &&
           t.status === "pending" &&
           t.recurrence.type === "none" &&
           t.deletedAt === null &&
@@ -394,6 +401,8 @@ export function MemberShellContent({
           todoViewMode={todoViewMode}
           todoThreadOrder={todoThreadOrder}
           onReorderThreads={onReorderThreads}
+          todoBubbleOrder={todoBubbleOrder}
+          onReorderBubbles={onReorderBubbles}
           todoThreadRange={todoThreadRange}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}

@@ -11,7 +11,25 @@ const subscriptionSchema = new Schema(
     dateFrom: { type: String, default: null },
     dateTo: { type: String, default: null },
     lastSyncedAt: { type: String, default: null },
-    displaySymbol: { type: String, default: null }
+    displaySymbol: { type: String, default: null },
+    syncIntervalMinutes: { type: Number, default: 60 }
+  },
+  { id: false }
+);
+
+const calDavConnectionSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    calendarId: { type: String, required: true },
+    provider: { type: String, required: true },
+    accountEmailEnc: { type: String, required: true },
+    appSpecificPasswordEnc: { type: String, required: true },
+    externalCalendarHref: { type: String, required: true },
+    syncIntervalMinutes: { type: Number, default: 15 },
+    lastSyncedAt: { type: String, default: null },
+    lastSyncError: { type: String, default: null },
+    createdBy: { type: String, required: true },
+    connectedAt: { type: String, required: true }
   },
   { id: false }
 );
@@ -49,7 +67,9 @@ const calendarSchema = new Schema<Calendar>(
         symbol: { type: String, default: null },
         createdBy: { type: String, required: true },
         deletedAt: { type: String, default: null },
-        deletedBy: { type: String, default: null }
+        deletedBy: { type: String, default: null },
+        calDavEtag: { type: String, default: null },
+        calDavHref: { type: String, default: null }
       }
     ],
     importedSources: [
@@ -60,7 +80,8 @@ const calendarSchema = new Schema<Calendar>(
         importedAt: { type: String, required: true }
       }
     ],
-    subscriptions: [subscriptionSchema]
+    subscriptions: [subscriptionSchema],
+    calDavConnections: [calDavConnectionSchema]
   },
   { id: false }
 );

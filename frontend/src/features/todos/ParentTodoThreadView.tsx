@@ -1,6 +1,7 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Check, EyeOff, Pencil } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
@@ -54,6 +55,9 @@ type Props = {
   onAddTodoToCategory: (categoryId: Id | null) => void;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
+  // Manuell bubbel-ordning inom en enskild tråd (2026-07-24, Zaidas önskemål).
+  todoBubbleOrder: Record<Id, Id[]>;
+  onReorderBubbles: (threadId: Id, order: Id[]) => void;
   // Hur mycket som visas (2026-07-06, Zaidas önskemål: "bara idag, en vecka,
   // en månad, eller en lång lista på allt i framtiden") — väljs i
   // Inställningar, samma per-medlem-mönster som todoViewMode.
@@ -147,6 +151,28 @@ function sortByEndThenStartTime(todos: Todo[]): Todo[] {
   });
 }
 
+// Bubbel-omordning (2026-07-24, Zaidas önskemål: "jag kanske vill flytta så
+// att 'gå och lägg dig' kommer sist") — en återkommande uppgifts dagliga
+// occurrence får ett NYTT eget id varje dag (frusen kopia av mallen), så
+// ordningen måste bindas till något som överlever regenereringen: mallens id
+// (recurringSourceId) om det finns, annars uppgiftens eget (engångsuppgifter).
+function stableBubbleKey(todo: Todo): Id {
+  return todo.recurringSourceId ?? todo.id;
+}
+
+// Sparad ordning läggs OVANPÅ den automatiska sluttid/starttid-sorteringen —
+// bubblor utan en sparad plats hamnar sist, i sin vanliga inbördes ordning
+// (samma "olistade hamnar sist"-princip som trådarnas egen todoThreadOrder).
+function applyBubbleOrder(todos: Todo[], order: Id[] | undefined): Todo[] {
+  if (!order || order.length === 0) return todos;
+  const orderIndex = new Map(order.map((key, i) => [key, i]));
+  return [...todos].sort((a, b) => {
+    const ai = orderIndex.get(stableBubbleKey(a)) ?? Number.MAX_SAFE_INTEGER;
+    const bi = orderIndex.get(stableBubbleKey(b)) ?? Number.MAX_SAFE_INTEGER;
+    return ai - bi;
+  });
+}
+
 // Hur mycket som visas (2026-07-06, Zaidas önskemål) — en todo räknas som
 // inom spannet om dess synlighetsfönster (visibleFrom–expiresAt) övertäcker
 // någon del av det, eller om den saknar schema helt (då är den inte knuten
@@ -209,6 +235,8 @@ export function ParentTodoThreadView({
   onAddTodoToCategory,
   todoThreadOrder,
   onReorderThreads,
+  todoBubbleOrder,
+  onReorderBubbles,
   range,
   fixedTodoTimes
 }: Props) {
@@ -289,6 +317,60 @@ export function ParentTodoThreadView({
   const [draggingId, setDraggingId] = useState<Id | null>(null);
   const [dragOverId, setDragOverId] = useState<Id | null>(null);
   const DRAG_THRESHOLD_PX = 8;
+
+  // Redigeringsläge (2026-07-24, Zaidas önskemål) — en knapp uppe till höger
+  // låser upp två saker samtidigt: en snabb "Göm"-genväg per tråd (samma
+  // sak som redan finns i kategorimenyn, bara mer direktåtkomlig här) och
+  // bubbel-drag inom en kategori (se nedan). Bubblornas vanliga klick/
+  // dubbelklick/långtryck-gester stängs medvetet AV i redigeringsläge —
+  // annars skulle de krocka med drag-gesten.
+  const [editMode, setEditMode] = useState(false);
+  const bubbleDragStateRef = useRef<{ threadId: Id; key: Id; x: number; y: number } | null>(null);
+  const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
+  const [bubbleDragOverKey, setBubbleDragOverKey] = useState<Id | null>(null);
+
+  function handleBubblePointerDown(e: React.PointerEvent<HTMLButtonElement>, threadId: Id, key: Id) {
+    bubbleDragStateRef.current = { threadId, key, x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleBubblePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const start = bubbleDragStateRef.current;
+    if (!start) return;
+    if (draggingBubbleKey === null) {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      setDraggingBubbleKey(start.key);
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const li = el instanceof Element ? el.closest<HTMLElement>("[data-bubble-key]") : null;
+    // Bara ett drop-mål inom SAMMA tråd räknas — bubbelordning är per kategori.
+    if (li && li.dataset.threadId === start.threadId) {
+      setBubbleDragOverKey(li.dataset.bubbleKey as Id);
+    } else {
+      setBubbleDragOverKey(null);
+    }
+  }
+
+  function handleBubblePointerUp(threadTodos: Todo[]) {
+    const start = bubbleDragStateRef.current;
+    const target = bubbleDragOverKey;
+    bubbleDragStateRef.current = null;
+    if (start && target && start.key !== target) {
+      const keys = threadTodos.map(stableBubbleKey);
+      const from = keys.indexOf(start.key);
+      const to = keys.indexOf(target);
+      if (from !== -1 && to !== -1) {
+        const next = [...keys];
+        next.splice(from, 1);
+        next.splice(to, 0, start.key);
+        onReorderBubbles(start.threadId, next);
+      }
+    }
+    setDraggingBubbleKey(null);
+    setBubbleDragOverKey(null);
+  }
 
   useEffect(
     () => () => {
@@ -378,7 +460,10 @@ export function ParentTodoThreadView({
       label: "Barn",
       deletable: false,
       assignees: uniqueAssignees(childBaseTodos, members),
-      todos: sortByEndThenStartTime(applyAssigneeFilter(CHILDREN_THREAD_ID, childBaseTodos)),
+      todos: applyBubbleOrder(
+        sortByEndThenStartTime(applyAssigneeFilter(CHILDREN_THREAD_ID, childBaseTodos)),
+        todoBubbleOrder[CHILDREN_THREAD_ID]
+      ),
       completedPercent: computeCompletedPercent(childAllTodos)
     };
 
@@ -398,7 +483,10 @@ export function ParentTodoThreadView({
       label: "Familjen",
       deletable: false,
       assignees: uniqueAssignees(familyBaseTodos, members),
-      todos: sortByEndThenStartTime(applyAssigneeFilter(FAMILY_THREAD_ID, familyBaseTodos)),
+      todos: applyBubbleOrder(
+        sortByEndThenStartTime(applyAssigneeFilter(FAMILY_THREAD_ID, familyBaseTodos)),
+        todoBubbleOrder[FAMILY_THREAD_ID]
+      ),
       completedPercent: computeCompletedPercent(familyAllTodos)
     };
 
@@ -439,14 +527,17 @@ export function ParentTodoThreadView({
         deletable: true,
         accentColor: accentColorForIndex(index),
         assignees: uniqueAssignees(categoryBaseTodos, members),
-        todos: sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
+        todos: applyBubbleOrder(
+          sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
+          todoBubbleOrder[category.id]
+        ),
         completedPercent: computeCompletedPercent(categoryAllTodos)
       };
     });
 
     return [childThread, familyThread, ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters]);
+  }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters, todoBubbleOrder]);
 
   // Egen sparad ordning (drag-and-drop, 2026-07-06) — trådar som saknas i
   // listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga ordning.
@@ -702,7 +793,19 @@ export function ParentTodoThreadView({
   }
 
   return (
-    <div className="todo-thread-view">
+    <div className="todo-thread-view-wrapper">
+      <div className="todo-thread-view__toolbar">
+        <button
+          aria-pressed={editMode}
+          className={"icon-button todo-thread-view__edit-button" + (editMode ? " todo-thread-view__edit-button--active" : "")}
+          onClick={() => setEditMode((v) => !v)}
+          title={editMode ? "Klar med redigering" : "Redigera trådar och ordning"}
+          type="button"
+        >
+          {editMode ? <Check size={16} /> : <Pencil size={16} />}
+        </button>
+      </div>
+      <div className="todo-thread-view">
       {orderedThreads.map((thread) => (
         <section
           key={thread.id}
@@ -746,7 +849,36 @@ export function ParentTodoThreadView({
                 >
                   {thread.label}
                 </button>
+                {editMode && thread.deletable && (
+                  <button
+                    aria-label={`Göm ${thread.label}`}
+                    className="todo-thread__quick-hide"
+                    onClick={() => onSetCategoryHidden(thread.id, true)}
+                    title="Göm den här tråden"
+                    type="button"
+                  >
+                    <EyeOff size={13} />
+                  </button>
+                )}
               </h3>
+            )}
+
+            {/* Samlad andel avklarat, som en påfyllnadsstapel under
+                kategorinamnet (2026-07-24, Zaidas önskemål — ersätter en
+                tidigare procenttext längst ner i kolumnen som lätt missades).
+                null = inga uppgifter i perioden alls, visar då ingen stapel
+                istället för en missvisande tom/full stapel. */}
+            {thread.completedPercent !== null && (
+              <div
+                aria-label={`${thread.completedPercent}% avklarat`}
+                aria-valuemax={100}
+                aria-valuemin={0}
+                aria-valuenow={thread.completedPercent}
+                className="todo-thread__progress-track"
+                role="progressbar"
+              >
+                <div className="todo-thread__progress-fill" style={{ width: `${thread.completedPercent}%` }} />
+              </div>
             )}
 
             {/* Den gemensamma Barn-tråden är varken döpbar/raderbar/nedladdningsbar
@@ -807,9 +939,7 @@ export function ParentTodoThreadView({
               )}
           </div>
 
-          {thread.todos.length === 0 ? (
-            <p className="todo-thread__empty">Allt avklarat här 🎉</p>
-          ) : (
+          {thread.todos.length > 0 && (
             <ul className="todo-thread__list">
               {thread.todos.map((todo) => {
                 const progress = computeProgress(todo);
@@ -833,10 +963,19 @@ export function ParentTodoThreadView({
                   inProgressMembers.length >= 2 && todo.inProgressSince
                     ? formatElapsed(nowTick - new Date(todo.inProgressSince).getTime())
                     : null;
+                const bubbleKey = stableBubbleKey(todo);
                 return (
                   <li
                     key={todo.id}
-                    className="todo-thread__item"
+                    className={
+                      "todo-thread__item" +
+                      (editMode && draggingBubbleKey === bubbleKey ? " todo-thread__item--dragging" : "") +
+                      (editMode && bubbleDragOverKey === bubbleKey && draggingBubbleKey !== bubbleKey
+                        ? " todo-thread__item--drop-target"
+                        : "")
+                    }
+                    data-thread-id={thread.id}
+                    data-bubble-key={bubbleKey}
                     style={
                       {
                         ...(assigneeColor ? { "--assignee-color": assigneeColor } : {}),
@@ -851,22 +990,29 @@ export function ParentTodoThreadView({
                         (isChildrenThread ? " todo-thread__ball--small" : "") +
                         (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                         (isDissolving ? " todo-thread__ball--dissolving" : "") +
-                        (inProgressColor ? " todo-thread__ball--in-progress" : "")
+                        (inProgressColor ? " todo-thread__ball--in-progress" : "") +
+                        (editMode ? " todo-thread__ball--edit" : "")
                       }
                       disabled={isDissolving}
-                      onClick={(e) => handleBallClick(todo, e)}
-                      onPointerDown={() => startHold(todo.id, () => handleConfirmComplete(todo))}
-                      onPointerUp={clearHold}
-                      onPointerLeave={clearHold}
-                      onPointerCancel={clearHold}
+                      onClick={(e) => { if (!editMode) handleBallClick(todo, e); }}
+                      onPointerDown={(e) => {
+                        if (editMode) { handleBubblePointerDown(e, thread.id, bubbleKey); return; }
+                        startHold(todo.id, () => handleConfirmComplete(todo));
+                      }}
+                      onPointerMove={editMode ? handleBubblePointerMove : undefined}
+                      onPointerUp={() => { if (editMode) { handleBubblePointerUp(thread.todos); return; } clearHold(); }}
+                      onPointerLeave={editMode ? undefined : clearHold}
+                      onPointerCancel={() => { if (editMode) { handleBubblePointerUp(thread.todos); return; } clearHold(); }}
                       title={todo.title}
                       aria-label={
-                        `${todo.title}, tilldelad ${assignee}` +
-                        (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
-                        (inProgressMembers.length > 0
-                          ? `. ${inProgressMembers.map((m) => m.name).join(", ")} håller på med den här.`
-                          : "") +
-                        ". Håll intryckt i två sekunder för att markera hela uppgiften klar. Dubbeltryck för att markera att du håller på."
+                        editMode
+                          ? `${todo.title}. Håll och dra för att flytta ordningen inom ${thread.label}.`
+                          : `${todo.title}, tilldelad ${assignee}` +
+                            (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
+                            (inProgressMembers.length > 0
+                              ? `. ${inProgressMembers.map((m) => m.name).join(", ")} håller på med den här.`
+                              : "") +
+                            ". Håll intryckt i två sekunder för att markera hela uppgiften klar. Dubbeltryck för att markera att du håller på."
                       }
                     >
                       {todo.visual.value && (
@@ -929,16 +1075,9 @@ export function ParentTodoThreadView({
               })}
             </ul>
           )}
-
-          {/* Samlad andel avklarat (2026-07-13, Zaidas önskemål) — periodens
-              (samma tidsspann som resten av tråden) done/approved-uppgifter,
-              se computeCompletedPercent. null = inga uppgifter i perioden
-              alls, visar då ingenting istället för en missvisande "0%". */}
-          {thread.completedPercent !== null && (
-            <p className="todo-thread__completed-percent">{thread.completedPercent}% avklarat</p>
-          )}
         </section>
       ))}
+      </div>
 
       {detailTodo && (
         <TodoDetailView

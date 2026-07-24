@@ -1,4 +1,4 @@
-import type { Calendar, IcsSubscription } from "@shared/types";
+import type { Calendar, CalDavConnection, IcsSubscription } from "@shared/types";
 import { api, request } from "./client";
 
 export const calendarsApi = {
@@ -64,12 +64,12 @@ export const calendarsApi = {
   // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
   purgeTrash: () =>
     request<{ ok: boolean }>(api("calendars/purge-trash"), { method: "POST", body: JSON.stringify({}) }),
-  createSubscription: (calendarId: string, sub: { url: string; includeWords: string[]; excludeWords: string[]; dateFrom: string | null; dateTo: string | null }) =>
+  createSubscription: (calendarId: string, sub: { url: string; includeWords: string[]; excludeWords: string[]; dateFrom: string | null; dateTo: string | null; displaySymbol: string | null; syncIntervalMinutes: number }) =>
     request<IcsSubscription>(api(`calendars/${calendarId}/subscriptions`), {
       method: "POST",
       body: JSON.stringify(sub)
     }),
-  updateSubscription: (calendarId: string, subId: string, patch: { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null; displaySymbol?: string | null }) =>
+  updateSubscription: (calendarId: string, subId: string, patch: { includeWords?: string[]; excludeWords?: string[]; dateFrom?: string | null; dateTo?: string | null; displaySymbol?: string | null; syncIntervalMinutes?: number }) =>
     request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}`), {
       method: "PATCH",
       body: JSON.stringify(patch)
@@ -78,6 +78,24 @@ export const calendarsApi = {
     request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}`), { method: "DELETE" }),
   syncSubscription: (calendarId: string, subId: string) =>
     request<{ ok: boolean }>(api(`calendars/${calendarId}/subscriptions/${subId}/sync`), {
+      method: "POST",
+      body: JSON.stringify({})
+    }),
+  // ADR-0027 (2026-07-24) — tvåvägs CalDAV-anslutning (Apple, Fas 1).
+  connectAppleCalDav: (calendarId: string, accountEmail: string, appSpecificPassword: string) =>
+    request<CalDavConnection>(api(`calendars/${calendarId}/caldav/apple`), {
+      method: "POST",
+      body: JSON.stringify({ accountEmail, appSpecificPassword })
+    }),
+  disconnectCalDav: (calendarId: string, connectionId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/caldav/${connectionId}`), { method: "DELETE" }),
+  updateCalDavInterval: (calendarId: string, connectionId: string, syncIntervalMinutes: number) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/caldav/${connectionId}`), {
+      method: "PATCH",
+      body: JSON.stringify({ syncIntervalMinutes })
+    }),
+  syncCalDav: (calendarId: string, connectionId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/caldav/${connectionId}/sync`), {
       method: "POST",
       body: JSON.stringify({})
     })

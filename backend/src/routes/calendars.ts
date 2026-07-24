@@ -3,6 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as calendars from "../services/calendarsService.js";
 import * as subscriptions from "../services/calendarSubscriptionsService.js";
+import * as appleCalDav from "../services/appleCalDavService.js";
 
 export const calendarsRouter = Router();
 
@@ -50,6 +51,29 @@ calendarsRouter.delete("/:id/subscriptions/:subId", requireAuth, attachAccountId
 
 calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, attachAccountId, async (req, res) => {
   await subscriptions.syncSubscriptionById(req.params.id, req.accountId!, req.params.subId);
+  res.json({ ok: true });
+});
+
+// ── CalDAV-anslutning, tvåvägssynk (ADR-0027) ───────────────────────────────────
+
+calendarsRouter.post("/:id/caldav/apple", requireAuth, attachAccountId, async (req, res) => {
+  const conn = await appleCalDav.connectAppleCalendar(req.params.id, req.accountId!, req.memberId!, req.body);
+  res.status(201).json(conn);
+});
+
+calendarsRouter.delete("/:id/caldav/:connectionId", requireAuth, attachAccountId, async (req, res) => {
+  await appleCalDav.disconnectAppleCalendar(req.params.id, req.accountId!, req.params.connectionId);
+  res.json({ ok: true });
+});
+
+calendarsRouter.patch("/:id/caldav/:connectionId", requireAuth, attachAccountId, async (req, res) => {
+  const { syncIntervalMinutes } = req.body as { syncIntervalMinutes: number };
+  await appleCalDav.updateCalDavConnectionInterval(req.params.id, req.accountId!, req.params.connectionId, syncIntervalMinutes);
+  res.json({ ok: true });
+});
+
+calendarsRouter.post("/:id/caldav/:connectionId/sync", requireAuth, attachAccountId, async (req, res) => {
+  await appleCalDav.pullConnectionById(req.params.id, req.accountId!, req.params.connectionId);
   res.json({ ok: true });
 });
 

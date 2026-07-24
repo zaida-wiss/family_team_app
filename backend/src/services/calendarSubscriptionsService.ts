@@ -7,7 +7,7 @@ import { decryptField, encryptField } from "../utils/fieldEncryption.js";
 
 // ── ICS-parsning (privat) ─────────────────────────────────────────────────────
 
-function parseIcsEvents(text: string) {
+export function parseIcsEvents(text: string) {
   const unfolded = text.replace(/\r?\n[ \t]/g, "");
   return unfolded
     .split("BEGIN:VEVENT")
@@ -75,6 +75,17 @@ function applyFilters(
   });
 }
 
+const SYNC_INTERVAL_OPTIONS = [5, 15, 30, 60, 240];
+
+// Klämmer till närmaste tillåtna val istället för att avvisa okänd indata —
+// samma "var förlåtande, aldrig 500 på ett skrivfel"-princip som redan
+// gäller övriga fält i den här filen (ingen Zod-validering byggd för denna
+// route, se befintligt mönster ovan).
+function normalizeSyncInterval(value: unknown): number {
+  if (typeof value === "number" && SYNC_INTERVAL_OPTIONS.includes(value)) return value;
+  return 60;
+}
+
 // ── Prenumerations-CRUD och synk ──────────────────────────────────────────────
 
 export async function createSubscription(calendarId: string, accountId: string, body: unknown) {
@@ -88,6 +99,7 @@ export async function createSubscription(calendarId: string, accountId: string, 
     dateFrom?: string | null;
     dateTo?: string | null;
     displaySymbol?: string | null;
+    syncIntervalMinutes?: number;
   };
   const sub: IcsSubscription = {
     id: `sub-${crypto.randomUUID()}`,
@@ -99,6 +111,7 @@ export async function createSubscription(calendarId: string, accountId: string, 
     dateTo: b.dateTo ?? null,
     lastSyncedAt: null,
     displaySymbol: b.displaySymbol ?? null,
+    syncIntervalMinutes: normalizeSyncInterval(b.syncIntervalMinutes),
   };
   calendar.subscriptions.push(sub as any);
   calendar.markModified("subscriptions");
@@ -114,18 +127,20 @@ export async function updateSubscription(calendarId: string, accountId: string, 
   const sub = calendar.subscriptions.find((s) => s.id === subId);
   if (!sub) throw new AppError(404, "Prenumeration hittades inte");
 
-  const { includeWords, excludeWords, dateFrom, dateTo, displaySymbol } = patch as {
+  const { includeWords, excludeWords, dateFrom, dateTo, displaySymbol, syncIntervalMinutes } = patch as {
     includeWords?: string[];
     excludeWords?: string[];
     dateFrom?: string;
     dateTo?: string;
     displaySymbol?: string | null;
+    syncIntervalMinutes?: number;
   };
   if (includeWords !== undefined) sub.includeWords = includeWords;
   if (excludeWords !== undefined) sub.excludeWords = excludeWords;
   if (dateFrom !== undefined) sub.dateFrom = dateFrom;
   if (dateTo !== undefined) sub.dateTo = dateTo;
   if (displaySymbol !== undefined) (sub as IcsSubscription).displaySymbol = displaySymbol;
+  if (syncIntervalMinutes !== undefined) (sub as IcsSubscription).syncIntervalMinutes = normalizeSyncInterval(syncIntervalMinutes);
   calendar.markModified("subscriptions");
   await calendar.save();
 }
@@ -187,7 +202,7 @@ async function fetchIcsTextOrNull(url: string): Promise<string | null> {
   }
 }
 
-function subscriptionCutoffs(now: Date) {
+export function subscriptionCutoffs(now: Date) {
   const sub3mAgo = new Date(now); sub3mAgo.setMonth(sub3mAgo.getMonth() - 3);
   const sub1mAgo = new Date(now); sub1mAgo.setMonth(sub1mAgo.getMonth() - 1);
   return {
@@ -200,7 +215,7 @@ function subscriptionCutoffs(now: Date) {
 // som fortfarande finns i flödet, soft-deletar de som försvunnit. Muterar
 // incomingByUid (tar bort matchade poster) så att kvarvarande poster i den
 // mappen är just de som ska läggas till som nya händelser.
-function reconcileExistingEvents(
+export function reconcileExistingEvents(
   calendar: { events: any[] },
   subId: string,
   incomingByUid: Map<string, ReturnType<typeof parseIcsEvents>[number]>,
@@ -225,7 +240,7 @@ function reconcileExistingEvents(
   }
 }
 
-function insertNewEvents(
+export function insertNewEvents(
   calendar: { events: any[]; ownerId: string },
   calendarId: string,
   subId: string,

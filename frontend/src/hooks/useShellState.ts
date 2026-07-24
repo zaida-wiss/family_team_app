@@ -42,7 +42,8 @@ export function useShellState(
     deleteCalendarEvent, deleteCalendar, rsvpCalendarEvent, importCalendarEvents,
     shareCalendar, removeCalendarShare, restoreCalendar, purgeCalendarsTrash,
     softDeleteCalendarsForMember,
-    addSubscription, updateSubscription, removeSubscription, syncSubscription } = calendarsState;
+    addSubscription, updateSubscription, removeSubscription, syncSubscription,
+    connectAppleCalDav, disconnectCalDav, updateCalDavInterval, syncCalDavNow } = calendarsState;
 
   const { shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
     removeShoppingListShare, softDeleteShoppingList, restoreShoppingList, purgeShoppingTrash,
@@ -188,6 +189,11 @@ export function useShellState(
     // Drag-and-drop-ordning på trådarna i "bollar i tråd" (2026-07-06).
     todoThreadOrder: currentMember.todoThreadOrder ?? [],
     onReorderThreads: (order: Id[]) => updateMemberNavigation(currentMember.id, { todoThreadOrder: order }),
+    todoBubbleOrder: currentMember.todoBubbleOrder ?? {},
+    onReorderBubbles: (threadId: Id, order: Id[]) =>
+      updateMemberNavigation(currentMember.id, {
+        todoBubbleOrder: { ...(currentMember.todoBubbleOrder ?? {}), [threadId]: order }
+      }),
     // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
     // Inställningar, se settingsProps nedan.
     todoThreadRange: currentMember.todoThreadRange ?? "today",
@@ -220,6 +226,10 @@ export function useShellState(
     onUpdateSubscription: updateSubscription,
     onRemoveSubscription: removeSubscription,
     onSyncSubscription: syncSubscription,
+    onConnectAppleCalDav: connectAppleCalDav,
+    onDisconnectCalDav: disconnectCalDav,
+    onUpdateCalDavInterval: updateCalDavInterval,
+    onSyncCalDavNow: syncCalDavNow,
     onImportCalendar: (
       calendarId: string,
       sourceName: string,

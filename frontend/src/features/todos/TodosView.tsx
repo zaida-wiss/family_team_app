@@ -26,6 +26,8 @@ type Props = {
   todoViewMode: TodoViewMode;
   todoThreadOrder: Id[];
   onReorderThreads: (order: Id[]) => void;
+  todoBubbleOrder: Record<Id, Id[]>;
+  onReorderBubbles: (threadId: Id, order: Id[]) => void;
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode.
   todoThreadRange: TodoThreadRange;
@@ -70,6 +72,8 @@ export function TodosView({
   todoViewMode,
   todoThreadOrder,
   onReorderThreads,
+  todoBubbleOrder,
+  onReorderBubbles,
   todoThreadRange,
   onCreateTodo,
   onToggleSubtask,
@@ -208,6 +212,8 @@ export function TodosView({
             onAddTodoToCategory={openCreateModalForCategory}
             todoThreadOrder={todoThreadOrder}
             onReorderThreads={onReorderThreads}
+            todoBubbleOrder={todoBubbleOrder}
+            onReorderBubbles={onReorderBubbles}
             range={todoThreadRange}
             fixedTodoTimes={fixedTodoTimes}
           />

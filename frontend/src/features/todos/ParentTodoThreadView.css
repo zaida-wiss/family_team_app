@@ -13,6 +13,23 @@
    men växer sedan gradvis i takt med `vw` upp till ett tak på större skärmar
    (surfplattor, desktop) istället för att hoppa direkt till samma storlek
    oavsett om skärmen är 500px eller 5000px bred. */
+/* Redigeringsläge (2026-07-24, Zaidas önskemål) — en liten knapp uppe till
+   höger, ovanför själva tråd-raden, låser upp göm-genväg + bubbel-drag. */
+.todo-thread-view-wrapper {
+  position: relative;
+}
+
+.todo-thread-view__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.todo-thread-view__edit-button--active {
+  background: var(--primary);
+  color: var(--primary-fg, #fff);
+}
+
 .todo-thread-view {
   display: flex;
   flex-direction: row;
@@ -62,7 +79,8 @@
   top: 0;
   z-index: 3;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 4px;
   width: 100%;
   margin-bottom: 4px;
@@ -70,22 +88,41 @@
   padding-top: 2px;
 }
 
-/* Fast (sticky) footer med samlad andel avklarat (2026-07-13, Zaidas
-   önskemål) — samma resonemang som rubriken ovan: sticky mot kolumnens EGNA
-   scroll-behållare (.todo-thread), ogenomskinlig bakgrund så bollar inte
-   syns genom den när de scrollar bakom. */
-.todo-thread__completed-percent {
-  position: sticky;
-  bottom: 0;
-  z-index: 3;
+/* Påfyllnadsstapel under kategorinamnet (2026-07-24, Zaidas önskemål) —
+   ersätter den tidigare procent-TEXTEN som satt längst ner i kolumnen (sticky
+   footer, lätt att missa bakom en lång bollista). Sitter nu inne i .todo-
+   thread__header, som redan är sticky mot toppen av kolumnen — stapeln
+   följer alltså med och syns alltid. */
+.todo-thread__progress-track {
   width: 100%;
-  margin: 4px 0 0;
-  padding-top: 4px;
-  background: var(--card);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-align: center;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--muted);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.todo-thread__progress-fill {
+  height: 100%;
+  background: var(--thread-accent, var(--primary));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.todo-thread__quick-hide {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--muted);
   color: var(--muted-fg);
+  cursor: pointer;
 }
 
 /* Kategorinamnets meny (2026-07-05, Zaidas beslut, utökad senare samma dag)
@@ -137,18 +174,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  position: relative;
   /* Kategorins accentfärg (kopplad till valt tema, se ParentTodoThreadView.tsx) —
      saknas för Barn-tråden, som då faller tillbaka på vanlig textfärg.
      Tillgänglighetsfynd fixat (2026-07-17, Astrid, WCAG 1.4.3): flera av
-     temanas ljusare --c0…--c7-accentfärger (särskilt Solnedgång/Turkos/
-     Lagun) klarade inte 4,5:1-kontrastkravet mot --card-bakgrunden när de
-     användes rakt av som textfärg — vissa så lågt som ~1,0:1 (praktiskt
-     taget osynlig text). Mörkas nu alltid 70% mot svart innan den används
-     som text — en beräknad, uträknad kontrollpunkt (60% svart var minsta
-     mängd som fick ALLA 24 accentfärger i de tre temana att klara 4,5:1;
-     70% ger marginal). Temaoberoende formel, ingen risk att glömma
-     verifiera ett framtida nytt tema separat. */
-  color: color-mix(in srgb, var(--thread-accent, var(--foreground)) 30%, black 70%);
+     temanas ljusare --c0…--c7-accentfärger klarade inte 4,5:1-kontrastkravet
+     mot --card-bakgrunden när de användes rakt av som textfärg.
+     UPPFÖLJNINGSFIX (2026-07-24, Zaidas fynd: fortsatt dålig kontrast) — den
+     första fixen mörkade alltid mot hårdkodat SVART, vilket fungerar i ljust
+     läge men blir kontraproduktivt i Mörkt läge (tillagt 2026-07-23, EFTER
+     den första kontrastfixen — aldrig verifierat mot det): ett nästan-svart
+     textfärg mot --cards redan MÖRKA bakgrund i mörkt läge ger nästan
+     osynlig text, exakt samma problem den skulle lösa. Mixar nu mot
+     var(--foreground) istället för black — --foreground är redan ett
+     kontrastverifierat par mot --card i BÅDA lägena (se Mörkt läge-arbetet
+     2026-07-23), så formeln behöver inte längre räknas om separat för varje
+     tema/läge-kombination. */
+  color: color-mix(in srgb, var(--thread-accent, var(--foreground)) 30%, var(--foreground) 70%);
 }
 
 .todo-thread__category-button {
@@ -193,24 +235,28 @@
   border-radius: var(--radius-sm);
 }
 
+/* Bubbel-drag inom en kategori (2026-07-24, Zaidas önskemål) — samma
+   ghost/drop-target-princip som trådarnas egen drag ovan, bara på en enskild
+   bubbel istället för en hel kolumn. */
+.todo-thread__item--dragging {
+  opacity: 0.5;
+}
+
+.todo-thread__item--drop-target .todo-thread__ball {
+  outline: 2px dashed var(--thread-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+.todo-thread__ball--edit {
+  cursor: grab;
+  touch-action: none;
+}
+
 .todo-thread__category-input {
   width: 100%;
   font-size: 0.78rem;
   font-weight: 700;
   padding: 2px 4px;
-}
-
-.todo-thread__empty {
-  color: var(--muted-fg);
-  font-size: 0.78rem;
-  margin: 0;
-  align-self: stretch;
-  /* Utan detta vägrar texten wrappa inom den nu smala kolumnen (2026-07-06-
-     fixet) — en ostretchad flex-kolumnbarn breder annars ut sig efter sin
-     egen textbredd istället för att respektera .todo-thread bredd. */
-  max-width: 100%;
-  text-align: center;
-  overflow-wrap: break-word;
 }
 
 .todo-thread__list {

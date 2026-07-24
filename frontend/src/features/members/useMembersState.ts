@@ -215,6 +215,7 @@ export function useMembersState() {
       calendarView?: CalendarViewMode;
       todoViewMode?: TodoViewMode;
       todoThreadOrder?: Id[];
+      todoBubbleOrder?: Record<Id, Id[]>;
       todoThreadRange?: TodoThreadRange;
     }
   ) {

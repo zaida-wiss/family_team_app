@@ -31,6 +31,10 @@ type CalendarPanelProps = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
+  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string) => Promise<void>;
+  onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
+  onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
+  onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
 };
 
 export function CalendarPanel({
@@ -53,6 +57,10 @@ export function CalendarPanel({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
+  onConnectAppleCalDav,
+  onDisconnectCalDav,
+  onUpdateCalDavInterval,
+  onSyncCalDavNow,
 }: CalendarPanelProps) {
   const canCreateCalendar = hasPermission(currentMember, roles, "canCreateCalendar");
   const canImport = hasPermission(currentMember, roles, "canImportCalendar");
@@ -108,6 +116,10 @@ export function CalendarPanel({
           onRemoveSubscription={onRemoveSubscription}
           onSyncSubscription={onSyncSubscription}
           onUpdateCalendarKeepAllHistory={onUpdateCalendarKeepAllHistory}
+          onConnectAppleCalDav={onConnectAppleCalDav}
+          onDisconnectCalDav={onDisconnectCalDav}
+          onUpdateCalDavInterval={onUpdateCalDavInterval}
+          onSyncCalDavNow={onSyncCalDavNow}
         />
       )}
 

@@ -20,7 +20,7 @@ export function useCalendarSubscriptions(setCalendars: Dispatch<SetStateAction<C
   async function updateSubscription(
     calendarId: Id,
     subId: Id,
-    patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "dateFrom" | "dateTo" | "displaySymbol">>
+    patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "dateFrom" | "dateTo" | "displaySymbol" | "syncIntervalMinutes">>
   ) {
     setCalendars((current) =>
       current.map((cal) =>

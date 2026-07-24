@@ -285,6 +285,20 @@
   flex: 1;
 }
 
+.subIntervalLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+.subIntervalHint {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
 .subSymbolWrap {
   position: relative;
   flex-shrink: 0;

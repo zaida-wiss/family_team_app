@@ -3,6 +3,7 @@ import { calendarsApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { generateId } from "../../utils/uuid";
 import { useCalendarSubscriptions } from "./useCalendarSubscriptions";
+import { useCalendarCalDav } from "./useCalendarCalDav";
 import { readCache, writeCache } from "../../utils/localCache";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
 
@@ -413,6 +414,8 @@ export function useCalendarsState() {
 
   const { addSubscription, updateSubscription, removeSubscription, syncSubscription } =
     useCalendarSubscriptions(setCalendars);
+  const { connectApple: connectAppleCalDav, disconnect: disconnectCalDav, updateInterval: updateCalDavInterval, syncNow: syncCalDavNow } =
+    useCalendarCalDav(setCalendars);
 
   return {
     calendars,
@@ -436,6 +439,10 @@ export function useCalendarsState() {
     addSubscription,
     updateSubscription,
     removeSubscription,
-    syncSubscription
+    syncSubscription,
+    connectAppleCalDav,
+    disconnectCalDav,
+    updateCalDavInterval,
+    syncCalDavNow
   };
 }

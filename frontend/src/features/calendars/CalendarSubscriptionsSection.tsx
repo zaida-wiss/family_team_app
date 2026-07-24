@@ -10,10 +10,24 @@ type Props = {
   selectedCalendar: Calendar;
   canImportToSelected: boolean;
   onAddSubscription: (calendarId: Id, sub: Omit<IcsSubscription, "id" | "calendarId" | "lastSyncedAt">) => void;
-  onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "displaySymbol">>) => Promise<void>;
+  onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "displaySymbol" | "syncIntervalMinutes">>) => Promise<void>;
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
 };
+
+// Val + etiketter delas mellan "lägg till"-formuläret och redigeringsläget.
+// Måste spegla SYNC_INTERVAL_OPTIONS i backend/src/services/
+// calendarSubscriptionsService.ts — okända värden klämts till 60 där.
+const SYNC_INTERVAL_OPTIONS: { value: number; label: string }[] = [
+  { value: 5, label: "Var 5:e minut" },
+  { value: 15, label: "Var 15:e minut" },
+  { value: 30, label: "Var 30:e minut" },
+  { value: 60, label: "En gång i timmen (standard)" },
+  { value: 240, label: "Var 4:e timme" },
+];
+
+const SYNC_INTERVAL_HINT =
+  "Hur ofta appen hämtar ändringar från länken. Kortare intervall känns snabbare men skickar fler anrop till kalendertjänsten — för täta anrop kan uppfattas som missbruk och riskera att anslutningen stängs av. Synkningen sker på appens server, inte på din telefon — det spelar alltså ingen roll om du har roaming eller begränsad mobildata.";
 
 export function CalendarSubscriptionsSection({
   selectedCalendar,
@@ -26,12 +40,14 @@ export function CalendarSubscriptionsSection({
   const [newSubUrl, setNewSubUrl] = useState("");
   const [newSubIncludeWords, setNewSubIncludeWords] = useState<string[]>([]);
   const [newSubExcludeWords, setNewSubExcludeWords] = useState<string[]>([]);
+  const [newSubInterval, setNewSubInterval] = useState(60);
   const [addingSub, setAddingSub] = useState(false);
   const [syncingSubId, setSyncingSubId] = useState<string | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [editIncludeWords, setEditIncludeWords] = useState<string[]>([]);
   const [editExcludeWords, setEditExcludeWords] = useState<string[]>([]);
   const [editDisplaySymbol, setEditDisplaySymbol] = useState("");
+  const [editSyncInterval, setEditSyncInterval] = useState(60);
   const [symbolPickerSubId, setSymbolPickerSubId] = useState<string | null>(null);
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [confirmDeleteSubId, setConfirmDeleteSubId] = useState<string | null>(null);
@@ -60,10 +76,12 @@ export function CalendarSubscriptionsSection({
         dateFrom: null,
         dateTo: null,
         displaySymbol: null,
+        syncIntervalMinutes: newSubInterval,
       });
       setNewSubUrl("");
       setNewSubIncludeWords([]);
       setNewSubExcludeWords([]);
+      setNewSubInterval(60);
     } finally {
       setAddingSub(false);
     }
@@ -83,6 +101,7 @@ export function CalendarSubscriptionsSection({
       includeWords: editIncludeWords,
       excludeWords: editExcludeWords,
       displaySymbol: editDisplaySymbol.trim() || null,
+      syncIntervalMinutes: editSyncInterval,
     });
     setEditingSubId(null);
     await syncSub(sub.id);
@@ -112,6 +131,19 @@ export function CalendarSubscriptionsSection({
           words={newSubExcludeWords}
           onChangeWords={setNewSubExcludeWords}
         />
+        <label className={styles.subIntervalLabel}>
+          Synkintervall
+          <select
+            className="text-input"
+            onChange={(e) => setNewSubInterval(Number(e.target.value))}
+            value={newSubInterval}
+          >
+            {SYNC_INTERVAL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </label>
+        <small className={styles.subIntervalHint}>{SYNC_INTERVAL_HINT}</small>
         <button
           className={`secondary-button ${styles.fullButton}`}
           disabled={!newSubUrl.trim() || addingSub}
@@ -141,6 +173,19 @@ export function CalendarSubscriptionsSection({
                     words={editExcludeWords}
                     onChangeWords={setEditExcludeWords}
                   />
+                  <label className={styles.subIntervalLabel}>
+                    Synkintervall
+                    <select
+                      className="text-input"
+                      onChange={(e) => setEditSyncInterval(Number(e.target.value))}
+                      value={editSyncInterval}
+                    >
+                      {SYNC_INTERVAL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <small className={styles.subIntervalHint}>{SYNC_INTERVAL_HINT}</small>
                   <div className={styles.subEditActions}>
                     <button
                       className="secondary-button"
@@ -208,6 +253,9 @@ export function CalendarSubscriptionsSection({
                     {sub.lastSyncedAt && (
                       <small>Senast synkad: {new Date(sub.lastSyncedAt).toLocaleString("sv-SE")}</small>
                     )}
+                    <small>
+                      Synkas: {SYNC_INTERVAL_OPTIONS.find((o) => o.value === (sub.syncIntervalMinutes ?? 60))?.label ?? "En gång i timmen"}
+                    </small>
                   </div>
                   <div className={styles.subActions}>
                     <button
@@ -218,6 +266,7 @@ export function CalendarSubscriptionsSection({
                         setEditIncludeWords([...sub.includeWords]);
                         setEditExcludeWords([...sub.excludeWords]);
                         setEditDisplaySymbol(sub.displaySymbol ?? "");
+                        setEditSyncInterval((sub as IcsSubscription).syncIntervalMinutes ?? 60);
                       }}
                       title="Redigera ord"
                       type="button"

@@ -5,6 +5,8 @@ import { CalendarEventPatchSchema, CalendarEventSchema, ImportedCalendarSourceSc
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { getAllRoles } from "./rolesService.js";
 import { hasPermission } from "../../../shared/permissions.js";
+import { logger } from "../utils/logger.js";
+import { pushEventDelete, pushEventUpsert } from "./appleCalDavService.js";
 
 // Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
 // title/notes krypteras precis innan de sparas och dekrypteras precis innan de
@@ -64,6 +66,15 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
     subscriptions: (calendar.subscriptions ?? []).map((sub: { url: string }) => ({
       ...sub,
       url: decryptField(accountId, sub.url)
+    })),
+    // ADR-0027 — accountEmailEnc dekrypteras för visning ("Ansluten som:
+    // x@icloud.com"), men appSpecificPasswordEnc lämnar ALDRIG backend i
+    // klartext eller krypterad form efter denna punkt — bara en fast
+    // maskeringssträng, samma princip som GDPR-exportens uteslutning.
+    calDavConnections: (calendar.calDavConnections ?? []).map((conn: { accountEmailEnc: string }) => ({
+      ...conn,
+      accountEmailEnc: decryptField(accountId, conn.accountEmailEnc),
+      appSpecificPasswordEnc: "••••••••"
     }))
   }));
 }
@@ -157,6 +168,12 @@ export async function addEvent(calendarId: string, accountId: string, memberId: 
     createdBy: memberId
   } as any);
   await calendar.save();
+  // ADR-0027 (2026-07-24) — skriver ut händelsen till en ansluten Apple-
+  // kalender om kalendern har en aktiv CalDavConnection. Fire-and-forget,
+  // precis som appens övriga SSE/realtidsmönster: lokal skrivning är redan
+  // sanningen, extern synk är bästa-möjliga-ansträngning (fel loggas på
+  // anslutningens lastSyncError, blockerar aldrig den lokala sparningen).
+  pushEventUpsert(calendarId, accountId, validated.id).catch((e) => logger.error(e));
 }
 
 export async function importEvents(
@@ -235,6 +252,7 @@ export async function updateEvent(calendarId: string, accountId: string, eventId
   Object.assign(event, validated);
   calendar.markModified("events");
   await calendar.save();
+  pushEventUpsert(calendarId, accountId, eventId).catch((e) => logger.error(e));
 }
 
 export async function deleteEvent(calendarId: string, accountId: string, eventId: string, memberId: string | null) {
@@ -248,6 +266,9 @@ export async function deleteEvent(calendarId: string, accountId: string, eventId
   event.deletedBy = memberId;
   calendar.markModified("events");
   await calendar.save();
+  pushEventDelete(calendarId, accountId, event as unknown as import("../../../shared/types.js").CalendarEvent).catch((e) =>
+    logger.error(e)
+  );
 }
 
 export async function rsvpEvent(

@@ -190,13 +190,38 @@ export async function exportAccount(accountId: string, memberId: string | null |
     })
   );
   const decryptedCalendars = (
-    calendars as Array<{ events: Array<{ title: string; notes: string | null }>; subscriptions: Array<{ url: string }> }>
+    calendars as Array<{
+      events: Array<{ title: string; notes: string | null }>;
+      subscriptions: Array<{ url: string }>;
+      calDavConnections?: Array<{
+        id: string; provider: string; accountEmailEnc: string; appSpecificPasswordEnc: string;
+        externalCalendarHref: string; syncIntervalMinutes: number; lastSyncedAt: string | null;
+        lastSyncError: string | null; connectedAt: string;
+      }>;
+    }>
   ).map((calendar) => ({
     ...calendar,
     events: calendar.events.map((event) => decryptEvent(accountId, event)),
     subscriptions: (calendar.subscriptions ?? []).map((sub) => ({
       ...sub,
       url: decryptField(accountId, sub.url)
+    })),
+    // ADR-0027 (2026-07-24) — appSpecificPasswordEnc UTELÄMNAS HELT, varken
+    // krypterat eller i klartext. En GDPR-export är en nedladdningsbar fil;
+    // att skicka ut en fungerande nyckel till någon annans Apple-konto i den
+    // filen vore ett allvarligt läckage, till skillnad från övriga
+    // krypterade fält (title/notes/url) som dekrypteras här för att exporten
+    // ska vara läsbar/portabel — de skyddar INNEHÅLL vi själva äger, inte
+    // nycklar till en tredje parts konto.
+    calDavConnections: (calendar.calDavConnections ?? []).map((conn) => ({
+      id: conn.id,
+      provider: conn.provider,
+      accountEmail: decryptField(accountId, conn.accountEmailEnc),
+      externalCalendarHref: conn.externalCalendarHref,
+      syncIntervalMinutes: conn.syncIntervalMinutes,
+      lastSyncedAt: conn.lastSyncedAt,
+      lastSyncError: conn.lastSyncError,
+      connectedAt: conn.connectedAt
     }))
   }));
   const decryptedRewards = (rewards as Array<{ title: string }>).map((reward) => ({
