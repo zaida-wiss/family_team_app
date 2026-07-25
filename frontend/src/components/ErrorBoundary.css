@@ -27,8 +27,8 @@
   padding: 10px 20px;
   border: none;
   border-radius: 10px;
-  background: var(--c1, #4338ca);
-  color: #fff;
+  background: var(--c1);
+  color: var(--on-c1);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;

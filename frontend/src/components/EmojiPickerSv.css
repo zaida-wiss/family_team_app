@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   width: 300px;
-  background: var(--background, #ffffff);
+  background: var(--background);
   border: 1.5px solid var(--border, #e0e0e0);
   border-radius: 14px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
@@ -19,7 +19,7 @@
   padding: 7px 10px;
   border: 1.5px solid var(--border, #e0e0e0);
   border-radius: 8px;
-  background: var(--background, #ffffff);
+  background: var(--background);
   color: inherit;
   font: inherit;
   font-size: 0.88rem;
@@ -28,7 +28,7 @@
 }
 
 .emoji-picker-sv__search input:focus {
-  border-color: var(--primary, #6c63ff);
+  border-color: var(--primary);
 }
 
 .emoji-picker-sv__clear {
@@ -46,7 +46,7 @@
 }
 
 .emoji-picker-sv__clear:hover {
-  background: color-mix(in oklch, var(--primary, #6c63ff) 8%, var(--background, #ffffff));
+  background: color-mix(in oklch, var(--primary) 8%, var(--background));
   color: inherit;
 }
 
@@ -74,7 +74,7 @@
 }
 
 .emoji-picker-sv__btn:hover {
-  background: color-mix(in oklch, var(--primary, #6c63ff) 12%, var(--background, #ffffff));
+  background: color-mix(in oklch, var(--primary) 12%, var(--background));
 }
 
 .emoji-picker-sv__empty {

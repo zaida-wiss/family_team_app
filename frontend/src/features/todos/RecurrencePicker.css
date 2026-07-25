@@ -54,7 +54,7 @@
 .recurrence-picker__day--on {
   background: var(--primary);
   border-color: var(--primary);
-  color: white;
+  color: var(--primary-fg);
 }
 
 .recurrence-picker__hint {

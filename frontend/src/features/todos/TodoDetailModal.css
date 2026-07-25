@@ -142,7 +142,7 @@
   height: 20px;
   border-radius: 50%;
   background: var(--muted);
-  color: #fff;
+  color: var(--primary-fg);
   font-size: 0.65rem;
   font-weight: 700;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);

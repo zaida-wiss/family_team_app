@@ -81,7 +81,7 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: var(--primary);
-  color: white;
+  color: var(--primary-fg);
   cursor: pointer;
   font-weight: 800;
 }
@@ -390,7 +390,7 @@ h3 {
 
 .tab.active {
   background: var(--primary);
-  color: white;
+  color: var(--primary-fg);
   border-color: var(--primary);
 }
 

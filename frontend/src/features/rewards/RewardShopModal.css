@@ -9,7 +9,7 @@
 }
 
 .reward-shop-modal {
-  background: var(--bg-card, #fff);
+  background: var(--card);
   border-radius: 20px;
   padding: 24px;
   width: min(480px, 92vw);
@@ -93,7 +93,7 @@
 
 .reward-shop-modal__mode-btn--active {
   background: var(--primary);
-  color: #fff;
+  color: var(--primary-fg);
 }
 
 .reward-shop-modal__mode-hint {
@@ -111,7 +111,7 @@
   border: 2px solid var(--primary);
   border-radius: 10px;
   background: var(--primary);
-  color: #fff;
+  color: var(--primary-fg);
   font-weight: 700;
   font-size: 0.8rem;
   cursor: pointer;

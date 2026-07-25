@@ -19,7 +19,7 @@
    assignee-indikatorer (t.ex. todo-thread__ball). */
 .subtask-assignee-btn[style] {
   border-style: solid;
-  color: #fff;
+  color: var(--primary-fg);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 

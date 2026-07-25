@@ -60,7 +60,7 @@
   height: 28px;
   border-radius: 50%;
   background: var(--primary);
-  color: white;
+  color: var(--primary-fg);
   font-size: 0.9rem;
 }
 
