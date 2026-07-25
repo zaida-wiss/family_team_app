@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const IdSchema = z.string();
 
-export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "members", "settings"]);
+export const AppPanelSchema = z.enum(["home", "calendar", "shopping", "todos", "recipes", "members", "settings"]);
 
 export const CalendarViewModeSchema = z.enum(["month", "week", "list", "timeline"]);
 
