@@ -8,6 +8,7 @@ const RECIPES_CACHE_KEY = "recipes_v1";
 type RecipeInput = {
   name: string;
   emoji: string | null;
+  tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
@@ -48,5 +49,26 @@ export function useRecipesState() {
     setRecipes((current) => current.filter((r) => r.id !== id));
   }
 
-  return { recipes, createRecipe, updateRecipe, removeRecipe };
+  // Massimport (2026-07-25, Zaidas önskemål: "exportera och importera
+  // recept, massuppladdning") — en rad utan Id skapar ett nytt recept, en
+  // rad vars Id matchar ett BEFINTLIGT eget recept uppdaterar det istället
+  // (samma matcha-mot-Id-mönster som todoCsv.ts:s import). Buntar i grupper
+  // om 4 med en kort paus (ADR-0023, 2026-07-16 rate-limit-incidenten) —
+  // samma skäl/mönster som Sprint 8 S9:s fix av todo-importens loop.
+  async function importRecipes(rows: (RecipeInput & { id?: Id | null })[]) {
+    const existingIds = new Set(recipes.map((r) => r.id));
+    for (let i = 0; i < rows.length; i += 4) {
+      const batch = rows.slice(i, i + 4);
+      await Promise.all(
+        batch.map(({ id, ...input }) =>
+          id && existingIds.has(id) ? recipesApi.update(id, input) : recipesApi.create(input)
+        )
+      );
+      if (i + 4 < rows.length) await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    const fresh = await recipesApi.getAll();
+    setRecipes(fresh);
+  }
+
+  return { recipes, createRecipe, updateRecipe, removeRecipe, importRecipes };
 }

@@ -86,7 +86,8 @@ export type DashboardThemeId =
   | "turquoise"
   | "lagoon"
   | "orchid"
-  | "dusk";
+  | "dusk"
+  | "salvia";
 
 export type User = {
   id: Id;
@@ -650,6 +651,10 @@ export type Recipe = {
   emoji: string | null;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
+  // Söktaggar + skapad-tidsstämpel (2026-07-25, Zaidas önskemål: "kunna
+  // filtrera och sortera i recepten och lägga till söktaggar").
+  tags: string[];
+  createdAt: string;
   createdBy: Id;
   deletedAt: string | null;
   deletedBy: Id | null;

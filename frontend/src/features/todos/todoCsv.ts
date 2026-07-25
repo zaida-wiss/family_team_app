@@ -48,14 +48,14 @@ const WEEKDAY_SHORT_TO_KEY = new Map<string, Weekday>(
 // Minimal RFC4180-liknande CSV — undviker ett nytt beroende (CLAUDE.md-regel:
 // nya beroenden kräver motivering) för ett format enkelt nog att skriva själv.
 // Citerar ett fält om det innehåller kommatecken, citattecken eller radbrytning.
-function csvField(value: string): string {
+export function csvField(value: string): string {
   if (/[",\n\r]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;
 }
 
-function toCsvRow(fields: string[]): string {
+export function toCsvRow(fields: string[]): string {
   return fields.map(csvField).join(",");
 }
 

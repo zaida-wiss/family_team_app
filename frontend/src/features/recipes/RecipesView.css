@@ -1,5 +1,54 @@
 /* Recept (2026-07-25, ADR-0028). */
 
+.recipes-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recipes-toolbar__search {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipes-toolbar__sort {
+  flex-shrink: 0;
+  max-width: 160px;
+}
+
+.recipes-tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.recipes-tag-filter__chip {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--foreground);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.recipes-tag-filter__chip--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg, white);
+}
+
+.recipe-import-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
 .recipes-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -133,6 +182,12 @@
   font-size: 0.78rem;
   color: var(--primary);
   font-weight: 700;
+}
+
+.recipe-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .recipe-detail__actions {

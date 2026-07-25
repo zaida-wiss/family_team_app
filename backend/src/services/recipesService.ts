@@ -16,6 +16,7 @@ type RecipeInput = {
   emoji: string | null;
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
+  tags: string[];
 };
 
 function normalizeInput(body: unknown): RecipeInput {
@@ -36,6 +37,10 @@ function normalizeInput(body: unknown): RecipeInput {
               ? (s as { timedMinutes: number }).timedMinutes
               : null
         })).filter((s) => s.text)
+      : [],
+    // Söktaggar (2026-07-25) — fri text, trimmade, tomma/dubbletter bortfiltrerade.
+    tags: Array.isArray(b.tags)
+      ? [...new Set(b.tags.map((t) => String(t).trim()).filter(Boolean))]
       : []
   };
 }
@@ -50,6 +55,8 @@ export async function createRecipe(accountId: string, memberId: string | null, b
     emoji: input.emoji,
     ingredients: input.ingredients.map((i) => ({ id: `recipe-ing-${crypto.randomUUID()}`, ...i })),
     steps: input.steps.map((s) => ({ id: `recipe-step-${crypto.randomUUID()}`, ...s })),
+    tags: input.tags,
+    createdAt: new Date().toISOString(),
     createdBy: memberId,
     deletedAt: null,
     deletedBy: null
@@ -73,6 +80,7 @@ export async function updateRecipe(id: string, accountId: string, memberId: stri
   recipe.emoji = input.emoji;
   recipe.ingredients = input.ingredients.map((i) => ({ id: `recipe-ing-${crypto.randomUUID()}`, ...i })) as never;
   recipe.steps = input.steps.map((s) => ({ id: `recipe-step-${crypto.randomUUID()}`, ...s })) as never;
+  recipe.tags = input.tags;
   await recipe.save();
   return { ok: true };
 }

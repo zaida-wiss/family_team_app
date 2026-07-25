@@ -89,7 +89,7 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, onCreateTodo,
           Datum och tid
           <input className="text-input" onChange={(e) => setWhen(e.target.value)} type="datetime-local" value={when} />
         </label>
-        <div className="todo-thread-view__reuse-actions">
+        <div className="recipe-form__actions">
           <button className="secondary-button" onClick={onClose} type="button">Avbryt</button>
           <button className="primary-button" disabled={!when} onClick={submit} type="button">Skapa</button>
         </div>

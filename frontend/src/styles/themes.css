@@ -237,6 +237,49 @@
   --sidebar: color-mix(in oklab, #7a1fd6 16%, oklch(0.96 0.018 78));
 }
 
+.app-shell.theme-salvia {
+  /* 8-färgsskala hämtad direkt från Zaidas grå→oliv→antracit-mockup
+     (2026-07-25, Alabaster/Dust/Ash Grey→Dusty Olive→Granite/Ebony/Gunmetal)
+     — redan i ljust→mörkt-ordning i bilden, till skillnad från de tidigare
+     temanas mer varierade mockuper. c0/c1 = temats mörka primärfärg (Ebony/
+     Granite, samma c0/c1/c4-resonemang som övriga teman), c4 = ljus
+     mellanton (Dust Grey). Bara 7 swatchar i mockupen — en åttonde, ännu
+     ljusare neutral (#f2f3f2) tillagd som en naturlig förlängning av samma
+     gråskala för c7. */
+  --c0: #434c40;
+  --c1: #475841;
+  --c2: #738877;
+  --c3: #9fb8ad;
+  --c4: #ced0ce;
+  --c5: #3f403f;
+  --c6: #e6e8e6;
+  --c7: #f2f3f2;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--white);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--white);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #f2f3f2 0%, #ced0ce 100%);
+  --theme-nav-border: #c3d1ca;
+  --theme-nav-fg: #3a3f38;
+  --theme-nav-muted: #6f7d70;
+  --theme-nav-hover-bg: rgba(71, 88, 65, 0.12);
+  --theme-nav-active-bg: #475841;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #475841;
+  --primary-dark: #434c40;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #475841 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #475841 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #475841 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #475841 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #475841 16%, oklch(0.96 0.018 78));
+}
+
 /* Zaidas önskemål 2026-07-12: gradient i sidbakgrunden på ALLA vuxenteman
    (var tidigare bara Orkidé/Skymning, se historiken nedan) — istället för
    att skriva en egen hårdkodad --theme-page-gradient per tema räcker EN
@@ -255,7 +298,8 @@
 .app-shell.theme-turquoise,
 .app-shell.theme-lagoon,
 .app-shell.theme-orchid,
-.app-shell.theme-dusk {
+.app-shell.theme-dusk,
+.app-shell.theme-salvia {
   --theme-page-gradient:
     radial-gradient(circle at 18% 15%, color-mix(in oklab, var(--c4) 20%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 50%),
@@ -274,7 +318,8 @@
 .app-shell.theme-turquoise .app-shell-content,
 .app-shell.theme-lagoon .app-shell-content,
 .app-shell.theme-orchid .app-shell-content,
-.app-shell.theme-dusk .app-shell-content {
+.app-shell.theme-dusk .app-shell-content,
+.app-shell.theme-salvia .app-shell-content {
   background: var(--theme-page-gradient);
 }
 
@@ -412,6 +457,13 @@
   --c4: #c17e84; --c5: #b06aa8; --c6: #7a1fd6; --c7: #4d1099;
   --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
   --on-c4: var(--black); --on-c5: var(--black); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-salvia.dark-mode {
+  --c0: #f2f3f2; --c1: #e6e8e6; --c2: #3f403f; --c3: #ced0ce;
+  --c4: #9fb8ad; --c5: #738877; --c6: #475841; --c7: #434c40;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--white); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
 }
 
 /* =========================================================
@@ -1062,6 +1114,21 @@
     #4d1099 100%
   );
   color: #ffffff;
+}
+
+.theme-option.theme-salvia {
+  background: linear-gradient(
+    135deg,
+    #f2f3f2 0%,
+    #e6e8e6 14%,
+    #ced0ce 28%,
+    #9fb8ad 43%,
+    #738877 57%,
+    #475841 71%,
+    #434c40 86%,
+    #3f403f 100%
+  );
+  color: #2a3126;
 }
 
 .theme-option.theme-space {

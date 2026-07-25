@@ -4,14 +4,23 @@ import { Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
+import { WordTagInput } from "../calendars/WordTagInput";
 import type { Recipe } from "@shared/types";
 
 type Ingredient = { id: string; text: string };
 type Step = { id: string; text: string; timed: boolean; minutesInput: string };
 
+export type RecipeFormInput = {
+  name: string;
+  emoji: string | null;
+  tags: string[];
+  ingredients: { text: string }[];
+  steps: { text: string; timedMinutes: number | null }[];
+};
+
 type Props = {
   recipe: Recipe | null;
-  onSave: (input: { name: string; emoji: string | null; ingredients: { text: string }[]; steps: { text: string; timedMinutes: number | null }[] }) => void;
+  onSave: (input: RecipeFormInput) => void;
   onClose: () => void;
 };
 
@@ -24,6 +33,7 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [name, setName] = useState(recipe?.name ?? "");
   const [emoji, setEmoji] = useState(recipe?.emoji ?? "");
+  const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     recipe?.ingredients.map((i) => ({ id: i.id, text: i.text })) ?? [{ id: generateId(), text: "" }]
   );
@@ -59,6 +69,7 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
     onSave({
       name: name.trim(),
       emoji: emoji || null,
+      tags,
       ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({ text: i.text.trim() })),
       steps: steps.filter((s) => s.text.trim()).map((s) => ({
         text: s.text.trim(),
@@ -91,6 +102,13 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
             <input autoFocus className="text-input" onChange={(e) => setName(e.target.value)} placeholder="Till exempel Köttfärssås" value={name} />
           </label>
         </div>
+
+        <WordTagInput
+          label="Söktaggar"
+          onChangeWords={setTags}
+          placeholder="Till exempel vardag, snabbt + Enter"
+          words={tags}
+        />
 
         <p className="eyebrow">Ingredienser</p>
         <div className="recipe-form__rows">
@@ -164,7 +182,7 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
           <Plus size={14} /> Lägg till steg
         </button>
 
-        <div className="todo-thread-view__reuse-actions">
+        <div className="recipe-form__actions">
           <button className="secondary-button" onClick={onClose} type="button">Avbryt</button>
           <button className="primary-button" disabled={!canSave} onClick={submit} type="button">
             {recipe ? "Spara" : "Skapa recept"}

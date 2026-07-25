@@ -22,6 +22,8 @@ const recipeSchema = new Schema<Recipe>({
       timedMinutes: { type: Number, default: null }
     }
   ],
+  tags: [{ type: String }],
+  createdAt: { type: String, required: true },
   createdBy: { type: String, required: true },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }

@@ -66,7 +66,7 @@ export function AddToShoppingListModal({ recipe, shoppingLists, onAddShoppingIte
             <input autoFocus className="text-input" onChange={(e) => setNewListName(e.target.value)} value={newListName} />
           </label>
         )}
-        <div className="todo-thread-view__reuse-actions">
+        <div className="recipe-form__actions">
           <button className="secondary-button" onClick={onClose} type="button">Avbryt</button>
           <button className="primary-button" disabled={!canSubmit} onClick={submit} type="button">Lägg till</button>
         </div>
