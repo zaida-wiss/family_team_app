@@ -25,6 +25,7 @@ import { todoCategoriesRouter } from "./routes/todoCategories.js";
 import { todoTemplatesRouter } from "./routes/todoTemplates.js";
 import { recipesRouter } from "./routes/recipes.js";
 import { householdSecretsRouter } from "./routes/householdSecrets.js";
+import { householdPinRouter } from "./routes/householdPin.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
@@ -86,6 +87,9 @@ app.use("/api", globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/child-login", authLimiter);
+// Samma brute-force-skydd som inloggning (10 försök/15 min) — en 6-siffrig
+// kod har bara en miljon kombinationer, se householdPinService.ts.
+app.use("/api/household-pin/verify", authLimiter);
 
 app.get("/health", (_req, res) => { res.json({ ok: true }); });
 
@@ -107,6 +111,7 @@ app.use("/api/todo-categories", todoCategoriesRouter);
 app.use("/api/todo-templates", todoTemplatesRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/household-secrets", householdSecretsRouter);
+app.use("/api/household-pin", householdPinRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);

@@ -13,6 +13,8 @@ import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
 import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
 import { HouseholdSecretsSettings } from "../settings/HouseholdSecretsSettings";
+import { HouseholdPinGate } from "../settings/HouseholdPinGate";
+import { useHouseholdPin } from "../settings/useHouseholdPin";
 import { TemplatesSettings } from "../todos/TemplatesSettings";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
 import type { useShellState } from "../../hooks/useShellState";
@@ -104,6 +106,9 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
   } = settingsProps;
 
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  // Extra lås för Hushåll-kategorin (2026-07-25) — EN instans här (inte i
+  // HouseholdPinGate.tsx) så upplåst-state delas mellan Lösenord/Abonnemang.
+  const householdPin = useHouseholdPin();
 
   const hiddenCategories = personalCategories.filter((c) => c.hidden);
 
@@ -533,12 +538,20 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         {
           id: "household-passwords",
           label: "Lösenord",
-          content: <HouseholdSecretsSettings kind="password" />
+          content: (
+            <HouseholdPinGate pinState={householdPin}>
+              <HouseholdSecretsSettings kind="password" />
+            </HouseholdPinGate>
+          )
         },
         {
           id: "household-subscriptions",
           label: "Abonnemang",
-          content: <HouseholdSecretsSettings kind="subscription" />
+          content: (
+            <HouseholdPinGate pinState={householdPin}>
+              <HouseholdSecretsSettings kind="subscription" />
+            </HouseholdPinGate>
+          )
         }
       ]
     }
@@ -546,7 +559,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
 
   return (
     <>
-      <SettingsCategoryNav categories={categories} />
+      <SettingsCategoryNav
+        categories={categories}
+        onCategoryChange={(categoryId) => { if (categoryId !== "household") householdPin.lock(); }}
+      />
       {logoutConfirmOpen && (
         <LogoutConfirmModal
           onCancel={() => setLogoutConfirmOpen(false)}

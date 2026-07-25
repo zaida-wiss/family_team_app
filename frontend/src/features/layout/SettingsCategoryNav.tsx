@@ -19,6 +19,10 @@ export type SettingsCategory = {
 
 type Props = {
   categories: SettingsCategory[];
+  // Låter en konsument reagera på att man LÄMNAR en kategori (2026-07-25,
+  // Hushåll-kategorins PIN-lås: "tills jag byter vy" ska låsa om) — anropas
+  // med den NYA activeCategoryId (null = tillbaka till kategori-rutnätet).
+  onCategoryChange?: (categoryId: string | null) => void;
 };
 
 // Tvånivå-navigering för Inställningar (2026-07-22, Zaidas önskemål: "en
@@ -28,7 +32,7 @@ type Props = {
 // samtidigt öppningsbara accordion-sektioner (settings-section.tsx) — bara
 // EN kategori och EN underkategori kan vara öppen åt gången, en brödsmule
 // visar alltid var man är.
-export function SettingsCategoryNav({ categories }: Props) {
+export function SettingsCategoryNav({ categories, onCategoryChange }: Props) {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
 
@@ -39,11 +43,13 @@ export function SettingsCategoryNav({ categories }: Props) {
   function openCategory(category: SettingsCategory) {
     setActiveCategoryId(category.id);
     setActiveSubId(category.subcategories.length === 1 ? category.subcategories[0].id : null);
+    onCategoryChange?.(category.id);
   }
 
   function backToCategories() {
     setActiveCategoryId(null);
     setActiveSubId(null);
+    onCategoryChange?.(null);
   }
 
   function backToSubcategories() {
