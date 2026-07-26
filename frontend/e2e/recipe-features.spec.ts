@@ -17,7 +17,7 @@ const RECIPE = {
   imageUrl: null,
   sourceUrl: null,
   servings: 4,
-  ingredients: [{ id: "ing-1", text: "500 g köttfärs" }],
+  ingredients: [{ id: "ing-1", text: "köttfärs", quantity: 500, unit: "g" }],
   steps: [
     { id: "step-1", text: "Fräs köttfärsen", timedMinutes: null },
     { id: "step-2", text: "Sätt in i ugnen", timedMinutes: 25 }
@@ -130,13 +130,51 @@ test("Justerar antal personer just nu med +/- knapparna, oberoende av receptets 
 
   const dialog = page.getByRole("dialog", { name: /Köttfärssås/ });
   await expect(dialog.getByText("4 personer")).toBeVisible();
+  await expect(dialog.getByText("500 g köttfärs")).toBeVisible();
   await dialog.getByRole("button", { name: "Fler personer" }).click();
   await expect(dialog.getByText("5 personer")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Återställ till 4" })).toBeVisible();
+  // Ingrediensmängden skalar direkt med räknaren (2026-07-26, Zaidas
+  // önskemål: "sen måste vi fixa mängd och enheter").
+  await expect(dialog.getByText("625 g köttfärs")).toBeVisible();
 
   await page.getByRole("button", { name: "Tillbaka" }).click();
   await page.getByRole("button", { name: "Köttfärssås" }).click();
   await expect(page.getByRole("dialog", { name: /Köttfärssås/ }).getByText("5 personer")).toBeVisible();
+});
+
+test("Ny ingrediens med mängd/enhet sparas strukturerat, en ingrediens utan mängd fungerar precis som förut", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, []);
+  let createdBody: Record<string, unknown> | null = null;
+  await page.route("**/api/recipes", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    createdBody = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: { id: "recipe-new" } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Nytt recept" }).click();
+
+  await page.getByPlaceholder("Till exempel Köttfärssås").fill("Omelett");
+  await page.getByLabel("Mängd").first().fill("3");
+  await page.getByLabel("Ingrediensnamn").first().fill("ägg");
+  await page.getByRole("button", { name: "Lägg till ingrediens" }).click();
+  await page.getByLabel("Mängd").nth(1).fill("1");
+  await page.getByLabel("Enhet").nth(1).fill("dl");
+  await page.getByLabel("Ingrediensnamn").nth(1).fill("mjölk");
+  await page.getByRole("button", { name: "Lägg till ingrediens" }).click();
+  await page.getByLabel("Ingrediensnamn").nth(2).fill("Salt efter smak");
+  await page.getByPlaceholder("Till exempel Blanda mjöl och mjölk").fill("Vispa ihop");
+
+  await page.getByRole("button", { name: "Skapa recept" }).click();
+
+  await expect.poll(() => createdBody?.ingredients).toEqual([
+    { text: "ägg", quantity: 3, unit: null },
+    { text: "mjölk", quantity: 1, unit: "dl" },
+    { text: "Salt efter smak", quantity: null, unit: null }
+  ]);
 });
 
 test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i uppgiftens anteckningar", async ({ page }) => {
@@ -162,7 +200,7 @@ test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i upp
   await expect.poll(() => createdBody?.notes).toBe("Räknat för 4 personer.");
 });
 
-test("Handlingslista-modalen förifylls med aktuellt antal personer, lägger till en informationsrad först i listan", async ({ page }) => {
+test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar mängderna som har mängd/enhet", async ({ page }) => {
   await mockAuthAndData(page);
   await mockRecipes(page, [RECIPE]);
   await page.route("**/api/shopping", (route) =>
@@ -177,6 +215,8 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer, lägger til
 
   const shoppingDialog = page.getByRole("dialog", { name: "Handlingslista från Köttfärssås" });
   await expect(shoppingDialog.getByLabel("Antal personer")).toHaveValue("4");
+  // Ändrar till 6 personer (receptet är sparat för 4) — mängden ska skalas.
+  await shoppingDialog.getByLabel("Antal personer").fill("6");
   await shoppingDialog.getByRole("button", { name: "Lägg till" }).click();
 
   // Receptets egen visa-vy-modal (fullskärm sedan 2026-07-26) ligger kvar
@@ -184,6 +224,6 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer, lägger til
   // huvudnavets Inköp-knapp.
   await page.getByRole("button", { name: "Tillbaka" }).click();
   await page.getByRole("button", { name: "Inköp" }).click();
-  await expect(page.getByText("🧮 Köttfärssås — för 4 personer (ej omräknat)")).toBeVisible();
-  await expect(page.getByText("500 g köttfärs")).toBeVisible();
+  await expect(page.getByText("📐 Skalat från 4 till 6 personer")).toBeVisible();
+  await expect(page.getByText("750 g köttfärs")).toBeVisible();
 });

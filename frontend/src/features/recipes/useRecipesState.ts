@@ -15,7 +15,7 @@ type RecipeInput = {
   sourceUrl?: string | null;
   servings?: number | null;
   tags: string[];
-  ingredients: { text: string }[];
+  ingredients: { text: string; quantity: number | null; unit: string | null }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
 

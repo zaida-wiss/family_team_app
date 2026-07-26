@@ -11,10 +11,17 @@ const recipeSchema = new Schema<Recipe>({
   emoji: { type: String, default: null },
   imageUrl: { type: String, default: null },
   sourceUrl: { type: String, default: null },
+  // Mängd/enhet (2026-07-26, Zaidas önskemål) — se shared/types.ts:s
+  // RecipeIngredient-kommentar. Kom ihåg att lägga till HÄR i Mongoose-
+  // schemat när ett nytt fält läggs i Zod/typerna — samma bugklass som just
+  // fixades för Member.todoThreadGap (fältet fanns i Zod men saknades i
+  // Mongoose-modellen, så det sparades aldrig, trots att API-svaret var 200).
   ingredients: [
     {
       id: { type: String, required: true },
-      text: { type: String, required: true }
+      text: { type: String, required: true },
+      quantity: { type: Number, default: null },
+      unit: { type: String, default: null }
     }
   ],
   steps: [

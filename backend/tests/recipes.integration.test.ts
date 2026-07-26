@@ -36,7 +36,10 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
     name: "Köttfärssås",
     emoji: "🍝",
     servings: 4,
-    ingredients: [{ text: "500 g köttfärs" }, { text: "1 burk krossade tomater" }],
+    ingredients: [
+      { text: "köttfärs", quantity: 500, unit: "g" },
+      { text: "krossade tomater", quantity: 1, unit: "burk" }
+    ],
     steps: [{ text: "Fräs köttfärsen", timedMinutes: null }, { text: "Sätt in i ugnen", timedMinutes: 25 }]
   };
 
@@ -94,6 +97,8 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
     expect(res.body.name).toBe("Köttfärssås");
     expect(res.body.servings).toBe(4);
     expect(res.body.ingredients).toHaveLength(2);
+    expect(res.body.ingredients[0]).toMatchObject({ text: "köttfärs", quantity: 500, unit: "g" });
+    expect(res.body.ingredients[1]).toMatchObject({ text: "krossade tomater", quantity: 1, unit: "burk" });
     expect(res.body.steps).toHaveLength(2);
     expect(res.body.steps[1].timedMinutes).toBe(25);
     recipeId = res.body.id;
@@ -129,6 +134,16 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
     expect(list.body[0].name).toBe("Vegetarisk köttfärssås");
+  });
+
+  it("en ingrediens utan mängd/enhet (t.ex. 'Salt efter smak') sparas med quantity/unit null", async () => {
+    const res = await request(app)
+      .post("/api/recipes")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ ...recipePayload, ingredients: [{ text: "Salt efter smak" }] });
+    expect(res.status).toBe(201);
+    expect(res.body.ingredients[0]).toMatchObject({ text: "Salt efter smak", quantity: null, unit: null });
   });
 
   it("tomt namn avvisas", async () => {

@@ -226,6 +226,35 @@
   min-width: 0;
 }
 
+/* Ingrediensrad: Mängd/Enhet/Namn (2026-07-26, Zaidas önskemål: "sen måste
+   vi fixa mängd och enheter") — Mängd/Enhet smala och fasta, Namn tar
+   resten. flex-wrap så raden bryter på smala mobiler istället för att
+   klippas (samma mönster som RecurrencePicker/TimeWindowsPicker sedan
+   2026-07-06). */
+.recipe-form__ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.recipe-form__ingredient-quantity {
+  width: 4.5rem;
+  min-width: 4.5rem;
+  flex: 0 0 auto;
+}
+
+.recipe-form__ingredient-unit {
+  width: 5rem;
+  min-width: 5rem;
+  flex: 0 0 auto;
+}
+
+.recipe-form__ingredient-name {
+  flex: 1;
+  min-width: 8rem;
+}
+
 .recipe-form__step {
   display: flex;
   flex-direction: column;

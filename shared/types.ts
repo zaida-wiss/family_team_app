@@ -647,11 +647,22 @@ export type TodoSubtask = {
 };
 
 // Recept (2026-07-25, ADR-0028) — kontobred som TodoCategory sedan
-// ADR-0019, mutationer kräver en vuxen. Ingredienser är fri text (samma
-// filosofi som CSV-importens rader), ingen strukturerad mängd/enhet.
+// ADR-0019, mutationer kräver en vuxen.
+// Mängd/enhet (2026-07-26, Zaidas önskemål: "sen måste vi fixa mängd och
+// enheter" — så Antal personer-räknaren i visa-vyn kan räkna om ingrediens-
+// mängder) — `text` är nu bara ingrediensens NAMN (t.ex. "köttfärs"),
+// `quantity`/`unit` egna, valfria fält (samma "text + ett valfritt
+// strukturerat tal"-mönster som RecipeStep.timedMinutes redan använder).
+// Båda null (t.ex. "Salt efter smak") = skalas inte, visas bara som text.
+// Befintliga recept sparade INNAN detta fält fanns har hela den gamla fria
+// texten (t.ex. "500 g köttfärs") liggande i `text` med quantity/unit=null
+// — fungerar och visas precis som förut, skalar bara inte förrän man delar
+// upp raden i formuläret.
 export type RecipeIngredient = {
   id: Id;
   text: string;
+  quantity: number | null;
+  unit: string | null;
 };
 
 export type RecipeStep = {

@@ -2,6 +2,7 @@ import "./RecipesView.css";
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { ingredientDisplayText } from "./recipeScaling";
 import type { Id, Recipe, ShoppingList } from "@shared/types";
 
 const NEW_LIST_VALUE = "__new__";
@@ -25,9 +26,9 @@ export function AddToShoppingListModal({ recipe, shoppingLists, initialServings,
   const activeLists = shoppingLists.filter((l) => l.deletedAt === null);
   const [targetListId, setTargetListId] = useState<string>(activeLists[0]?.id ?? NEW_LIST_VALUE);
   const [newListName, setNewListName] = useState(recipe.name);
-  // Ingredienserna är fri text (ingen strukturerad mängd/enhet) — antalet
-  // personer räknar INTE om raderna, bara en egen informationsrad överst i
-  // listan så det syns vilket antal ingredienserna nedan gäller.
+  // Räknar om mängderna som HAR mängd/enhet (2026-07-26, Zaidas önskemål:
+  // "sen måste vi fixa mängd och enheter") — en ingrediens utan strukturerad
+  // mängd (t.ex. "Salt efter smak") läggs till oförändrad, precis som förut.
   const [servingsInput, setServingsInput] = useState(initialServings != null ? String(initialServings) : "");
 
   const canSubmit = targetListId === NEW_LIST_VALUE ? newListName.trim().length > 0 : true;
@@ -36,11 +37,11 @@ export function AddToShoppingListModal({ recipe, shoppingLists, initialServings,
     if (!canSubmit) return;
     const listId = targetListId === NEW_LIST_VALUE ? onCreateShoppingList(newListName.trim(), recipe.emoji) : (targetListId as Id);
     const servings = servingsInput ? Math.max(1, Math.floor(Number(servingsInput)) || 0) || null : null;
-    if (servings) {
-      onAddShoppingItem(listId, `🧮 ${recipe.name} — för ${servings} ${servings === 1 ? "person" : "personer"} (ej omräknat)`);
+    if (servings && recipe.servings && servings !== recipe.servings) {
+      onAddShoppingItem(listId, `📐 Skalat från ${recipe.servings} till ${servings} ${servings === 1 ? "person" : "personer"}`);
     }
     for (const ingredient of recipe.ingredients) {
-      onAddShoppingItem(listId, ingredient.text);
+      onAddShoppingItem(listId, ingredientDisplayText(ingredient, recipe.servings, servings));
     }
     onClose();
   }

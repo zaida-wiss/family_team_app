@@ -6,6 +6,7 @@ import { CreateTodoFromRecipeModal } from "./CreateTodoFromRecipeModal";
 import { AddToShoppingListModal } from "./AddToShoppingListModal";
 import { RecipeStepTimer } from "./RecipeStepTimer";
 import { useRecipeCookingSession } from "./useRecipeCookingSession";
+import { ingredientDisplayText } from "./recipeScaling";
 import type { Id, Member, Recipe, ShoppingList, Todo } from "@shared/types";
 
 type Props = {
@@ -100,7 +101,9 @@ export function RecipeDetailView({
 
         <p className="eyebrow">Ingredienser</p>
         <ul className="recipe-detail__ingredients">
-          {recipe.ingredients.map((i) => <li key={i.id}>{i.text}</li>)}
+          {recipe.ingredients.map((i) => (
+            <li key={i.id}>{ingredientDisplayText(i, recipe.servings, activeServings)}</li>
+          ))}
         </ul>
 
         <p className="eyebrow">Steg</p>

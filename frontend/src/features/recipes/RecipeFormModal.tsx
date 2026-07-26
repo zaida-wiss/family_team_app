@@ -9,7 +9,12 @@ import { reportApiError } from "../../api";
 import { WordTagInput } from "../calendars/WordTagInput";
 import type { Recipe } from "@shared/types";
 
-type Ingredient = { id: string; text: string };
+// Mängd/enhet (2026-07-26, Zaidas önskemål: "sen måste vi fixa mängd och
+// enheter") — quantityInput sträng-baserad (samma mönster som minutesInput/
+// servingsInput), unit fri text (t.ex. "g", "dl", "msk"). Båda valfria — en
+// ingrediens utan mängd (t.ex. "Salt efter smak") fungerar precis som förut,
+// skalas bara inte när Antal personer ändras i visa-vyn.
+type Ingredient = { id: string; text: string; quantityInput: string; unit: string };
 type Step = { id: string; text: string; timed: boolean; minutesInput: string };
 
 export type RecipeFormInput = {
@@ -19,7 +24,7 @@ export type RecipeFormInput = {
   sourceUrl: string | null;
   servings: number | null;
   tags: string[];
-  ingredients: { text: string }[];
+  ingredients: { text: string; quantity: number | null; unit: string | null }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
 
@@ -53,7 +58,12 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
   const [servingsInput, setServingsInput] = useState(recipe?.servings != null ? String(recipe.servings) : "");
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [ingredients, setIngredients] = useState<Ingredient[]>(
-    recipe?.ingredients.map((i) => ({ id: i.id, text: i.text })) ?? [{ id: generateId(), text: "" }]
+    recipe?.ingredients.map((i) => ({
+      id: i.id,
+      text: i.text,
+      quantityInput: i.quantity != null ? String(i.quantity) : "",
+      unit: i.unit ?? ""
+    })) ?? [{ id: generateId(), text: "", quantityInput: "", unit: "" }]
   );
   const [steps, setSteps] = useState<Step[]>(
     recipe?.steps.map((s) => ({ id: s.id, text: s.text, timed: s.timedMinutes != null, minutesInput: s.timedMinutes != null ? String(s.timedMinutes) : "" }))
@@ -78,11 +88,11 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
         ? "Lägg till minst ett steg."
         : null;
 
-  function updateIngredient(id: string, text: string) {
-    setIngredients((prev) => prev.map((i) => (i.id === id ? { ...i, text } : i)));
+  function updateIngredient(id: string, patch: Partial<Ingredient>) {
+    setIngredients((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   }
   function addIngredient() {
-    setIngredients((prev) => [...prev, { id: generateId(), text: "" }]);
+    setIngredients((prev) => [...prev, { id: generateId(), text: "", quantityInput: "", unit: "" }]);
   }
   function removeIngredient(id: string) {
     setIngredients((prev) => prev.filter((i) => i.id !== id));
@@ -119,7 +129,11 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
       sourceUrl: sourceUrl.trim() || null,
       servings: servingsInput ? Math.max(1, Math.floor(Number(servingsInput)) || 0) || null : null,
       tags,
-      ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({ text: i.text.trim() })),
+      ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({
+        text: i.text.trim(),
+        quantity: i.quantityInput ? Math.max(0.01, Number(i.quantityInput.replace(",", ".")) || 0) || null : null,
+        unit: i.unit.trim() || null
+      })),
       steps: steps.filter((s) => s.text.trim()).map((s) => ({
         text: s.text.trim(),
         timedMinutes: s.timed && s.minutesInput ? Math.max(1, Math.floor(Number(s.minutesInput)) || 0) : null
@@ -211,11 +225,27 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
         <p className="eyebrow">Ingredienser</p>
         <div className="recipe-form__rows">
           {ingredients.map((ing, i) => (
-            <div className="recipe-form__row" key={ing.id}>
+            <div className="recipe-form__ingredient-row" key={ing.id}>
               <input
-                className="text-input"
-                onChange={(e) => updateIngredient(ing.id, e.target.value)}
-                placeholder="Till exempel 2 dl mjöl"
+                aria-label="Mängd"
+                className="text-input recipe-form__ingredient-quantity"
+                inputMode="decimal"
+                onChange={(e) => updateIngredient(ing.id, { quantityInput: e.target.value.replace(/[^\d,.]/g, "") })}
+                placeholder="Mängd"
+                value={ing.quantityInput}
+              />
+              <input
+                aria-label="Enhet"
+                className="text-input recipe-form__ingredient-unit"
+                onChange={(e) => updateIngredient(ing.id, { unit: e.target.value })}
+                placeholder="Enhet"
+                value={ing.unit}
+              />
+              <input
+                aria-label="Ingrediensnamn"
+                className="text-input recipe-form__ingredient-name"
+                onChange={(e) => updateIngredient(ing.id, { text: e.target.value })}
+                placeholder="Till exempel köttfärs"
                 value={ing.text}
               />
               <button
@@ -230,6 +260,7 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
             </div>
           ))}
         </div>
+        <p className="field-hint field-hint--neutral">Mängd och enhet är valfritt — lämna tomt för t.ex. "Salt efter smak".</p>
         <button className="secondary-button" onClick={addIngredient} type="button">
           <Plus size={14} /> Lägg till ingrediens
         </button>

@@ -16,7 +16,7 @@ type RecipeInput = {
   emoji: string | null;
   imageUrl: string | null;
   sourceUrl: string | null;
-  ingredients: { text: string }[];
+  ingredients: { text: string; quantity: number | null; unit: string | null }[];
   steps: { text: string; timedMinutes: number | null }[];
   servings: number | null;
   tags: string[];
@@ -32,8 +32,19 @@ function normalizeInput(body: unknown): RecipeInput {
     imageUrl: typeof b.imageUrl === "string" && b.imageUrl ? b.imageUrl : null,
     sourceUrl: typeof b.sourceUrl === "string" && b.sourceUrl.trim() ? b.sourceUrl.trim() : null,
     servings: typeof b.servings === "number" && b.servings > 0 ? Math.floor(b.servings) : null,
+    // Mängd/enhet (2026-07-26) — båda valfria, en ingrediens utan mängd
+    // (t.ex. "Salt efter smak") skalas inte men fungerar precis som förut.
     ingredients: Array.isArray(b.ingredients)
-      ? b.ingredients.map((i) => ({ text: String((i as { text: unknown }).text ?? "").trim() })).filter((i) => i.text)
+      ? b.ingredients
+          .map((i) => {
+            const raw = i as { text: unknown; quantity: unknown; unit: unknown };
+            return {
+              text: String(raw.text ?? "").trim(),
+              quantity: typeof raw.quantity === "number" && raw.quantity > 0 ? raw.quantity : null,
+              unit: typeof raw.unit === "string" && raw.unit.trim() ? raw.unit.trim() : null
+            };
+          })
+          .filter((i) => i.text)
       : [],
     steps: Array.isArray(b.steps)
       ? b.steps.map((s) => ({

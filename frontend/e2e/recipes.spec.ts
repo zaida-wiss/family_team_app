@@ -17,7 +17,7 @@ const RECIPE = {
   emoji: "🍝",
   imageUrl: null,
   sourceUrl: null,
-  ingredients: [{ id: "ing-1", text: "500 g köttfärs" }],
+  ingredients: [{ id: "ing-1", text: "köttfärs", quantity: 500, unit: "g" }],
   steps: [{ id: "step-1", text: "Fräs köttfärsen", timedMinutes: null }],
   tags: [],
   createdAt: "2026-07-01T00:00:00.000Z",
@@ -105,7 +105,7 @@ test("Recept: spara-fel visar serverns riktiga felmeddelande i felbannern, inte 
   await page.getByRole("button", { name: "Recept" }).click();
   await page.getByRole("button", { name: "Nytt recept" }).click();
   await page.getByPlaceholder("Till exempel Köttfärssås").fill("Trasigt recept");
-  await page.getByPlaceholder("Till exempel 2 dl mjöl").fill("Något");
+  await page.getByLabel("Ingrediensnamn").fill("Något");
   await page.getByPlaceholder("Till exempel Blanda mjöl och mjölk").fill("Ett steg");
   await page.getByRole("button", { name: "Skapa recept" }).click();
 
