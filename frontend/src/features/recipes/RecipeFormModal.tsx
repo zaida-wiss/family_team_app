@@ -55,7 +55,23 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
       ?? [{ id: generateId(), text: "", timed: false, minutesInput: "" }]
   );
 
-  const canSave = name.trim().length > 0 && ingredients.some((i) => i.text.trim()) && steps.some((s) => s.text.trim());
+  const hasName = name.trim().length > 0;
+  const hasIngredient = ingredients.some((i) => i.text.trim());
+  const hasStep = steps.some((s) => s.text.trim());
+  const canSave = hasName && hasIngredient && hasStep;
+  // Synlig varning istället för en bara-tyst-grå-knapp (2026-07-26, Zaidas
+  // fynd: "det händer inget när jag trycker på spara") — samma "spärra OCH
+  // förklara varför"-princip som redan gäller todo-formulärets tom titel/
+  // saknat startdatum-spärrar (se CLAUDE.md 2026-07-06). Ett recept importerat
+  // via CSV kan sakna ingredienser/steg helt (backend kräver bara namn) —
+  // utan denna hint ser Spara-knappen ut att bara inte fungera.
+  const saveHint = !hasName
+    ? "Namn saknas."
+    : !hasIngredient
+      ? "Lägg till minst en ingrediens."
+      : !hasStep
+        ? "Lägg till minst ett steg."
+        : null;
 
   function updateIngredient(id: string, text: string) {
     setIngredients((prev) => prev.map((i) => (i.id === id ? { ...i, text } : i)));
@@ -269,6 +285,7 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
             {recipe ? "Spara" : "Skapa recept"}
           </button>
         </div>
+        {saveHint && <p className="field-hint">{saveHint}</p>}
       </div>
     </div>
   );

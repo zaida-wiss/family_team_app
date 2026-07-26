@@ -122,6 +122,24 @@
   gap: 10px;
 }
 
+/* Receptformuläret (skapa/redigera) fyller hela skärmen och skrollar internt
+   (2026-07-26, Zaidas önskemål) — till skillnad från appens övriga, mindre
+   modaler (visa-vyn, handlingslista, skapa uppgift) som är opåverkade.
+   Formuläret har flest fält av alla receptmodaler (bild, länk, taggar,
+   obegränsat antal ingrediens-/stegrader), så en fast maxbredd/höjd klippte
+   lättast av innehåll på mindre skärmar. */
+.recipe-modal-overlay:has(.recipe-form-modal) {
+  padding: 0;
+}
+
+.recipe-form-modal {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+}
+
 .recipe-modal__header {
   display: flex;
   align-items: center;
