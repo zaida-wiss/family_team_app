@@ -3,6 +3,7 @@ import { shoppingApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { generateId } from "../../utils/uuid";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { AccessLevel, Id, ShoppingList } from "@shared/types";
 
 const SHOPPING_CACHE_KEY = "shopping_v1";
@@ -12,7 +13,9 @@ export function useShoppingState() {
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(() => readCache(SHOPPING_CACHE_KEY, []));
 
   useEffect(() => {
-    shoppingApi.getAll().then(setShoppingLists).catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts.
+    deferToIdle(() => { shoppingApi.getAll().then(setShoppingLists).catch(console.error); });
   }, []);
 
   useEffect(() => {

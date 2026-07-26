@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { timedTasksApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 
 const PENDING_ATTEMPTS_KEY = "timedTaskPendingAttempts";
@@ -78,7 +79,10 @@ export function useTimedTasksState() {
   }, [refresh]);
 
   useEffect(() => {
-    refresh();
+    // Bara den inledande refresh() skjuts upp (2026-07-26, prestandaomgången
+    // S1a, se deferToIdle.ts) — flushPendingAttempts (offline-kön) och
+    // "online"-lyssnaren registreras direkt, oförändrat.
+    deferToIdle(refresh);
     void flushPendingAttempts();
     window.addEventListener("online", flushPendingAttempts);
     return () => window.removeEventListener("online", flushPendingAttempts);

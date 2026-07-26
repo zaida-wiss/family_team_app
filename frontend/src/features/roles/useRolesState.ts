@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { rolesApi } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { Id, PermissionKey, Role } from "@shared/types";
 
 const ROLES_CACHE_KEY = "roles_v1";
@@ -12,7 +13,10 @@ export function useRolesState() {
   const [roles, setRoles] = useState<Role[]>(() => readCache(ROLES_CACHE_KEY, []));
 
   useEffect(() => {
-    rolesApi.getAll().then(setRoles).catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts. Cachad data (ovan) visas redan direkt, det
+    // är bara HÄMTNINGEN av färsk data som flyttas, inte tillgängligheten.
+    deferToIdle(() => { rolesApi.getAll().then(setRoles).catch(console.error); });
   }, []);
 
   useEffect(() => {

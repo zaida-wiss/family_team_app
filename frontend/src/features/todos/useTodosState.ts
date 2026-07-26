@@ -5,6 +5,7 @@ import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences }
 import type { Id, Member, Role, Todo } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 
 const TODOS_CACHE_KEY = "todos_v1";
 
@@ -58,7 +59,10 @@ export function useTodosState(fixedTodoTimes = false) {
   const syncInFlightRef = useRef(false);
 
   useEffect(() => {
-    refreshTodos().catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts. Bara den INLEDANDE hämtningen, inte SSE/
+    // visibilitychange/intervallet nedan, som redan är händelsestyrda.
+    deferToIdle(() => { refreshTodos().catch(console.error); });
   }, []);
 
   useEffect(() => {

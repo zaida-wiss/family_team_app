@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { todoTemplatesApi } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { Id, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
 
 const TASK_TEMPLATES_CACHE_KEY = "task_templates_v1";
@@ -18,8 +19,12 @@ export function useTodoTemplatesState() {
   );
 
   useEffect(() => {
-    todoTemplatesApi.getAllTasks().then(setTaskTemplates).catch(console.error);
-    todoTemplatesApi.getAllCategories().then(setCategoryTemplates).catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts.
+    deferToIdle(() => {
+      todoTemplatesApi.getAllTasks().then(setTaskTemplates).catch(console.error);
+      todoTemplatesApi.getAllCategories().then(setCategoryTemplates).catch(console.error);
+    });
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { todoCategoriesApi } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { Id, TodoCategory } from "@shared/types";
 
 const TODO_CATEGORIES_CACHE_KEY = "todo_categories_v1";
@@ -12,7 +13,9 @@ export function useTodoCategoriesState() {
   const [categories, setCategories] = useState<TodoCategory[]>(() => readCache(TODO_CATEGORIES_CACHE_KEY, []));
 
   useEffect(() => {
-    todoCategoriesApi.getAll().then(setCategories).catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts.
+    deferToIdle(() => { todoCategoriesApi.getAll().then(setCategories).catch(console.error); });
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { membersApi } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type {
   AppPanel,
   CalendarFilterKey,
@@ -28,7 +29,11 @@ export function useMembersState() {
   const [members, setMembers] = useState<Member[]>(() => readCache(MEMBERS_CACHE_KEY, []));
 
   useEffect(() => {
-    membersApi.getAll().then(setMembers).catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts. currentMember (useAppState.ts) faller redan
+    // tillbaka på initialMembership.member tills denna hämtning landat, så
+    // en liten extra fördröjning här ändrar ingenting synligt.
+    deferToIdle(() => { membersApi.getAll().then(setMembers).catch(console.error); });
   }, []);
 
   useEffect(() => {

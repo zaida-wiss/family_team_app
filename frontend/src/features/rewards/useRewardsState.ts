@@ -3,6 +3,7 @@ import { rewardsApi } from "../../api";
 import type { Id, Reward } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 
 const REWARDS_CACHE_KEY = "rewards_v1";
 
@@ -12,7 +13,9 @@ export function useRewardsState() {
   const [wishStars, setWishStars] = useState<Record<Id, number>>({});
 
   useEffect(() => {
-    rewardsApi.getAll().then(setRewards).catch(console.error);
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts.
+    deferToIdle(() => { rewardsApi.getAll().then(setRewards).catch(console.error); });
   }, []);
 
   useEffect(() => {

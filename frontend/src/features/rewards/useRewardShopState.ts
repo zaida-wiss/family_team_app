@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { rewardShopApi } from "../../api";
 import { trackEvent } from "../../utils/analytics";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { PurchasedReward, RewardShopItem } from "@shared/types";
 
 export type { PurchasedReward };
@@ -33,7 +34,10 @@ export function useRewardShopState() {
   }, []);
 
   useEffect(() => {
-    refreshShop();
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts. refreshShop() självt orört (återanvänds av
+    // SSE-prenumerationen nedan, som INTE ska fördröjas).
+    deferToIdle(refreshShop);
   }, [refreshShop]);
 
   // Realtidssynk mellan enheter: ett köp/flytt/borttag ELLER en katalogändring (ny/redigerad/

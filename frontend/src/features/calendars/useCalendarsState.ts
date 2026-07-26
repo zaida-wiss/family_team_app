@@ -5,6 +5,7 @@ import { generateId } from "../../utils/uuid";
 import { useCalendarSubscriptions } from "./useCalendarSubscriptions";
 import { useCalendarCalDav } from "./useCalendarCalDav";
 import { readCache, writeCache } from "../../utils/localCache";
+import { deferToIdle } from "../../utils/deferToIdle";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
 
 const CALS_CACHE_KEY = "cals_v1";
@@ -50,11 +51,13 @@ export function useCalendarsState() {
   const loadedUntil = useRef<string>("");
 
   useEffect(() => {
+    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
+    // S1a) — se deferToIdle.ts.
     const now = new Date();
     const { from, until } = monthWindow(now.getFullYear(), now.getMonth());
     loadedFrom.current = from;
     loadedUntil.current = until;
-    calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
+    deferToIdle(() => { calendarsApi.getAll(from, until).then(setCalendars).catch(console.error); });
   }, []);
 
   useEffect(() => {
