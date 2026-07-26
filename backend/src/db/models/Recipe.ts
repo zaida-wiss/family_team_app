@@ -25,7 +25,18 @@ const recipeSchema = new Schema<Recipe>({
     }
   ],
   tags: [{ type: String }],
-  createdAt: { type: String, required: true },
+  // required + default (2026-07-26, Zaidas fynd: "för created at eller
+  // något datum krävs" — den riktiga felmeddelandetexten syntes först efter
+  // gårdagens fix av felbanner-dubbelrapporteringen). createdAt tillkom i en
+  // SENARE commit samma dag (431675f) än receptpanelens allra första version
+  // (ce26f7f) — recept skapade i det mellanrummet saknar fältet helt i
+  // databasen. Mongoose applicerar defaultet vid HYDRERING av ett befintligt
+  // dokument också, inte bara vid create(), så nästa gång ett sådant recept
+  // laddas och .save():as (update ELLER delete, båda validerar HELA
+  // dokumentet) fylls fältet i automatiskt istället för att kasta
+  // "createdAt: Path `createdAt` is required." — självläkande, ingen
+  // separat migrering/databasskrivning behövs.
+  createdAt: { type: String, required: true, default: () => new Date().toISOString() },
   createdBy: { type: String, required: true },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }

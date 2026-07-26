@@ -158,6 +158,60 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
     expect(list.body).toEqual([]);
   });
 
+  // 2026-07-26, Zaidas fynd: "jag kan inte ta bort recept... för created at
+  // eller något datum krävs?" — receptpanelens allra första version
+  // (commit ce26f7f) satte aldrig createdAt, en SENARE commit samma dag
+  // (431675f) gjorde fältet required för sorteringen "Senast tillagda".
+  // Recept skapade i det mellanrummet saknar fältet helt i databasen —
+  // Mongoose validerar HELA dokumentet vid .save() (update OCH delete),
+  // så ett sådant recept gick att LÄSA men aldrig ändra/ta bort. Fixat med
+  // ett default på schemat (Recipe.ts) — Mongoose fyller i fältet vid
+  // hydrering av det gamla dokumentet, ingen databasmigrering behövs.
+  it("ett recept utan createdAt i databasen (kvarleva från innan fältet fanns) går att uppdatera och radera", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: `recipes-legacy-${crypto.randomUUID()}@bmad.test`, password: "Losenord1!", name: "Legacytest" });
+    const token = register.body.accessToken as string;
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Legacyfamiljen" });
+    const legacyMemberId = setup.body.membership.member.id as string;
+    const legacyAccountId = setup.body.membership.account.id as string;
+
+    const legacyRecipeId = `recipe-${crypto.randomUUID()}`;
+    // Rå collection.insertOne (förbi Mongoose/schemadefaults) för att
+    // exakt återskapa det historiska tillståndet — RecipeModel.create()
+    // skulle fylla i createdAt-defaultet direkt och inte testa något.
+    await mongoose.connection.db!.collection("recipes").insertOne({
+      id: legacyRecipeId,
+      accountId: legacyAccountId,
+      name: "Gammalt recept",
+      emoji: null,
+      imageUrl: null,
+      sourceUrl: null,
+      ingredients: [{ id: "ing-legacy", text: "Något" }],
+      steps: [{ id: "step-legacy", text: "Gör något", timedMinutes: null }],
+      tags: [],
+      createdBy: legacyMemberId,
+      deletedAt: null,
+      deletedBy: null
+    });
+
+    const update = await request(app)
+      .patch(`/api/recipes/${legacyRecipeId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .set("x-member-id", legacyMemberId)
+      .send({ ...recipePayload, name: "Uppdaterat gammalt recept" });
+    expect(update.status).toBe(200);
+
+    const del = await request(app)
+      .delete(`/api/recipes/${legacyRecipeId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .set("x-member-id", legacyMemberId);
+    expect(del.status).toBe(200);
+  });
+
   it("ett annat konto ser inga recept alls (kontoscopning)", async () => {
     const otherRegister = await request(app)
       .post("/api/auth/register")
