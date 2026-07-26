@@ -114,13 +114,18 @@ test("Mörkt läge: växeln finns bara för vuxenteman, sätter dark-mode-klasse
   await expect(shell).not.toHaveClass(/dark-mode/);
 });
 
-test("Mörkt läge: text/bakgrund-kontrast klarar WCAG AA (4.5:1) för alla sex vuxenteman", async ({ page }) => {
+test("Mörkt läge: text/bakgrund-kontrast klarar WCAG AA (4.5:1) för alla vuxenteman", async ({ page }) => {
   await mockCommon(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
 
-  for (const themeId of ["clear", "sunset", "turquoise", "lagoon", "orchid", "dusk"]) {
+  // Salvia (2026-07-25) och Karneval (2026-07-26) saknades här sedan de
+  // lades till — testet skrevs innan de fanns och glömdes aldrig uppdateras.
+  // Ingen egen bugg (bakgrund/kort/kant deriveras generiskt ur --primary
+  // för ALLA teman, se .app-shell.dark-mode ovan i themes.css, så de klarade
+  // sannolikt redan innan de begärdes explicit här) — men bör täckas.
+  for (const themeId of ["clear", "sunset", "turquoise", "lagoon", "orchid", "dusk", "salvia", "karneval"]) {
     await page.locator(`.theme-option.theme-${themeId}`).click();
     await page.locator(".theme-dark-mode-toggle input").check();
 

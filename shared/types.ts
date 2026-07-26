@@ -87,7 +87,8 @@ export type DashboardThemeId =
   | "lagoon"
   | "orchid"
   | "dusk"
-  | "salvia";
+  | "salvia"
+  | "karneval";
 
 export type User = {
   id: Id;

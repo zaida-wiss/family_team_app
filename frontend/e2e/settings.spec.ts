@@ -52,4 +52,25 @@ test.describe("Inställningar", () => {
 
     expect(errors).toEqual([]);
   });
+
+  // 2026-07-26, Zaidas önskemål: "trycker jag på inställningar-ikonen när
+  // jag är på en gren inne i inställningar så skall jag komma tillbaka till
+  // inställningsmenyn". activePanel byter inte värde (redan "settings"), så
+  // ett naivt onClick={() => onNavigate("settings")} gjorde ingenting —
+  // fixat med en egen settingsNavResetKey-räknare (useAppState.ts) som
+  // tvingar SettingsContent att ommonteras vid VARJE klick på ikonen.
+  test("klick på Inställningar-ikonen mitt i en underkategori går tillbaka till kategori-rutnätet", async ({ page }) => {
+    await page.goto("/");
+    await page.locator('button[title="Inställningar"]').click();
+    await page.getByRole("button", { name: "Barn", exact: true }).click();
+    await page.getByRole("button", { name: "🏪 Belöningsbutiken" }).click();
+    await expect(page.getByText("Belöningsbutiken", { exact: true })).toBeVisible();
+
+    // Samma huvudnav-ikon igen, mitt i underkategorin — inte brödsmulan.
+    await page.locator('button[title="Inställningar"]').click();
+
+    await expect(page.getByRole("button", { name: "Barn", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Utseende" })).toBeVisible();
+    await expect(page.getByText("Belöningsbutiken", { exact: true })).toHaveCount(0);
+  });
 });

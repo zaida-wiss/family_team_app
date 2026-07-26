@@ -280,6 +280,54 @@
   --sidebar: color-mix(in oklab, #475841 16%, oklch(0.96 0.018 78));
 }
 
+.app-shell.theme-karneval {
+  /* Byggt från EN ankarfärg Zaida gav (#d8ce23, guld) + "3 kontrastfärger
+     och komplementfärger" (2026-07-26) — ingen mockup-bild denna gången,
+     så hela skalan är beräknad, inte samplad. Guld = hsl(57°,72%,49%).
+     8 nyanser jämnt spridda var 45:e grad runt hjulet (samma S/L som
+     guldet, max perceptuell separation mellan alla åtta — de används som
+     8 SKILDA kategori-accentfärger i tråd-vyn, inte en gradient), en
+     nionde punkt (12°, röd-orange, mellan Rose och Gold) uteslöts som
+     överflödig. c0/c1 = mörk primärfärg (indigo, samma c0/c1/c4-resonemang
+     som övriga teman — c0 är en mörkare NYANS av samma indigo-nyans, inte
+     en ny hue, jämför Skymnings lila c0/c1-par), c4 = ljus mellanton —
+     Zaidas ursprungliga guld, medvetet placerad där så den syns tydligt
+     (bubblornas basfyllnad bakom alltid-svart title-text). Kontrastvärden
+     (WCAG-luminans) verifierade — se artefakten från förslagsrundan. */
+  --c0: #171d8c;
+  --c1: #232dd8;
+  --c2: #a223d8;
+  --c3: #d82387;
+  --c4: #d8ce23;
+  --c5: #59d823;
+  --c6: #23d874;
+  --c7: #23b4d8;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--white);
+  --on-c3: var(--white);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #fdf6c8 0%, #dcdcfa 100%);
+  --theme-nav-border: #d8d0f0;
+  --theme-nav-fg: #242066;
+  --theme-nav-muted: #6f6a9e;
+  --theme-nav-hover-bg: rgba(35, 45, 216, 0.12);
+  --theme-nav-active-bg: #232dd8;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #232dd8;
+  --primary-dark: #171d8c;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #232dd8 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #232dd8 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #232dd8 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #232dd8 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #232dd8 16%, oklch(0.96 0.018 78));
+}
+
 /* Zaidas önskemål 2026-07-12: gradient i sidbakgrunden på ALLA vuxenteman
    (var tidigare bara Orkidé/Skymning, se historiken nedan) — istället för
    att skriva en egen hårdkodad --theme-page-gradient per tema räcker EN
@@ -299,7 +347,8 @@
 .app-shell.theme-lagoon,
 .app-shell.theme-orchid,
 .app-shell.theme-dusk,
-.app-shell.theme-salvia {
+.app-shell.theme-salvia,
+.app-shell.theme-karneval {
   --theme-page-gradient:
     radial-gradient(circle at 18% 15%, color-mix(in oklab, var(--c4) 20%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 50%),
@@ -319,7 +368,8 @@
 .app-shell.theme-lagoon .app-shell-content,
 .app-shell.theme-orchid .app-shell-content,
 .app-shell.theme-dusk .app-shell-content,
-.app-shell.theme-salvia .app-shell-content {
+.app-shell.theme-salvia .app-shell-content,
+.app-shell.theme-karneval .app-shell-content {
   background: var(--theme-page-gradient);
 }
 
@@ -464,6 +514,13 @@
   --c4: #9fb8ad; --c5: #738877; --c6: #475841; --c7: #434c40;
   --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--white); --on-c3: var(--black);
   --on-c4: var(--black); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-karneval.dark-mode {
+  --c0: #23b4d8; --c1: #23d874; --c2: #59d823; --c3: #d8ce23;
+  --c4: #d82387; --c5: #a223d8; --c6: #232dd8; --c7: #171d8c;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--white); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
 }
 
 /* =========================================================

@@ -53,9 +53,20 @@ export function useAppState(initialMembership: ActiveMembership) {
     initialMembership.member.lastActivePanel ?? "home"
   );
   const [apiError, setApiError] = useState<string | null>(null);
+  // Ökas varje gång Inställningar-ikonen klickas, ÄVEN om man redan står i
+  // Inställningar (2026-07-26, Zaidas önskemål: "trycker jag på
+  // inställningar-ikonen när jag är på en gren inne i inställningar så
+  // skall jag komma tillbaka till inställningsmenyn"). activePanel ändras
+  // INTE i det läget (redan "settings"), så ErrorBoundary key={activePanel}
+  // i Shell.tsx remountar aldrig SettingsContent av sig själv — den här
+  // separata räknaren används istället som en egen key på SettingsContent
+  // för att tvinga fram en remount (nollställer SettingsCategoryNavs interna
+  // activeCategoryId/activeSubId) oavsett om panelen faktiskt bytte värde.
+  const [settingsNavResetKey, setSettingsNavResetKey] = useState(0);
 
   function setActivePanel(panel: ShellPanel) {
     setActivePanelRaw(panel);
+    if (panel === "settings") setSettingsNavResetKey((k) => k + 1);
     setSelectedDashboardMemberIdRaw(null);
     updateMemberNavigation(initialMembership.member.id, {
       lastActivePanel: panel,
@@ -139,6 +150,7 @@ export function useAppState(initialMembership: ActiveMembership) {
     setThemePickerMemberId,
     activePanel,
     setActivePanel,
+    settingsNavResetKey,
     apiError
   };
 }
