@@ -191,9 +191,22 @@
 .recipe-detail__servings {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 0.85rem;
   color: var(--muted-fg);
+  flex-wrap: wrap;
+}
+
+.recipe-detail__servings-count {
+  min-width: 6ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-detail__servings-reset {
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  margin-left: 4px;
 }
 
 .recipe-form__rows {

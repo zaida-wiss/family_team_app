@@ -115,3 +115,75 @@ test("Startar en timer på ett tidsstyrt steg — överlever att man stänger re
   await page.getByRole("button", { name: "Köttfärssås" }).click();
   await expect(page.getByRole("dialog", { name: /Köttfärssås/ }).locator(".recipe-detail__step-timer-running")).toBeVisible();
 });
+
+// 2026-07-26, Zaidas fråga: "kan jag välja nu hur många personer jag ska
+// tillaga för?" — en justerbar räknare i visa-vyn, SKILD från receptets
+// egna sparade Antal personer (satt i redigera-formuläret). Ligger i samma
+// localStorage-baserade cooking session som kryssrutorna/timern ovan.
+test("Justerar antal personer just nu med +/- knapparna, oberoende av receptets sparade antal, överlever att man stänger och öppnar receptet igen", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE]);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+
+  const dialog = page.getByRole("dialog", { name: /Köttfärssås/ });
+  await expect(dialog.getByText("4 personer")).toBeVisible();
+  await dialog.getByRole("button", { name: "Fler personer" }).click();
+  await expect(dialog.getByText("5 personer")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Återställ till 4" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Tillbaka" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await expect(page.getByRole("dialog", { name: /Köttfärssås/ }).getByText("5 personer")).toBeVisible();
+});
+
+test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i uppgiftens anteckningar", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE]);
+  let createdBody: Record<string, unknown> | null = null;
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() !== "POST") return route.fulfill({ json: [] });
+    createdBody = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: { id: "todo-new" } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Skapa uppgift" }).click();
+
+  const createDialog = page.getByRole("dialog", { name: "Skapa uppgift av Köttfärssås" });
+  await expect(createDialog.getByLabel("Antal personer")).toHaveValue("4");
+  await createDialog.locator('input[type="datetime-local"]').fill("2026-08-01T12:00");
+  await createDialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdBody?.notes).toBe("Räknat för 4 personer.");
+});
+
+test("Handlingslista-modalen förifylls med aktuellt antal personer, lägger till en informationsrad först i listan", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE]);
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [] }) : route.fulfill({ json: { ok: true } })
+  );
+  await page.route("**/api/shopping/*/items", (route) => route.fulfill({ json: { ok: true } }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Handlingslista" }).click();
+
+  const shoppingDialog = page.getByRole("dialog", { name: "Handlingslista från Köttfärssås" });
+  await expect(shoppingDialog.getByLabel("Antal personer")).toHaveValue("4");
+  await shoppingDialog.getByRole("button", { name: "Lägg till" }).click();
+
+  // Receptets egen visa-vy-modal (fullskärm sedan 2026-07-26) ligger kvar
+  // öppen bakom handlingslista-modalen och fångar annars klicket på
+  // huvudnavets Inköp-knapp.
+  await page.getByRole("button", { name: "Tillbaka" }).click();
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await expect(page.getByText("🧮 Köttfärssås — för 4 personer (ej omräknat)")).toBeVisible();
+  await expect(page.getByText("500 g köttfärs")).toBeVisible();
+});

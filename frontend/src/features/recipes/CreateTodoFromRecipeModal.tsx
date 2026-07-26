@@ -8,6 +8,12 @@ import type { Id, Member, Recipe, Todo } from "@shared/types";
 type Props = {
   recipe: Recipe;
   currentMember: Member;
+  // Förifyllt Antal personer (2026-07-26, Zaidas fråga: "kan jag välja nu
+  // hur många personer jag ska tillaga för?" — "även när jag skapar en
+  // uppgift för det... skall man fylla i för hur många personer det skall
+  // beräknas på") — receptvyns egen "just nu"-räknare (activeServings) om
+  // satt, annars receptets sparade default.
+  initialServings: number | null;
   onCreateTodo: (todo: Todo) => void;
   onClose: () => void;
 };
@@ -21,13 +27,19 @@ function toDateTimeString(value: string): string | null {
 // hamnar i den delade Familjen-tråden (assignedTo: null), samma
 // "vem som helst kan slutföra en otilldelad uppgift"-princip som redan
 // gäller där (2026-07-23).
-export function CreateTodoFromRecipeModal({ recipe, currentMember, onCreateTodo, onClose }: Props) {
+export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServings, onCreateTodo, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [when, setWhen] = useState("");
+  // Sträng-baserat lokalt state (samma mönster som RecipeFormModal.tsx:s
+  // servingsInput) — ingredienserna är fri text och räknas INTE om
+  // automatiskt (ingen strukturerad mängd/enhet), antalet sparas bara som
+  // en informativ notering på uppgiften.
+  const [servingsInput, setServingsInput] = useState(initialServings != null ? String(initialServings) : "");
 
   function submit() {
     const visibleFrom = toDateTimeString(when);
     if (!visibleFrom) return;
+    const servings = servingsInput ? Math.max(1, Math.floor(Number(servingsInput)) || 0) || null : null;
     onCreateTodo({
       id: `todo-${generateId()}`,
       title: recipe.name,
@@ -51,7 +63,7 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, onCreateTodo,
       deletedAt: null,
       deletedBy: null,
       personalCategoryId: null,
-      notes: null,
+      notes: servings ? `Räknat för ${servings} ${servings === 1 ? "person" : "personer"}.` : null,
       subtasks: recipe.steps.map((step) => ({
         id: generateId() as Id,
         title: step.text,
@@ -88,6 +100,16 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, onCreateTodo,
         <label className="field-label">
           Datum och tid
           <input className="text-input" onChange={(e) => setWhen(e.target.value)} type="datetime-local" value={when} />
+        </label>
+        <label className="field-label recipe-form__servings">
+          Antal personer
+          <input
+            className="text-input"
+            inputMode="numeric"
+            onChange={(e) => setServingsInput(e.target.value.replace(/\D/g, ""))}
+            placeholder="Till exempel 4"
+            value={servingsInput}
+          />
         </label>
         <div className="recipe-form__actions">
           <button className="secondary-button" onClick={onClose} type="button">Avbryt</button>

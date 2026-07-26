@@ -1,6 +1,6 @@
 import "./RecipesView.css";
 import { useState } from "react";
-import { ArrowLeft, CalendarPlus, ExternalLink, Pencil, ShoppingCart, Timer, Users } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ExternalLink, Minus, Pencil, Plus, ShoppingCart, Timer, Users } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { CreateTodoFromRecipeModal } from "./CreateTodoFromRecipeModal";
 import { AddToShoppingListModal } from "./AddToShoppingListModal";
@@ -31,8 +31,14 @@ export function RecipeDetailView({
   // "Följ steg för steg" (2026-07-26, Zaidas önskemål) — se
   // useRecipeCookingSession.ts:s filhuvud för varför detta ligger i
   // localStorage och inte i lokal state här.
-  const { checkedStepIds, timerStepId, timerStartedAt, toggleStep, startTimer, clearTimer } =
+  const { checkedStepIds, timerStepId, timerStartedAt, servingsOverride, toggleStep, startTimer, clearTimer, setServingsOverride } =
     useRecipeCookingSession(recipe.id);
+  // Antal personer just DENNA gång (2026-07-26, Zaidas fråga: "kan jag
+  // välja nu hur många personer jag ska tillaga för?") — startar på
+  // receptets eget sparade antal (eller 1 om receptet inte har något),
+  // justerbart bara för den här kockningen (localStorage, se
+  // useRecipeCookingSession.ts). Ändrar inte det sparade receptet.
+  const activeServings = servingsOverride ?? recipe.servings;
 
   return (
     <div className="recipe-modal-overlay" onClick={onClose}>
@@ -62,11 +68,34 @@ export function RecipeDetailView({
               <ExternalLink size={14} /> Källa
             </a>
           )}
-          {recipe.servings != null && (
-            <span className="recipe-detail__servings">
-              <Users size={14} aria-hidden="true" /> {recipe.servings} {recipe.servings === 1 ? "person" : "personer"}
+          <div className="recipe-detail__servings">
+            <Users size={14} aria-hidden="true" />
+            <button
+              aria-label="Färre personer"
+              className="icon-button"
+              disabled={(activeServings ?? 1) <= 1}
+              onClick={() => setServingsOverride(Math.max(1, (activeServings ?? 1) - 1))}
+              type="button"
+            >
+              <Minus size={14} />
+            </button>
+            <span className="recipe-detail__servings-count">
+              {activeServings ?? "—"} {activeServings === 1 ? "person" : "personer"}
             </span>
-          )}
+            <button
+              aria-label="Fler personer"
+              className="icon-button"
+              onClick={() => setServingsOverride((activeServings ?? 0) + 1)}
+              type="button"
+            >
+              <Plus size={14} />
+            </button>
+            {servingsOverride != null && recipe.servings != null && servingsOverride !== recipe.servings && (
+              <button className="secondary-button recipe-detail__servings-reset" onClick={() => setServingsOverride(null)} type="button">
+                Återställ till {recipe.servings}
+              </button>
+            )}
+          </div>
         </div>
 
         <p className="eyebrow">Ingredienser</p>
@@ -118,6 +147,7 @@ export function RecipeDetailView({
       {showCreateTodo && (
         <CreateTodoFromRecipeModal
           currentMember={currentMember}
+          initialServings={activeServings}
           onClose={() => setShowCreateTodo(false)}
           onCreateTodo={onCreateTodo}
           recipe={recipe}
@@ -125,6 +155,7 @@ export function RecipeDetailView({
       )}
       {showShoppingList && (
         <AddToShoppingListModal
+          initialServings={activeServings}
           onAddShoppingItem={onAddShoppingItem}
           onClose={() => setShowShoppingList(false)}
           onCreateShoppingList={onCreateShoppingList}

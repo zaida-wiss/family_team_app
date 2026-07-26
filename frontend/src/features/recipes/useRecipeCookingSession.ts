@@ -4,9 +4,22 @@ type CookingSession = {
   checkedStepIds: string[];
   timerStepId: string | null;
   timerStartedAt: string | null;
+  // Antal personer just DENNA gång (2026-07-26, Zaidas fråga: "kan jag
+  // välja nu hur många personer jag ska tillaga för?") — oberoende av
+  // receptets EGNA sparade Recipe.servings (satt i redigera-formuläret,
+  // receptets normala/vanliga antal). null = inget eget val gjort, visa
+  // receptets vanliga antal. Ändrar INTE ingrediensmängderna (fri text,
+  // ingen strukturerad mängd/enhet att räkna om) — bara en räknare för hur
+  // många man faktiskt lagar till just nu.
+  servingsOverride: number | null;
 };
 
-const EMPTY: CookingSession = { checkedStepIds: [], timerStepId: null, timerStartedAt: null };
+const EMPTY: CookingSession = {
+  checkedStepIds: [],
+  timerStepId: null,
+  timerStartedAt: null,
+  servingsOverride: null
+};
 
 function storageKey(recipeId: string) {
   return `recipe-cooking-${recipeId}`;
@@ -59,12 +72,18 @@ export function useRecipeCookingSession(recipeId: string) {
     setSession((s) => ({ ...s, timerStepId: null, timerStartedAt: null }));
   }
 
+  function setServingsOverride(servings: number | null) {
+    setSession((s) => ({ ...s, servingsOverride: servings }));
+  }
+
   return {
     checkedStepIds: session.checkedStepIds,
     timerStepId: session.timerStepId,
     timerStartedAt: session.timerStartedAt,
+    servingsOverride: session.servingsOverride,
     toggleStep,
     startTimer,
-    clearTimer
+    clearTimer,
+    setServingsOverride
   };
 }
