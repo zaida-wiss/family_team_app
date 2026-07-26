@@ -134,12 +134,12 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
         <RecipeFormModal
           onClose={() => setEditingId(null)}
           onDelete={() => {
-            removeRecipe(editing.id);
+            removeRecipe(editing.id).catch(() => {});
             setEditingId(null);
             setSelectedId(null);
           }}
           onSave={(input) => {
-            updateRecipe(editing.id, input);
+            updateRecipe(editing.id, input).catch(() => {});
             setEditingId(null);
           }}
           recipe={editing}

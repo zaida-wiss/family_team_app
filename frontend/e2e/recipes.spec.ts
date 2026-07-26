@@ -59,7 +59,41 @@ test("Recept: raderaknappen nås via redigera-formuläret, radering anropar API:
   await expect(page.getByText("Köttfärssås")).toHaveCount(0);
 });
 
-test("Recept: spara-fel visas i felbannern istället för att tystnas", async ({ page }) => {
+// removeRecipe väntade tidigare INTE in DELETE-svaret innan den tog bort
+// receptet lokalt (fire-and-glöm) — ett misslyckat anrop kunde alltså se ut
+// som en lyckad radering (receptet försvann direkt), för att sedan dyka upp
+// igen vid nästa hämtning. Verifierar att ett misslyckat anrop nu lämnar
+// receptet kvar synligt, med serverns riktiga felmeddelande i bannern.
+test("Recept: ett misslyckat DELETE-anrop tar INTE bort receptet lokalt, visar serverns felmeddelande", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE]);
+  await page.route("**/api/recipes/recipe-1", (route) => {
+    if (route.request().method() !== "DELETE") return route.continue();
+    route.fulfill({ status: 403, json: { error: "Åtkomst nekad" } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Redigera recept" }).click();
+
+  const formDialog = page.getByRole("dialog", { name: "Redigera recept" });
+  await formDialog.getByRole("button", { name: "Radera recept" }).click();
+  await formDialog.getByRole("button", { name: "Bekräfta radering av receptet" }).click();
+
+  // onDelete stänger båda modalerna direkt oavsett utfall (samma synkrona
+  // mönster som innan) — bara den lokala listborttagningen väntar in svaret.
+  await expect(page.getByRole("alert")).toContainText("Åtkomst nekad");
+  await expect(page.getByText("Köttfärssås")).toBeVisible();
+});
+
+// Felbannern visar numera serverns RIKTIGA felmeddelande direkt (client.ts:s
+// performRequest/handleResponse), inte en egen generisk text i
+// useRecipesState.ts — den senare skrev tidigare över den riktiga orsaken
+// (bannern är en enda apiError-sträng, useAppState.ts), vilket gömde exakt
+// den information Zaida behövde när hon rapporterade "det fungerar inte att
+// radera/spara recept" (2026-07-26).
+test("Recept: spara-fel visar serverns riktiga felmeddelande i felbannern, inte tystnas", async ({ page }) => {
   await mockAuthAndData(page);
   await mockRecipes(page, []);
   await page.route("**/api/recipes", (route) => {
@@ -75,5 +109,5 @@ test("Recept: spara-fel visas i felbannern istället för att tystnas", async ({
   await page.getByPlaceholder("Till exempel Blanda mjöl och mjölk").fill("Ett steg");
   await page.getByRole("button", { name: "Skapa recept" }).click();
 
-  await expect(page.getByRole("alert")).toContainText("Receptet kunde inte sparas");
+  await expect(page.getByRole("alert")).toContainText("Serverfel");
 });
