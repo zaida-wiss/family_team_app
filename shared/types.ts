@@ -650,6 +650,11 @@ export type Recipe = {
   accountId: Id;
   name: string;
   emoji: string | null;
+  // Riktig bild (2026-07-26, Zaidas önskemål) — samma Cloudinary-uppladdning
+  // som medlemmars profilbilder (uploadImage.ts, folder "recipes"), helt
+  // separat från emoji (som fortsatt visas i listor/rubriker, oberoende av
+  // om ett foto satts).
+  imageUrl: string | null;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
   // Söktaggar + skapad-tidsstämpel (2026-07-25, Zaidas önskemål: "kunna

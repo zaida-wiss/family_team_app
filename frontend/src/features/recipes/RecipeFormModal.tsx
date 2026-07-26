@@ -1,9 +1,11 @@
 import "./RecipesView.css";
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { ImagePlus, Loader, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
+import { uploadImage } from "../../utils/uploadImage";
+import { reportApiError } from "../../api";
 import { WordTagInput } from "../calendars/WordTagInput";
 import type { Recipe } from "@shared/types";
 
@@ -13,6 +15,7 @@ type Step = { id: string; text: string; timed: boolean; minutesInput: string };
 export type RecipeFormInput = {
   name: string;
   emoji: string | null;
+  imageUrl: string | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
@@ -33,6 +36,8 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [name, setName] = useState(recipe?.name ?? "");
   const [emoji, setEmoji] = useState(recipe?.emoji ?? "");
+  const [imageUrl, setImageUrl] = useState<string | null>(recipe?.imageUrl ?? null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     recipe?.ingredients.map((i) => ({ id: i.id, text: i.text })) ?? [{ id: generateId(), text: "" }]
@@ -54,6 +59,18 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
     setIngredients((prev) => prev.filter((i) => i.id !== id));
   }
 
+  async function handleImageUpload(file: File | null) {
+    if (!file || uploadingImage) return;
+    setUploadingImage(true);
+    try {
+      setImageUrl(await uploadImage(file, "recipes"));
+    } catch {
+      reportApiError("Bilden kunde inte laddas upp");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   function updateStep(id: string, patch: Partial<Step>) {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
@@ -69,6 +86,7 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
     onSave({
       name: name.trim(),
       emoji: emoji || null,
+      imageUrl,
       tags,
       ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({ text: i.text.trim() })),
       steps: steps.filter((s) => s.text.trim()).map((s) => ({
@@ -101,6 +119,32 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
             Namn
             <input autoFocus className="text-input" onChange={(e) => setName(e.target.value)} placeholder="Till exempel Köttfärssås" value={name} />
           </label>
+        </div>
+
+        <div className="recipe-form__image-row">
+          {imageUrl && <img alt="" className="recipe-form__image-preview" src={imageUrl} />}
+          <label
+            aria-label="Välj bild för receptet"
+            className={`icon-button${uploadingImage ? " icon-button--loading" : ""}`}
+            title="Välj bild"
+          >
+            {uploadingImage ? <Loader className="spin" size={16} /> : <ImagePlus size={16} />}
+            <input
+              accept="image/*"
+              disabled={uploadingImage}
+              hidden
+              onChange={(e) => {
+                void handleImageUpload(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+              type="file"
+            />
+          </label>
+          {imageUrl && (
+            <button aria-label="Ta bort bild" className="icon-button" onClick={() => setImageUrl(null)} title="Ta bort bild" type="button">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
 
         <WordTagInput

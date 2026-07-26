@@ -49,6 +49,8 @@ export function RecipeDetailView({
           </button>
         </div>
 
+        {recipe.imageUrl && <img alt="" className="recipe-detail__image" src={recipe.imageUrl} />}
+
         <p className="eyebrow">Ingredienser</p>
         <ul className="recipe-detail__ingredients">
           {recipe.ingredients.map((i) => <li key={i.id}>{i.text}</li>)}

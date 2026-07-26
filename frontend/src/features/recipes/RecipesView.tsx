@@ -105,7 +105,11 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
         <div className="recipes-list">
           {visibleRecipes.map((recipe) => (
             <button className="recipe-card" key={recipe.id} onClick={() => setSelectedId(recipe.id)} type="button">
-              <span aria-hidden="true" className="recipe-card__emoji">{recipe.emoji || "🍽️"}</span>
+              {recipe.imageUrl ? (
+                <img alt="" className="recipe-card__thumbnail" src={recipe.imageUrl} />
+              ) : (
+                <span aria-hidden="true" className="recipe-card__emoji">{recipe.emoji || "🍽️"}</span>
+              )}
               <span className="recipe-card__name">{recipe.name}</span>
             </button>
           ))}

@@ -8,6 +8,10 @@ const RECIPES_CACHE_KEY = "recipes_v1";
 type RecipeInput = {
   name: string;
   emoji: string | null;
+  // Valfritt (till skillnad från RecipeFormModal.tsx:s RecipeFormInput, som
+  // alltid skickar det) — CSV-importens ParsedRecipeRow har ingen bildkolumn
+  // (ett foto laddas alltid upp manuellt), backend defaultar saknat till null.
+  imageUrl?: string | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];

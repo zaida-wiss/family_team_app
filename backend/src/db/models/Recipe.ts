@@ -9,6 +9,7 @@ const recipeSchema = new Schema<Recipe>({
   accountId: { type: String, required: true },
   name: { type: String, required: true },
   emoji: { type: String, default: null },
+  imageUrl: { type: String, default: null },
   ingredients: [
     {
       id: { type: String, required: true },
