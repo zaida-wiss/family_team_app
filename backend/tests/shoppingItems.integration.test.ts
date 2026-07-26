@@ -189,6 +189,117 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
   });
 });
 
+// Drag-and-drop-ordning på varorna (2026-07-26, Zaidas önskemål) — samma
+// requireEditAccess-mönster som övriga skrivningar i filen.
+describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll + ordning på PATCH .../items/reorder", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.db?.dropDatabase();
+    await mongoose.disconnect();
+  });
+
+  let accessToken: string;
+  let ownerMemberId: string;
+  let restrictedMemberId: string;
+  let listId: string;
+  let itemAId: string;
+  let itemBId: string;
+
+  it("sätter upp konto med ägare + en behörighetslös medlem, en lista med två varor", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: `shopping-reorder-int-${crypto.randomUUID()}@bmad.test`, password: "Lösenord1!", name: "Ordningstest" });
+    expect(register.status).toBe(201);
+    accessToken = register.body.accessToken as string;
+
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: "Ordningsfamiljen" });
+    ownerMemberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
+
+    const restrictedRole = await request(app)
+      .post("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: `role-restricted-reorder-${crypto.randomUUID()}`,
+        name: "Utan inköpsbehörigheter",
+        isChildRole: false,
+        permissions: {
+          canManageMembers: false, canManageRoles: false, canSeeAllTodos: false, canSeeOwnTodos: true,
+          canCreateTodos: true, canScheduleRecurringTodos: false, canCompleteAssignedTodos: false,
+          canEditAnyTodos: false, canDeleteAnyTodos: false, canApproveTodos: false, canSeeAllCalendar: false,
+          canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
+          canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
+          canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
+          canCreateChildAccounts: false, canManageChildTodos: false
+        }
+      });
+    expect(restrictedRole.status).toBe(201);
+    const restricted = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        name: "Begränsad medlem", roleId: (restrictedRole.body as { id: string }).id, isChild: false,
+        avatarUrl: null, color: null, dashboardTheme: null
+      });
+    expect(restricted.status).toBe(201);
+    restrictedMemberId = (restricted.body as { id: string }).id;
+
+    listId = `shopping-reorder-${crypto.randomUUID()}`;
+    const create = await request(app)
+      .post("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: listId, name: "Ordningslista", ownerId: ownerMemberId, color: "#2f7d6d", icon: null,
+        sharedWith: [], deletedAt: null, deletedBy: null, items: []
+      });
+    expect(create.status).toBe(201);
+
+    itemAId = `shopping-item-a-${crypto.randomUUID()}`;
+    itemBId = `shopping-item-b-${crypto.randomUUID()}`;
+    for (const [id, title] of [[itemAId, "Mjölk"], [itemBId, "Bröd"]] as const) {
+      const add = await request(app)
+        .post(`/api/shopping/${listId}/items`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .set("x-member-id", ownerMemberId)
+        .send({ id, title, createdBy: ownerMemberId, done: false, deletedAt: null, deletedBy: null });
+      expect(add.status).toBe(201);
+    }
+  });
+
+  it("nekar reorder för en medlem utan canEditShoppingLists", async () => {
+    const res = await request(app)
+      .patch(`/api/shopping/${listId}/items/reorder`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ itemIds: [itemBId, itemAId] });
+    expect(res.status).toBe(403);
+  });
+
+  it("tillåter ägaren att ändra ordningen, ordningen persisteras", async () => {
+    const res = await request(app)
+      .patch(`/api/shopping/${listId}/items/reorder`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({ itemIds: [itemBId, itemAId] });
+    expect(res.status).toBe(200);
+
+    const lists = await request(app)
+      .get("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    const list = (lists.body as Array<{ id: string; items: Array<{ id: string }> }>).find((l) => l.id === listId)!;
+    expect(list.items.map((i) => i.id)).toEqual([itemBId, itemAId]);
+  });
+});
+
 describe.skipIf(!RUN)("shoppingService: server-side behörighetskontroll (createList/toggleItem/share/deleteList/restoreList)", () => {
   beforeAll(async () => {
     await connectDB();

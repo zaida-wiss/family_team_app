@@ -1,5 +1,5 @@
-import { Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { Combine, GripVertical, Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { SharedShoppingLists } from "./SharedShoppingLists";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
@@ -10,6 +10,8 @@ import {
 } from "../../utils/permissions";
 import styles from "./ShoppingLists.module.css";
 import type { AccessLevel, Id, Member, Role, ShoppingList } from "@shared/types";
+
+const DRAG_THRESHOLD_PX = 8;
 
 // Visning av bockade varor + redigeringsläge (2026-07-22, Zaidas önskemål:
 // "tänk minimalistiskt") — bara lokalt, icke-persisterat UI-state per lista,
@@ -25,8 +27,10 @@ type Props = {
   onAddItem: (listId: Id, title: string) => void;
   onToggleItem: (listId: Id, itemId: Id) => void;
   onDeleteItem: (listId: Id, itemId: Id) => void;
+  onReorderItems: (listId: Id, itemIds: Id[]) => void;
   onClearCompleted: (listId: Id) => void;
   onCreateList: (name: string, icon?: string | null) => void;
+  onDeleteList: (listId: Id) => void;
   onShareList: (listId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveListShare: (listId: Id, memberId: Id) => void;
 };
@@ -50,8 +54,10 @@ export function ShoppingView({
   onAddItem,
   onToggleItem,
   onDeleteItem,
+  onReorderItems,
   onClearCompleted,
   onCreateList,
+  onDeleteList,
   onShareList,
   onRemoveListShare
 }: Props) {
@@ -63,6 +69,17 @@ export function ShoppingView({
   const [creatingList, setCreatingList] = useState(false);
   const [draftListName, setDraftListName] = useState("");
   const [draftListIcon, setDraftListIcon] = useState("");
+  // Radera lista + slå ihop två listor (2026-07-26, Zaidas önskemål) — båda
+  // bara nåbara i redigeringsläge, samma "ingenting raderbart utan Redigera
+  // först"-princip som varu-raderaknappen redan följer.
+  const [confirmDeleteListId, setConfirmDeleteListId] = useState<Id | null>(null);
+  const [mergingListId, setMergingListId] = useState<Id | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<Id | null>(null);
+  // Drag-and-drop-ordning på varorna (2026-07-26) — pointer-baserat, samma
+  // mönster som ParentTodoThreadView.tsx:s bubbel-drag inom en tråd.
+  const itemDragStateRef = useRef<{ listId: Id; itemId: Id; x: number; y: number } | null>(null);
+  const [draggingItemId, setDraggingItemId] = useState<Id | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<Id | null>(null);
 
   const canEdit = hasPermission(currentMember, roles, "canEditShoppingLists");
   const canCreate = hasPermission(currentMember, roles, "canCreateShoppingLists");
@@ -109,6 +126,64 @@ export function ShoppingView({
 
   function getShareDraft(listId: Id): ShareDraft {
     return shareDrafts[listId] ?? getDefaultShareDraft();
+  }
+
+  function handleItemPointerDown(e: React.PointerEvent<HTMLButtonElement>, listId: Id, itemId: Id) {
+    itemDragStateRef.current = { listId, itemId, x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleItemPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const start = itemDragStateRef.current;
+    if (!start) return;
+    if (draggingItemId === null) {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      setDraggingItemId(start.itemId);
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const li = el instanceof Element ? el.closest<HTMLElement>("[data-item-id]") : null;
+    if (li && li.dataset.listId === start.listId) {
+      setDragOverItemId(li.dataset.itemId as Id);
+    } else {
+      setDragOverItemId(null);
+    }
+  }
+
+  function handleItemPointerUp(visibleItemIds: Id[]) {
+    const start = itemDragStateRef.current;
+    const target = dragOverItemId;
+    itemDragStateRef.current = null;
+    if (start && target && start.itemId !== target) {
+      const from = visibleItemIds.indexOf(start.itemId);
+      const to = visibleItemIds.indexOf(target);
+      if (from !== -1 && to !== -1) {
+        const next = [...visibleItemIds];
+        next.splice(from, 1);
+        next.splice(to, 0, start.itemId);
+        onReorderItems(start.listId, next);
+      }
+    }
+    setDraggingItemId(null);
+    setDragOverItemId(null);
+  }
+
+  // Slå ihop två listor (2026-07-26, Zaidas önskemål) — återanvänder
+  // befintliga onAddItem/onDeleteList, ingen ny backend-endpoint. Varorna
+  // läggs till som NYA, obockade rader i målet (samma "en rad i taget"-
+  // mönster som CSV-importen) — bockad status från källistan förs medvetet
+  // inte över, en enkel avvägning. Källistan raderas (mjukt) efteråt.
+  function mergeListInto(sourceListId: Id, targetListId: Id) {
+    const source = shoppingLists.find((l) => l.id === sourceListId);
+    const target = shoppingLists.find((l) => l.id === targetListId);
+    if (!source || !target || !canEditList(source) || !canEditList(target)) return;
+    for (const item of source.items.filter((i) => i.deletedAt === null)) {
+      onAddItem(targetListId, item.title);
+    }
+    onDeleteList(sourceListId);
+    setMergingListId(null);
+    setMergeTargetId(null);
   }
 
   return (
@@ -218,14 +293,99 @@ export function ShoppingView({
                     aria-label={isEditing ? `Klar med redigering av ${list.name}` : `Redigera ${list.name}`}
                     aria-pressed={isEditing}
                     className={`icon-button${isEditing ? " icon-button--active" : ""}`}
-                    onClick={() => setEditingLists((prev) => ({ ...prev, [list.id]: !isEditing }))}
+                    onClick={() => {
+                      setEditingLists((prev) => ({ ...prev, [list.id]: !isEditing }));
+                      if (isEditing) {
+                        // Lämnar redigeringsläget — nollställ eventuella
+                        // öppna raderings-/sammanslagningsbekräftelser.
+                        setConfirmDeleteListId((current) => (current === list.id ? null : current));
+                        setMergingListId((current) => (current === list.id ? null : current));
+                      }
+                    }}
                     type="button"
                   >
                     <Pencil size={16} />
                   </button>
+                  {isEditing && shoppingLists.filter((l) => l.id !== list.id && l.deletedAt === null && canEditList(l)).length > 0 && (
+                    <button
+                      aria-label={`Slå ihop ${list.name} med en annan lista`}
+                      aria-pressed={mergingListId === list.id}
+                      className={`icon-button${mergingListId === list.id ? " icon-button--active" : ""}`}
+                      onClick={() => {
+                        setMergingListId((current) => (current === list.id ? null : list.id));
+                        setMergeTargetId(null);
+                      }}
+                      type="button"
+                    >
+                      <Combine size={16} />
+                    </button>
+                  )}
+                  {isEditing && (
+                    confirmDeleteListId === list.id ? (
+                      <>
+                        <button
+                          aria-label={`Bekräfta radering av ${list.name}`}
+                          className="icon-button danger"
+                          onClick={() => onDeleteList(list.id)}
+                          type="button"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <button
+                          aria-label="Avbryt radering"
+                          className="icon-button"
+                          onClick={() => setConfirmDeleteListId(null)}
+                          type="button"
+                        >
+                          <X size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        aria-label={`Radera ${list.name}`}
+                        className="icon-button danger"
+                        onClick={() => setConfirmDeleteListId(list.id)}
+                        type="button"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )
+                  )}
                 </div>
               )}
             </div>
+
+            {mergingListId === list.id && (
+              <div className={styles.sharePanel}>
+                <div className={styles.addRow}>
+                  <select
+                    aria-label={`Slå ihop ${list.name} med`}
+                    className="text-input"
+                    onChange={(e) => setMergeTargetId(e.target.value || null)}
+                    value={mergeTargetId ?? ""}
+                  >
+                    <option value="">Välj lista att slå ihop med</option>
+                    {shoppingLists
+                      .filter((l) => l.id !== list.id && l.deletedAt === null && canEditList(l))
+                      .map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                  </select>
+                  <button
+                    aria-label={`Slå ihop ${list.name} in i vald lista`}
+                    className="icon-button"
+                    disabled={!mergeTargetId}
+                    onClick={() => mergeTargetId && mergeListInto(list.id, mergeTargetId)}
+                    type="button"
+                  >
+                    <Combine size={16} />
+                  </button>
+                </div>
+                <p className="empty-note">
+                  Alla varor från {list.name} läggs till i den valda listan, sedan raderas {list.name}.
+                </p>
+              </div>
+            )}
 
             {isSharing && (
               <div className={styles.sharePanel}>
@@ -296,7 +456,24 @@ export function ShoppingView({
 
             <ul className={styles.items}>
               {visibleItems.map((item) => (
-                <li className={styles.itemRow} key={item.id}>
+                <li
+                  className={`${styles.itemRow}${dragOverItemId === item.id && draggingItemId !== item.id ? ` ${styles.dragOver}` : ""}`}
+                  data-item-id={item.id}
+                  data-list-id={list.id}
+                  key={item.id}
+                >
+                  {isEditing && (
+                    <button
+                      aria-label={`Dra för att flytta ${item.title}`}
+                      className={`icon-button ${styles.dragHandle}`}
+                      onPointerDown={(e) => handleItemPointerDown(e, list.id, item.id)}
+                      onPointerMove={handleItemPointerMove}
+                      onPointerUp={() => handleItemPointerUp(visibleItems.map((i) => i.id))}
+                      type="button"
+                    >
+                      <GripVertical size={14} />
+                    </button>
+                  )}
                   <span className={`${styles.itemLabel}${item.done ? ` ${styles.done}` : ""}`}>
                     <input
                       aria-label={item.title}

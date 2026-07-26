@@ -53,6 +53,12 @@ shoppingRouter.delete("/:id/items/:itemId", async (req, res) => {
   res.json({ ok: true });
 });
 
+shoppingRouter.patch("/:id/items/reorder", async (req, res) => {
+  const itemIds = Array.isArray(req.body?.itemIds) ? req.body.itemIds.map(String) : [];
+  await shopping.reorderItems(req.params.id, req.accountId!, req.memberId ?? null, itemIds);
+  res.json({ ok: true });
+});
+
 shoppingRouter.post("/:id/clear-completed", async (req, res) => {
   await shopping.clearCompletedItems(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });

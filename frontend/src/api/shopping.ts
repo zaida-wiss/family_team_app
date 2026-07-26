@@ -39,6 +39,12 @@ export const shoppingApi = {
     }),
   removeItem: (listId: string, itemId: string) =>
     request<{ ok: boolean }>(api(`shopping/${listId}/items/${itemId}`), { method: "DELETE" }),
+  // Drag-and-drop-ordning på varorna (2026-07-26).
+  reorderItems: (listId: string, itemIds: string[]) =>
+    request<{ ok: boolean }>(api(`shopping/${listId}/items/reorder`), {
+      method: "PATCH",
+      body: JSON.stringify({ itemIds })
+    }),
   clearCompleted: (listId: string) =>
     request<{ ok: boolean }>(api(`shopping/${listId}/clear-completed`), {
       method: "POST",

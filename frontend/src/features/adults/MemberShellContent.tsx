@@ -101,6 +101,7 @@ type Props = {
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
   onToggleShoppingItem: (listId: string, itemId: string) => void;
   onDeleteShoppingItem: (listId: string, itemId: string) => void;
+  onReorderShoppingItems: (listId: string, itemIds: string[]) => void;
   onClearCompletedShoppingItems: (listId: string) => void;
   calendarSettings?: CalendarSettings;
   otherFamilies: Membership[];
@@ -137,8 +138,8 @@ export function MemberShellContent({
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
-  onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onClearCompletedShoppingItems,
-  onCreateShoppingList, onShareShoppingList, onRemoveShoppingListShare,
+  onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onReorderShoppingItems, onClearCompletedShoppingItems,
+  onCreateShoppingList, onDeleteShoppingList, onShareShoppingList, onRemoveShoppingListShare,
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
   otherFamilies, onSwitchFamily,
@@ -379,8 +380,10 @@ export function MemberShellContent({
           onAddItem={onAddShoppingItem}
           onToggleItem={onToggleShoppingItem}
           onDeleteItem={onDeleteShoppingItem}
+          onReorderItems={onReorderShoppingItems}
           onClearCompleted={onClearCompletedShoppingItems}
           onCreateList={onCreateShoppingList}
+          onDeleteList={onDeleteShoppingList}
           onShareList={onShareShoppingList}
           onRemoveListShare={onRemoveShoppingListShare}
         />

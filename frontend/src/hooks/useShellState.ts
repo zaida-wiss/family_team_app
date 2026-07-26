@@ -47,7 +47,7 @@ export function useShellState(
 
   const { shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
     removeShoppingListShare, softDeleteShoppingList, restoreShoppingList, purgeShoppingTrash,
-    toggleShoppingItem, deleteShoppingItem, clearCompletedShoppingItems,
+    toggleShoppingItem, deleteShoppingItem, reorderShoppingItems, clearCompletedShoppingItems,
     softDeleteShoppingForMember } = shoppingState;
 
   const { rewards, createWish, wishStars, setWishStars,
@@ -253,6 +253,7 @@ export function useShellState(
     onToggleShoppingItem: toggleShoppingItem,
     onDeleteShoppingItem: (listId: string, itemId: string) =>
       deleteShoppingItem(listId, itemId, currentMember.id),
+    onReorderShoppingItems: reorderShoppingItems,
     onClearCompletedShoppingItems: (listId: string) =>
       clearCompletedShoppingItems(listId, currentMember.id),
     ...sharedChildProps

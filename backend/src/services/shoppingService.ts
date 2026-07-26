@@ -139,6 +139,26 @@ export async function restoreList(id: string, accountId: string, memberId: strin
   await list.save();
 }
 
+// Drag-and-drop-ordning på varorna (2026-07-26, Zaidas önskemål) — itemIds
+// är den nya, kompletta ordningen (klienten känner till alla synliga
+// id:n). Varor som saknas i listan (t.ex. en samtidig radering från en
+// annan enhet) hamnar sist i sin befintliga inbördes ordning, defensivt —
+// ingen kastas bort.
+export async function reorderItems(listId: string, accountId: string, memberId: string | null, itemIds: string[]) {
+  const list = await ShoppingListModel.findOne({ id: listId, accountId });
+  if (!list) {
+    throw new AppError(404, "Inköpslista hittades inte");
+  }
+  await requireEditAccess(list, accountId, memberId);
+  const byId = new Map(list.items.map((item) => [item.id, item]));
+  const ordered = itemIds.map((id) => byId.get(id)).filter((item): item is NonNullable<typeof item> => item !== undefined);
+  const orderedIds = new Set(ordered.map((item) => item.id));
+  const rest = list.items.filter((item) => !orderedIds.has(item.id));
+  list.items = [...ordered, ...rest] as typeof list.items;
+  list.markModified("items");
+  await list.save();
+}
+
 export async function deleteItem(listId: string, accountId: string, itemId: string, memberId: string | null) {
   const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {

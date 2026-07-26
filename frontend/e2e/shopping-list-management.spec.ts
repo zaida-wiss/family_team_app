@@ -243,3 +243,118 @@ test("kan dela en lista med en annan familjemedlem direkt i Inköp-panelen", asy
 
   expect(shareBody).toEqual({ memberId: "mem-2", access: "view" });
 });
+
+// Zaida (2026-07-26): "inköpslistorna måste gå att radera. Ingenting skall
+// gå att radera om man inte trycker redigera först. Inköpslistan måste gå
+// att drag and droppa ordningen på varorna och att slå ihop två
+// inköpslistor." Tre nya delar i Inköp-panelen (listradering fanns redan,
+// men bara i Inställningar → Inköpslistor, inte här).
+
+test("kan radera en hel inköpslista i redigeringsläge, kräver bekräftelse", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-1", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null, items: [],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  let deleteCalled = false;
+  await page.route("**/api/shopping/shop-1", (route) => {
+    if (route.request().method() !== "DELETE") return route.continue();
+    deleteCalled = true;
+    route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await expect(page.getByText("Veckohandling")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Radera Veckohandling" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Redigera" }).click();
+  await page.getByRole("button", { name: "Radera Veckohandling" }).click();
+  await page.getByRole("button", { name: "Bekräfta radering av Veckohandling" }).click();
+
+  expect(deleteCalled).toBe(true);
+  await expect(page.getByText("Veckohandling")).toHaveCount(0);
+});
+
+test("kan dra och släppa för att ändra ordning på varorna i redigeringsläge", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-1", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null,
+    items: [
+      shoppingItem({ id: "item-mjolk", title: "Mjölk" }),
+      shoppingItem({ id: "item-brod", title: "Bröd" }),
+      shoppingItem({ id: "item-agg", title: "Ägg" }),
+    ],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  let reorderedIds: string[] | null = null;
+  await page.route("**/api/shopping/shop-1/items/reorder", (route) => {
+    reorderedIds = (route.request().postDataJSON() as { itemIds: string[] }).itemIds;
+    route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Redigera" }).click();
+
+  const mjolkHandle = page.locator('[data-item-id="item-mjolk"]').getByRole("button", { name: /Dra för att flytta/ });
+  const aggRow = page.locator('[data-item-id="item-agg"]');
+  const handleBox = await mjolkHandle.boundingBox();
+  const targetBox = await aggRow.boundingBox();
+  if (!handleBox || !targetBox) throw new Error("Saknar bounding box för drag-testet");
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(() => reorderedIds).not.toBeNull();
+  expect(reorderedIds).toEqual(["item-brod", "item-agg", "item-mjolk"]);
+});
+
+test("kan slå ihop två inköpslistor i redigeringsläge", async ({ page }) => {
+  await mockCommon(page);
+  const listA = {
+    id: "shop-1", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null,
+    items: [shoppingItem({ id: "item-mjolk", title: "Mjölk" })],
+  };
+  const listB = {
+    id: "shop-2", name: "Fest", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null, items: [],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [listA, listB] }) : route.fulfill({ json: { id: "new" } })
+  );
+  let addedTitle: string | null = null;
+  await page.route("**/api/shopping/shop-2/items", (route) => {
+    addedTitle = (route.request().postDataJSON() as { title: string }).title;
+    route.fulfill({ json: { ok: true } });
+  });
+  let deleteCalled = false;
+  await page.route("**/api/shopping/shop-1", (route) => {
+    if (route.request().method() !== "DELETE") return route.continue();
+    deleteCalled = true;
+    route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+
+  const veckoCard = page.locator("article", { hasText: "Veckohandling" });
+  await veckoCard.getByRole("button", { name: "Redigera" }).click();
+  await veckoCard.getByRole("button", { name: "Slå ihop Veckohandling med en annan lista" }).click();
+  await veckoCard.getByLabel("Slå ihop Veckohandling med", { exact: true }).selectOption("shop-2");
+  await veckoCard.getByRole("button", { name: "Slå ihop Veckohandling in i vald lista" }).click();
+
+  await expect.poll(() => addedTitle).not.toBeNull();
+  expect(addedTitle).toBe("Mjölk");
+  expect(deleteCalled).toBe(true);
+  await expect(page.getByText("Veckohandling")).toHaveCount(0);
+});

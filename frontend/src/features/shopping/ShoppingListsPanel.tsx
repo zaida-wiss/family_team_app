@@ -1,4 +1,4 @@
-import { Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import {
@@ -44,6 +44,11 @@ export function ShoppingListsPanel({
   const [draftListName, setDraftListName] = useState("");
   const [draftItems, setDraftItems] = useState<Record<Id, string>>({});
   const [shareDrafts, setShareDrafts] = useState<Record<Id, ShareDraft>>({});
+  // Raderaknappen kräver redigeringsläge (2026-07-26, Zaidas önskemål:
+  // "ingenting skall gå att radera om man inte trycker redigera först") —
+  // låg tidigare alltid synlig här, till skillnad från Inköp-panelens
+  // motsvarighet som redan hade den regeln.
+  const [editingLists, setEditingLists] = useState<Record<Id, boolean>>({});
   const canCreateShoppingLists = hasPermission(currentMember, roles, "canCreateShoppingLists");
   const canEditShoppingLists = hasPermission(currentMember, roles, "canEditShoppingLists");
   // Soft-deletade medlemmar ska inte gå att välja i delnings-listan
@@ -158,6 +163,7 @@ export function ShoppingListsPanel({
       {visibleLists.map((list) => {
         const canEditThisList = canEditList(list);
         const shareDraft = getShareDraft(list.id);
+        const isEditingList = canEditThisList && (editingLists[list.id] ?? false);
 
         return (
           <div className={styles.card} key={list.id}>
@@ -170,15 +176,29 @@ export function ShoppingListsPanel({
                 )}
                 <strong>{list.name}</strong>
               </div>
-              <button
-                aria-label={`Radera ${list.name}`}
-                className="icon-button danger"
-                disabled={!canEditThisList}
-                onClick={() => onDeleteList(list.id)}
-                type="button"
-              >
-                <Trash2 size={16} />
-              </button>
+              {canEditThisList && (
+                <div className={styles.toolbarActions}>
+                  <button
+                    aria-label={isEditingList ? `Klar med redigering av ${list.name}` : `Redigera ${list.name}`}
+                    aria-pressed={isEditingList}
+                    className={`icon-button${isEditingList ? " icon-button--active" : ""}`}
+                    onClick={() => setEditingLists((current) => ({ ...current, [list.id]: !isEditingList }))}
+                    type="button"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  {isEditingList && (
+                    <button
+                      aria-label={`Radera ${list.name}`}
+                      className="icon-button danger"
+                      onClick={() => onDeleteList(list.id)}
+                      type="button"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {!managementOnly && (

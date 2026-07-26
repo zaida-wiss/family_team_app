@@ -185,6 +185,22 @@ export function useShoppingState() {
     );
   }
 
+  // Drag-and-drop-ordning på varorna (2026-07-26, Zaidas önskemål) —
+  // itemIds är den nya, kompletta ordningen för listans SYNLIGA varor.
+  function reorderShoppingItems(listId: Id, itemIds: Id[]) {
+    shoppingApi.reorderItems(listId, itemIds).catch(console.error);
+    setShoppingLists((current) =>
+      current.map((list) => {
+        if (list.id !== listId) return list;
+        const byId = new Map(list.items.map((item) => [item.id, item]));
+        const ordered = itemIds.map((id) => byId.get(id)).filter((item): item is ShoppingList["items"][number] => item !== undefined);
+        const orderedIds = new Set(ordered.map((item) => item.id));
+        const rest = list.items.filter((item) => !orderedIds.has(item.id));
+        return { ...list, items: [...ordered, ...rest] };
+      })
+    );
+  }
+
   // Töm listan (2026-07-22, Zaidas önskemål: "töm listan kan vara ett val")
   // — rensar bara BOCKADE varor, en enskild rad tas bort via deleteShoppingItem.
   function clearCompletedShoppingItems(listId: Id, memberId: Id) {
@@ -243,6 +259,7 @@ export function useShoppingState() {
     purgeShoppingTrash,
     toggleShoppingItem,
     deleteShoppingItem,
+    reorderShoppingItems,
     clearCompletedShoppingItems,
     softDeleteShoppingForMember
   };
