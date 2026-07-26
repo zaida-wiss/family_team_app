@@ -319,7 +319,7 @@ h3 {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 14px;
-  background: #fffaf0;
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
 }
 
 .approval-header,
@@ -359,7 +359,7 @@ h3 {
 }
 
 .approval-row {
-  border-top: 1px solid #eadfc8;
+  border-top: 1px solid var(--border);
   padding-top: 10px;
 }
 
