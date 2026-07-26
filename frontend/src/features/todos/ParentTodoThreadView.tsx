@@ -1,7 +1,7 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Check, ChevronDown, ChevronUp, EyeOff, Info, Pencil, Plus, X } from "lucide-react";
+import { BarChart3, Info, Plus, X } from "lucide-react";
 import { TodoStatsModal } from "./TodoStatsModal";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
@@ -327,13 +327,28 @@ export function ParentTodoThreadView({
   const [dragOverId, setDragOverId] = useState<Id | null>(null);
   const DRAG_THRESHOLD_PX = 8;
 
-  // Redigeringsläge (2026-07-24, Zaidas önskemål) — en knapp uppe till höger
-  // låser upp två saker samtidigt: en snabb "Göm"-genväg per tråd (samma
-  // sak som redan finns i kategorimenyn, bara mer direktåtkomlig här) och
-  // bubbel-drag inom en kategori (se nedan). Bubblornas vanliga klick/
-  // dubbelklick/långtryck-gester stängs medvetet AV i redigeringsläge —
-  // annars skulle de krocka med drag-gesten.
-  const [editMode, setEditMode] = useState(false);
+  // Redigeringsläge/flyttläge, PER KATEGORI (2026-07-26, Zaidas önskemål:
+  // "tre tryck gör hela kategorin i flyttläge... ta bort alla andra
+  // funktioner med pilar osv"). Ersätter den tidigare GLOBALA Pennikon-
+  // knappen (2026-07-24) som slog på redigering för ALLA trådar samtidigt —
+  // nu triggas det istället av tre snabba tryck på ett specifikt
+  // kategorinamn (se handleCategoryClick), och gäller bara DEN kategorin.
+  // Samma tre-tryck igen stänger av det (symmetrisk gest, ingen separat
+  // "Klar"-knapp behövs). Bara drag-and-drop kvar i flyttläge — knapp-
+  // baserade alternativ (upp/ner-pilar per bubbla, Flytta vänster/höger i
+  // menyn, Göm-genvägen) togs bort på Zaidas begäran, samma dag de lades
+  // till (2026-07-25) som ett "pålitligt alternativ till drag" — hon vill
+  // ha renodlat drag istället. Bubblornas vanliga klick/dubbelklick/
+  // långtryck-gester stängs medvetet AV i flyttläge — annars skulle de
+  // krocka med drag-gesten.
+  const [editingThreadId, setEditingThreadId] = useState<Id | null>(null);
+  // Trippel-tryck-detektion (samma standardmönster som dubbeltryck-
+  // avatarväljaren nedan, bara utökat till tre tryck): varje tryck inom
+  // CATEGORY_TAP_MS av föregående räknas till samma "serie", tredje trycket
+  // i en serie växlar flyttläge istället för att öppna kategorimenyn.
+  const CATEGORY_TAP_MS = 400;
+  const categoryTapRef = useRef<{ id: Id; count: number; time: number } | null>(null);
+  const categoryTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Instruktionsknapp (2026-07-25, Zaidas önskemål — ersätter den tidigare
   // fasta undertexten "Dagens familjebubblor – pilla på en när den är
   // klar!" som togs bort ur TodosView.tsx samma dag).
@@ -652,38 +667,6 @@ export function ParentTodoThreadView({
     onReorderThreads(next);
   }
 
-  // Flytta-knappar som alternativ till håll-och-dra (2026-07-25, Zaidas
-  // önskemål: "det vore bättre om det gick att välja 'flytta' i
-  // kategorimenyn... flytta går att flytta både innehåll och kategori") —
-  // drag fungerar fortfarande, men ett explicit menyval är mer pålitligt på
-  // touch, samma resonemang som redan gjorde delmomentens ordning till
-  // pilknappar istället för drag (TodoCreatorModal.tsx:s moveSubtask).
-  function moveThread(threadId: Id, direction: -1 | 1) {
-    const ids = orderedThreads.map((t) => t.id);
-    const index = ids.indexOf(threadId);
-    const targetIndex = index + direction;
-    if (index === -1 || targetIndex < 0 || targetIndex >= ids.length) return;
-    const next = [...ids];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-    onReorderThreads(next);
-  }
-
-  function handleMoveThreadFromMenu(threadId: Id, direction: -1 | 1) {
-    setMenuCategoryId(null);
-    moveThread(threadId, direction);
-  }
-
-  // Motsvarande för en bubbla INOM sin egen tråd (bara i redigeringsläge).
-  function moveBubble(threadTodos: Todo[], threadId: Id, key: Id, direction: -1 | 1) {
-    const keys = threadTodos.map(stableBubbleKey);
-    const index = keys.indexOf(key);
-    const targetIndex = index + direction;
-    if (index === -1 || targetIndex < 0 || targetIndex >= keys.length) return;
-    const next = [...keys];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-    onReorderBubbles(threadId, next);
-  }
-
   function handleThreadPointerDown(e: React.PointerEvent<HTMLButtonElement>, threadId: Id) {
     dragStateRef.current = { id: threadId, x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -779,9 +762,29 @@ export function ParentTodoThreadView({
       suppressCategoryClickRef.current = false;
       return;
     }
+
+    const now = Date.now();
+    const last = categoryTapRef.current;
+    const count = last && last.id === thread.id && now - last.time < CATEGORY_TAP_MS ? last.count + 1 : 1;
+    categoryTapRef.current = { id: thread.id, count, time: now };
+    if (categoryTapTimerRef.current) {
+      window.clearTimeout(categoryTapTimerRef.current);
+      categoryTapTimerRef.current = null;
+    }
+
+    if (count >= 3) {
+      categoryTapRef.current = null;
+      setMenuCategoryId(null);
+      setEditingThreadId((current) => (current === thread.id ? null : thread.id));
+      return;
+    }
+
     const rect = event.currentTarget.getBoundingClientRect();
-    setMenuPos({ top: rect.bottom + 4, left: rect.left });
-    setMenuCategoryId((current) => (current === thread.id ? null : thread.id));
+    categoryTapTimerRef.current = window.setTimeout(() => {
+      setMenuPos({ top: rect.bottom + 4, left: rect.left });
+      setMenuCategoryId((current) => (current === thread.id ? null : thread.id));
+      categoryTapTimerRef.current = null;
+    }, CATEGORY_TAP_MS);
   }
 
   function handleRenameFromMenu(categoryId: Id) {
@@ -935,15 +938,6 @@ export function ParentTodoThreadView({
             <BarChart3 size={16} />
           </button>
           <button
-            aria-pressed={editMode}
-            className={"icon-button todo-thread-view__edit-button" + (editMode ? " todo-thread-view__edit-button--active" : "")}
-            onClick={() => setEditMode((v) => !v)}
-            title={editMode ? "Klar med redigering" : "Redigera trådar och ordning"}
-            type="button"
-          >
-            {editMode ? <Check size={16} /> : <Pencil size={16} />}
-          </button>
-          <button
             aria-label="Ny kategori"
             className="icon-button"
             onClick={() => setShowNewCategory(true)}
@@ -1072,7 +1066,7 @@ export function ParentTodoThreadView({
               <li><strong>Dubbeltryck</strong> markerar att du håller på med uppgiften, så andra ser det.</li>
               <li><strong>Håll intryckt i två sekunder</strong> markerar hela uppgiften klar.</li>
               <li><strong>Håll och dra i ett kategorinamn</strong> för att ändra ordning på trådarna.</li>
-              <li><strong>Pennikonen</strong> öppnar redigeringsläge — där kan du göra en tråd osynlig och dra enskilda bubblor för att ändra ordning inom en kategori.</li>
+              <li><strong>Tre snabba tryck på ett kategorinamn</strong> växlar flyttläge för just den kategorin — dra då enskilda bubblor för att ändra ordning inom kategorin (kategorin i sig går alltid att dra i, oavsett läge).</li>
             </ul>
           </div>
         </div>
@@ -1085,7 +1079,8 @@ export function ParentTodoThreadView({
           className={
             "todo-thread" +
             (draggingId === thread.id ? " todo-thread--dragging" : "") +
-            (dragOverId === thread.id && draggingId !== thread.id ? " todo-thread--drop-target" : "")
+            (dragOverId === thread.id && draggingId !== thread.id ? " todo-thread--drop-target" : "") +
+            (editingThreadId === thread.id ? " todo-thread--editing" : "")
           }
           aria-label={`Tråd: ${thread.label}`}
           style={thread.accentColor ? ({ "--thread-accent": thread.accentColor } as React.CSSProperties) : undefined}
@@ -1112,7 +1107,8 @@ export function ParentTodoThreadView({
                     (draggingId === thread.id ? " todo-thread__category-button--dragging" : "")
                   }
                   aria-expanded={menuCategoryId === thread.id}
-                  aria-label={`${thread.label}. Klicka för fler val, håll och dra för att flytta tråden.`}
+                  aria-pressed={editingThreadId === thread.id}
+                  aria-label={`${thread.label}. Klicka för fler val, håll och dra för att flytta tråden, tre snabba tryck för att växla flyttläge.`}
                   onClick={(e) => handleCategoryClick(thread, e)}
                   onPointerDown={(e) => handleThreadPointerDown(e, thread.id)}
                   onPointerMove={handleThreadPointerMove}
@@ -1121,17 +1117,6 @@ export function ParentTodoThreadView({
                 >
                   {thread.label}
                 </button>
-                {editMode && thread.deletable && (
-                  <button
-                    aria-label={`Göm ${thread.label}`}
-                    className="todo-thread__quick-hide"
-                    onClick={() => onSetCategoryHidden(thread.id, true)}
-                    title="Göm den här tråden"
-                    type="button"
-                  >
-                    <EyeOff size={13} />
-                  </button>
-                )}
               </h3>
             )}
 
@@ -1174,20 +1159,6 @@ export function ParentTodoThreadView({
                     type="button"
                   >
                     Lägg till uppgift
-                  </button>
-                  <button
-                    disabled={orderedThreads.findIndex((t) => t.id === thread.id) === 0}
-                    onClick={() => handleMoveThreadFromMenu(thread.id, -1)}
-                    type="button"
-                  >
-                    ◀ Flytta vänster
-                  </button>
-                  <button
-                    disabled={orderedThreads.findIndex((t) => t.id === thread.id) === orderedThreads.length - 1}
-                    onClick={() => handleMoveThreadFromMenu(thread.id, 1)}
-                    type="button"
-                  >
-                    Flytta höger ▶
                   </button>
                   <button onClick={() => handleToggleExpiredFromMenu(thread.id)} type="button">
                     {showExpiredThreadIds.has(thread.id) ? "Dölj utgångna" : "Visa utgångna"}
@@ -1255,8 +1226,8 @@ export function ParentTodoThreadView({
                     key={todo.id}
                     className={
                       "todo-thread__item" +
-                      (editMode && draggingBubbleKey === bubbleKey ? " todo-thread__item--dragging" : "") +
-                      (editMode && bubbleDragOverKey === bubbleKey && draggingBubbleKey !== bubbleKey
+                      ((editingThreadId === thread.id) && draggingBubbleKey === bubbleKey ? " todo-thread__item--dragging" : "") +
+                      ((editingThreadId === thread.id) && bubbleDragOverKey === bubbleKey && draggingBubbleKey !== bubbleKey
                         ? " todo-thread__item--drop-target"
                         : "")
                     }
@@ -1277,21 +1248,21 @@ export function ParentTodoThreadView({
                         (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                         (isDissolving ? " todo-thread__ball--dissolving" : "") +
                         (inProgressColor ? " todo-thread__ball--in-progress" : "") +
-                        (editMode ? " todo-thread__ball--edit" : "")
+                        ((editingThreadId === thread.id) ? " todo-thread__ball--edit" : "")
                       }
                       disabled={isDissolving}
-                      onClick={(e) => { if (!editMode) handleBallClick(todo, e); }}
+                      onClick={(e) => { if (!(editingThreadId === thread.id)) handleBallClick(todo, e); }}
                       onPointerDown={(e) => {
-                        if (editMode) { handleBubblePointerDown(e, thread.id, bubbleKey); return; }
+                        if ((editingThreadId === thread.id)) { handleBubblePointerDown(e, thread.id, bubbleKey); return; }
                         startHold(todo.id, () => handleConfirmComplete(todo));
                       }}
-                      onPointerMove={editMode ? handleBubblePointerMove : undefined}
-                      onPointerUp={() => { if (editMode) { handleBubblePointerUp(thread.todos); return; } clearHold(); }}
-                      onPointerLeave={editMode ? undefined : clearHold}
-                      onPointerCancel={() => { if (editMode) { handleBubblePointerUp(thread.todos); return; } clearHold(); }}
+                      onPointerMove={(editingThreadId === thread.id) ? handleBubblePointerMove : undefined}
+                      onPointerUp={() => { if ((editingThreadId === thread.id)) { handleBubblePointerUp(thread.todos); return; } clearHold(); }}
+                      onPointerLeave={(editingThreadId === thread.id) ? undefined : clearHold}
+                      onPointerCancel={() => { if ((editingThreadId === thread.id)) { handleBubblePointerUp(thread.todos); return; } clearHold(); }}
                       title={todo.title}
                       aria-label={
-                        editMode
+                        (editingThreadId === thread.id)
                           ? `${todo.title}. Håll och dra för att flytta ordningen inom ${thread.label}.`
                           : `${todo.title}, tilldelad ${assignee}` +
                             (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
@@ -1311,29 +1282,6 @@ export function ParentTodoThreadView({
                         <span className="todo-thread__ball-progress">{progress}%</span>
                       )}
                     </button>
-
-                    {editMode && (
-                      <div className="todo-thread__move-buttons">
-                        <button
-                          aria-label={`Flytta "${todo.title}" uppåt`}
-                          className="icon-button"
-                          disabled={thread.todos.indexOf(todo) === 0}
-                          onClick={() => moveBubble(thread.todos, thread.id, bubbleKey, -1)}
-                          type="button"
-                        >
-                          <ChevronUp size={14} />
-                        </button>
-                        <button
-                          aria-label={`Flytta "${todo.title}" nedåt`}
-                          className="icon-button"
-                          disabled={thread.todos.indexOf(todo) === thread.todos.length - 1}
-                          onClick={() => moveBubble(thread.todos, thread.id, bubbleKey, 1)}
-                          type="button"
-                        >
-                          <ChevronDown size={14} />
-                        </button>
-                      </div>
-                    )}
 
                     {inProgressMembers.length >= 2 && (
                       <div className="todo-thread__in-progress" aria-hidden="true">

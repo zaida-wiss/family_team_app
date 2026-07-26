@@ -85,11 +85,6 @@
   flex-shrink: 0;
 }
 
-.todo-thread-view__edit-button--active {
-  background: var(--primary);
-  color: var(--primary-fg, #fff);
-}
-
 .todo-thread-view {
   display: flex;
   flex-direction: row;
@@ -185,22 +180,6 @@
   background: var(--thread-accent, var(--primary));
   border-radius: 2px;
   transition: width 0.3s ease;
-}
-
-.todo-thread__quick-hide {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--muted);
-  color: var(--muted-fg);
-  cursor: pointer;
 }
 
 /* Kategorinamnets meny (2026-07-05, Zaidas beslut, utökad senare samma dag)
@@ -313,6 +292,17 @@
   border-radius: var(--radius-sm);
 }
 
+/* Flyttläge, PER KATEGORI (2026-07-26) — en synlig markering av VILKEN
+   kategori som just nu är i flyttläge (tre-tryck-gesten aktiverar bara en
+   åt gången, till skillnad från det tidigare globala redigeringsläget där
+   alla kategorier alltid såg likadana ut). */
+.todo-thread--editing {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--primary) 6%, transparent);
+}
+
 /* Bubbel-drag inom en kategori (2026-07-24, Zaidas önskemål) — samma
    ghost/drop-target-princip som trådarnas egen drag ovan, bara på en enskild
    bubbel istället för en hel kolumn. */
@@ -328,17 +318,6 @@
 .todo-thread__ball--edit {
   cursor: grab;
   touch-action: none;
-}
-
-/* Flytta-knappar som pålitligt alternativ till håll-och-dra (2026-07-25,
-   Zaidas önskemål) — samma princip som delmomentens upp/ner-pilar
-   (TodoCreatorModal.tsx), bara i redigeringsläge. Staplade vertikalt (inte
-   sida vid sida) så de får plats i den smala kolumnbredden utan att gå
-   under 44×44px touch-målet (CLAUDE.md, icke förhandlingsbart). */
-.todo-thread__move-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .todo-thread__category-input {

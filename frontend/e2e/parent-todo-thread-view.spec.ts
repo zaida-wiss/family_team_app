@@ -1855,6 +1855,56 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
 });
 
+// Zaida (2026-07-26): "ändra redigeringen av todo så att tre tryck gör hela
+// kategorin i flyttläge, så att man kan drag and droppa ordningen på
+// uppgifterna i kategorin, samt flytta kategorin till höger och vänster med
+// drag and drop. Ta bort alla andra funktioner med pilar osv" — ersätter den
+// tidigare GLOBALA Pennikon-knappen (som slog på redigering för alla trådar
+// samtidigt) med en per-kategori trippel-tryck-gest, och tar bort pil-
+// knapparna/menyalternativen som lades till dagen innan som ett alternativ
+// till drag.
+test("Bollar i tråd: tre snabba tryck på ett kategorinamn växlar flyttläge, drag ordnar om bubblorna i kategorin", async ({ page }) => {
+  let savedBubbleOrder: string[] | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS, PERSONAL_TODO_NO_SUBTASKS] })
+  );
+  await page.route("**/api/members/mem-1", (route) => {
+    const body = route.request().postDataJSON() as { todoBubbleOrder?: Record<string, string[]> };
+    if (body.todoBubbleOrder) savedBubbleOrder = body.todoBubbleOrder["cat-1"] ?? null;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await openThreadView(page);
+
+  const traningBtn = page.getByRole("button", { name: /^Träning\./ });
+  await expect(traningBtn).toBeVisible();
+
+  // Tre snabba tryck (Playwrights inbyggda triple-klick) — flyttläge aktivt,
+  // kategorimenyn ska INTE öppnas, kolumnen får en egen visuell markering.
+  await traningBtn.click({ clickCount: 3 });
+  await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Tråd: Träning" })).toHaveClass(/todo-thread--editing/);
+
+  const styrkaBall = page.getByRole("button", { name: /^Styrketräning/ });
+  const lopningBall = page.getByRole("button", { name: /^Löpning/ });
+  const styrkaBox = (await styrkaBall.boundingBox())!;
+  const lopningBox = (await lopningBall.boundingBox())!;
+
+  await page.mouse.move(styrkaBox.x + styrkaBox.width / 2, styrkaBox.y + styrkaBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(lopningBox.x + lopningBox.width / 2, lopningBox.y + lopningBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(() => savedBubbleOrder).not.toBeNull();
+  expect(savedBubbleOrder).toEqual(["todo-2", "todo-1"]);
+
+  // Tre snabba tryck igen stänger av flyttläget (symmetrisk gest).
+  await traningBtn.click({ clickCount: 3 });
+  await expect(page.getByRole("region", { name: "Tråd: Träning" })).not.toHaveClass(/todo-thread--editing/);
+});
+
 // Zaida: "i nuläget markeras bara texten när jag ska lägga in en ny uppgift
 // genom att hålla 2 sekunder på kategorinamnet... jag vill att menyn skall
 // komma upp istället" (2026-07-06) — kategorinamnet saknade user-select:none,
