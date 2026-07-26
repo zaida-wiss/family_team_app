@@ -1,27 +1,37 @@
 import "./RecipesView.css";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { useRecipesState } from "./useRecipesState";
 import { RecipeFormModal } from "./RecipeFormModal";
 import { RecipeDetailView } from "./RecipeDetailView";
-import { RecipeImportExport } from "./RecipeImportExport";
-import type { Id, Member, ShoppingList, Todo } from "@shared/types";
+import type { Id, Member, Recipe, ShoppingList, Todo } from "@shared/types";
+import type { RecipeFormInput } from "./RecipeFormModal";
 
 type SortMode = "name" | "newest";
 
 type Props = {
   currentMember: Member;
+  recipes: Recipe[];
   shoppingLists: ShoppingList[];
   onCreateTodo: (todo: Todo) => void;
   onAddShoppingItem: (listId: Id, title: string) => void;
   onCreateShoppingList: (name: string, icon?: string | null) => Id;
+  onCreateRecipe: (input: RecipeFormInput) => Promise<Recipe>;
+  onUpdateRecipe: (id: Id, input: RecipeFormInput) => Promise<void>;
+  onRemoveRecipe: (id: Id) => Promise<void>;
 };
 
 // Recept, ny huvudpanel (2026-07-25, ADR-0028, Zaidas önskemål: "recept i
 // våran app som en egen kategori i menyn"). Kontobrett — hela familjen ser
 // samma recept, mutationer kräver en vuxen (server-side, recipesService.ts).
-export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddShoppingItem, onCreateShoppingList }: Props) {
-  const { recipes, createRecipe, updateRecipe, removeRecipe, importRecipes } = useRecipesState();
+// Import/export flyttat till en egen Inställningar-kategori 2026-07-26
+// (Zaidas önskemål: "istället för i receptvyn") — se SettingsContent.tsx.
+// recipes/create/update/remove kommer därför numera som props (delad
+// useRecipesState-instans i useShellState.ts, samma mönster som
+// todos/shopping/kalendrar) istället för en egen lokal hook här.
+export function RecipesView({
+  currentMember, recipes, shoppingLists, onCreateTodo, onAddShoppingItem, onCreateShoppingList,
+  onCreateRecipe: createRecipe, onUpdateRecipe: updateRecipe, onRemoveRecipe: removeRecipe
+}: Props) {
   const [selectedId, setSelectedId] = useState<Id | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<Id | null>(null);
@@ -117,8 +127,6 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
         </div>
       )}
 
-      <RecipeImportExport onImport={importRecipes} recipes={recipes} />
-
       {showCreate && (
         <RecipeFormModal
           onClose={() => setShowCreate(false)}
@@ -148,6 +156,7 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
 
       {selected && !editing && (
         <RecipeDetailView
+          key={selected.id}
           currentMember={currentMember}
           onAddShoppingItem={onAddShoppingItem}
           onCreateShoppingList={onCreateShoppingList}

@@ -24,6 +24,8 @@ const recipeSchema = new Schema<Recipe>({
       timedMinutes: { type: Number, default: null }
     }
   ],
+  // Antal personer (2026-07-26, Zaidas önskemål) — valfritt tal.
+  servings: { type: Number, default: null },
   tags: [{ type: String }],
   // required + default (2026-07-26, Zaidas fynd: "för created at eller
   // något datum krävs" — den riktiga felmeddelandetexten syntes först efter

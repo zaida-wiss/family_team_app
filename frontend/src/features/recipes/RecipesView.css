@@ -166,6 +166,14 @@
   margin-bottom: 12px;
 }
 
+.recipe-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
 .recipe-detail__source-link {
   display: inline-flex;
   align-items: center;
@@ -174,11 +182,18 @@
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
-  margin-bottom: 4px;
 }
 
 .recipe-detail__source-link:hover {
   text-decoration: underline;
+}
+
+.recipe-detail__servings {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted-fg);
 }
 
 .recipe-form__rows {
@@ -224,6 +239,10 @@
   max-width: 100px;
 }
 
+.recipe-form__servings .text-input {
+  max-width: 100px;
+}
+
 .recipe-detail__ingredients,
 .recipe-detail__steps {
   margin: 0;
@@ -236,13 +255,41 @@
 .recipe-detail__step {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
 }
 
-.recipe-detail__step-timer {
+/* Kryssruta + tonad-ner/överstruken markering (2026-07-26, Zaidas önskemål:
+   "kryssrutor så man kan följa steg för steg... överstrukna steg skall
+   tonas ner") — samma 44px touch-mål-golv som resten av appen. */
+.recipe-detail__step-checkbox {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+
+.recipe-detail__step--checked span {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.recipe-detail__step-timer-start {
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+.recipe-detail__step-timer-running {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.78rem;
   color: var(--primary);
   font-weight: 700;
+}
+
+.recipe-detail__step-timer-running--done {
+  color: #e74c3c;
 }
 
 .recipe-form__actions {

@@ -35,6 +35,7 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
   const recipePayload = {
     name: "Köttfärssås",
     emoji: "🍝",
+    servings: 4,
     ingredients: [{ text: "500 g köttfärs" }, { text: "1 burk krossade tomater" }],
     steps: [{ text: "Fräs köttfärsen", timedMinutes: null }, { text: "Sätt in i ugnen", timedMinutes: 25 }]
   };
@@ -91,6 +92,7 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
       .send(recipePayload);
     expect(res.status).toBe(201);
     expect(res.body.name).toBe("Köttfärssås");
+    expect(res.body.servings).toBe(4);
     expect(res.body.ingredients).toHaveLength(2);
     expect(res.body.steps).toHaveLength(2);
     expect(res.body.steps[1].timedMinutes).toBe(25);

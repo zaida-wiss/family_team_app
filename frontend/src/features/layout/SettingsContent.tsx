@@ -1,6 +1,7 @@
 import "./Settings.css";
 import { lazy, useState } from "react";
-import { Baby, CalendarDays, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
+import { Baby, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
+import { RecipeImportExport } from "../recipes/RecipeImportExport";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
 import type { SettingsCategory } from "./SettingsCategoryNav";
@@ -65,6 +66,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     rewards,
     calendars,
     shoppingLists,
+    recipes,
+    onImportRecipes,
     canManageMembers,
     canManageRoles,
     canViewTrash,
@@ -384,6 +387,24 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onToggleItem={memberContentProps.onToggleShoppingItem}
             />
           )
+        }
+      ]
+    },
+    {
+      // Egen kategori för recept (2026-07-26, Zaidas önskemål: "recept ska
+      // ha egen kategori i inställningar där man kan ladda ner, importera
+      // och exportera... istället för i receptvyn") — importflödet låg
+      // tidigare direkt i Recept-panelen, flyttat hit helt (samma
+      // "panelen visar bara det man faktiskt gör där, resten i
+      // Inställningar"-princip som redan gäller Todos, ADR 2026-07-05/06).
+      id: "recipes",
+      label: "Recept",
+      icon: <ChefHat aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "recipes",
+          label: "Recept",
+          content: <RecipeImportExport onImport={onImportRecipes} recipes={recipes} />
         }
       ]
     },

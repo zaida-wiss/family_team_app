@@ -10,7 +10,7 @@ import { generateId } from "../../utils/uuid";
 // cell, separerade med " | " (enkelt att läsa/redigera i ett kalkylark),
 // ett tidsstyrt steg skrivs "Text (25 min)".
 
-export const RECIPE_CSV_HEADERS = ["Namn", "Emoji", "Länk", "Taggar", "Ingredienser", "Steg", "Id"] as const;
+export const RECIPE_CSV_HEADERS = ["Namn", "Emoji", "Länk", "Antal personer", "Taggar", "Ingredienser", "Steg", "Id"] as const;
 
 const ITEM_SEPARATOR = " | ";
 const TIMED_STEP_PATTERN = /^(.*)\((\d+)\s*min\)$/;
@@ -32,6 +32,7 @@ export function recipesToCsv(recipes: Recipe[]): string {
     r.name,
     r.emoji ?? "",
     r.sourceUrl ?? "",
+    r.servings != null ? String(r.servings) : "",
     r.tags.join(", "),
     r.ingredients.map((i) => i.text).join(ITEM_SEPARATOR),
     r.steps.map(stepToText).join(ITEM_SEPARATOR),
@@ -42,7 +43,7 @@ export function recipesToCsv(recipes: Recipe[]): string {
 
 export function buildRecipeTemplateCsv(): string {
   const example = [
-    "Köttfärssås", "🍝", "https://exempel.se/kottfarssas", "vardag, snabbt",
+    "Köttfärssås", "🍝", "https://exempel.se/kottfarssas", "4", "vardag, snabbt",
     ["500 g köttfärs", "1 burk krossade tomater", "1 gul lök"].join(ITEM_SEPARATOR),
     ["Fräs köttfärsen och löken", "Sätt in i ugnen (25 min)"].join(ITEM_SEPARATOR),
     ""
@@ -57,6 +58,7 @@ export type ParsedRecipeRow = {
   name: string;
   emoji: string | null;
   sourceUrl: string | null;
+  servings: number | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
@@ -72,6 +74,7 @@ export function parseRecipeCsv(text: string): ParsedRecipeRow[] {
   const nameIdx = colIndex("Namn");
   const emojiIdx = colIndex("Emoji");
   const sourceUrlIdx = colIndex("Länk");
+  const servingsIdx = colIndex("Antal personer");
   const tagsIdx = colIndex("Taggar");
   const ingredientsIdx = colIndex("Ingredienser");
   const stepsIdx = colIndex("Steg");
@@ -83,11 +86,14 @@ export function parseRecipeCsv(text: string): ParsedRecipeRow[] {
       if (!name) return null;
       const ingredientsRaw = row[ingredientsIdx] ?? "";
       const stepsRaw = row[stepsIdx] ?? "";
+      const servingsRaw = (row[servingsIdx] ?? "").trim();
+      const servingsNum = Number(servingsRaw);
       return {
         id: (row[idIdx] ?? "").trim() || null,
         name,
         emoji: (row[emojiIdx] ?? "").trim() || null,
         sourceUrl: (row[sourceUrlIdx] ?? "").trim() || null,
+        servings: servingsRaw && Number.isFinite(servingsNum) && servingsNum > 0 ? Math.floor(servingsNum) : null,
         tags: (row[tagsIdx] ?? "").split(",").map((t) => t.trim()).filter(Boolean),
         ingredients: ingredientsRaw.split(ITEM_SEPARATOR).map((t) => t.trim()).filter(Boolean).map((text) => ({ text })),
         steps: stepsRaw.split(ITEM_SEPARATOR).map((t) => t.trim()).filter(Boolean).map(textToStep)

@@ -676,6 +676,10 @@ export type Recipe = {
   sourceUrl: string | null;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
+  // Antal personer (2026-07-26, Zaidas önskemål) — fritt valfritt tal, ingen
+  // automatisk omräkning av ingrediensmängder (de är fri text, inte
+  // strukturerad mängd/enhet — se RecipeIngredient).
+  servings: number | null;
   // Söktaggar + skapad-tidsstämpel (2026-07-25, Zaidas önskemål: "kunna
   // filtrera och sortera i recepten och lägga till söktaggar").
   tags: string[];

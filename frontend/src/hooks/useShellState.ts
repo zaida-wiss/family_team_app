@@ -5,6 +5,7 @@ import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
 import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState";
 import { useTodoTemplatesState } from "../features/todos/useTodoTemplatesState";
+import { useRecipesState } from "../features/recipes/useRecipesState";
 import { useAppFont } from "../components/FontPicker";
 import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TextSize, TodoThreadRange, TodoViewMode } from "@shared/types";
 
@@ -90,6 +91,12 @@ export function useShellState(
     removeCategoryTemplate
   } = useTodoTemplatesState();
 
+  // Delad instans (2026-07-26) — behövs av BÅDE Recept-panelen
+  // (memberContentProps) och Inställningars nya import/export-kategori
+  // (settingsProps, "istället för i receptvyn", Zaidas rättelse), samma
+  // "en instans i useShellState.ts"-mönster som övriga funktioner ovan.
+  const { recipes, createRecipe, updateRecipe, removeRecipe, importRecipes } = useRecipesState();
+
   const permissions = useShellPermissions(currentMember, roles);
 
   // Andra familjer man är medlem i (2026-07-23, Zaidas önskemål: kunna vara
@@ -168,6 +175,10 @@ export function useShellState(
     rewards,
     calendars,
     shoppingLists,
+    recipes,
+    onCreateRecipe: createRecipe,
+    onUpdateRecipe: updateRecipe,
+    onRemoveRecipe: removeRecipe,
     fixedTodoTimes: activeAccount.fixedTodoTimes ?? false,
     ...permissions,
     wishStars,
@@ -279,6 +290,8 @@ export function useShellState(
     rewards,
     calendars,
     shoppingLists,
+    recipes,
+    onImportRecipes: importRecipes,
     wishStars,
     canManageMembers: permissions.canManageMembers,
     canManageRoles: permissions.canManageRoles,

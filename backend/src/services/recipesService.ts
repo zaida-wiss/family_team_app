@@ -18,6 +18,7 @@ type RecipeInput = {
   sourceUrl: string | null;
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
+  servings: number | null;
   tags: string[];
 };
 
@@ -30,6 +31,7 @@ function normalizeInput(body: unknown): RecipeInput {
     emoji: typeof b.emoji === "string" && b.emoji ? b.emoji : null,
     imageUrl: typeof b.imageUrl === "string" && b.imageUrl ? b.imageUrl : null,
     sourceUrl: typeof b.sourceUrl === "string" && b.sourceUrl.trim() ? b.sourceUrl.trim() : null,
+    servings: typeof b.servings === "number" && b.servings > 0 ? Math.floor(b.servings) : null,
     ingredients: Array.isArray(b.ingredients)
       ? b.ingredients.map((i) => ({ text: String((i as { text: unknown }).text ?? "").trim() })).filter((i) => i.text)
       : [],
@@ -61,6 +63,7 @@ export async function createRecipe(accountId: string, memberId: string | null, b
     sourceUrl: input.sourceUrl,
     ingredients: input.ingredients.map((i) => ({ id: `recipe-ing-${crypto.randomUUID()}`, ...i })),
     steps: input.steps.map((s) => ({ id: `recipe-step-${crypto.randomUUID()}`, ...s })),
+    servings: input.servings,
     tags: input.tags,
     createdAt: new Date().toISOString(),
     createdBy: memberId,
@@ -88,6 +91,7 @@ export async function updateRecipe(id: string, accountId: string, memberId: stri
   recipe.sourceUrl = input.sourceUrl;
   recipe.ingredients = input.ingredients.map((i) => ({ id: `recipe-ing-${crypto.randomUUID()}`, ...i })) as never;
   recipe.steps = input.steps.map((s) => ({ id: `recipe-step-${crypto.randomUUID()}`, ...s })) as never;
+  recipe.servings = input.servings;
   recipe.tags = input.tags;
   await recipe.save();
   return { ok: true };

@@ -13,6 +13,7 @@ type RecipeInput = {
   // (ett foto laddas alltid upp manuellt), backend defaultar saknat till null.
   imageUrl?: string | null;
   sourceUrl?: string | null;
+  servings?: number | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];

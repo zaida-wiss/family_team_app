@@ -17,6 +17,7 @@ export type RecipeFormInput = {
   emoji: string | null;
   imageUrl: string | null;
   sourceUrl: string | null;
+  servings: number | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
@@ -46,6 +47,10 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
   const [imageUrl, setImageUrl] = useState<string | null>(recipe?.imageUrl ?? null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? "");
+  // Sträng-baserat lokalt state (samma mönster som delmomentens Stjärnor-
+  // fält, 2026-07-07) — en kontrollerad `Number(...)`-input tvingar annars
+  // fältet till "0" istället för att gå att radera helt medan man skriver.
+  const [servingsInput, setServingsInput] = useState(recipe?.servings != null ? String(recipe.servings) : "");
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     recipe?.ingredients.map((i) => ({ id: i.id, text: i.text })) ?? [{ id: generateId(), text: "" }]
@@ -112,6 +117,7 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
       emoji: emoji || null,
       imageUrl,
       sourceUrl: sourceUrl.trim() || null,
+      servings: servingsInput ? Math.max(1, Math.floor(Number(servingsInput)) || 0) || null : null,
       tags,
       ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({ text: i.text.trim() })),
       steps: steps.filter((s) => s.text.trim()).map((s) => ({
@@ -181,6 +187,17 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
             placeholder="https://…"
             type="url"
             value={sourceUrl}
+          />
+        </label>
+
+        <label className="field-label recipe-form__servings">
+          Antal personer
+          <input
+            className="text-input"
+            inputMode="numeric"
+            onChange={(e) => setServingsInput(e.target.value.replace(/\D/g, ""))}
+            placeholder="Till exempel 4"
+            value={servingsInput}
           />
         </label>
 

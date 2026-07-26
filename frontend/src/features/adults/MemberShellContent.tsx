@@ -28,8 +28,9 @@ const RecipesView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Membership, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Membership, Recipe, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
+import type { RecipeFormInput } from "../recipes/RecipeFormModal";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -45,6 +46,10 @@ type Props = {
   rewards: Reward[];
   calendars: Calendar[];
   shoppingLists: ShoppingList[];
+  recipes: Recipe[];
+  onCreateRecipe: (input: RecipeFormInput) => Promise<Recipe>;
+  onUpdateRecipe: (id: Id, input: RecipeFormInput) => Promise<void>;
+  onRemoveRecipe: (id: Id) => Promise<void>;
   fixedTodoTimes: boolean;
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
@@ -128,7 +133,8 @@ export function MemberShellContent({
   activePanel, accountName,
 
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
-  todos, rewards, calendars, shoppingLists, fixedTodoTimes, timedTasks, onRecordTimedAttempt,
+  todos, rewards, calendars, shoppingLists, recipes, onCreateRecipe, onUpdateRecipe, onRemoveRecipe,
+  fixedTodoTimes, timedTasks, onRecordTimedAttempt,
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
@@ -460,6 +466,10 @@ export function MemberShellContent({
           onAddShoppingItem={onAddShoppingItem}
           onCreateShoppingList={onCreateShoppingList}
           onCreateTodo={onCreateTodo}
+          onCreateRecipe={onCreateRecipe}
+          onRemoveRecipe={onRemoveRecipe}
+          onUpdateRecipe={onUpdateRecipe}
+          recipes={recipes}
           shoppingLists={canSeeShopping ? shoppingLists : []}
         />
       </Suspense>
