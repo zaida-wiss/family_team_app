@@ -69,6 +69,11 @@ type Props = {
   // en månad, eller en lång lista på allt i framtiden") — väljs i
   // Inställningar, samma per-medlem-mönster som todoViewMode.
   range: TodoThreadRange;
+  // Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål:
+  // "via ett reglage kunna bestämma avståndet vågrät mellan
+  // kategoritrådarna") — px, väljs i Inställningar → Utseende. undefined =
+  // ingen anpassning, CSS:s befintliga clamp()-formel gäller.
+  threadGap?: number;
   fixedTodoTimes: boolean;
 };
 
@@ -247,6 +252,7 @@ export function ParentTodoThreadView({
   todoBubbleOrder,
   onReorderBubbles,
   range,
+  threadGap,
   fixedTodoTimes
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
@@ -1085,7 +1091,10 @@ export function ParentTodoThreadView({
           </div>
         </div>
       )}
-      <div className="todo-thread-view">
+      <div
+        className="todo-thread-view"
+        style={threadGap != null ? ({ "--todo-thread-gap": `${threadGap}px` } as React.CSSProperties) : undefined}
+      >
       {orderedThreads.map((thread) => (
         <section
           key={thread.id}

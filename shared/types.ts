@@ -178,6 +178,12 @@ export type Member = {
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode. Standard "today" om osatt.
   todoThreadRange?: TodoThreadRange;
+  // Vågrätt avstånd mellan kategoritrådarna i "bollar i tråd" (2026-07-26,
+  // Zaidas önskemål: "via ett reglage kunna bestämma avståndet vågrät
+  // mellan kategoritrådarna") — px, väljs i Inställningar → Utseende.
+  // Standard (osatt) faller tillbaka på den befintliga clamp()-formeln i
+  // ParentTodoThreadView.css, oförändrat beteende.
+  todoThreadGap?: number;
   spentStars: number;
   approvedStars: number;
   // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,

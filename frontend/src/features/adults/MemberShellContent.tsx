@@ -62,6 +62,7 @@ type Props = {
   todoBubbleOrder: Record<Id, Id[]>;
   onReorderBubbles: (threadId: Id, order: Id[]) => void;
   todoThreadRange: TodoThreadRange;
+  todoThreadGap?: number;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
   onCreateTodo: (todo: Todo) => void;
@@ -131,7 +132,7 @@ export function MemberShellContent({
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
-  todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange,
+  todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange, todoThreadGap,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate,
@@ -412,6 +413,7 @@ export function MemberShellContent({
           todoBubbleOrder={todoBubbleOrder}
           onReorderBubbles={onReorderBubbles}
           todoThreadRange={todoThreadRange}
+          todoThreadGap={todoThreadGap}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onToggleTodoInProgress={onToggleTodoInProgress}

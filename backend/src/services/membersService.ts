@@ -84,6 +84,7 @@ const SELF_NAV_FIELDS = new Set([
   "todoThreadOrder",
   "todoBubbleOrder",
   "todoThreadRange",
+  "todoThreadGap",
   "calendarFilterSettings",
   // Mina familjekonton (2026-07-25) — vilka av mina EGNA andra medlemskap
   // som ska döljas i cross-account-vyer, se todosService.ts:s

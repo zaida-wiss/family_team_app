@@ -88,6 +88,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onUpdateTodoViewMode,
     todoThreadRange,
     onUpdateTodoThreadRange,
+    todoThreadGap,
+    onUpdateTodoThreadGap,
     personalCategories,
     onCreateCategory,
     onSetCategoryHidden,
@@ -167,6 +169,19 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                     <option value="month">En månad framåt</option>
                     <option value="all">Allt i framtiden</option>
                   </select>
+                </label>
+              )}
+              {todoViewMode === "thread" && (
+                <label className="field-label settings-todo-view-mode">
+                  Avstånd mellan kategoritrådarna ({todoThreadGap ?? 8} px)
+                  <input
+                    className="settings-thread-gap-slider"
+                    max={32}
+                    min={0}
+                    onChange={(e) => onUpdateTodoThreadGap(Number(e.target.value))}
+                    type="range"
+                    value={todoThreadGap ?? 8}
+                  />
                 </label>
               )}
             </>

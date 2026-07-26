@@ -203,6 +203,10 @@ export function useShellState(
     // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
     // Inställningar, se settingsProps nedan.
     todoThreadRange: currentMember.todoThreadRange ?? "today",
+    // Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål) —
+    // väljs i Inställningar, se settingsProps nedan. undefined = ingen
+    // anpassning, ParentTodoThreadView.css:s befintliga clamp() gäller.
+    todoThreadGap: currentMember.todoThreadGap,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
@@ -313,6 +317,9 @@ export function useShellState(
     todoThreadRange: currentMember.todoThreadRange ?? "today",
     onUpdateTodoThreadRange: (range: TodoThreadRange) =>
       updateMemberNavigation(currentMember.id, { todoThreadRange: range }),
+    todoThreadGap: currentMember.todoThreadGap,
+    onUpdateTodoThreadGap: (gap: number) =>
+      updateMemberNavigation(currentMember.id, { todoThreadGap: gap }),
     onUpdateChildTimelineSettings: updateChildTimelineSettings,
     onAssignRole: assignRole,
     onCreateRole: createRole,

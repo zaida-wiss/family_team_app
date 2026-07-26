@@ -73,4 +73,26 @@ test.describe("Inställningar", () => {
     await expect(page.getByRole("button", { name: "Utseende" })).toBeVisible();
     await expect(page.getByText("Belöningsbutiken", { exact: true })).toHaveCount(0);
   });
+
+  // 2026-07-26, Zaidas önskemål: "i redigera todolistor ska vi även via ett
+  // reglage kunna bestämma avståndet vågrät mellan kategoritrådarna".
+  test("reglaget för avstånd mellan kategoritrådarna sparar ett nytt värde", async ({ page }) => {
+    let savedGap: number | null = null;
+    await page.route("**/api/members/mem-1", (route) => {
+      const body = route.request().postDataJSON() as { todoThreadGap?: number };
+      if (body.todoThreadGap !== undefined) savedGap = body.todoThreadGap;
+      return route.fulfill({ json: { ok: true } });
+    });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
+
+    const slider = page.getByLabel(/Avstånd mellan kategoritrådarna/);
+    await expect(slider).toBeVisible();
+    await slider.fill("20");
+
+    await expect.poll(() => savedGap).toBe(20);
+    await expect(page.getByText("Avstånd mellan kategoritrådarna (20 px)")).toBeVisible();
+  });
 });

@@ -31,6 +31,9 @@ type Props = {
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode.
   todoThreadRange: TodoThreadRange;
+  // Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål) —
+  // väljs i Inställningar, samma mönster som todoThreadRange.
+  todoThreadGap?: number;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
@@ -75,6 +78,7 @@ export function TodosView({
   todoBubbleOrder,
   onReorderBubbles,
   todoThreadRange,
+  todoThreadGap,
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
@@ -215,6 +219,7 @@ export function TodosView({
             todoBubbleOrder={todoBubbleOrder}
             onReorderBubbles={onReorderBubbles}
             range={todoThreadRange}
+            threadGap={todoThreadGap}
             fixedTodoTimes={fixedTodoTimes}
           />
         )}

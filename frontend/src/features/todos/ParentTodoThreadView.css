@@ -99,7 +99,11 @@
      är korta), var och en fortsatt begränsad av sin egen max-height nedan. */
   align-items: stretch;
   --ball-size: clamp(5.5rem, 11vw, 8rem);
-  gap: clamp(4px, 1vw, 8px);
+  /* Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål om
+     ett eget reglage i Inställningar) — --todo-thread-gap sätts inline av
+     ParentTodoThreadView.tsx när medlemmen valt ett eget värde, annars
+     faller den tillbaka på den befintliga adaptiva clamp()-formeln. */
+  gap: var(--todo-thread-gap, clamp(4px, 1vw, 8px));
   overflow-x: auto;
   padding-bottom: 8px;
   /* Fyller kvarvarande yta ovanför bottenmenyn (2026-07-05, Zaidas begäran,
