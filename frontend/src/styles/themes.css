@@ -1090,7 +1090,14 @@
 }
 
 .theme-option.active {
+  /* Tjockare + tydligare markering (2026-07-26, Zaidas fynd: "bordern på
+     valt tema... måste vara tjockare och med högre kontrast") — en dubbel
+     ring (kant + en halo i --background-färgen) syns pålitligt oavsett hur
+     ljus/mörk/mångfärgad swatchens egen gradient råkar vara, till skillnad
+     från bara en tjockare kant i en enda färg. */
+  border-width: 3px;
   border-color: var(--foreground);
+  box-shadow: 0 0 0 2px var(--background);
 }
 
 .theme-option.theme-clear {
@@ -1186,6 +1193,25 @@
     #3f403f 100%
   );
   color: #2a3126;
+}
+
+.theme-option.theme-karneval {
+  /* Samma 8 nyanser/ordning som --c4→--c1→--c0 osv i .app-shell.theme-karneval
+     ovan (guld→chartreuse→grönt→cyanblått→indigo→violett→rosa→mörk indigo) —
+     glömdes bort när temat lades till (2026-07-26, Zaidas fynd: "det nya
+     temat har inte sina rätta färger på knappen"). */
+  background: linear-gradient(
+    135deg,
+    #d8ce23 0%,
+    #59d823 14%,
+    #23d874 28%,
+    #23b4d8 43%,
+    #232dd8 57%,
+    #a223d8 71%,
+    #d82387 86%,
+    #171d8c 100%
+  );
+  color: #ffffff;
 }
 
 .theme-option.theme-space {
