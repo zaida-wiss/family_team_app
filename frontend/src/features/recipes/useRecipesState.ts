@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { recipesApi } from "../../api";
+import { recipesApi, reportApiError } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
 import type { Id, Recipe } from "@shared/types";
 
@@ -12,6 +12,7 @@ type RecipeInput = {
   // alltid skickar det) — CSV-importens ParsedRecipeRow har ingen bildkolumn
   // (ett foto laddas alltid upp manuellt), backend defaultar saknat till null.
   imageUrl?: string | null;
+  sourceUrl?: string | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
@@ -30,15 +31,27 @@ export function useRecipesState() {
     writeCache(RECIPES_CACHE_KEY, recipes);
   }, [recipes]);
 
+  // Fångar och visar fel (2026-07-26, Zaidas fynd: "inget händer heller när
+  // jag ska spara recept") — createRecipe hade ingen egen felhantering alls,
+  // ett misslyckat anrop (t.ex. Recept ännu inte deployat till produktion,
+  // eller ett riktigt nätverksfel) gav en tyst avvisad Promise: skapa-modalen
+  // stängdes ändå direkt (onSave-anroparen väntar inte in resultatet), utan
+  // att receptet någonsin lades till och utan att något felmeddelande syntes.
   function createRecipe(input: RecipeInput) {
-    return recipesApi.create(input).then((recipe) => {
-      setRecipes((current) => [...current, recipe]);
-      return recipe;
-    });
+    return recipesApi.create(input).then(
+      (recipe) => {
+        setRecipes((current) => [...current, recipe]);
+        return recipe;
+      },
+      (err) => {
+        reportApiError("Receptet kunde inte sparas");
+        throw err;
+      }
+    );
   }
 
   function updateRecipe(id: Id, input: RecipeInput) {
-    recipesApi.update(id, input).catch(console.error);
+    recipesApi.update(id, input).catch(() => reportApiError("Receptet kunde inte sparas"));
     setRecipes((current) =>
       current.map((r) => (r.id !== id ? r : { ...r, ...input, ingredients: r.ingredients, steps: r.steps }))
     );
@@ -49,7 +62,7 @@ export function useRecipesState() {
   }
 
   function removeRecipe(id: Id) {
-    recipesApi.remove(id).catch(console.error);
+    recipesApi.remove(id).catch(() => reportApiError("Receptet kunde inte raderas"));
     setRecipes((current) => current.filter((r) => r.id !== id));
   }
 

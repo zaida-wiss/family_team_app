@@ -3,9 +3,9 @@ import { api, request } from "./client";
 
 export const recipesApi = {
   getAll: () => request<Recipe[]>(api("recipes")),
-  create: (body: { name: string; emoji: string | null; imageUrl?: string | null; tags: string[]; ingredients: { text: string }[]; steps: { text: string; timedMinutes: number | null }[] }) =>
+  create: (body: { name: string; emoji: string | null; imageUrl?: string | null; sourceUrl?: string | null; tags: string[]; ingredients: { text: string }[]; steps: { text: string; timedMinutes: number | null }[] }) =>
     request<Recipe>(api("recipes"), { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: { name: string; emoji: string | null; imageUrl?: string | null; tags: string[]; ingredients: { text: string }[]; steps: { text: string; timedMinutes: number | null }[] }) =>
+  update: (id: string, body: { name: string; emoji: string | null; imageUrl?: string | null; sourceUrl?: string | null; tags: string[]; ingredients: { text: string }[]; steps: { text: string; timedMinutes: number | null }[] }) =>
     request<{ ok: boolean }>(api(`recipes/${id}`), { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`recipes/${id}`), { method: "DELETE" })

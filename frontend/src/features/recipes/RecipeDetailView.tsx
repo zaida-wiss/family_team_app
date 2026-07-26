@@ -1,6 +1,6 @@
 import "./RecipesView.css";
 import { useState } from "react";
-import { ArrowLeft, CalendarPlus, Pencil, ShoppingCart, Trash2, X } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ExternalLink, Pencil, ShoppingCart, Trash2, X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { CreateTodoFromRecipeModal } from "./CreateTodoFromRecipeModal";
 import { AddToShoppingListModal } from "./AddToShoppingListModal";
@@ -50,6 +50,12 @@ export function RecipeDetailView({
         </div>
 
         {recipe.imageUrl && <img alt="" className="recipe-detail__image" src={recipe.imageUrl} />}
+
+        {recipe.sourceUrl && (
+          <a className="recipe-detail__source-link" href={recipe.sourceUrl} rel="noreferrer" target="_blank">
+            <ExternalLink size={14} /> Källa
+          </a>
+        )}
 
         <p className="eyebrow">Ingredienser</p>
         <ul className="recipe-detail__ingredients">

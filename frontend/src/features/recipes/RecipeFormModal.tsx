@@ -16,6 +16,7 @@ export type RecipeFormInput = {
   name: string;
   emoji: string | null;
   imageUrl: string | null;
+  sourceUrl: string | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
@@ -38,6 +39,7 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
   const [emoji, setEmoji] = useState(recipe?.emoji ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(recipe?.imageUrl ?? null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? "");
   const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     recipe?.ingredients.map((i) => ({ id: i.id, text: i.text })) ?? [{ id: generateId(), text: "" }]
@@ -87,6 +89,7 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
       name: name.trim(),
       emoji: emoji || null,
       imageUrl,
+      sourceUrl: sourceUrl.trim() || null,
       tags,
       ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({ text: i.text.trim() })),
       steps: steps.filter((s) => s.text.trim()).map((s) => ({
@@ -146,6 +149,18 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
             </button>
           )}
         </div>
+
+        <label className="field-label">
+          Länk till receptet
+          <input
+            className="text-input"
+            inputMode="url"
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://…"
+            type="url"
+            value={sourceUrl}
+          />
+        </label>
 
         <WordTagInput
           label="Söktaggar"

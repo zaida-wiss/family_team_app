@@ -156,6 +156,21 @@
   margin-bottom: 12px;
 }
 
+.recipe-detail__source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+.recipe-detail__source-link:hover {
+  text-decoration: underline;
+}
+
 .recipe-form__rows {
   display: flex;
   flex-direction: column;

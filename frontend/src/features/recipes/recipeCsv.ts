@@ -10,7 +10,7 @@ import { generateId } from "../../utils/uuid";
 // cell, separerade med " | " (enkelt att läsa/redigera i ett kalkylark),
 // ett tidsstyrt steg skrivs "Text (25 min)".
 
-export const RECIPE_CSV_HEADERS = ["Namn", "Emoji", "Taggar", "Ingredienser", "Steg", "Id"] as const;
+export const RECIPE_CSV_HEADERS = ["Namn", "Emoji", "Länk", "Taggar", "Ingredienser", "Steg", "Id"] as const;
 
 const ITEM_SEPARATOR = " | ";
 const TIMED_STEP_PATTERN = /^(.*)\((\d+)\s*min\)$/;
@@ -31,6 +31,7 @@ export function recipesToCsv(recipes: Recipe[]): string {
   const rows = recipes.map((r) => [
     r.name,
     r.emoji ?? "",
+    r.sourceUrl ?? "",
     r.tags.join(", "),
     r.ingredients.map((i) => i.text).join(ITEM_SEPARATOR),
     r.steps.map(stepToText).join(ITEM_SEPARATOR),
@@ -41,7 +42,7 @@ export function recipesToCsv(recipes: Recipe[]): string {
 
 export function buildRecipeTemplateCsv(): string {
   const example = [
-    "Köttfärssås", "🍝", "vardag, snabbt",
+    "Köttfärssås", "🍝", "https://exempel.se/kottfarssas", "vardag, snabbt",
     ["500 g köttfärs", "1 burk krossade tomater", "1 gul lök"].join(ITEM_SEPARATOR),
     ["Fräs köttfärsen och löken", "Sätt in i ugnen (25 min)"].join(ITEM_SEPARATOR),
     ""
@@ -55,6 +56,7 @@ export type ParsedRecipeRow = {
   id: string | null;
   name: string;
   emoji: string | null;
+  sourceUrl: string | null;
   tags: string[];
   ingredients: { text: string }[];
   steps: { text: string; timedMinutes: number | null }[];
@@ -69,6 +71,7 @@ export function parseRecipeCsv(text: string): ParsedRecipeRow[] {
   const colIndex = (label: string) => header.indexOf(label);
   const nameIdx = colIndex("Namn");
   const emojiIdx = colIndex("Emoji");
+  const sourceUrlIdx = colIndex("Länk");
   const tagsIdx = colIndex("Taggar");
   const ingredientsIdx = colIndex("Ingredienser");
   const stepsIdx = colIndex("Steg");
@@ -84,6 +87,7 @@ export function parseRecipeCsv(text: string): ParsedRecipeRow[] {
         id: (row[idIdx] ?? "").trim() || null,
         name,
         emoji: (row[emojiIdx] ?? "").trim() || null,
+        sourceUrl: (row[sourceUrlIdx] ?? "").trim() || null,
         tags: (row[tagsIdx] ?? "").split(",").map((t) => t.trim()).filter(Boolean),
         ingredients: ingredientsRaw.split(ITEM_SEPARATOR).map((t) => t.trim()).filter(Boolean).map((text) => ({ text })),
         steps: stepsRaw.split(ITEM_SEPARATOR).map((t) => t.trim()).filter(Boolean).map(textToStep)

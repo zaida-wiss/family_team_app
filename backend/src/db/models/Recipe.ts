@@ -10,6 +10,7 @@ const recipeSchema = new Schema<Recipe>({
   name: { type: String, required: true },
   emoji: { type: String, default: null },
   imageUrl: { type: String, default: null },
+  sourceUrl: { type: String, default: null },
   ingredients: [
     {
       id: { type: String, required: true },

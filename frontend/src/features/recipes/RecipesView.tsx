@@ -123,7 +123,7 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
         <RecipeFormModal
           onClose={() => setShowCreate(false)}
           onSave={(input) => {
-            createRecipe(input);
+            createRecipe(input).catch(() => {});
             setShowCreate(false);
           }}
           recipe={null}

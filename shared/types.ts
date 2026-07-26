@@ -655,6 +655,10 @@ export type Recipe = {
   // separat från emoji (som fortsatt visas i listor/rubriker, oberoende av
   // om ett foto satts).
   imageUrl: string | null;
+  // Länk till receptet (2026-07-26, Zaidas önskemål) — t.ex. källan man
+  // hittade receptet på. Fri text, ingen URL-validering server-side (samma
+  // "lita på fritext"-hållning som övriga fria fält på Recipe).
+  sourceUrl: string | null;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
   // Söktaggar + skapad-tidsstämpel (2026-07-25, Zaidas önskemål: "kunna
