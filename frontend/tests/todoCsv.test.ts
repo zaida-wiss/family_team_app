@@ -326,6 +326,22 @@ describe("todoCsv", () => {
     expect(rowsWithoutEmoji[0].emoji).toBe("⭐");
   });
 
+  // 2026-07-26, Zaidas fynd: "varför blir det text istället för symbol i
+  // barnens vy ibland?" — en "Emoji"-cell i kalkylarket är fri text, ett
+  // vanligt misstag är att skriva ett ord istället för en emoji (eller att
+  // spreadsheet-programmet gör om en inklistrad emoji till text). Utan
+  // valideringen sparades ordet rakt av som Todo.visual.value och visades
+  // bokstavligen i barnens vy istället för en symbol.
+  test("parseTodoCsv: en Emoji-cell med vanlig text (inte en riktig emoji) faller tillbaka på ⭐", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Emoji,Tilldelad",
+      "Träna,gympa,Mig själv"
+    ].join("\r\n");
+    const { rows } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(rows[0].emoji).toBe("⭐");
+  });
+
   test("parseTodoCsv: Vecka utan giltiga veckodagar ger ett fel och behandlas som engångsuppgift", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [

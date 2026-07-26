@@ -28,6 +28,14 @@ export const TODO_CSV_HEADERS = [
 
 const SELF_LABEL = "Mig själv";
 const DEFAULT_EMOJI = "⭐";
+// Ett kalkylark ger ingen garanti att "Emoji"-cellen faktiskt innehåller en
+// emoji — ett vanligt misstag är att skriva ett ord (t.ex. "gympa") i
+// cellen istället, eller att spreadsheet-programmet gör om en inklistrad
+// emoji till text. Utan den här kontrollen sparades vad som helst rakt av
+// som Todo.visual.value, vilket visar sig som bokstäver istället för en
+// symbol i barnens vy (Zaidas fynd 2026-07-26) — matchar inte något
+// pictografiskt Unicode-tecken faller cellen tillbaka på DEFAULT_EMOJI.
+const EMOJI_PATTERN = /\p{Extended_Pictographic}/u;
 
 const RECURRENCE_UNIT_LABEL: Record<RecurrenceUnit, string> = {
   day: "Dag",
@@ -311,7 +319,8 @@ export function parseTodoCsv(
       return;
     }
 
-    const emoji = (emojiCol !== undefined ? cells[emojiCol] : "")?.trim() || DEFAULT_EMOJI;
+    const emojiRaw = (emojiCol !== undefined ? cells[emojiCol] : "")?.trim() ?? "";
+    const emoji = emojiRaw && EMOJI_PATTERN.test(emojiRaw) ? emojiRaw : DEFAULT_EMOJI;
 
     const assignedLabel = (assignedCol !== undefined ? cells[assignedCol] : "")?.trim() ?? "";
     let assignedTo: Id = currentMemberId;
