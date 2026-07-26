@@ -23,6 +23,15 @@ const memberSchema = new Schema<Member>({
   todoThreadOrder: { type: [String], default: undefined },
   todoBubbleOrder: { type: Schema.Types.Mixed, default: undefined },
   todoThreadRange: { type: String, default: undefined },
+  // Saknades i Mongoose-schemat (2026-07-26, Zaida upptäckte att reglaget
+  // "studsade tillbaka" till standardvärdet) — fältet fanns i Zod-schemat
+  // (shared/schemas.ts) och routen (SELF_NAV_FIELDS), så PATCH-anropet
+  // svarade 200 utan fel, men Mongoose i strict-läge (default) tystar en
+  // väg som inte finns i schemat — fältet skrevs alltså aldrig faktiskt
+  // till databasen. Samma bugklass hade kunnat drabba vilket nytt
+  // self-nav-fält som helst om det bara läggs till i Zod/routen och glöms
+  // här.
+  todoThreadGap: { type: Number, default: undefined },
   spentStars: { type: Number, default: 0 },
   approvedStars: { type: Number, default: 0 },
   // Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22) — se

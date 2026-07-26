@@ -148,6 +148,32 @@ describe.skipIf(!RUN)("membersService: server-side behörighetskontroll", () => 
     expect(res.status).toBe(200);
   });
 
+  // 2026-07-26, Zaidas fynd: reglaget för avstånd mellan kategoritrådarna
+  // (todoThreadGap) "studsade tillbaka" till standardvärdet. Grundorsak:
+  // fältet fanns i Zod-schemat och SELF_NAV_FIELDS, så PATCH svarade 200
+  // — men Mongoose Member-schemat (Member.ts) hade aldrig fått fältet
+  // tillagt, och i strict-läge (default) tystar Mongoose en väg som inte
+  // finns i schemat vid .save(). Ett test som bara kollar PATCH-svarets
+  // statuskod (som ovanstående test) hade ALDRIG fångat detta — måste
+  // hämta om medlemmen och verifiera att fältet faktiskt låg kvar.
+  it("todoThreadGap sparas verkligen till databasen, inte bara ett 200-svar (regression)", async () => {
+    const patchRes = await request(app)
+      .patch(`/api/members/${restrictedMemberId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ todoThreadGap: 20 });
+    expect(patchRes.status).toBe(200);
+
+    const listRes = await request(app)
+      .get("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    const refetched = (listRes.body as Array<{ id: string; todoThreadGap?: number }>).find(
+      (m) => m.id === restrictedMemberId
+    );
+    expect(refetched?.todoThreadGap).toBe(20);
+  });
+
   it("tillåter en medlem att patcha sitt EGET tema utan canManageMembers", async () => {
     const res = await request(app)
       .patch(`/api/members/${restrictedMemberId}`)
