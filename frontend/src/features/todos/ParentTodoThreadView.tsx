@@ -716,7 +716,21 @@ export function ParentTodoThreadView({
       }
       lastTapRef.current = null;
       const rect = e.currentTarget.getBoundingClientRect();
-      setInProgressPickerPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+      // Bugg fixad (2026-07-26, Zaidas fynd: "modalen hamnar utanför
+      // skärmen") — elementet positioneras med position:fixed (viewport-
+      // relativt), men koden lade ändå till window.scrollY/scrollX ovanpå
+      // getBoundingClientRect()s redan viewport-relativa koordinater, samma
+      // fel som redan var korrekt undvikt i kategorimenyns motsvarande kod
+      // (handleCategoryClick, ingen scroll-offset där). Klämmer dessutom in
+      // positionen mot fönstrets kanter — pickerns bredd/höjd är okänd innan
+      // render, en rimlig uppskattning (220×260px) räcker för att undvika
+      // att den klipps av när bubblan ligger nära höger/nedre kanten.
+      const ESTIMATED_WIDTH = 220;
+      const ESTIMATED_HEIGHT = 260;
+      setInProgressPickerPos({
+        top: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - ESTIMATED_HEIGHT)),
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - ESTIMATED_WIDTH))
+      });
       setInProgressPickerTodoId(todo.id);
       return;
     }
