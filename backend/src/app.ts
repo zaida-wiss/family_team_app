@@ -1,5 +1,6 @@
 import "dotenv/config";
 import "express-async-errors";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -80,6 +81,12 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(helmet());
+// gzip/br-komprimering av alla svar (2026-07-26) — JSON komprimerar mycket
+// väl (typiskt 80-90%), en enkel `GET /api/todos` mättes till 2,7MB
+// okomprimerat för ett konto med lång historik. Ingen ändring av
+// svarsformatet, bara transport — `compression` är Express egna officiella
+// rekommenderade middleware för detta (se Express docs, källhierarki tier 3).
+app.use(compression());
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
