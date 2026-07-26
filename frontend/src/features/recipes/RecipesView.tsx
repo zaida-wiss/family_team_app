@@ -63,12 +63,13 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
       {recipes.length > 0 && (
         <div className="recipes-toolbar">
           <input
+            aria-label="Sök recept"
             className="text-input recipes-toolbar__search"
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Sök namn eller tagg…"
             value={search}
           />
-          <select className="text-input recipes-toolbar__sort" onChange={(e) => setSortMode(e.target.value as SortMode)} value={sortMode}>
+          <select aria-label="Sortera recept" className="text-input recipes-toolbar__sort" onChange={(e) => setSortMode(e.target.value as SortMode)} value={sortMode}>
             <option value="name">Namn (A–Ö)</option>
             <option value="newest">Senast tillagda</option>
           </select>
