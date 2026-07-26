@@ -2,6 +2,10 @@ import crypto from "crypto";
 import { RecipeModel } from "../db/models/Recipe.js";
 import { AppError } from "../utils/errors.js";
 import { requireAdultMember } from "./todoCategoriesService.js";
+import { RECIPE_UNITS } from "../../../shared/types.js";
+import type { RecipeUnit } from "../../../shared/types.js";
+
+const RECIPE_UNIT_SET: ReadonlySet<string> = new Set(RECIPE_UNITS);
 
 // Recept (2026-07-25, ADR-0028) — kontobrett (som TodoCategory), mutationer
 // kräver en vuxen. Ingredienser/steg är fri text, ingen strukturerad
@@ -16,7 +20,7 @@ type RecipeInput = {
   emoji: string | null;
   imageUrl: string | null;
   sourceUrl: string | null;
-  ingredients: { text: string; quantity: number | null; unit: string | null }[];
+  ingredients: { text: string; quantity: number | null; unit: RecipeUnit | null }[];
   steps: { text: string; timedMinutes: number | null }[];
   servings: number | null;
   tags: string[];
@@ -34,14 +38,18 @@ function normalizeInput(body: unknown): RecipeInput {
     servings: typeof b.servings === "number" && b.servings > 0 ? Math.floor(b.servings) : null,
     // Mängd/enhet (2026-07-26) — båda valfria, en ingrediens utan mängd
     // (t.ex. "Salt efter smak") skalas inte men fungerar precis som förut.
+    // Enhet är en fast, gemen lista (RECIPE_UNITS, delad med frontend) —
+    // ett värde utanför listan (t.ex. gammal fri text eller versaler)
+    // faller tyst tillbaka till null istället för att avvisa hela sparningen.
     ingredients: Array.isArray(b.ingredients)
       ? b.ingredients
           .map((i) => {
             const raw = i as { text: unknown; quantity: unknown; unit: unknown };
+            const unitLower = typeof raw.unit === "string" ? raw.unit.trim().toLowerCase() : "";
             return {
               text: String(raw.text ?? "").trim(),
               quantity: typeof raw.quantity === "number" && raw.quantity > 0 ? raw.quantity : null,
-              unit: typeof raw.unit === "string" && raw.unit.trim() ? raw.unit.trim() : null
+              unit: RECIPE_UNIT_SET.has(unitLower) ? (unitLower as RecipeUnit) : null
             };
           })
           .filter((i) => i.text)

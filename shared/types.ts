@@ -658,11 +658,20 @@ export type TodoSubtask = {
 // texten (t.ex. "500 g köttfärs") liggande i `text` med quantity/unit=null
 // — fungerar och visas precis som förut, skalar bara inte förrän man delar
 // upp raden i formuläret.
+// Enhet — fast lista, gemener (2026-07-26, Zaidas önskemål: "enhetsfältet
+// ska vara små bokstäver och antingen nypa, krm, tsk, msk, dl, l, g, kg",
+// följt av "eller st"). Enda "kontrollerade" fältet på Recipe — resten är
+// fortsatt medvetet fri text (se filhuvudets kommentar) eftersom mängd/
+// enhet är det enda som faktiskt behöver vara maskinläsbart för att kunna
+// skalas.
+export const RECIPE_UNITS = ["nypa", "krm", "tsk", "msk", "dl", "l", "g", "kg", "st"] as const;
+export type RecipeUnit = (typeof RECIPE_UNITS)[number];
+
 export type RecipeIngredient = {
   id: Id;
   text: string;
   quantity: number | null;
-  unit: string | null;
+  unit: RecipeUnit | null;
 };
 
 export type RecipeStep = {

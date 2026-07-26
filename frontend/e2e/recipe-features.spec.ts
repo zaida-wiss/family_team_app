@@ -162,7 +162,7 @@ test("Ny ingrediens med mängd/enhet sparas strukturerat, en ingrediens utan mä
   await page.getByLabel("Ingrediensnamn").first().fill("ägg");
   await page.getByRole("button", { name: "Lägg till ingrediens" }).click();
   await page.getByLabel("Mängd").nth(1).fill("1");
-  await page.getByLabel("Enhet").nth(1).fill("dl");
+  await page.getByLabel("Enhet").nth(1).selectOption("dl");
   await page.getByLabel("Ingrediensnamn").nth(1).fill("mjölk");
   await page.getByRole("button", { name: "Lägg till ingrediens" }).click();
   await page.getByLabel("Ingrediensnamn").nth(2).fill("Salt efter smak");

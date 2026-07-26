@@ -1,4 +1,5 @@
-import type { Recipe, RecipeIngredient } from "@shared/types";
+import { RECIPE_UNITS } from "@shared/types";
+import type { Recipe, RecipeIngredient, RecipeUnit } from "@shared/types";
 import { downloadCsv, parseCsvText, toCsvRow } from "../todos/todoCsv";
 import { generateId } from "../../utils/uuid";
 import { formatQuantity } from "./recipeScaling";
@@ -16,17 +17,13 @@ export const RECIPE_CSV_HEADERS = ["Namn", "Emoji", "Länk", "Antal personer", "
 const ITEM_SEPARATOR = " | ";
 const TIMED_STEP_PATTERN = /^(.*)\((\d+)\s*min\)$/;
 
-// Mängd/enhet i CSV (2026-07-26, Zaidas önskemål) — en ingrediensrad
-// skrivs "500 g köttfärs"/"3 ägg"/"Salt efter smak". Vid import: ett
-// inledande tal tolkas som mängd, ordet direkt efter som enhet BARA om det
-// finns i denna lista (annars vore "3 ägg" felaktigt tolkat som mängd 3 +
+// Mängd/enhet i CSV (2026-07-26, Zaidas önskemål: "nypa, krm, tsk, msk, dl,
+// l, g, kg, eller st") — en ingrediensrad skrivs "500 g köttfärs"/"3 ägg"/
+// "Salt efter smak". Vid import: ett inledande tal tolkas som mängd, ordet
+// direkt efter som enhet BARA om det matchar RECIPE_UNITS (delad lista med
+// formuläret/backend, annars vore "3 ägg" felaktigt tolkat som mängd 3 +
 // enhet "ägg" + tomt namn) — resten av raden blir alltid namnet.
-const KNOWN_UNITS = new Set([
-  "g", "gram", "kg", "hg", "dl", "cl", "ml", "l", "liter",
-  "msk", "tsk", "st", "styck", "förp", "förpackning", "paket",
-  "burk", "burkar", "skiva", "skivor", "klyfta", "klyftor",
-  "nypa", "kruka", "knippe", "port", "portion", "portioner", "påse"
-]);
+const KNOWN_UNITS: ReadonlySet<string> = new Set(RECIPE_UNITS);
 
 function stepToText(step: Recipe["steps"][number]): string {
   return step.timedMinutes != null ? `${step.text} (${step.timedMinutes} min)` : step.text;
@@ -46,7 +43,7 @@ function ingredientToText(ingredient: RecipeIngredient): string {
   return ingredient.unit ? `${amount} ${ingredient.unit} ${ingredient.text}` : `${amount} ${ingredient.text}`;
 }
 
-function textToIngredient(raw: string): { text: string; quantity: number | null; unit: string | null } {
+function textToIngredient(raw: string): { text: string; quantity: number | null; unit: RecipeUnit | null } {
   const trimmed = raw.trim();
   const match = trimmed.match(/^(\d+(?:[.,]\d+)?)\s+(.*)$/);
   if (!match) return { text: trimmed, quantity: null, unit: null };
@@ -55,7 +52,7 @@ function textToIngredient(raw: string): { text: string; quantity: number | null;
   const words = rest.split(/\s+/);
   const firstWord = (words[0] ?? "").toLowerCase().replace(/[.,]/g, "");
   if (firstWord && KNOWN_UNITS.has(firstWord) && words.length > 1) {
-    return { text: words.slice(1).join(" "), quantity, unit: words[0] };
+    return { text: words.slice(1).join(" "), quantity, unit: firstWord as RecipeUnit };
   }
   return { text: rest, quantity, unit: null };
 }
@@ -93,7 +90,7 @@ export type ParsedRecipeRow = {
   sourceUrl: string | null;
   servings: number | null;
   tags: string[];
-  ingredients: { text: string; quantity: number | null; unit: string | null }[];
+  ingredients: { text: string; quantity: number | null; unit: RecipeUnit | null }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
 

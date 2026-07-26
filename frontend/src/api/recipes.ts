@@ -1,4 +1,4 @@
-import type { Recipe } from "@shared/types";
+import type { Recipe, RecipeUnit } from "@shared/types";
 import { api, request } from "./client";
 
 type RecipeBody = {
@@ -8,7 +8,7 @@ type RecipeBody = {
   sourceUrl?: string | null;
   servings?: number | null;
   tags: string[];
-  ingredients: { text: string; quantity: number | null; unit: string | null }[];
+  ingredients: { text: string; quantity: number | null; unit: RecipeUnit | null }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
 

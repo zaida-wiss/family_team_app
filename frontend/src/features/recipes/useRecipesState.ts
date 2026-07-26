@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { recipesApi } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
-import type { Id, Recipe } from "@shared/types";
+import type { Id, Recipe, RecipeUnit } from "@shared/types";
 
 const RECIPES_CACHE_KEY = "recipes_v1";
 
@@ -15,7 +15,7 @@ type RecipeInput = {
   sourceUrl?: string | null;
   servings?: number | null;
   tags: string[];
-  ingredients: { text: string; quantity: number | null; unit: string | null }[];
+  ingredients: { text: string; quantity: number | null; unit: RecipeUnit | null }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
 

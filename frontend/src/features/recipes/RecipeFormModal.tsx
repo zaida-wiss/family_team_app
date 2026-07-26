@@ -7,14 +7,17 @@ import { generateId } from "../../utils/uuid";
 import { uploadImage } from "../../utils/uploadImage";
 import { reportApiError } from "../../api";
 import { WordTagInput } from "../calendars/WordTagInput";
-import type { Recipe } from "@shared/types";
+import { RECIPE_UNITS } from "@shared/types";
+import type { Recipe, RecipeUnit } from "@shared/types";
 
 // Mängd/enhet (2026-07-26, Zaidas önskemål: "sen måste vi fixa mängd och
-// enheter") — quantityInput sträng-baserad (samma mönster som minutesInput/
-// servingsInput), unit fri text (t.ex. "g", "dl", "msk"). Båda valfria — en
+// enheter", "enhetsfältet ska vara små bokstäver och antingen nypa, krm,
+// tsk, msk, dl, l, g, kg", "eller st") — quantityInput sträng-baserad
+// (samma mönster som minutesInput/servingsInput), unit en fast dropdown
+// (RECIPE_UNITS, delad med backend/CSV — inte fri text). Båda valfria — en
 // ingrediens utan mängd (t.ex. "Salt efter smak") fungerar precis som förut,
 // skalas bara inte när Antal personer ändras i visa-vyn.
-type Ingredient = { id: string; text: string; quantityInput: string; unit: string };
+type Ingredient = { id: string; text: string; quantityInput: string; unit: RecipeUnit | "" };
 type Step = { id: string; text: string; timed: boolean; minutesInput: string };
 
 export type RecipeFormInput = {
@@ -24,7 +27,7 @@ export type RecipeFormInput = {
   sourceUrl: string | null;
   servings: number | null;
   tags: string[];
-  ingredients: { text: string; quantity: number | null; unit: string | null }[];
+  ingredients: { text: string; quantity: number | null; unit: RecipeUnit | null }[];
   steps: { text: string; timedMinutes: number | null }[];
 };
 
@@ -62,7 +65,9 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
       id: i.id,
       text: i.text,
       quantityInput: i.quantity != null ? String(i.quantity) : "",
-      unit: i.unit ?? ""
+      // Ett recept sparat innan enheten blev en fast lista kan ha ett
+      // värde som inte längre finns bland RECIPE_UNITS — visas då som "Ingen".
+      unit: i.unit && (RECIPE_UNITS as readonly string[]).includes(i.unit) ? i.unit : ""
     })) ?? [{ id: generateId(), text: "", quantityInput: "", unit: "" }]
   );
   const [steps, setSteps] = useState<Step[]>(
@@ -132,7 +137,7 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
       ingredients: ingredients.filter((i) => i.text.trim()).map((i) => ({
         text: i.text.trim(),
         quantity: i.quantityInput ? Math.max(0.01, Number(i.quantityInput.replace(",", ".")) || 0) || null : null,
-        unit: i.unit.trim() || null
+        unit: i.unit || null
       })),
       steps: steps.filter((s) => s.text.trim()).map((s) => ({
         text: s.text.trim(),
@@ -234,13 +239,17 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
                 placeholder="Mängd"
                 value={ing.quantityInput}
               />
-              <input
+              <select
                 aria-label="Enhet"
                 className="text-input recipe-form__ingredient-unit"
-                onChange={(e) => updateIngredient(ing.id, { unit: e.target.value })}
-                placeholder="Enhet"
+                onChange={(e) => updateIngredient(ing.id, { unit: e.target.value as RecipeUnit | "" })}
                 value={ing.unit}
-              />
+              >
+                <option value="">Ingen</option>
+                {RECIPE_UNITS.map((unit) => (
+                  <option key={unit} value={unit}>{unit}</option>
+                ))}
+              </select>
               <input
                 aria-label="Ingrediensnamn"
                 className="text-input recipe-form__ingredient-name"
