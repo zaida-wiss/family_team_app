@@ -126,7 +126,7 @@ export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
       <div
         aria-labelledby="recipe-form-title"
         aria-modal="true"
-        className="recipe-modal recipe-form-modal"
+        className="recipe-modal"
         onClick={(e) => e.stopPropagation()}
         ref={dialogRef}
         role="dialog"
