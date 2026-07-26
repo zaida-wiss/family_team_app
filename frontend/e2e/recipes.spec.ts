@@ -1,0 +1,78 @@
+import { test, expect } from "@playwright/test";
+import { mockAuthAndData } from "./helpers";
+
+// Recept (2026-07-25, ADR-0028). Zaida rapporterade upprepade gånger
+// (2026-07-26) att radering "inte gjorde något" — en riktig e2e-körning
+// mot en simulerad backend visade aldrig något fel i själva klick-/API-
+// flödet, men fanns ingen permanent testtäckning för det innan denna fil.
+// Raderaknappen kräver numera ett eget redigeringsläge (Pennikon-toggle i
+// receptvyns knapprad, skild från header-pennan som öppnar hela
+// redigeringsformuläret) — samma "ingenting raderbart utan Redigera
+// först"-princip som inköpslistorna redan följer.
+
+const RECIPE = {
+  id: "recipe-1",
+  accountId: "acc-1",
+  name: "Köttfärssås",
+  emoji: "🍝",
+  imageUrl: null,
+  sourceUrl: null,
+  ingredients: [{ id: "ing-1", text: "500 g köttfärs" }],
+  steps: [{ id: "step-1", text: "Fräs köttfärsen", timedMinutes: null }],
+  tags: [],
+  createdAt: "2026-07-01T00:00:00.000Z",
+  createdBy: "mem-1",
+  deletedAt: null,
+  deletedBy: null,
+};
+
+async function mockRecipes(page: import("@playwright/test").Page, recipes: (typeof RECIPE)[]) {
+  await page.route("**/api/recipes", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: recipes }) : route.fulfill({ json: recipes[0] })
+  );
+}
+
+test("Recept: raderaknappen syns bara i redigeringsläge, radering anropar API:et och tar bort receptet", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE]);
+  let deleteCalled = false;
+  await page.route("**/api/recipes/recipe-1", (route) => {
+    if (route.request().method() !== "DELETE") return route.continue();
+    deleteCalled = true;
+    route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await expect(page.getByText("Köttfärssås")).toBeVisible();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+
+  const dialog = page.getByRole("dialog", { name: /Köttfärssås/ });
+  await expect(dialog.getByRole("button", { name: "Radera recept" })).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Redigeringsläge" }).click();
+  await dialog.getByRole("button", { name: "Radera recept" }).click();
+  await dialog.getByRole("button", { name: "Bekräfta radering av receptet" }).click();
+
+  expect(deleteCalled).toBe(true);
+  await expect(page.getByText("Köttfärssås")).toHaveCount(0);
+});
+
+test("Recept: spara-fel visas i felbannern istället för att tystnas", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, []);
+  await page.route("**/api/recipes", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    return route.fulfill({ status: 500, json: { error: "Serverfel" } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Nytt recept" }).click();
+  await page.getByPlaceholder("Till exempel Köttfärssås").fill("Trasigt recept");
+  await page.getByPlaceholder("Till exempel 2 dl mjöl").fill("Något");
+  await page.getByPlaceholder("Till exempel Blanda mjöl och mjölk").fill("Ett steg");
+  await page.getByRole("button", { name: "Skapa recept" }).click();
+
+  await expect(page.getByRole("alert")).toContainText("Receptet kunde inte sparas");
+});
