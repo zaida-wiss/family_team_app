@@ -3,12 +3,23 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
-import { CompleteTodoBodySchema, RejectTodoBodySchema, ToggleInProgressBodySchema } from "../../../shared/schemas.js";
+import { CompleteTodoBodySchema, RejectTodoBodySchema, TodosHistoryQuerySchema, ToggleInProgressBodySchema } from "../../../shared/schemas.js";
 
 export const todosRouter = Router();
 
 todosRouter.get("/", requireAuth, attachAccountId, async (req, res) => {
   res.json(await todos.getAllTodos(req.accountId!));
+});
+
+const MAX_HISTORY_PAGE_SIZE = 100;
+const DEFAULT_HISTORY_PAGE_SIZE = 25;
+
+// Historik/papperskorg, paginerad (2026-07-26) — se todosService.ts:s
+// getTodosHistoryPage för vad som räknas hit och varför.
+todosRouter.get("/history", requireAuth, attachAccountId, async (req, res) => {
+  const { page, pageSize } = TodosHistoryQuerySchema.parse(req.query);
+  const cappedPageSize = Math.min(pageSize ?? DEFAULT_HISTORY_PAGE_SIZE, MAX_HISTORY_PAGE_SIZE);
+  res.json(await todos.getTodosHistoryPage(req.accountId!, page ?? 1, cappedPageSize));
 });
 
 todosRouter.post("/", requireAuth, attachAccountId, async (req, res) => {

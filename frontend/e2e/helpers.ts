@@ -42,6 +42,12 @@ export async function mockDataAPIs(page: Page) {
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  // Todo-historik/Papperskorg, paginerad (2026-07-26) — default-stubb så
+  // ett test som råkar öppna den underkategorin utan egen mock inte faller
+  // igenom till ett riktigt, ej mockat nätverksanrop.
+  await page.route("**/api/todos/history**", (route) =>
+    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
+  );
   // SSE-strömmen för todo-ändringar — utan denna faller den igenom till en riktig
   // backend och 401:ar (ofarligt i sig, men brusigt och kan racea med riktiga tester).
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));

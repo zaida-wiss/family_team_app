@@ -291,7 +291,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                     members={members}
                     roles={roles}
                     shoppingLists={shoppingLists}
-                    todos={todos}
                     onRestoreCalendar={settingsProps.onRestoreCalendar}
                     onRestoreMember={settingsProps.onRestoreMember}
                     onRestoreShoppingList={settingsProps.onRestoreShoppingList}
@@ -397,7 +396,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           id: "history",
           label: "📋 Todo-historik",
           content: (
-            <TodoHistory currentMember={currentMember} roles={roles} todos={todos} allMembers={members} />
+            <TodoHistory currentMember={currentMember} roles={roles} allMembers={members} />
           )
         },
         {

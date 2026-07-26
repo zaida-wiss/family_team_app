@@ -50,6 +50,31 @@ async function canCompleteTodoAsCaller(caller: Member, roles: Role[], todo: Todo
   return !!assignee && canManageChildAccount(caller, assignee, roles);
 }
 
+function decryptTodo<T extends { title: string; rejectedReason: string | null; notes?: string | null }>(
+  accountId: string,
+  todo: T
+): T {
+  return {
+    ...todo,
+    title: decryptField(accountId, todo.title),
+    rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null,
+    notes: decryptNullable(accountId, todo.notes) ?? null
+  };
+}
+
+// Paginering (2026-07-26, Zaidas önskemål: "fixa pagineringen på todo") —
+// mjuk-raderade todos (papperskorgen) togs helt bort ur denna, huvud-
+// endpointen (var tidigare kvar 30 dagar "för papperskorgsvyn") och flyttades
+// till en egen, paginerad getTodosHistoryPage nedan. Bekräftat säkert innan
+// ändringen: soft-deletade todos konsumeras ENDAST av TrashView.tsx, inte av
+// completedPercent (ParentTodoThreadView.tsx), CSV-export (todoCsv.ts,
+// filtrerar redan bort deletedAt!==null) eller barnens nekad-uppgift-
+// feedback. Expired/approved-fönstren (30/7 dagar) lämnas MEDVETET orörda
+// här — completedPercent läser approved-status ur denna endpoint (via
+// isDueWithinRange, som i praktiken bara räknar todos vars expiresAt inte
+// redan passerat — ett bredare fönster hade inte gjort skillnad för den
+// statistiken, men att ta bort approved helt hade krävt att flytta
+// beräkningen server-side, ett större jobb som INTE gjordes denna gång).
 export async function getAllTodos(accountId: string) {
   const cutoff30 = new Date();
   cutoff30.setDate(cutoff30.getDate() - 30);
@@ -59,9 +84,8 @@ export async function getAllTodos(accountId: string) {
   const todos = await TodoModel.find(
     {
       accountId,
+      deletedAt: null,
       $and: [
-        // Soft-deleted: keep last 30 days for trash view
-        { $or: [{ deletedAt: null }, { deletedAt: { $gte: cutoff30.toISOString() } }] },
         // Expired: keep last 30 days
         { $or: [{ status: { $ne: "expired" } }, { expiresAt: { $gte: cutoff30.toISOString() } }] },
         // Approved: keep last 7 days — total stars tracked on member.approvedStars
@@ -71,12 +95,39 @@ export async function getAllTodos(accountId: string) {
     { _id: 0, __v: 0 }
   ).lean();
 
-  return todos.map((todo) => ({
-    ...todo,
-    title: decryptField(accountId, todo.title),
-    rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null,
-    notes: decryptNullable(accountId, todo.notes) ?? null
-  }));
+  return todos.map((todo) => decryptTodo(accountId, todo));
+}
+
+// Historik/papperskorg, paginerad (2026-07-26) — allt som huvud-endpointen
+// ovan INTE längre returnerar i sin helhet: mjuk-raderade todos (oavsett
+// status) OCH avslutade todos (godkända/nekade/utgångna) UTAN tidsfönster —
+// till skillnad från getAllTodos ovan finns ingen 7/30-dagarsgräns här,
+// eftersom paginering redan löser problemet med en obegränsat växande
+// mängd. Samma sida-mönster som rewardShopService.ts:s
+// getPurchasedRewardsPage (page/pageSize/total), konsumeras av
+// TodoHistory.tsx OCH TrashView.tsx (var sin filtrering av samma sida).
+export async function getTodosHistoryPage(accountId: string, page: number, pageSize: number) {
+  const filter = {
+    accountId,
+    $or: [{ deletedAt: { $ne: null } }, { status: { $in: ["approved", "rejected", "expired"] } }]
+  };
+  const [todos, total] = await Promise.all([
+    TodoModel.find(filter, { _id: 0, __v: 0 })
+      // Ingen enskild "senast ändrad"-tidsstämpel finns på modellen — deletedAt
+      // (om satt) är den mest relevanta signalen, annars expiresAt.
+      .sort({ deletedAt: -1, expiresAt: -1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .lean(),
+    TodoModel.countDocuments(filter)
+  ]);
+
+  return {
+    items: todos.map((todo) => decryptTodo(accountId, todo)),
+    page,
+    pageSize,
+    total
+  };
 }
 
 // Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22) — hittar

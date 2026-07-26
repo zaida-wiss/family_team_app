@@ -83,6 +83,11 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await page.route("**/api/todos", (route) =>
       route.fulfill({ json: route.request().method() === "GET" ? [APPROVED_TODO, PENDING_TODO, EXPIRED_TODO] : {} })
     );
+    // Todo-historik-fliken hämtar sin egen paginerade sida (2026-07-26) —
+    // inte längre samma /api/todos-lista.
+    await page.route("**/api/todos/history**", (route) =>
+      route.fulfill({ json: { items: [APPROVED_TODO, EXPIRED_TODO], page: 1, pageSize: 25, total: 2 } })
+    );
 
     await page.goto("/");
     // Tråd-läget (bubbelvyn) är default sedan 2026-07-05, listläget väljs i

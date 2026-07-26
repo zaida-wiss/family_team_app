@@ -1,4 +1,4 @@
-import type { AccessLevel, CrossAccountFamilyThread, Todo } from "@shared/types";
+import type { AccessLevel, CrossAccountFamilyThread, PaginatedTodos, Todo } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
@@ -59,6 +59,11 @@ export const todosApi = {
   // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
   purgeTrash: () =>
     request<{ ok: boolean }>(api("todos/purge-trash"), { method: "POST", body: JSON.stringify({}) }),
+  // Historik/papperskorg, paginerad (2026-07-26) — se todosService.ts:s
+  // getTodosHistoryPage. GET /api/todos ovan returnerar inte längre
+  // mjuk-raderade todos alls (var tidigare kvar 30 dagar).
+  getHistoryPage: (page: number, pageSize: number) =>
+    request<PaginatedTodos>(api(`todos/history?page=${page}&pageSize=${pageSize}`)),
   // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
   getSharedChildren: () => request<SharedChildTodos[]>(api("todos/shared-children")),
   completeShared: (

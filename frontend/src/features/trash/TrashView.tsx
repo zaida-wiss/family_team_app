@@ -3,7 +3,8 @@ import { RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { hasPermission } from "../../utils/permissions";
 import { getDeletedItemsForTrash } from "./trash";
-import type { Calendar, Id, Member, Role, ShoppingList, Todo } from "@shared/types";
+import { useTodosHistoryState } from "../todos/useTodosHistoryState";
+import type { Calendar, Id, Member, Role, ShoppingList } from "@shared/types";
 
 type TrashViewProps = {
   calendars: Calendar[];
@@ -11,7 +12,6 @@ type TrashViewProps = {
   members: Member[];
   roles: Role[];
   shoppingLists: ShoppingList[];
-  todos: Todo[];
   onRestoreCalendar: (calendarId: Id) => void;
   onRestoreMember: (memberId: Id) => void;
   onRestoreShoppingList: (listId: Id) => void;
@@ -29,7 +29,6 @@ export function TrashView({
   onRestoreTodo,
   roles,
   shoppingLists,
-  todos,
   onRestoreMember,
   onPurgeAllTrash
 }: TrashViewProps) {
@@ -38,6 +37,19 @@ export function TrashView({
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [purging, setPurging] = useState(false);
   const [purgeError, setPurgeError] = useState<string | null>(null);
+  // Todos-delen av papperskorgen är paginerad (2026-07-26) — samma nya
+  // GET /api/todos/history som Todo-historik-fliken använder, filtrerad
+  // till bara mjuk-raderade nedan. Medlemmar/inköpslistor/kalendrar är
+  // fortsatt ofiltrerade, redan hämtade arrayer via props — bara todos-
+  // volymen var det egentliga problemet, se todosService.ts:s kommentar.
+  const {
+    items: todoHistoryItems,
+    total: todoHistoryTotal,
+    loading: todoHistoryLoading,
+    loadMore: loadMoreTodoTrash,
+    refetch: refetchTodoTrash,
+    removeItem: removeTodoTrashItem
+  } = useTodosHistoryState();
 
   if (!canViewTrash) {
     return null;
@@ -53,6 +65,9 @@ export function TrashView({
     try {
       await onPurgeAllTrash();
       setConfirmPurge(false);
+      // ADR-0025 rör bara den centrala todos-listan — den lokalt hämtade
+      // historik-/papperskorgssidan här måste hämtas om separat.
+      refetchTodoTrash();
     } catch (err) {
       setPurgeError(err instanceof Error ? err.message : "Något gick fel");
     } finally {
@@ -60,12 +75,22 @@ export function TrashView({
     }
   }
 
+  function handleRestoreTodo(todoId: Id) {
+    onRestoreTodo(todoId);
+    // restoreTodo (useTodosState.ts) är fire-and-forget mot den CENTRALA
+    // todos-listan — ett refetch() här hade kunnat racea mot ett anrop som
+    // inte hunnit landa, tas bort optimistiskt lokalt istället.
+    removeTodoTrashItem(todoId);
+  }
+
   const deletedMembers = getDeletedItemsForTrash(members, currentMember, roles);
   const deletedShoppingLists = getDeletedItemsForTrash(shoppingLists, currentMember, roles);
   const deletedCalendars = getDeletedItemsForTrash(calendars, currentMember, roles);
-  const deletedTodos = getDeletedItemsForTrash(todos, currentMember, roles);
+  const deletedTodos = getDeletedItemsForTrash(todoHistoryItems, currentMember, roles);
+  const hasMoreTodoTrash = todoHistoryTotal !== null && todoHistoryItems.length < todoHistoryTotal;
 
   const isTrashEmpty =
+    !todoHistoryLoading &&
     deletedMembers.length === 0 &&
     deletedShoppingLists.length === 0 &&
     deletedCalendars.length === 0 &&
@@ -188,7 +213,7 @@ export function TrashView({
               <button
                 className="secondary-button"
                 disabled={!canRestore}
-                onClick={() => onRestoreTodo(todo.id)}
+                onClick={() => handleRestoreTodo(todo.id)}
                 type="button"
               >
                 <RotateCcw size={16} />
@@ -197,6 +222,11 @@ export function TrashView({
             </div>
           ))}
           </div>
+          {hasMoreTodoTrash && (
+            <button className="secondary-button" disabled={todoHistoryLoading} onClick={loadMoreTodoTrash} type="button">
+              {todoHistoryLoading ? "Laddar…" : "Ladda fler raderade uppgifter"}
+            </button>
+          )}
         </>
       )}
     </article>

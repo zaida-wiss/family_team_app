@@ -607,6 +607,15 @@ export type Todo = {
   inProgressSince?: string | null;
 };
 
+// Paginerad todos-historik/papperskorg (2026-07-26) — samma form som
+// PaginatedPurchasedRewards, se todosService.ts:s getTodosHistoryPage.
+export type PaginatedTodos = {
+  items: Todo[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 export type TodoTimeWindow = {
   visibleFrom: string | null;
   expiresAt: string | null;

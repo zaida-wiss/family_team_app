@@ -61,12 +61,22 @@ test("Töm papperskorgen permanent: dubbel bekräftelse, anropar alla fyra endpo
     route.fulfill({ json: { ok: true } });
   });
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
+  // GET /api/todos returnerar inte längre papperskorgen (2026-07-26) — den
+  // mjuk-raderade todon kommer numera bara via den paginerade
+  // /todos/history nedan, som TrashView.tsx läser från.
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [DELETED_TODO] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
     route.fulfill({ json: { ok: true } });
   });
+  let todoTrashPurged = false;
+  await page.route("**/api/todos/history**", (route) =>
+    route.fulfill({
+      json: { items: todoTrashPurged ? [] : [DELETED_TODO], page: 1, pageSize: 25, total: todoTrashPurged ? 0 : 1 }
+    })
+  );
   await page.route("**/api/todos/purge-trash", (route) => {
     purgeCalls.push("todos");
+    todoTrashPurged = true;
     route.fulfill({ json: { ok: true } });
   });
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));

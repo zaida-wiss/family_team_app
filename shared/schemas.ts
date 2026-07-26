@@ -423,6 +423,13 @@ export const AuditLogQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).optional()
 });
 
+// Todos-historik/papperskorg, paginerad (2026-07-26) — samma mönster som
+// PurchasedRewardsQuerySchema/AuditLogQuerySchema.
+export const TodosHistoryQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).optional()
+});
+
 export const RewardPatchSchema = z.object({
   title: z.string().min(1).optional(),
   starsNeeded: z.number().int().min(1).optional(),
