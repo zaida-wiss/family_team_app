@@ -77,7 +77,6 @@ async function openThreadView(page: import("@playwright/test").Page) {
 
 async function switchToListViewInSettings(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Konto & familj" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByLabel("Todos-vy").selectOption("list");
   await page.getByRole("button", { name: "Todos" }).click();
@@ -287,7 +286,6 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
 
   async function selectRange(label: string) {
     await page.getByRole("button", { name: "Inställningar" }).click();
-    await page.getByRole("button", { name: "Konto & familj" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Hur mycket ska visas i tråd-vyn?").selectOption(label);
     await page.getByRole("button", { name: "Todos" }).click();

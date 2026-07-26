@@ -78,7 +78,7 @@ test("RoleEditor: en raderad medlem visas inte i Tilldela roll-listan", async ({
   await setUpCommonRoutes(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Konto & familj" }).click();
+  await page.getByRole("button", { name: "Familj" }).click();
   await page.getByRole("button", { name: "Roller & behörigheter" }).click();
 
   await expect(page.getByText("Aktiv förälder")).toBeVisible();

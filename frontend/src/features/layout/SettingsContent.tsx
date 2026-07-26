@@ -1,6 +1,6 @@
 import "./Settings.css";
 import { lazy, useState } from "react";
-import { Baby, CalendarDays, KeyRound, ListTodo, LogOut, ShoppingCart, UserCog } from "lucide-react";
+import { Baby, CalendarDays, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
 import type { SettingsCategory } from "./SettingsCategoryNav";
@@ -112,16 +112,20 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
 
   const hiddenCategories = personalCategories.filter((c) => c.hidden);
 
-  // Fem kategorier istället för 18 platta, oberoende accordion-sektioner
-  // (2026-07-22, Zaidas önskemål) — se SettingsCategoryNav.tsx. Konto samlar
-  // allt kontobrett (namn, familjemedlemmar, roller, tema, aktivitetslogg,
-  // papperskorg, radera/logga ut); Kalender/Inköpslistor har bara en egen
-  // underkategori vardera och hoppar därför rakt förbi underkategori-listan.
+  // Sju kategorier istället för 18 platta, oberoende accordion-sektioner
+  // (2026-07-22, Zaidas önskemål) — se SettingsCategoryNav.tsx. Den
+  // ursprungliga samlade "Konto & familj" delades 2026-07-26 (Zaidas
+  // önskemål: "en separat knapp bara för utseende, en för familj/roller/
+  // familjemedlemmar") i tre egna toppnivåer: Utseende (tema/todo-vy, bara
+  // EN underkategori — hoppar rakt förbi underkategori-listan precis som
+  // Kalender/Inköpslistor redan gjorde), Familj (medlemmar, mina
+  // familjekonton, roller) och Konto (namn, aktivitetslogg, papperskorg,
+  // radera/logga ut — det som blev kvar).
   const categories: SettingsCategory[] = [
     {
-      id: "account",
-      label: "Konto & familj",
-      icon: <UserCog aria-hidden="true" size={22} />,
+      id: "appearance",
+      label: "Utseende",
+      icon: <Palette aria-hidden="true" size={22} />,
       subcategories: [
         {
           id: "appearance",
@@ -167,18 +171,14 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               )}
             </>
           )
-        },
-        {
-          id: "account-name",
-          label: "Konto",
-          content: (
-            <AccountSetup
-              account={activeAccount}
-              onCreateFamily={settingsProps.onCreateFamily}
-              onUpdateAccount={settingsProps.onUpdateAccount}
-            />
-          )
-        },
+        }
+      ]
+    },
+    {
+      id: "family",
+      label: "Familj",
+      icon: <Users aria-hidden="true" size={22} />,
+      subcategories: [
         {
           id: "members",
           label: "Familjemedlemmar",
@@ -236,7 +236,25 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 )
               }
             ]
-          : []),
+          : [])
+      ]
+    },
+    {
+      id: "account",
+      label: "Konto",
+      icon: <UserCog aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "account-name",
+          label: "Konto",
+          content: (
+            <AccountSetup
+              account={activeAccount}
+              onCreateFamily={settingsProps.onCreateFamily}
+              onUpdateAccount={settingsProps.onUpdateAccount}
+            />
+          )
+        },
         ...(canManageMembers
           ? [
               {

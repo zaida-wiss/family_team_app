@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 // in på sitt egna konto... de ska få användarnamn till familjen som är
 // unika... inget mejl, återställning görs via föräldrarnas mail". Testar
 // hela loopen: föräldern skapar barnets inloggning i Inställningar →
-// Konto & familj → Familjemedlemmar, loggar ut, och barnet loggar in via
+// Familj → Familjemedlemmar, loggar ut, och barnet loggar in via
 // den nya "Logga in som barn"-vyn (förälderns e-post + username + lösenord).
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
@@ -100,9 +100,9 @@ test("förälder skapar barnets inloggning, barnet loggar in och ser sin dashboa
 
   await page.goto("/");
 
-  // Förälder: skapa barnets inloggning i Inställningar → Konto & familj → Familjemedlemmar.
+  // Förälder: skapa barnets inloggning i Inställningar → Familj → Familjemedlemmar.
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Konto & familj" }).click();
+  await page.getByRole("button", { name: "Familj" }).click();
   await page.getByRole("button", { name: "Familjemedlemmar" }).click();
   await page.getByRole("button", { name: "Redigera Nova" }).click();
   await page.getByPlaceholder("t.ex. nova").fill("Nova");
@@ -112,8 +112,9 @@ test("förälder skapar barnets inloggning, barnet loggar in och ser sin dashboa
   expect(credentialsSet).toBe(true);
   await page.getByRole("button", { name: "Stäng" }).click();
 
-  // Logga ut (tillbaka till underkategori-listan via brödsmulan, sedan Logga ut + bekräftelsemodal).
-  await page.getByRole("button", { name: "Konto & familj" }).click();
+  // Logga ut (tillbaka till kategori-rutnätet via brödsmulan, sedan Konto → Logga ut + bekräftelsemodal).
+  await page.getByLabel("Var i inställningarna du är").getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto", exact: true }).click();
   await page.getByRole("button", { name: "Logga ut", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Logga ut", exact: true }).click();
   await expect(page.locator("p.eyebrow", { hasText: "Logga in" })).toBeVisible();

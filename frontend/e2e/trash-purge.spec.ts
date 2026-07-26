@@ -96,7 +96,7 @@ test("Töm papperskorgen permanent: dubbel bekräftelse, anropar alla fyra endpo
 
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Konto & familj" }).click();
+  await page.getByRole("button", { name: "Konto", exact: true }).click();
   await page.getByRole("button", { name: "Papperskorg" }).click();
 
   await expect(page.getByText("Raderad medlem")).toBeVisible();
