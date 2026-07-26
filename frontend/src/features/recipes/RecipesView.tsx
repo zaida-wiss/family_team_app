@@ -133,6 +133,11 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
       {editing && (
         <RecipeFormModal
           onClose={() => setEditingId(null)}
+          onDelete={() => {
+            removeRecipe(editing.id);
+            setEditingId(null);
+            setSelectedId(null);
+          }}
           onSave={(input) => {
             updateRecipe(editing.id, input);
             setEditingId(null);
@@ -148,10 +153,6 @@ export function RecipesView({ currentMember, shoppingLists, onCreateTodo, onAddS
           onCreateShoppingList={onCreateShoppingList}
           onCreateTodo={onCreateTodo}
           onClose={() => setSelectedId(null)}
-          onDelete={() => {
-            removeRecipe(selected.id);
-            setSelectedId(null);
-          }}
           onEdit={() => setEditingId(selected.id)}
           recipe={selected}
           shoppingLists={shoppingLists}

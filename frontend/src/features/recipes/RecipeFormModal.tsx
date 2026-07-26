@@ -25,6 +25,7 @@ export type RecipeFormInput = {
 type Props = {
   recipe: Recipe | null;
   onSave: (input: RecipeFormInput) => void;
+  onDelete?: () => void;
   onClose: () => void;
 };
 
@@ -33,8 +34,13 @@ type Props = {
 // checklista, TodoCreatorModal.tsx). Ett steg kan markeras "tidsstyrt" med
 // en varaktighet — det är ENDA sättet timern kopplas till ett steg (inget
 // gissande på fritext, se ADR-0028).
-export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
+export function RecipeFormModal({ recipe, onSave, onDelete, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  // Radera nås härifrån, INTE via en separat knapp i visa-vyn (2026-07-26,
+  // Zaidas rättelse: "det finns redan en redigera knapp i receptmodalen,
+  // där ska det gå att radera" — samma "en enda plats att ändra"-princip
+  // som header-pennan redan gav, ingen ny egen redigeringsläge-toggle).
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [name, setName] = useState(recipe?.name ?? "");
   const [emoji, setEmoji] = useState(recipe?.emoji ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(recipe?.imageUrl ?? null);
@@ -242,6 +248,22 @@ export function RecipeFormModal({ recipe, onSave, onClose }: Props) {
         </button>
 
         <div className="recipe-form__actions">
+          {recipe && onDelete && (
+            confirmDelete ? (
+              <>
+                <button aria-label="Bekräfta radering av receptet" className="icon-button danger" onClick={onDelete} type="button">
+                  <Trash2 size={16} />
+                </button>
+                <button aria-label="Avbryt radering" className="icon-button" onClick={() => setConfirmDelete(false)} type="button">
+                  <X size={16} />
+                </button>
+              </>
+            ) : (
+              <button aria-label="Radera recept" className="icon-button danger" onClick={() => setConfirmDelete(true)} type="button">
+                <Trash2 size={16} />
+              </button>
+            )
+          )}
           <button className="secondary-button" onClick={onClose} type="button">Avbryt</button>
           <button className="primary-button" disabled={!canSave} onClick={submit} type="button">
             {recipe ? "Spara" : "Skapa recept"}

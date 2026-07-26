@@ -32,7 +32,7 @@ async function mockRecipes(page: import("@playwright/test").Page, recipes: (type
   );
 }
 
-test("Recept: raderaknappen syns bara i redigeringsläge, radering anropar API:et och tar bort receptet", async ({ page }) => {
+test("Recept: raderaknappen nås via redigera-formuläret, radering anropar API:et och tar bort receptet", async ({ page }) => {
   await mockAuthAndData(page);
   await mockRecipes(page, [RECIPE]);
   let deleteCalled = false;
@@ -47,12 +47,13 @@ test("Recept: raderaknappen syns bara i redigeringsläge, radering anropar API:e
   await expect(page.getByText("Köttfärssås")).toBeVisible();
   await page.getByRole("button", { name: "Köttfärssås" }).click();
 
-  const dialog = page.getByRole("dialog", { name: /Köttfärssås/ });
-  await expect(dialog.getByRole("button", { name: "Radera recept" })).toHaveCount(0);
+  const detailDialog = page.getByRole("dialog", { name: /Köttfärssås/ });
+  await expect(detailDialog.getByRole("button", { name: "Radera recept" })).toHaveCount(0);
+  await detailDialog.getByRole("button", { name: "Redigera recept" }).click();
 
-  await dialog.getByRole("button", { name: "Redigeringsläge" }).click();
-  await dialog.getByRole("button", { name: "Radera recept" }).click();
-  await dialog.getByRole("button", { name: "Bekräfta radering av receptet" }).click();
+  const formDialog = page.getByRole("dialog", { name: "Redigera recept" });
+  await formDialog.getByRole("button", { name: "Radera recept" }).click();
+  await formDialog.getByRole("button", { name: "Bekräfta radering av receptet" }).click();
 
   expect(deleteCalled).toBe(true);
   await expect(page.getByText("Köttfärssås")).toHaveCount(0);

@@ -1,6 +1,6 @@
 import "./RecipesView.css";
 import { useState } from "react";
-import { ArrowLeft, CalendarPlus, Check, ExternalLink, Pencil, ShoppingCart, Trash2, X } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ExternalLink, Pencil, ShoppingCart } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { CreateTodoFromRecipeModal } from "./CreateTodoFromRecipeModal";
 import { AddToShoppingListModal } from "./AddToShoppingListModal";
@@ -14,7 +14,6 @@ type Props = {
   onAddShoppingItem: (listId: Id, title: string) => void;
   onCreateShoppingList: (name: string, icon?: string | null) => Id;
   onEdit: () => void;
-  onDelete: () => void;
   onClose: () => void;
 };
 
@@ -22,17 +21,11 @@ type Props = {
 // ("Skapa uppgift"/"Handlingslista") öppnar var sin liten modal, se
 // CreateTodoFromRecipeModal.tsx/AddToShoppingListModal.tsx.
 export function RecipeDetailView({
-  recipe, currentMember, shoppingLists, onCreateTodo, onAddShoppingItem, onCreateShoppingList, onEdit, onDelete, onClose
+  recipe, currentMember, shoppingLists, onCreateTodo, onAddShoppingItem, onCreateShoppingList, onEdit, onClose
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [showCreateTodo, setShowCreateTodo] = useState(false);
   const [showShoppingList, setShowShoppingList] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  // Raderaknappen bara i redigeringsläge (2026-07-26, Zaidas önskemål,
-  // samma "ingenting raderbart utan Redigera först"-princip som
-  // inköpslistorna redan följer) — en egen lokal toggle, skild från
-  // header-pennan som öppnar hela redigeringsformuläret.
-  const [isEditing, setIsEditing] = useState(false);
 
   return (
     <div className="recipe-modal-overlay" onClick={onClose}>
@@ -84,34 +77,6 @@ export function RecipeDetailView({
           <button className="secondary-button" onClick={() => setShowShoppingList(true)} type="button">
             <ShoppingCart size={14} /> Handlingslista
           </button>
-          <button
-            aria-label={isEditing ? "Klar med redigering" : "Redigeringsläge"}
-            aria-pressed={isEditing}
-            className={`icon-button${isEditing ? " icon-button--active" : ""}`}
-            onClick={() => {
-              setIsEditing((v) => !v);
-              setConfirmDelete(false);
-            }}
-            type="button"
-          >
-            {isEditing ? <Check size={14} /> : <Pencil size={14} />}
-          </button>
-          {isEditing && (
-            confirmDelete ? (
-              <>
-                <button aria-label="Bekräfta radering av receptet" className="icon-button danger" onClick={onDelete} type="button">
-                  <Trash2 size={14} />
-                </button>
-                <button aria-label="Avbryt radering" className="icon-button" onClick={() => setConfirmDelete(false)} type="button">
-                  <X size={14} />
-                </button>
-              </>
-            ) : (
-              <button aria-label="Radera recept" className="icon-button danger" onClick={() => setConfirmDelete(true)} type="button">
-                <Trash2 size={14} />
-              </button>
-            )
-          )}
         </div>
       </div>
 
