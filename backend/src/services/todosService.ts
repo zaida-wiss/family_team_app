@@ -60,15 +60,15 @@ async function canCompleteTodoAsCaller(caller: Member, roles: Role[], todo: Todo
   return !!assignee && canManageChildAccount(caller, assignee, roles);
 }
 
-function decryptTodo<T extends { title: string; rejectedReason: string | null; notes?: string | null }>(
-  accountId: string,
-  todo: T
-): T {
+function decryptTodo<
+  T extends { title: string; rejectedReason: string | null; notes?: string | null; subtasks?: { title: string }[] }
+>(accountId: string, todo: T): T {
   return {
     ...todo,
     title: decryptField(accountId, todo.title),
     rejectedReason: decryptNullable(accountId, todo.rejectedReason) ?? null,
-    notes: decryptNullable(accountId, todo.notes) ?? null
+    notes: decryptNullable(accountId, todo.notes) ?? null,
+    subtasks: todo.subtasks?.map((s) => ({ ...s, title: decryptField(accountId, s.title) }))
   };
 }
 
@@ -315,7 +315,8 @@ export async function createTodo(data: unknown) {
     ...input,
     title: encryptField(input.accountId, input.title),
     rejectedReason: encryptNullable(input.accountId, input.rejectedReason) ?? null,
-    notes: encryptNullable(input.accountId, input.notes) ?? null
+    notes: encryptNullable(input.accountId, input.notes) ?? null,
+    subtasks: input.subtasks?.map((s) => ({ ...s, title: encryptField(input.accountId, s.title) }))
   };
 
   const todo = new TodoModel(encrypted);
@@ -457,6 +458,9 @@ export async function updateTodo(id: string, accountId: string, data: unknown, m
 
   if (patch.title !== undefined) patch.title = encryptField(accountId, patch.title);
   if (patch.notes !== undefined) patch.notes = encryptNullable(accountId, patch.notes) ?? null;
+  if (patch.subtasks !== undefined) {
+    patch.subtasks = patch.subtasks.map((s) => ({ ...s, title: encryptField(accountId, s.title) }));
+  }
 
   Object.assign(todo, patch);
   await todo.save();

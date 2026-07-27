@@ -1,8 +1,9 @@
 /**
  * Integrationstest (ADR-0014 tillägg, utökning till todos/rewards): verifierar
- * att Todo.title/rejectedReason/notes och Reward.title faktiskt ligger
- * krypterade i MongoDB, och att API:et transparent dekrypterar tillbaka till
- * klartext.
+ * att Todo.title/rejectedReason/notes/subtasks[].title och Reward.title
+ * faktiskt ligger krypterade i MongoDB, och att API:et transparent
+ * dekrypterar tillbaka till klartext (subtasks tillagt 2026-07-28, Zaidas
+ * begäran "deluppgifter ska krypteras").
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -166,6 +167,75 @@ describe.skipIf(!RUN)("Todos/rewards title krypteras i databasen (ADR-0014 till�
       .set("x-member-id", memberId);
     const todo = (res.body as Array<{ id: string; notes: string | null }>).find((t) => t.id === todoId);
     expect(todo?.notes).toBe(SECRET_NOTES);
+  });
+
+  it("skapar ett todo med ett delmoment med känslig titel — delmomentstiteln krypteras i databasen, dekrypteras i API-svaret", async () => {
+    const subtaskTodoId = `todo-crypt-subtask-${crypto.randomUUID()}`;
+    const subtaskId = `subtask-crypt-${crypto.randomUUID()}`;
+    const SECRET_SUBTASK_TITLE = "Hämta medicin på apoteket åt mormor";
+
+    const res = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: subtaskTodoId,
+        title: "Ärenden",
+        createdBy: memberId,
+        assignedTo: childId,
+        isShared: false,
+        status: "pending",
+        starValue: 0,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none", interval: 1, until: null },
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+        subtasks: [{ id: subtaskId, title: SECRET_SUBTASK_TITLE, done: false }]
+      });
+    expect(res.status).toBe(201);
+
+    const doc = await TodoModel.findOne({ id: subtaskTodoId }).lean();
+    const rawSubtask = doc?.subtasks?.find((s) => s.id === subtaskId);
+    expect(rawSubtask?.title).not.toBe(SECRET_SUBTASK_TITLE);
+    expect(rawSubtask?.title.startsWith("v1:")).toBe(true);
+
+    const list = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (list.body as Array<{ id: string; subtasks: Array<{ id: string; title: string }> }>).find(
+      (t) => t.id === subtaskTodoId
+    );
+    expect(todo?.subtasks.find((s) => s.id === subtaskId)?.title).toBe(SECRET_SUBTASK_TITLE);
+
+    const NEW_SECRET_SUBTASK_TITLE = "Boka tid hos psykologen";
+    const patch = await request(app)
+      .patch(`/api/todos/${subtaskTodoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ subtasks: [{ id: subtaskId, title: NEW_SECRET_SUBTASK_TITLE, done: false }] });
+    expect(patch.status).toBe(200);
+
+    const docAfterPatch = await TodoModel.findOne({ id: subtaskTodoId }).lean();
+    const rawSubtaskAfterPatch = docAfterPatch?.subtasks?.find((s) => s.id === subtaskId);
+    expect(rawSubtaskAfterPatch?.title).not.toBe(NEW_SECRET_SUBTASK_TITLE);
+    expect(rawSubtaskAfterPatch?.title.startsWith("v1:")).toBe(true);
+
+    const listAfterPatch = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todoAfterPatch = (
+      listAfterPatch.body as Array<{ id: string; subtasks: Array<{ id: string; title: string }> }>
+    ).find((t) => t.id === subtaskTodoId);
+    expect(todoAfterPatch?.subtasks.find((s) => s.id === subtaskId)?.title).toBe(NEW_SECRET_SUBTASK_TITLE);
   });
 
   it("skapar en belöning med en känslig titel", async () => {
