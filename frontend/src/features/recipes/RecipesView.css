@@ -91,13 +91,16 @@
   font-weight: 700;
 }
 
-/* Alla receptmodaler (visa/redigera/handlingslista/skapa uppgift) fyller hela
-   skärmen och skrollar internt (2026-07-26, Zaidas önskemål — första
-   versionen gällde bara redigeringsformuläret, rättad till att gälla alla).
-   z-index höjt över mobilens fasta bottennav (HeroBar.module.css, 999) —
-   annars döljs modalens knapprad bakom navbaren eftersom en full-skärms-
-   overlay annars låg UNDER den fasta navigeringen (samma "över navbaren"-tak
-   som redan används av temaväljaren/medlemsväljaren, 1099-1100). */
+/* Alla receptmodaler (visa/redigera/handlingslista/skapa uppgift) täcker
+   resten av skärmen och skrollar internt (2026-07-25/26) — men navbaren
+   skall ALLTID synas (2026-07-27, Zaidas fynd: "recept tar idag upp hela
+   skärmen, samt redigering av recept, men navbaren skall alltid synas,
+   resten av skärmen skall vara täckt"). En tidigare version höjde z-index
+   över mobilens fasta bottennav (HeroBar.module.css, 999) för att undvika
+   att knapparna doldes bakom den — fel lösning, det gömde navbaren helt.
+   Rätt lösning: overlayn stannar FÖRE navbaren (bottom på mobil, left på
+   desktop där navbaren är ett sidofält), så de aldrig överlappar oavsett
+   z-index — samma HeroBar.module.css-mått (64px) som redan används där. */
 .recipe-modal-overlay {
   position: fixed;
   inset: 0;
@@ -107,6 +110,18 @@
   justify-content: center;
   z-index: 1200;
   padding: 0;
+}
+
+@media (max-width: 1023px) {
+  .recipe-modal-overlay {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 1024px) {
+  .recipe-modal-overlay {
+    left: 64px;
+  }
 }
 
 .recipe-modal {
@@ -121,15 +136,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-/* Knapparna (Spara/Radera/Avbryt m.fl.) ligger sist i flödet — utan detta
-   klipptes de av/doldes bakom mobilens 64px fasta bottennav, eftersom
-   modalens overflow-scroll annars slutar exakt vid skärmkanten. */
-@media (max-width: 1023px) {
-  .recipe-modal {
-    padding-bottom: calc(18px + 64px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 .recipe-modal__header {
