@@ -26,16 +26,6 @@ const setupSchema = z.object({
   name: z.string().min(1, "Kontonamn krävs").max(80)
 });
 
-const PARENT_PERMISSIONS: PermissionKey[] = [
-  "canManageMembers", "canManageRoles", "canCreateChildAccounts", "canManageChildTodos",
-  "canSeeAllTodos", "canCreateTodos", "canScheduleRecurringTodos",
-  "canEditAnyTodos", "canDeleteAnyTodos", "canApproveTodos",
-  "canSeeAllCalendar", "canCreateCalendar", "canEditCalendar",
-  "canImportCalendar", "canExportCalendar",
-  "canSeeShoppingLists", "canCreateShoppingLists", "canEditShoppingLists",
-  "canViewTrash", "canRestoreFromTrash"
-];
-
 const CHILD_PERMISSIONS: PermissionKey[] = [
   "canSeeOwnTodos", "canCompleteAssignedTodos", "canSeeOwnCalendar"
 ];
@@ -74,7 +64,15 @@ export async function setupAccount(userId: string, data: unknown) {
       accountId,
       name: "Förälder",
       isChildRole: false,
-      permissions: makePermissions(PARENT_PERMISSIONS)
+      // Kontoskaparen ska ha full adminbehörighet — ALLA behörigheter, inte
+      // en kuraterad delmängd (2026-07-27, Zaidas önskemål: "den personen
+      // skall få adminbehörigheter och ha tillgång till allt i roller och
+      // behörigheter"). Tidigare saknade förälderrollen tre behörigheter
+      // (canSeeOwnTodos/canCompleteAssignedTodos/canSeeOwnCalendar, av
+      // misstag bara i CHILD_PERMISSIONS) — synligt i Inställningar → Roller
+      // & behörigheter som tre ikryssade rutor som saknades för kontots
+      // egen, allra första roll.
+      permissions: makePermissions(ALL_PERMISSION_KEYS)
     }).save(),
     new RoleModel({
       id: barnRoleId,
