@@ -27,6 +27,7 @@ import { todoTemplatesRouter } from "./routes/todoTemplates.js";
 import { recipesRouter } from "./routes/recipes.js";
 import { householdSecretsRouter } from "./routes/householdSecrets.js";
 import { householdPinRouter } from "./routes/householdPin.js";
+import { compressionFilter } from "./utils/compressionFilter.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
@@ -86,7 +87,25 @@ app.use(helmet());
 // okomprimerat för ett konto med lång historik. Ingen ändring av
 // svarsformatet, bara transport — `compression` är Express egna officiella
 // rekommenderade middleware för detta (se Express docs, källhierarki tier 3).
-app.use(compression());
+//
+// Bugg fixad (2026-07-27, Zaidas fynd: "barnens stjärnor har slutat att
+// fungera... intjänade pengar ökar inte" direkt, bara efter en omladdning,
+// "man ska hur som helst kunna se direkt, på olika enheter"): `compressible`
+// (biblioteket `compression` använder för att avgöra vad som ska
+// komprimeras) räknar `text/event-stream` som komprimerbart — men våra tre
+// SSE-strömmar (members/todos/reward-shop realtidssynk, se realtime/*.ts)
+// är LÅNGLIVADE anslutningar som aldrig avslutas. En gzip/deflate-ström
+// flushar bara nedströms när dess interna buffert fyllts ELLER anslutningen
+// stängs — en enskild SSE-händelse ("event: members-changed\n...", några
+// tiotal bytes) är alltid långt under den gränsen, så händelserna fastnade
+// obestämt i komprimeringsbufferten istället för att nå klienten direkt.
+// Precis det symptom Zaida beskrev: stjärnorna VAR korrekt tilldelade
+// server-side hela tiden (rätt efter en omladdning, en vanlig avslutad
+// JSON-request flushar alltid vid res.end()) men realtidssynken hade i
+// praktiken slutat fungera sedan denna middleware lades till. compressionFilter.ts
+// stänger av komprimering specifikt för text/event-stream-svar — alla
+// vanliga JSON-svar komprimeras fortsatt som avsett.
+app.use(compression({ filter: compressionFilter }));
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
