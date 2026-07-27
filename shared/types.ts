@@ -190,6 +190,12 @@ export type Member = {
   // Standard (osatt) faller tillbaka på den befintliga clamp()-formeln i
   // ParentTodoThreadView.css, oförändrat beteende.
   todoThreadGap?: number;
+  // Bubblornas storlek i "bollar i tråd" (2026-07-27, Zaidas önskemål: "man
+  // måste även kunna bestämma storlek på bubbelsysslornas bubblor under
+  // utseende, inte bara avståndet") — px, väljs i Inställningar → Utseende.
+  // Standard (osatt) faller tillbaka på den befintliga clamp()-formeln i
+  // ParentTodoThreadView.css (skalar responsivt med skärmbredden).
+  todoBubbleSize?: number;
   spentStars: number;
   approvedStars: number;
   // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,

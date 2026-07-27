@@ -256,6 +256,7 @@ export function useMembersState() {
       todoBubbleOrder?: Record<Id, Id[]>;
       todoThreadRange?: TodoThreadRange;
       todoThreadGap?: number;
+      todoBubbleSize?: number;
     }
   ) {
     setMembers((current) =>

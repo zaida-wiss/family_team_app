@@ -287,7 +287,9 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
   async function selectRange(label: string) {
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
-    await page.getByLabel("Hur mycket ska visas i tråd-vyn?").selectOption(label);
+    // 2026-07-27: etiketten döptes om och gäller nu båda vyerna (Zaidas
+    // önskemål om att kunna välja tidsspannet i listläget också).
+    await page.getByLabel("Hur mycket ska visas?").selectOption(label);
     await page.getByRole("button", { name: "Todos" }).click();
   }
 
@@ -309,6 +311,37 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
   await expect(thread.getByText("Om hundra dagar")).toBeVisible();
   // Utgångna uppgifter ska ALDRIG synas, oavsett tidsspann.
   await expect(thread.getByText("Gick ut igår")).toHaveCount(0);
+});
+
+// 2026-07-27, Zaidas önskemål: "todo i inställningar ska gå att välja bara
+// dagens eller samtliga även i listvy" — tidsspannet gällde tidigare bara
+// tråd-vyn, listläget visade ALLTID allt oavsett datum. Nu gäller samma
+// inställning båda vyerna (väljer man "Allt i framtiden" motsvarar det
+// exakt listlägets gamla, oförändrade beteende).
+test("Todos-vy: tidsspannet i Inställningar styr även listläget", async ({ page }) => {
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const todoFuture = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-list-future",
+    title: "Listläge om tjugo dagar",
+    visibleFrom: new Date(now + 20 * oneDayMs).toISOString(),
+    expiresAt: null
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [todoFuture] }));
+
+  await openThreadView(page);
+  await switchToListViewInSettings(page);
+  await expect(page.getByText("Listläge om tjugo dagar")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Utseende" }).click();
+  await page.getByLabel("Hur mycket ska visas?").selectOption("all");
+  await page.getByRole("button", { name: "Todos" }).click();
+  await expect(page.getByText("Listläge om tjugo dagar")).toBeVisible();
 });
 
 test("Bollar i tråd: sorterar på sluttid, tidigast sluttid överst", async ({ page }) => {

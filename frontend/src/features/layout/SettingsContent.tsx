@@ -95,6 +95,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onUpdateTodoThreadRange,
     todoThreadGap,
     onUpdateTodoThreadGap,
+    todoBubbleSize,
+    onUpdateTodoBubbleSize,
     personalCategories,
     onCreateCategory,
     onSetCategoryHidden,
@@ -159,23 +161,27 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                   <option value="list">Lista</option>
                 </select>
               </label>
-              {todoViewMode === "thread" && (
-                <label className="field-label settings-todo-view-mode">
-                  Hur mycket ska visas i tråd-vyn?
-                  <select
-                    className="text-input"
-                    onChange={(e) =>
-                      onUpdateTodoThreadRange(e.target.value as "today" | "week" | "month" | "all")
-                    }
-                    value={todoThreadRange}
-                  >
-                    <option value="today">Bara idag</option>
-                    <option value="week">En vecka framåt</option>
-                    <option value="month">En månad framåt</option>
-                    <option value="all">Allt i framtiden</option>
-                  </select>
-                </label>
-              )}
+              {/* Gäller nu BÅDA vyerna (2026-07-27, Zaidas önskemål: "todo i
+                  inställningar ska gå att välja bara dagens eller samtliga
+                  även i listvy") — tidigare dold i listläget, som alltid
+                  visade allt oavsett datum. Väljer man "Allt i framtiden"
+                  motsvarar det exakt listlägets gamla, oförändrade
+                  beteende. */}
+              <label className="field-label settings-todo-view-mode">
+                Hur mycket ska visas?
+                <select
+                  className="text-input"
+                  onChange={(e) =>
+                    onUpdateTodoThreadRange(e.target.value as "today" | "week" | "month" | "all")
+                  }
+                  value={todoThreadRange}
+                >
+                  <option value="today">Bara idag</option>
+                  <option value="week">En vecka framåt</option>
+                  <option value="month">En månad framåt</option>
+                  <option value="all">Allt i framtiden</option>
+                </select>
+              </label>
               {todoViewMode === "thread" && (
                 <label className="field-label settings-todo-view-mode">
                   Avstånd mellan kategoritrådarna ({todoThreadGap ?? 8} px)
@@ -186,6 +192,19 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                     onChange={(e) => onUpdateTodoThreadGap(Number(e.target.value))}
                     type="range"
                     value={todoThreadGap ?? 8}
+                  />
+                </label>
+              )}
+              {todoViewMode === "thread" && (
+                <label className="field-label settings-todo-view-mode">
+                  Bubblornas storlek ({todoBubbleSize ?? 96} px)
+                  <input
+                    className="settings-thread-gap-slider"
+                    max={160}
+                    min={64}
+                    onChange={(e) => onUpdateTodoBubbleSize(Number(e.target.value))}
+                    type="range"
+                    value={todoBubbleSize ?? 96}
                   />
                 </label>
               )}

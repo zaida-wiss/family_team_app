@@ -73,6 +73,7 @@ export const MemberSchema = z.object({
   todoBubbleOrder: z.record(z.string(), z.array(IdSchema)).optional(),
   todoThreadRange: TodoThreadRangeSchema.optional(),
   todoThreadGap: z.number().min(0).max(32).optional(),
+  todoBubbleSize: z.number().min(60).max(200).optional(),
   spentStars: z.number().int().min(0),
   approvedStars: z.number().int().min(0),
   deletedAt: z.string().nullable(),
@@ -101,6 +102,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   todoBubbleOrder: true,
   todoThreadRange: true,
   todoThreadGap: true,
+  todoBubbleSize: true,
   spentStars: true
 }).partial();
 

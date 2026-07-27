@@ -98,7 +98,12 @@
      matcha radens höjd (den högsta kolumnen, eller min-height nedan om alla
      är korta), var och en fortsatt begränsad av sin egen max-height nedan. */
   align-items: stretch;
-  --ball-size: clamp(5.5rem, 11vw, 8rem);
+  /* Bubblornas storlek (2026-07-27, Zaidas önskemål om ett eget reglage i
+     Inställningar, samma mönster som --todo-thread-gap nedan) —
+     --todo-bubble-size-override sätts inline av ParentTodoThreadView.tsx
+     när medlemmen valt ett eget värde, annars gäller den adaptiva
+     clamp()-formeln oförändrat. */
+  --ball-size: var(--todo-bubble-size-override, clamp(5.5rem, 11vw, 8rem));
   /* Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål om
      ett eget reglage i Inställningar) — --todo-thread-gap sätts inline av
      ParentTodoThreadView.tsx när medlemmen valt ett eget värde, annars

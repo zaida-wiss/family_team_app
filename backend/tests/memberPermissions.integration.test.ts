@@ -174,6 +174,28 @@ describe.skipIf(!RUN)("membersService: server-side behörighetskontroll", () => 
     expect(refetched?.todoThreadGap).toBe(20);
   });
 
+  // 2026-07-27, samma regressionsmönster som todoThreadGap ovan — men den
+  // här gången lades fältet till i Mongoose-schemat SAMTIDIGT som Zod/
+  // SELF_NAV_FIELDS, inte i efterhand. Testet är den faktiska bekräftelsen
+  // på att alla tre lager stämmer, inte bara ett antagande.
+  it("todoBubbleSize sparas verkligen till databasen, inte bara ett 200-svar", async () => {
+    const patchRes = await request(app)
+      .patch(`/api/members/${restrictedMemberId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ todoBubbleSize: 120 });
+    expect(patchRes.status).toBe(200);
+
+    const listRes = await request(app)
+      .get("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    const refetched = (listRes.body as Array<{ id: string; todoBubbleSize?: number }>).find(
+      (m) => m.id === restrictedMemberId
+    );
+    expect(refetched?.todoBubbleSize).toBe(120);
+  });
+
   it("tillåter en medlem att patcha sitt EGET tema utan canManageMembers", async () => {
     const res = await request(app)
       .patch(`/api/members/${restrictedMemberId}`)

@@ -95,4 +95,27 @@ test.describe("Inställningar", () => {
     await expect.poll(() => savedGap).toBe(20);
     await expect(page.getByText("Avstånd mellan kategoritrådarna (20 px)")).toBeVisible();
   });
+
+  // 2026-07-27, Zaidas önskemål: "man måste även kunna bestämma storlek på
+  // bubbelsysslornas bubblor under utseende, inte bara avståndet" — samma
+  // reglage-mönster som avstånds-slidern ovan.
+  test("reglaget för bubblornas storlek sparar ett nytt värde", async ({ page }) => {
+    let savedSize: number | null = null;
+    await page.route("**/api/members/mem-1", (route) => {
+      const body = route.request().postDataJSON() as { todoBubbleSize?: number };
+      if (body.todoBubbleSize !== undefined) savedSize = body.todoBubbleSize;
+      return route.fulfill({ json: { ok: true } });
+    });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
+
+    const slider = page.getByLabel(/Bubblornas storlek/);
+    await expect(slider).toBeVisible();
+    await slider.fill("140");
+
+    await expect.poll(() => savedSize).toBe(140);
+    await expect(page.getByText("Bubblornas storlek (140 px)")).toBeVisible();
+  });
 });

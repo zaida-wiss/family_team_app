@@ -219,6 +219,9 @@ export function useShellState(
     // väljs i Inställningar, se settingsProps nedan. undefined = ingen
     // anpassning, ParentTodoThreadView.css:s befintliga clamp() gäller.
     todoThreadGap: currentMember.todoThreadGap,
+    // Bubblornas storlek (2026-07-27, Zaidas önskemål) — samma mönster som
+    // todoThreadGap ovan.
+    todoBubbleSize: currentMember.todoBubbleSize,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
@@ -338,6 +341,9 @@ export function useShellState(
     todoThreadGap: currentMember.todoThreadGap,
     onUpdateTodoThreadGap: (gap: number) =>
       updateMemberNavigation(currentMember.id, { todoThreadGap: gap }),
+    todoBubbleSize: currentMember.todoBubbleSize,
+    onUpdateTodoBubbleSize: (size: number) =>
+      updateMemberNavigation(currentMember.id, { todoBubbleSize: size }),
     onUpdateChildTimelineSettings: updateChildTimelineSettings,
     onAssignRole: assignRole,
     onCreateRole: createRole,

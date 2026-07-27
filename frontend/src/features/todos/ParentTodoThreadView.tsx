@@ -9,7 +9,7 @@ import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { dateOnlyToISO, isRecurringTemplate } from "./recurringTodos";
-import { isChildMember } from "./selectors";
+import { isChildMember, isDueWithinRange } from "./selectors";
 import { generateId } from "../../utils/uuid";
 
 const HOLD_DURATION_MS = 2000;
@@ -74,6 +74,12 @@ type Props = {
   // kategoritrådarna") — px, väljs i Inställningar → Utseende. undefined =
   // ingen anpassning, CSS:s befintliga clamp()-formel gäller.
   threadGap?: number;
+  // Bubblornas storlek (2026-07-27, Zaidas önskemål: "man måste även kunna
+  // bestämma storlek på bubbelsysslornas bubblor under utseende, inte bara
+  // avståndet") — px, väljs i Inställningar → Utseende, samma mönster som
+  // threadGap ovan. undefined = ingen anpassning, CSS:s befintliga
+  // clamp()-formel gäller.
+  bubbleSize?: number;
   fixedTodoTimes: boolean;
 };
 
@@ -185,28 +191,8 @@ function applyBubbleOrder(todos: Todo[], order: Id[] | undefined): Todo[] {
   });
 }
 
-// Hur mycket som visas (2026-07-06, Zaidas önskemål) — en todo räknas som
-// inom spannet om dess synlighetsfönster (visibleFrom–expiresAt) övertäcker
-// någon del av det, eller om den saknar schema helt (då är den inte knuten
-// till en viss dag/period och ska alltid synas). "Idag" (standard) beter sig
-// precis som tidigare — bara "week"/"month"/"all" är nya. "all" har ingen
-// bortre gräns (allt i framtiden), men utgångna uppgifter (until <= nu)
-// filtreras fortfarande bort, precis som i övriga spann.
-function rangeLengthInDays(range: TodoThreadRange): number | null {
-  if (range === "today") return 1;
-  if (range === "week") return 7;
-  if (range === "month") return 30;
-  return null;
-}
-
-function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange): boolean {
-  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const days = rangeLengthInDays(range);
-  const rangeEnd = days === null ? Number.POSITIVE_INFINITY : dayStart + days * 24 * 60 * 60 * 1000;
-  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
-  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
-  return from < rangeEnd && until > dayStart;
-}
+// isDueWithinRange flyttad till selectors.ts (2026-07-27) — delas nu även
+// av TodosView.tsx:s listläge, se selectors.ts för fullständig kommentar.
 
 // Vuxenvyn med delmoment (Sprint 6 S2–S4, ombyggd 2026-07-05 på Zaidas beslut) —
 // trådar sida vid sida istället för staplade sektioner, bollarna hålls medvetet
@@ -253,6 +239,7 @@ export function ParentTodoThreadView({
   onReorderBubbles,
   range,
   threadGap,
+  bubbleSize,
   fixedTodoTimes
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
@@ -1094,7 +1081,12 @@ export function ParentTodoThreadView({
       )}
       <div
         className="todo-thread-view"
-        style={threadGap != null ? ({ "--todo-thread-gap": `${threadGap}px` } as React.CSSProperties) : undefined}
+        style={
+          {
+            ...(threadGap != null ? { "--todo-thread-gap": `${threadGap}px` } : {}),
+            ...(bubbleSize != null ? { "--todo-bubble-size-override": `${bubbleSize}px` } : {})
+          } as React.CSSProperties
+        }
       >
       {orderedThreads.map((thread) => (
         <section

@@ -6,7 +6,7 @@ import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { SharedChildrenThreads } from "./SharedChildrenThreads";
 import { CrossAccountFamilyThreads } from "./CrossAccountFamilyThreads";
-import { getAssigneeName, getVisibleTodos, isTodoHistory } from "./selectors";
+import { getAssigneeName, getVisibleTodos, isDueWithinRange, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
 
@@ -34,6 +34,9 @@ type Props = {
   // Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål) —
   // väljs i Inställningar, samma mönster som todoThreadRange.
   todoThreadGap?: number;
+  // Bubblornas storlek (2026-07-27, Zaidas önskemål) — väljs i
+  // Inställningar, samma mönster som todoThreadGap.
+  todoBubbleSize?: number;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
@@ -79,6 +82,7 @@ export function TodosView({
   onReorderBubbles,
   todoThreadRange,
   todoThreadGap,
+  todoBubbleSize,
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
@@ -106,6 +110,20 @@ export function TodosView({
   const visibleTodos = canSeeTodos
     ? getVisibleTodos(currentMember, roles, todos).filter((t) => !isTodoHistory(t) && !isRecurringTemplate(t))
     : [];
+  // Tidsspannet (idag/vecka/månad/allt, Inställningar → Utseende) gäller nu
+  // även listläget (2026-07-27, Zaidas önskemål) — tidigare visade listläget
+  // ALLTID allt oavsett Syns från/Försvinner, medvetet, för att kunna hitta
+  // en felaktigt daterad engångsuppgift. Det går fortfarande: väljer man
+  // "Allt i framtiden" är beteendet identiskt med det gamla. Bara "pending"-
+  // uppgifter filtreras mot spannet — en redan avklarad men ej godkänd
+  // uppgift ("done") ska alltid synas oavsett datum, samma princip som i
+  // tråd-vyn (som aldrig ens tar med "done" i sin egen spann-filtrerade
+  // bollista, den har redan "löst upp" ur den vanliga vyn).
+  const today = new Date();
+  const rangeFilteredTodos =
+    todoViewMode === "list"
+      ? visibleTodos.filter((t) => t.status !== "pending" || isDueWithinRange(t, today, todoThreadRange))
+      : visibleTodos;
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
   const suggestedRewards = canApproveTodos
     ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null)
@@ -220,6 +238,7 @@ export function TodosView({
             onReorderBubbles={onReorderBubbles}
             range={todoThreadRange}
             threadGap={todoThreadGap}
+            bubbleSize={todoBubbleSize}
             fixedTodoTimes={fixedTodoTimes}
           />
         )}
@@ -237,7 +256,7 @@ export function TodosView({
             inte dolt dem alla i Inställningar. */}
         {todoViewMode === "thread" && <CrossAccountFamilyThreads />}
 
-        {todoViewMode === "list" && visibleTodos.map((todo) => (
+        {todoViewMode === "list" && rangeFilteredTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>
             <CheckCircle2 size={18} />
             <span>

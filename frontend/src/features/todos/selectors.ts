@@ -1,4 +1,4 @@
-import type { Member, Role, Todo } from "@shared/types";
+import type { Member, Role, Todo, TodoThreadRange } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
@@ -80,4 +80,29 @@ export function isOneOffTodo(todo: Todo): boolean {
     todo.recurrence.type === "none" &&
     !isTodoHistory(todo)
   );
+}
+
+// Tidsspannet ("Bara idag"/"En vecka framåt"/"En månad framåt"/"Allt i
+// framtiden") gäller nu BÅDE tråd-vyn och listläget (2026-07-27, Zaidas
+// önskemål: "todo i inställningar ska gå att välja bara dagens eller
+// samtliga även i listvy") — flyttad hit från ParentTodoThreadView.tsx
+// (delad av TodosView.tsx för listläget) istället för att dupliceras.
+// "Idag" (standard) beter sig precis som tidigare — bara "week"/"month"/
+// "all" är nya. "all" har ingen bortre gräns (allt i framtiden), men
+// utgångna uppgifter (until <= nu) filtreras fortfarande bort, precis som
+// i övriga spann.
+function rangeLengthInDays(range: TodoThreadRange): number | null {
+  if (range === "today") return 1;
+  if (range === "week") return 7;
+  if (range === "month") return 30;
+  return null;
+}
+
+export function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange): boolean {
+  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const days = rangeLengthInDays(range);
+  const rangeEnd = days === null ? Number.POSITIVE_INFINITY : dayStart + days * 24 * 60 * 60 * 1000;
+  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
+  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+  return from < rangeEnd && until > dayStart;
 }
