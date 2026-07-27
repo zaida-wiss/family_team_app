@@ -108,7 +108,8 @@ test("Todos-panelen: en delad barn-tråd visas med visnings-läge när access ä
             avatarUrl: null, color: null, dashboardTheme: null
           },
           access: "view",
-          todos: [SHARED_TODO]
+          todos: [SHARED_TODO],
+          calendarEvents: [], purchasedRewards: [], stars: { approved: 0, spent: 0 }, timedTasks: []
         }
       ]
     })
@@ -122,6 +123,50 @@ test("Todos-panelen: en delad barn-tråd visas med visnings-läge när access ä
   await expect(sharedThread.getByText("Läxor")).toBeVisible();
   await expect(sharedThread.locator(".shared-child-thread__lock")).toBeVisible();
   await expect(sharedThread.getByRole("button", { name: /Endast visning/ })).toBeDisabled();
+});
+
+// 2026-07-27, Zaidas önskemål: "en förälder som tillhör en annan familj ska
+// få åtkomst till allt som är kopplat till barnets konto" — kalender/
+// belöningar/Medaljer visas nu också, bakom en egen info-knapp (progressiv
+// avslöjning, döljs tills man klickar).
+test("Todos-panelen: info-knappen visar barnets kalender, köpta belöningar, stjärnor och Medaljer", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todos/shared-children", (route) =>
+    route.fulfill({
+      json: [
+        {
+          child: {
+            id: "mem-other-child", accountId: "acc-2", name: "Wilma",
+            avatarUrl: null, color: null, dashboardTheme: null
+          },
+          access: "view",
+          todos: [],
+          calendarEvents: [
+            { id: "ev-1", calendarId: "cal-1", calendarName: "Wilmas kalender", title: "Tandläkare", startsAt: "2026-08-01T10:00:00.000Z", endsAt: "2026-08-01T11:00:00.000Z", isAllDay: false, color: null, uid: null, subscriptionId: null, location: null, notes: null, recurrence: { type: "none", interval: 1, until: null }, attendees: [], symbol: null, createdBy: "mem-other-parent", deletedAt: null, deletedBy: null }
+          ],
+          purchasedRewards: [
+            { id: "pr-1", accountId: "acc-2", memberId: "mem-other-child", itemTitle: "Glass", itemSymbol: null, starCost: 5, purchasedAt: "2026-07-20T10:00:00.000Z", startsAt: "2026-07-20T10:00:00.000Z", durationMinutes: null, deletedAt: null }
+          ],
+          stars: { approved: 30, spent: 5 },
+          timedTasks: [
+            { id: "tt-1", accountId: "acc-2", title: "Springa", symbol: "🏃", assignedTo: "mem-other-child", createdBy: "mem-other-parent", deletedAt: null, deletedBy: null, bestDurationMs: 65000, bestAchievedAt: "2026-07-15T10:00:00.000Z", attemptCount: 3 }
+          ]
+        }
+      ]
+    })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos" }).click();
+
+  const sharedThread = page.getByRole("region", { name: "Delad tråd: Wilma" });
+  await expect(sharedThread.getByText("Tandläkare")).toHaveCount(0);
+
+  await sharedThread.getByRole("button", { name: /Mer om Wilma/ }).click();
+  await expect(sharedThread.getByText("⭐ 25 stjärnor")).toBeVisible();
+  await expect(sharedThread.getByText(/Tandläkare/)).toBeVisible();
+  await expect(sharedThread.getByText(/Glass \(5 ⭐\)/)).toBeVisible();
+  await expect(sharedThread.getByText(/Springa: 1:05/)).toBeVisible();
 });
 
 test("Todos-panelen: markera en delad uppgift klar (edit-åtkomst) anropar completeShared-endpointen", async ({ page }) => {
@@ -147,7 +192,8 @@ test("Todos-panelen: markera en delad uppgift klar (edit-åtkomst) anropar compl
             avatarUrl: null, color: null, dashboardTheme: null
           },
           access: "edit",
-          todos: completedCalled ? [] : [SHARED_TODO]
+          todos: completedCalled ? [] : [SHARED_TODO],
+          calendarEvents: [], purchasedRewards: [], stars: { approved: 0, spent: 0 }, timedTasks: []
         }
       ]
     })

@@ -684,3 +684,51 @@
   vertical-align: middle;
   opacity: 0.6;
 }
+
+.shared-child-thread__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+}
+
+/* Delade barn, "allt kopplat till barnets konto"-panelen (2026-07-27) —
+   döljs bakom info-knappen, progressiv avslöjning. Storleken är medvetet
+   INTE krympt under .icon-button:s vanliga 44×44px (CLAUDE.md:s
+   icke-förhandlingsbara touch-målsgolv), bara flex-shrink:0 så den inte
+   klämmer ihop sig bredvid kategorinamnet. */
+.shared-child-thread__info-btn {
+  flex-shrink: 0;
+}
+
+.shared-child-thread__details {
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.shared-child-thread__stars {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.shared-child-thread__details-title {
+  margin: 8px 0 2px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted-fg);
+}
+
+.shared-child-thread__details-title:first-of-type {
+  margin-top: 0;
+}
+
+.shared-child-thread__details-list {
+  margin: 0;
+  padding-left: 18px;
+}

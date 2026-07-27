@@ -1,8 +1,21 @@
-import type { AccessLevel, CrossAccountFamilyThread, PaginatedTodos, Todo } from "@shared/types";
+import type {
+  AccessLevel,
+  CalendarEvent,
+  CrossAccountFamilyThread,
+  PaginatedTodos,
+  PurchasedReward,
+  TimedTaskWithBest,
+  Todo
+} from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
-// Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
-export type SharedChildTodos = {
+// Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024) —
+// utökad 2026-07-27 (Zaidas önskemål: "åtkomst till allt som är kopplat
+// till barnets konto") till även kalender/belöningar/Medaljer, inte bara
+// todos. Bara todos har en mutation (completeShared, se nedan) — resten är
+// medvetet läsbart i denna första version, samma princip som redan gäller
+// för todos (godkännande/stjärnor sker bara i barnets EGET konto).
+export type SharedChildData = {
   child: {
     id: string;
     accountId: string;
@@ -13,6 +26,10 @@ export type SharedChildTodos = {
   };
   access: AccessLevel;
   todos: Todo[];
+  calendarEvents: (CalendarEvent & { calendarName: string })[];
+  purchasedRewards: PurchasedReward[];
+  stars: { approved: number; spent: number };
+  timedTasks: TimedTaskWithBest[];
 };
 
 export const todosApi = {
@@ -64,8 +81,9 @@ export const todosApi = {
   // mjuk-raderade todos alls (var tidigare kvar 30 dagar).
   getHistoryPage: (page: number, pageSize: number) =>
     request<PaginatedTodos>(api(`todos/history?page=${page}&pageSize=${pageSize}`)),
-  // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024).
-  getSharedChildren: () => request<SharedChildTodos[]>(api("todos/shared-children")),
+  // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024) —
+  // utökad till allt kopplat till barnets konto, se SharedChildData ovan.
+  getSharedChildren: () => request<SharedChildData[]>(api("todos/shared-children")),
   completeShared: (
     childAccountId: string,
     childMemberId: string,

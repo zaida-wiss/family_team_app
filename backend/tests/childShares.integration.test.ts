@@ -72,6 +72,9 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
   let familyC: Awaited<ReturnType<typeof registerFamily>>;
   let childId: string;
   let todoId: string;
+  let calendarId: string;
+  let eventId: string;
+  let timedTaskId: string;
 
   it("sätter upp tre separata familjer och ett barn i familj A", async () => {
     familyA = await registerFamily(`familjA-${crypto.randomUUID()}@bmad.test`, "Familj A");
@@ -91,6 +94,53 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId)
       .send({ id: todoId, title: "Läxor", createdBy: familyA.parentMemberId, assignedTo: childId, ...todoPayload({}) });
+
+    // Fixtures för 2026-07-27-utökningen (allt kopplat till barnets konto,
+    // inte bara todos) — en kalenderhändelse ägd av barnet, en tidtagen
+    // uppgift tilldelad barnet, och ett köp gjort ÅT barnet.
+    const eventStart = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const eventEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString();
+    const calendar = await request(app)
+      .post("/api/calendars")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ id: `cal-shared-${crypto.randomUUID()}`, name: "Barnets kalender", color: "#ffffff", ownerId: childId });
+    calendarId = (calendar.body as { id: string }).id;
+    eventId = `event-shared-${crypto.randomUUID()}`;
+    await request(app)
+      .post(`/api/calendars/${calendarId}/events`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({
+        id: eventId, calendarId, title: "Tandläkarbesök", startsAt: eventStart, endsAt: eventEnd,
+        isAllDay: false, color: null, uid: null, subscriptionId: null, location: null, notes: null,
+        recurrence: { type: "none", interval: 1, until: null }, attendees: [], symbol: null,
+        createdBy: familyA.parentMemberId, deletedAt: null, deletedBy: null
+      });
+
+    const timedTask = await request(app)
+      .post("/api/timed-tasks")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ title: "Klä på sig", symbol: "👕", assignedTo: childId });
+    timedTaskId = (timedTask.body as { id: string }).id;
+
+    // POST /items svarar bara {ok:true}, inte den skapade varan — id:t vi
+    // själva skickade in är den enda källan till sanning här.
+    const rewardItemId = `item-shared-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/reward-shop/items")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({
+        id: rewardItemId, title: "Gratis kram", symbol: null, starCost: 0,
+        timerMinutes: null, availability: null, requiredCategories: [], createdBy: familyA.parentMemberId, deletedAt: null
+      });
+    await request(app)
+      .post(`/api/reward-shop/purchase/${rewardItemId}`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ forMemberId: childId });
   });
 
   it("familj B ser INGENTING delat innan en delning skapats", async () => {
@@ -149,6 +199,28 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
       .set("x-member-id", familyB.parentMemberId)
       .send({});
     expect(complete.status).toBe(403);
+  });
+
+  // 2026-07-27, Zaidas önskemål: "en förälder som tillhör en annan familj
+  // ska få åtkomst till allt som är kopplat till barnets konto" — utökar
+  // delningen från bara todos till även kalender/belöningar/Medaljer.
+  it("familj B ser även barnets kalenderhändelser, köpta belöningar, stjärnor och tidtagna uppgifter", async () => {
+    const list = await request(app)
+      .get("/api/todos/shared-children")
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(list.status).toBe(200);
+    const entry = list.body[0];
+
+    expect(entry.calendarEvents.map((e: { id: string }) => e.id)).toContain(eventId);
+    expect(entry.calendarEvents[0].title).toBe("Tandläkarbesök");
+
+    expect(entry.timedTasks.map((t: { id: string }) => t.id)).toContain(timedTaskId);
+
+    expect(entry.purchasedRewards).toHaveLength(1);
+    expect(entry.purchasedRewards[0].itemTitle).toBe("Gratis kram");
+
+    expect(entry.stars).toEqual({ approved: 0, spent: 0 });
   });
 
   it("familj C (helt orelaterad, ingen delning) ser fortsatt ingenting och kan inte markera klar", async () => {

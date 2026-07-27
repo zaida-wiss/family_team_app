@@ -150,6 +150,21 @@ export async function getPurchasedRewardsByDate(accountId: string, date: string)
   );
 }
 
+// En enskild medlems köp, senaste först (2026-07-27) — till skillnad från
+// getPurchasedRewardsPage nedan (paginerad över HELA kontot) behöver en
+// delnings-vy (ADR-0024, utökad till "allt kopplat till barnets konto") en
+// query scopad till just barnet direkt i databasen — att filtrera en
+// konto-bred sida client-side hade kunnat missa barnets köp helt om andra
+// familjemedlemmar köpt mer nyligen.
+export async function getPurchasedRewardsForMember(accountId: string, memberId: string, limit: number) {
+  return PurchasedRewardModel.find(
+    { accountId, memberId, deletedAt: null },
+    { _id: 0, __v: 0 }
+  )
+    .sort({ purchasedAt: -1 })
+    .limit(limit);
+}
+
 // Offset-paginerad, senaste köp först — används av belöningsbutikens hanteringsvy (ADR-0003)
 export async function getPurchasedRewardsPage(accountId: string, page: number, pageSize: number) {
   const skip = (page - 1) * pageSize;

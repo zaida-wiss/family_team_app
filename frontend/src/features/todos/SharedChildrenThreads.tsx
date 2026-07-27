@@ -1,9 +1,22 @@
 import "./ParentTodoThreadView.css";
-import { Lock } from "lucide-react";
+import { useState } from "react";
+import { Info, Lock } from "lucide-react";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useSharedChildrenTodos } from "./useChildSharesState";
+import type { Id } from "@shared/types";
 
 const HOLD_DURATION_MS = 2000;
+
+function formatEventDate(iso: string) {
+  return new Date(iso).toLocaleDateString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
 // 2026-07-22) — en tråd PER barn som delats MED mig (av en förälder i ett
@@ -15,26 +28,89 @@ const HOLD_DURATION_MS = 2000;
 // klasser för visuell konsekvens, bara håll-in-bekräftelsen (samma mönster
 // som resten av tråd-vyn) är egen kod eftersom completeSharedTodo tar en
 // annan signatur (childAccountId+childMemberId, inte bara todoId).
+//
+// Utökad 2026-07-27 (Zaidas önskemål: "åtkomst till allt som är kopplat
+// till barnets konto") med kalender/belöningar/Medaljer — döljs bakom en
+// egen info-knapp per barn (progressiv avslöjning, samma princip som
+// ParentTodoThreadView.tsx:s egen instruktionspanel) istället för att alltid
+// visas, eftersom todos är det man oftast faktiskt vill agera på. Rent
+// läsbart i denna version, ingen mutation på kalender/belöningar/Medaljer
+// härifrån — samma "godkännande/stjärnor sker bara i barnets eget konto"-
+// princip som redan gäller för todos.
 export function SharedChildrenThreads() {
   const { sharedChildren, completeSharedTodo } = useSharedChildrenTodos();
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
+  const [expandedChildId, setExpandedChildId] = useState<Id | null>(null);
 
   if (sharedChildren.length === 0) return null;
 
   return (
     <div className="todo-thread-view">
-      {sharedChildren.map(({ child, access, todos }) => {
+      {sharedChildren.map(({ child, access, todos, calendarEvents, purchasedRewards, stars, timedTasks }) => {
         const pending = todos.filter((t) => t.status === "pending");
+        const expanded = expandedChildId === child.id;
         return (
           <section className="todo-thread" aria-label={`Delad tråd: ${child.name}`} key={child.id}>
             <div className="todo-thread__header">
-              <h3 className="todo-thread__category">
-                {child.name}
-                {access === "view" && (
-                  <Lock aria-label="Endast visning" className="shared-child-thread__lock" size={14} />
-                )}
-              </h3>
+              <div className="shared-child-thread__header-row">
+                <h3 className="todo-thread__category">
+                  {child.name}
+                  {access === "view" && (
+                    <Lock aria-label="Endast visning" className="shared-child-thread__lock" size={14} />
+                  )}
+                </h3>
+                <button
+                  aria-expanded={expanded}
+                  aria-label={`Mer om ${child.name} (kalender, belöningar, Medaljer)`}
+                  className="icon-button shared-child-thread__info-btn"
+                  onClick={() => setExpandedChildId(expanded ? null : child.id)}
+                  type="button"
+                >
+                  <Info size={14} />
+                </button>
+              </div>
             </div>
+
+            {expanded && (
+              <div className="shared-child-thread__details">
+                <p className="shared-child-thread__stars">⭐ {stars.approved - stars.spent} stjärnor</p>
+
+                <p className="shared-child-thread__details-title">Kommande i kalendern</p>
+                {calendarEvents.length === 0 ? (
+                  <p className="todo-thread__empty">Inget inbokat den närmaste tiden.</p>
+                ) : (
+                  <ul className="shared-child-thread__details-list">
+                    {calendarEvents.slice(0, 4).map((e) => (
+                      <li key={e.id}>{formatEventDate(e.startsAt)} — {e.title}</li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="shared-child-thread__details-title">Köpta belöningar</p>
+                {purchasedRewards.length === 0 ? (
+                  <p className="todo-thread__empty">Inga köp än.</p>
+                ) : (
+                  <ul className="shared-child-thread__details-list">
+                    {purchasedRewards.slice(0, 4).map((p) => (
+                      <li key={p.id}>{p.itemTitle} ({p.starCost} ⭐)</li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="shared-child-thread__details-title">Medaljer/Rekord</p>
+                {timedTasks.length === 0 ? (
+                  <p className="todo-thread__empty">Inga tidtagna uppgifter än.</p>
+                ) : (
+                  <ul className="shared-child-thread__details-list">
+                    {timedTasks.map((t) => (
+                      <li key={t.id}>
+                        {t.title}: {t.bestDurationMs !== null ? formatDuration(t.bestDurationMs) : "Inget rekord än"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {pending.length === 0 ? (
               <p className="todo-thread__empty">Allt avklarat här 🎉</p>

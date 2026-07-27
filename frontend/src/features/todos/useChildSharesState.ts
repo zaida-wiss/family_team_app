@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { membersApi, todosApi } from "../../api";
 import type { ChildShare, ChildShareCandidate } from "../../api/members";
-import type { SharedChildTodos } from "../../api/todos";
+import type { SharedChildData } from "../../api/todos";
 import type { AccessLevel, Id } from "@shared/types";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
@@ -11,7 +11,7 @@ import type { AccessLevel, Id } from "@shared/types";
 // används i Inställningar → Barn).
 
 export function useSharedChildrenTodos() {
-  const [sharedChildren, setSharedChildren] = useState<SharedChildTodos[]>([]);
+  const [sharedChildren, setSharedChildren] = useState<SharedChildData[]>([]);
 
   const refresh = useCallback(() => {
     todosApi.getSharedChildren().then(setSharedChildren).catch(console.error);

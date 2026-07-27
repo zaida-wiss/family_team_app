@@ -10,7 +10,17 @@ import { decryptField, decryptNullable, encryptField, encryptNullable } from "..
 import { writeAuditLog } from "./auditLogService.js";
 import { getAllRoles } from "./rolesService.js";
 import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, getChildShareAccess, hasPermission } from "../../../shared/permissions.js";
-import type { Member, Role, Todo } from "../../../shared/types.js";
+import type { CalendarEvent, Member, Role, Todo } from "../../../shared/types.js";
+// Dela ALLT kopplat till barnets konto, inte bara todos (2026-07-27, Zaidas
+// önskemål: "en förälder som tillhör en annan familj ska få åtkomst till
+// allt som är kopplat till barnets konto") — getSharedChildrenData nedan
+// återanvänder varje domäns egen befintliga hämtningsfunktion rakt av
+// (samma mönster som accountsService.ts:s exportAccount, som redan
+// importerar tvärs över flera services för en aggregerad vy), ingen
+// duplicerad hämtningslogik.
+import { getAllCalendars } from "./calendarsService.js";
+import { getPurchasedRewardsForMember } from "./rewardShopService.js";
+import { getAllTimedTasks } from "./timedTasksService.js";
 
 // Servern litade tidigare bara på att frontend gömde knapparna bakom
 // canCompleteTodo/hasPermission(..., "canApproveTodos") — vem som helst
@@ -130,17 +140,29 @@ export async function getTodosHistoryPage(accountId: string, page: number, pageS
   };
 }
 
-// Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22) — hittar
+// Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22), utökad
+// 2026-07-27 till ALLT kopplat till barnets konto (Zaidas önskemål) — hittar
 // alla barn (i VILKET konto som helst) som delat med den inloggade
-// medlemmen, och återanvänder getAllTodos ovan per barns EGET konto (samma
-// dekryptering/kvarhållningsfönster, ingen duplicerad logik) — filtrerar
-// sedan ner till just det barnets tilldelade uppgifter.
-export async function getSharedChildrenTodos(callerMemberId: string, callerAccountId: string) {
+// medlemmen, och återanvänder varje domäns egen befintliga hämtningsfunktion
+// per barns EGET konto (samma dekryptering/kvarhållningsfönster som varje
+// domän redan har, ingen duplicerad logik) — filtrerar sedan ner till just
+// det barnet. Todos-mutationer (complete) var redan implementerade sedan
+// ADR-0024 och är oförändrade; kalender/belöningar/Medaljer är MEDVETET
+// bara läsbara i denna första version (samma "godkännande/stjärnor sker
+// bara i barnets eget konto"-princip som redan gäller todos) — se ADR-0024s
+// uppföljningsavsnitt.
+export async function getSharedChildrenData(callerMemberId: string, callerAccountId: string) {
   const children = await MemberModel.find({
     isChild: true,
     deletedAt: null,
     childSharedWith: { $elemMatch: { memberId: callerMemberId, accountId: callerAccountId } }
   });
+
+  const now = new Date();
+  const untilDate = new Date(now);
+  untilDate.setDate(untilDate.getDate() + 30);
+  const fromStr = now.toISOString().slice(0, 10);
+  const untilStr = untilDate.toISOString().slice(0, 10);
 
   const results = [];
   for (const child of children) {
@@ -148,7 +170,14 @@ export async function getSharedChildrenTodos(callerMemberId: string, callerAccou
       (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
     );
     if (!grant) continue;
-    const accountTodos = await getAllTodos(child.accountId);
+
+    const [accountTodos, calendars, purchased, timedTasks] = await Promise.all([
+      getAllTodos(child.accountId),
+      getAllCalendars(child.accountId, fromStr, untilStr),
+      getPurchasedRewardsForMember(child.accountId, child.id, 25),
+      getAllTimedTasks(child.accountId)
+    ]);
+
     results.push({
       child: {
         id: child.id,
@@ -159,7 +188,15 @@ export async function getSharedChildrenTodos(callerMemberId: string, callerAccou
         dashboardTheme: child.dashboardTheme
       },
       access: grant.access,
-      todos: accountTodos.filter((t) => t.assignedTo === child.id)
+      todos: accountTodos.filter((t) => t.assignedTo === child.id),
+      // Nästa 30 dagar, samma fönster som CalendarPanel default visar —
+      // en delnings-vy är tänkt för samordning framåt, inte historik.
+      calendarEvents: calendars
+        .filter((c) => c.ownerId === child.id)
+        .flatMap((c) => c.events.map((e: CalendarEvent) => ({ ...e, calendarName: c.name }))),
+      purchasedRewards: purchased,
+      stars: { approved: child.approvedStars, spent: child.spentStars },
+      timedTasks: timedTasks.filter((t) => t.assignedTo === child.id)
     });
   }
   return results;
