@@ -11,16 +11,20 @@ import { useState, useEffect } from "react";
 import "../children/ChildDashboard.css";
 import "../children/ChildResponsive.css";
 
-// En vuxens egen uppgifter+kalender-vy (2026-07-22, Zaidas önskemål: "jag
+// En vuxen medlems uppgifter+kalender-vy (2026-07-22, Zaidas önskemål: "jag
 // vill kunna se mina uppgifter och kalendrar på samma sätt som barnen gör
-// när jag trycker på min profilbild") — visas när en vuxen väljer SIG
-// SJÄLV i medlemsväljaren (inte en annan vuxen, som fortsatt visar den
-// vanliga HomePage/"hemvy för den personen"). Återanvänder samma
-// underkomponenter/interaktionsmönster som ChildDashboard.tsx (timeline,
-// veckoremsa, håll-in-för-att-klarmarkera) — bara utan stjärnor/
-// belöningsbutik/önskningar, som inte gäller för en vuxens egna uppgifter.
-// Samma .child-dashboard-layoutklasser återanvänds (grid/flex, inte
-// temafärger) med MEDLEMMENS EGET tema istället för barnens "space".
+// när jag trycker på min profilbild") — visas när VILKEN vuxen som helst
+// väljs i medlemsväljaren, inte bara vid självval (2026-07-27, Zaidas fynd:
+// "får alla vuxna även en barnvy? Nu står Lars som förälder och han får
+// ingen barnvy" — reverserar 2026-07-22-beslutets uttryckliga undantag för
+// "en vuxen som väljer en ANNAN vuxen"). Komponenten själv har aldrig antagit
+// att `member` är den inloggade — `member` är helt enkelt VALD medlem, redan
+// generisk. Återanvänder samma underkomponenter/interaktionsmönster som
+// ChildDashboard.tsx (timeline, veckoremsa, håll-in-för-att-klarmarkera) —
+// bara utan stjärnor/belöningsbutik/önskningar, som inte gäller för en
+// vuxens egna uppgifter. Samma .child-dashboard-layoutklasser återanvänds
+// (grid/flex, inte temafärger) med MEDLEMMENS EGET tema istället för
+// barnens "space".
 type Props = {
   member: Member;
   calendars: Calendar[];

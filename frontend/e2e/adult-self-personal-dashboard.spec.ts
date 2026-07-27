@@ -5,9 +5,13 @@ import { test, expect } from "@playwright/test";
 // samma sätt som barnen gör när jag trycker på min profilbild inne i
 // familjemedlemmars vyn." Ny PersonalDashboard.tsx återanvänder ChildDashboards
 // underkomponenter (timeline, veckoremsa, uppgiftskort med håll-in) utan
-// stjärnor/belöningsbutik, som inte gäller en vuxens egna uppgifter. Gäller
-// bara SJÄLV-val — väljer man en ANNAN vuxen ska den vanliga hemvyn visas
-// oförändrat (regressionskoll i andra testet).
+// stjärnor/belöningsbutik, som inte gäller en vuxens egna uppgifter.
+//
+// 2026-07-27, Zaidas fynd: "får alla vuxna även en barnvy? Nu står Lars som
+// förälder och han får ingen barnvy" — 2026-07-22-beslutets undantag för
+// "väljer man en ANNAN vuxen visas ändå den vanliga hemvyn" reverserat.
+// Andra testet nedan uppdaterat till det NYA beteendet (visade tidigare det
+// omvända).
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -45,6 +49,7 @@ const TODO = {
   rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
   personalCategoryId: null, notes: null
 };
+const LARS_TODO = { ...TODO, id: "todo-2", title: "Klippa gräset", createdBy: "mem-2", assignedTo: "mem-2" };
 const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" };
 const LOGIN_RESPONSE = { accessToken: "fake-access-token", user: USER, memberships: [{ member: PARENT, account: ACCOUNT }] };
 
@@ -53,7 +58,7 @@ async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO, LARS_TODO] }));
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
@@ -81,14 +86,15 @@ test("vuxen som klickar sin egen profil ser sina uppgifter+kalender, inte Familj
   await expect(page.getByText("Familjens kalender")).toHaveCount(0);
 });
 
-test("vuxen som klickar en ANNAN vuxens profil ser fortfarande den vanliga hemvyn, oförändrat", async ({ page }) => {
+test("vuxen som klickar en ANNAN vuxens profil ser NU den personens uppgifter+kalender också", async ({ page }) => {
   await mockCommon(page);
   await page.goto("/");
 
   await page.getByRole("button", { name: "Medlemmar" }).click();
   await page.getByRole("button", { name: /Lars/ }).click();
 
-  await expect(page.getByText("Hej Testförälder!")).toHaveCount(0);
+  await expect(page.getByText("Hej Lars!")).toBeVisible();
+  await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expect(page.getByText("Handla mat")).toHaveCount(0);
-  await expect(page.getByText("Familjens kalender")).toBeVisible();
+  await expect(page.getByText("Familjens kalender")).toHaveCount(0);
 });

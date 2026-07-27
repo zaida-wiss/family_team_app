@@ -239,26 +239,29 @@ export function MemberShellContent({
   // samma ChildDashboard/ChildRecordsPage som barnet self ser inloggat.
   const selectedMemberIsChild =
     !!selectedDashboardMember && (selectedDashboardMember.isChild || !!selectedMemberRole?.isChildRole);
-  // Vuxnas eget profilklick (2026-07-22, Zaidas önskemål: "jag vill kunna se
-  // mina uppgifter och kalendrar på samma sätt som barnen gör när jag
-  // trycker på min profilbild") — bara vid SJÄLV-val, en vuxen som väljer en
-  // ANNAN vuxen ser fortfarande den vanliga HomePage/"hemvy för den
-  // personen" längre ner, oförändrat.
-  const selectedMemberIsSelf = !!selectedDashboardMember && selectedDashboardMember.id === currentMember.id;
 
-  // 2026-07-23 (Zaidas beslut, reverserar ovanstående 2026-07-22-önskemål):
-  // ett medlemsval ska bara ha effekt på Medlemmar-panelen — Hem/Kalender/
-  // Todos/Inköp visar alltid den inloggades EGEN vy. useAppState.ts:s
-  // setActivePanel rensar redan selectedDashboardMemberId vid varje
-  // nav-klick, så detta borde strukturellt aldrig triggas utanför
+  // Alla medlemmar (2026-07-27, Zaidas fynd: "får alla vuxna även en
+  // barnvy? Nu står Lars som förälder och han får ingen barnvy") — ett
+  // medlemsval visar nu PersonalDashboard/ChildDashboard för VILKEN medlem
+  // som helst, inte bara vid SJÄLV-val (2026-07-22-beslutet, som uttryckligen
+  // undantog "en vuxen som väljer en ANNAN vuxen", reverserat här på Zaidas
+  // begäran). Datan var redan tillgänglig för den inloggade (samma
+  // todos/calendars-props som redan speglas i tråd-vyn/kalenderpanelen,
+  // scopade av den vanliga behörighetsmodellen innan de ens når hit) — det
+  // här ändrar bara PRESENTATIONEN, inte vad som blir synligt.
+  //
+  // 2026-07-23: ett medlemsval ska bara ha effekt på Medlemmar-panelen —
+  // Hem/Kalender/Todos/Inköp visar alltid den inloggades EGEN vy.
+  // useAppState.ts:s setActivePanel rensar redan selectedDashboardMemberId
+  // vid varje nav-klick, så detta borde strukturellt aldrig triggas utanför
   // activePanel==="members" — men kontrollen läggs ändå till explicit här,
-  // eftersom en medlem sparad FÖRE denna ändring kan ha ett gammalt
+  // eftersom en medlem sparad FÖRE den ändringen kan ha ett gammalt
   // lastActivePanel:"home" ihop med ett kvarvarande
   // lastSelectedDashboardMemberId (då satte MembersView.tsx:s val alltid om
   // lastActivePanel till "home") — utan denna extra spärr hade en sådan
-  // medlem sett barnets/den andras dashboard på Hem igen efter en enda
+  // medlem sett en annans dashboard på Hem igen efter en enda
   // sidomladdning, med fel nav-ikon markerad.
-  if ((selectedMemberIsChild || selectedMemberIsSelf) && selectedDashboardMember && activePanel === "members") {
+  if (selectedDashboardMember && activePanel === "members") {
     const now = Date.now();
     // Ogömda/tilldelade uppgifter bara (2026-07-22, Zaidas önskemål: "mallar
     // till listor och undanlagda listor skall inte stå med i barnvyn ens för
