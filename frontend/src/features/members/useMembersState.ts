@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { membersApi } from "../../api";
 import { readCache, writeCache } from "../../utils/localCache";
-import { deferToIdle } from "../../utils/deferToIdle";
 import type {
   AppPanel,
   CalendarFilterKey,
@@ -29,11 +28,20 @@ export function useMembersState() {
   const [members, setMembers] = useState<Member[]>(() => readCache(MEMBERS_CACHE_KEY, []));
 
   useEffect(() => {
-    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
-    // S1a) — se deferToIdle.ts. currentMember (useAppState.ts) faller redan
-    // tillbaka på initialMembership.member tills denna hämtning landat, så
-    // en liten extra fördröjning här ändrar ingenting synligt.
-    deferToIdle(() => { membersApi.getAll().then(setMembers).catch(console.error); });
+    // INTE längre uppskjuten till requestIdleCallback (2026-07-27, hittat som
+    // grundorsak till ett flakigt e2e-test — member-dashboard-refresh.spec.ts:
+    // "lastActivePanel=members + ett medlemsval stannar kvar på barnets
+    // dashboard efter en sidomladdning"). 2026-07-26-optimeringen (S1a)
+    // resonerade bara kring currentMember (useAppState.ts, som redan faller
+    // tillbaka på initialMembership.member) — men missade att
+    // MemberShellContent.tsx:s selectedMember slås upp via
+    // activeMembers.find(...), och activeMembers är tom tills DENNA hämtning
+    // landat. En sidomladdning medan man tittar på ett barns dashboard visade
+    // därför ingenting (eller tomt) tills requestIdleCallback råkade fyra —
+    // under belastning kan det dröja långt förbi vad en användare (eller ett
+    // test) rimligen väntar på, eftersom idle callbacks medvetet INTE har
+    // någon garanterad övre tidsgräns. Hämtas nu direkt igen, som innan S1a.
+    membersApi.getAll().then(setMembers).catch(console.error);
   }, []);
 
   useEffect(() => {
