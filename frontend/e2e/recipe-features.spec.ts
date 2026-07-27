@@ -247,6 +247,9 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar m
 
   const shoppingDialog = page.getByRole("dialog", { name: "Handlingslista från Köttfärssås" });
   await expect(shoppingDialog.getByLabel("Antal personer")).toHaveValue("4");
+  // 2026-07-27, Zaidas önskemål: "recept på default blir en lista som
+  // heter 'ingredienser till recept'" — inte bara receptets eget namn.
+  await expect(shoppingDialog.getByLabel("Namn på ny lista")).toHaveValue("Ingredienser till Köttfärssås");
   // Ändrar till 6 personer (receptet är sparat för 4) — mängden ska skalas.
   await shoppingDialog.getByLabel("Antal personer").fill("6");
   await shoppingDialog.getByRole("button", { name: "Lägg till" }).click();
@@ -256,6 +259,7 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar m
   // huvudnavets Inköp-knapp.
   await page.getByRole("button", { name: "Tillbaka" }).click();
   await page.getByRole("button", { name: "Inköp" }).click();
+  await expect(page.getByText("Ingredienser till Köttfärssås")).toBeVisible();
   await expect(page.getByText("📐 Skalat från 4 till 6 personer")).toBeVisible();
   await expect(page.getByText("750 g köttfärs")).toBeVisible();
 });

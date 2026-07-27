@@ -25,7 +25,11 @@ export function AddToShoppingListModal({ recipe, shoppingLists, initialServings,
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const activeLists = shoppingLists.filter((l) => l.deletedAt === null);
   const [targetListId, setTargetListId] = useState<string>(activeLists[0]?.id ?? NEW_LIST_VALUE);
-  const [newListName, setNewListName] = useState(recipe.name);
+  // Förvalt listnamn (2026-07-27, Zaidas önskemål: "recept på default blir
+  // en lista som heter 'ingredienser till recept'") — var tidigare bara
+  // receptets eget namn, kunde se ut som en enda inköpsvara snarare än en
+  // hel lista.
+  const [newListName, setNewListName] = useState(`Ingredienser till ${recipe.name}`);
   // Räknar om mängderna som HAR mängd/enhet (2026-07-26, Zaidas önskemål:
   // "sen måste vi fixa mängd och enheter") — en ingrediens utan strukturerad
   // mängd (t.ex. "Salt efter smak") läggs till oförändrad, precis som förut.
