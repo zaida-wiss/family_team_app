@@ -193,6 +193,10 @@ test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i upp
   await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Skapa uppgift" }).click();
 
   const createDialog = page.getByRole("dialog", { name: "Skapa uppgift av Köttfärssås" });
+  // 2026-07-27, Zaidas önskemål: "Uppgifter skall som default bli rubriken
+  // på receptet" — förvalt till receptets namn, men en egen redigerbar
+  // Titel-input (fanns inte alls tidigare, hårdkodat).
+  await expect(createDialog.getByLabel("Titel")).toHaveValue("Köttfärssås");
   await expect(createDialog.getByLabel("Antal personer")).toHaveValue("4");
   await createDialog.locator('input[type="datetime-local"]').fill("2026-08-01T12:00");
   await createDialog.getByRole("button", { name: "Skapa" }).click();
@@ -201,6 +205,30 @@ test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i upp
   // och antal från receptet?" — anteckningarna innehåller nu även den
   // (vid behov skalade) ingredienslistan, inte bara antalet personer.
   await expect.poll(() => createdBody?.notes).toBe("Räknat för 4 personer.\n\nIngredienser:\n– 500 g köttfärs");
+  await expect.poll(() => createdBody?.title).toBe("Köttfärssås");
+});
+
+test("Skapa uppgift-modalens Titel-fält går att ändra, sparas som uppgiftens titel istället för receptets namn", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE]);
+  let createdBody: Record<string, unknown> | null = null;
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() !== "POST") return route.fulfill({ json: [] });
+    createdBody = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: { id: "todo-new" } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Skapa uppgift" }).click();
+
+  const createDialog = page.getByRole("dialog", { name: "Skapa uppgift av Köttfärssås" });
+  await createDialog.getByLabel("Titel").fill("Laga middag ikväll");
+  await createDialog.locator('input[type="datetime-local"]').fill("2026-08-01T12:00");
+  await createDialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdBody?.title).toBe("Laga middag ikväll");
 });
 
 // 2026-07-27, Zaidas fynd: "visual value is required" när hon skapade en

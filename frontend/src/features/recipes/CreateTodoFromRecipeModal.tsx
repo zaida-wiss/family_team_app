@@ -40,13 +40,20 @@ const DEFAULT_EMOJI = "⭐";
 export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServings, onCreateTodo, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [when, setWhen] = useState("");
+  // Uppgiftens titel (2026-07-27, Zaidas önskemål: "Uppgifter skall som
+  // default bli rubriken på receptet") — förvalt till receptets namn men
+  // redigerbart, samma mönster som Handlingslista-modalens "Namn på ny
+  // lista"-fält. Var tidigare hårdkodat till recipe.name utan någon egen
+  // input alls.
+  const [title, setTitle] = useState(recipe.name);
   // Sträng-baserat lokalt state (samma mönster som RecipeFormModal.tsx:s
   // servingsInput).
   const [servingsInput, setServingsInput] = useState(initialServings != null ? String(initialServings) : "");
+  const canSubmit = when.length > 0 && title.trim().length > 0;
 
   function submit() {
     const visibleFrom = toDateTimeString(when);
-    if (!visibleFrom) return;
+    if (!visibleFrom || !title.trim()) return;
     const servings = servingsInput ? Math.max(1, Math.floor(Number(servingsInput)) || 0) || null : null;
     // Ingredienslistan i anteckningarna (2026-07-27, Zaidas fråga: "är
     // todo-kopian... uppdaterad med enheterna och antal från receptet?") —
@@ -59,7 +66,7 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
     ].filter((line): line is string => line !== null);
     onCreateTodo({
       id: `todo-${generateId()}`,
-      title: recipe.name,
+      title: title.trim(),
       createdBy: currentMember.id,
       assignedTo: null,
       isShared: false,
@@ -115,6 +122,10 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
           Skapar en uppgift i Familjen-tråden med ett delmoment per steg — {recipe.steps.length} steg totalt.
         </p>
         <label className="field-label">
+          Titel
+          <input autoFocus className="text-input" onChange={(e) => setTitle(e.target.value)} value={title} />
+        </label>
+        <label className="field-label">
           Datum och tid
           <input className="text-input" onChange={(e) => setWhen(e.target.value)} type="datetime-local" value={when} />
         </label>
@@ -130,7 +141,7 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
         </label>
         <div className="recipe-form__actions">
           <button className="secondary-button" onClick={onClose} type="button">Avbryt</button>
-          <button className="primary-button" disabled={!when} onClick={submit} type="button">Skapa</button>
+          <button className="primary-button" disabled={!canSubmit} onClick={submit} type="button">Skapa</button>
         </div>
       </div>
     </div>
