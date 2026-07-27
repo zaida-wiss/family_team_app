@@ -97,6 +97,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onUpdateTodoThreadGap,
     todoBubbleSize,
     onUpdateTodoBubbleSize,
+    shoppingShowCompletedDefault,
+    onUpdateShoppingShowCompletedDefault,
     personalCategories,
     onCreateCategory,
     onSetCategoryHidden,
@@ -394,19 +396,39 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           id: "shopping-lists",
           label: "Inköpslistor",
           content: (
-            <ShoppingListsPanel
-              managementOnly
-              currentMember={currentMember}
-              members={members}
-              roles={roles}
-              shoppingLists={shoppingLists}
-              onAddItem={memberContentProps.onAddShoppingItem}
-              onCreateList={memberContentProps.onCreateShoppingList}
-              onDeleteList={memberContentProps.onDeleteShoppingList}
-              onShareList={memberContentProps.onShareShoppingList}
-              onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
-              onToggleItem={memberContentProps.onToggleShoppingItem}
-            />
+            <>
+              {/* Standardläge för "Visa avklarade" i Inköp-panelen
+                  (2026-07-27, Zaidas önskemål: "defaultläge skall gå att
+                  ställa in under inköpslistorna i inställningarna") — gäller
+                  bara listor utan ett eget, redan sparat val på DENNA enhet
+                  (se ShoppingView.tsx, localStorage). */}
+              <div className="settings-sub">
+                <label className="field-label toggle-label">
+                  <span>Visa avklarade som standard</span>
+                  <input
+                    checked={shoppingShowCompletedDefault ?? true}
+                    onChange={(e) => onUpdateShoppingShowCompletedDefault(e.target.checked)}
+                    type="checkbox"
+                  />
+                </label>
+                <p className="settings-sub-desc">
+                  Gäller listor du inte redan valt ett eget läge för på just den här enheten.
+                </p>
+              </div>
+              <ShoppingListsPanel
+                managementOnly
+                currentMember={currentMember}
+                members={members}
+                roles={roles}
+                shoppingLists={shoppingLists}
+                onAddItem={memberContentProps.onAddShoppingItem}
+                onCreateList={memberContentProps.onCreateShoppingList}
+                onDeleteList={memberContentProps.onDeleteShoppingList}
+                onShareList={memberContentProps.onShareShoppingList}
+                onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
+                onToggleItem={memberContentProps.onToggleShoppingItem}
+              />
+            </>
           )
         }
       ]

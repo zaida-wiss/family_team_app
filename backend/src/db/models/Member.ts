@@ -35,6 +35,7 @@ const memberSchema = new Schema<Member>({
   // Samma tre-lager-fälla som todoThreadGap ovan (2026-07-26) — lagt till
   // här SAMTIDIGT som Zod/routen denna gång, inte i efterhand.
   todoBubbleSize: { type: Number, default: undefined },
+  shoppingShowCompletedDefault: { type: Boolean, default: undefined },
   spentStars: { type: Number, default: 0 },
   approvedStars: { type: Number, default: 0 },
   // Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22) — se

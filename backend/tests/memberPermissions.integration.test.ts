@@ -196,6 +196,24 @@ describe.skipIf(!RUN)("membersService: server-side behörighetskontroll", () => 
     expect(refetched?.todoBubbleSize).toBe(120);
   });
 
+  it("shoppingShowCompletedDefault sparas verkligen till databasen, inte bara ett 200-svar", async () => {
+    const patchRes = await request(app)
+      .patch(`/api/members/${restrictedMemberId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ shoppingShowCompletedDefault: false });
+    expect(patchRes.status).toBe(200);
+
+    const listRes = await request(app)
+      .get("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    const refetched = (listRes.body as Array<{ id: string; shoppingShowCompletedDefault?: boolean }>).find(
+      (m) => m.id === restrictedMemberId
+    );
+    expect(refetched?.shoppingShowCompletedDefault).toBe(false);
+  });
+
   it("tillåter en medlem att patcha sitt EGET tema utan canManageMembers", async () => {
     const res = await request(app)
       .patch(`/api/members/${restrictedMemberId}`)

@@ -275,6 +275,9 @@ export function useShellState(
     onReorderShoppingItems: reorderShoppingItems,
     onClearCompletedShoppingItems: (listId: string) =>
       clearCompletedShoppingItems(listId, currentMember.id),
+    // Standardläge för "Visa avklarade" (2026-07-27, Zaidas önskemål) — väljs
+    // i Inställningar, se settingsProps nedan.
+    shoppingShowCompletedDefault: currentMember.shoppingShowCompletedDefault,
     ...sharedChildProps
   };
 
@@ -344,6 +347,9 @@ export function useShellState(
     todoBubbleSize: currentMember.todoBubbleSize,
     onUpdateTodoBubbleSize: (size: number) =>
       updateMemberNavigation(currentMember.id, { todoBubbleSize: size }),
+    shoppingShowCompletedDefault: currentMember.shoppingShowCompletedDefault,
+    onUpdateShoppingShowCompletedDefault: (value: boolean) =>
+      updateMemberNavigation(currentMember.id, { shoppingShowCompletedDefault: value }),
     onUpdateChildTimelineSettings: updateChildTimelineSettings,
     onAssignRole: assignRole,
     onCreateRole: createRole,

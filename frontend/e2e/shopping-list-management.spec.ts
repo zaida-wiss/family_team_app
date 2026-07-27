@@ -135,6 +135,63 @@ test("bockade varor hamnar sist när de visas, kan döljas med en toggle", async
   await expect(page.getByText("Läsk")).toBeVisible();
 });
 
+// 2026-07-27, Zaidas fynd: "sparas inställningen om jag växlar vy... det ska
+// sparas på enheten" — växeln var tidigare bara lokal komponent-state,
+// nollställdes vid ny sidomladdning/panelbyte. Sparas nu i localStorage.
+test("Visa avklarade-valet sparas på enheten, överlever en omladdning", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-3", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null,
+    items: [shoppingItem({ id: "item-ost", title: "Ost", done: true })],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await expect(page.getByText("Ost")).toBeVisible();
+
+  await page.getByRole("switch", { name: "Visa avklarade" }).click();
+  await expect(page.getByText("Ost")).toHaveCount(0);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await expect(page.getByText("Ost")).toHaveCount(0);
+});
+
+// 2026-07-27, Zaidas önskemål: "defaultläge skall gå att ställa in under
+// inköpslistorna i inställningarna" — gäller bara listor UTAN ett eget,
+// redan sparat val på just den här enheten (ren localStorage, en ny lista
+// har aldrig ett värde där).
+test("Standardläget för Visa avklarade i Inställningar styr en lista utan eget sparat val", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-4", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null,
+    items: [shoppingItem({ id: "item-smor", title: "Smör", done: true })],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  let savedDefault: boolean | null = null;
+  await page.route("**/api/members/mem-1", (route) => {
+    const body = route.request().postDataJSON() as { shoppingShowCompletedDefault?: boolean };
+    if (body.shoppingShowCompletedDefault !== undefined) savedDefault = body.shoppingShowCompletedDefault;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Inköpslistor" }).click();
+  await page.getByLabel("Visa avklarade som standard").uncheck();
+  await expect.poll(() => savedDefault).toBe(false);
+
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
+  await expect(page.getByText("Smör")).toHaveCount(0);
+});
+
 test("Töm listan (i redigeringsläge) rensar bara bockade varor", async ({ page }) => {
   await mockCommon(page);
   const list = {

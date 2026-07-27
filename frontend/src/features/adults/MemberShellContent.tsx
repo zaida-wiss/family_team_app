@@ -111,6 +111,7 @@ type Props = {
   onDeleteShoppingItem: (listId: string, itemId: string) => void;
   onReorderShoppingItems: (listId: string, itemIds: string[]) => void;
   onClearCompletedShoppingItems: (listId: string) => void;
+  shoppingShowCompletedDefault?: boolean;
   calendarSettings?: CalendarSettings;
   otherFamilies: Membership[];
   onSwitchFamily: (m: Membership) => void;
@@ -148,6 +149,7 @@ export function MemberShellContent({
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onReorderShoppingItems, onClearCompletedShoppingItems,
+  shoppingShowCompletedDefault,
   onCreateShoppingList, onDeleteShoppingList, onShareShoppingList, onRemoveShoppingListShare,
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
@@ -386,6 +388,7 @@ export function MemberShellContent({
           members={activeMembers}
           roles={roles}
           shoppingLists={canSeeShopping ? shoppingLists : []}
+          showCompletedDefault={shoppingShowCompletedDefault}
           onAddItem={onAddShoppingItem}
           onToggleItem={onToggleShoppingItem}
           onDeleteItem={onDeleteShoppingItem}

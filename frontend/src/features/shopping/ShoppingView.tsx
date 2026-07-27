@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { SharedShoppingLists } from "./SharedShoppingLists";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
+import { readCache, writeCache } from "../../utils/localCache";
 import {
   canEditSharedResource,
   canViewResource,
@@ -12,18 +13,26 @@ import styles from "./ShoppingLists.module.css";
 import type { AccessLevel, Id, Member, Role, ShoppingList } from "@shared/types";
 
 const DRAG_THRESHOLD_PX = 8;
+const SHOW_COMPLETED_CACHE_KEY = "shopping_show_completed_v1";
 
 // Visning av bockade varor + redigeringsläge (2026-07-22, Zaidas önskemål:
-// "tänk minimalistiskt") — bara lokalt, icke-persisterat UI-state per lista,
-// återställs vid ny sidomladdning/panelbyte. Synliga bockade varor hamnar
-// alltid sist. Raderaknappen per rad och delningspanelen visas bara i
-// redigeringsläge, inte hela tiden — Redigera-knappen är medvetet bara en
+// "tänk minimalistiskt"). "Visa avklarade" per lista sparas nu på ENHETEN
+// (2026-07-27, Zaidas fynd: "sparas inställningen [inte] om jag växlar vy...
+// det ska sparas på enheten") — var tidigare bara lokal komponent-state,
+// nollställdes vid varje panelbyte (samma remount-mönster som redan
+// dokumenterats för andra paneler, ErrorBoundary key={activePanel}). En
+// lista som aldrig fått ett eget val på DENNA enhet faller tillbaka på
+// showCompletedDefault (medlemmens inställning, Inställningar →
+// Inköpslistor), annars "visa" — oförändrat beteende. Synliga bockade varor
+// hamnar alltid sist. Raderaknappen per rad och delningspanelen visas bara
+// i redigeringsläge, inte hela tiden — Redigera-knappen är medvetet bara en
 // ikon (ingen text).
 type Props = {
   currentMember: Member;
   members: Member[];
   roles: Role[];
   shoppingLists: ShoppingList[];
+  showCompletedDefault?: boolean;
   onAddItem: (listId: Id, title: string) => void;
   onToggleItem: (listId: Id, itemId: Id) => void;
   onDeleteItem: (listId: Id, itemId: Id) => void;
@@ -51,6 +60,7 @@ export function ShoppingView({
   members,
   roles,
   shoppingLists,
+  showCompletedDefault,
   onAddItem,
   onToggleItem,
   onDeleteItem,
@@ -62,7 +72,19 @@ export function ShoppingView({
   onRemoveListShare
 }: Props) {
   const [draftItems, setDraftItems] = useState<Record<Id, string>>({});
-  const [showCompleted, setShowCompleted] = useState<Record<Id, boolean>>({});
+  // Sparat på ENHETEN, inte per komponent-mount (se filhuvudets kommentar) —
+  // lazy-init från localStorage, skrivs om vid varje ändring.
+  const [showCompleted, setShowCompleted] = useState<Record<Id, boolean>>(() =>
+    readCache(SHOW_COMPLETED_CACHE_KEY, {})
+  );
+
+  function setListShowCompleted(listId: Id, value: boolean) {
+    setShowCompleted((prev) => {
+      const next = { ...prev, [listId]: value };
+      writeCache(SHOW_COMPLETED_CACHE_KEY, next);
+      return next;
+    });
+  }
   const [editingLists, setEditingLists] = useState<Record<Id, boolean>>({});
   const [sharingListId, setSharingListId] = useState<Id | null>(null);
   const [shareDrafts, setShareDrafts] = useState<Record<Id, ShareDraft>>({});
@@ -244,7 +266,7 @@ export function ShoppingView({
         const editable = canEditList(list);
         const activeItems = list.items.filter((i) => i.deletedAt === null);
         const doneCount = activeItems.filter((i) => i.done).length;
-        const shouldShowCompleted = showCompleted[list.id] ?? true;
+        const shouldShowCompleted = showCompleted[list.id] ?? showCompletedDefault ?? true;
         const isEditing = editable && (editingLists[list.id] ?? false);
         const isSharing = sharingListId === list.id;
         const shareDraft = getShareDraft(list.id);
@@ -270,9 +292,7 @@ export function ShoppingView({
               <label className={styles.toggleSwitch}>
                 <input
                   checked={shouldShowCompleted}
-                  onChange={() =>
-                    setShowCompleted((prev) => ({ ...prev, [list.id]: !shouldShowCompleted }))
-                  }
+                  onChange={() => setListShowCompleted(list.id, !shouldShowCompleted)}
                   role="switch"
                   type="checkbox"
                 />

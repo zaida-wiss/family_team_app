@@ -257,6 +257,7 @@ export function useMembersState() {
       todoThreadRange?: TodoThreadRange;
       todoThreadGap?: number;
       todoBubbleSize?: number;
+      shoppingShowCompletedDefault?: boolean;
     }
   ) {
     setMembers((current) =>

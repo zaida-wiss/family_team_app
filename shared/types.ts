@@ -196,6 +196,13 @@ export type Member = {
   // Standard (osatt) faller tillbaka på den befintliga clamp()-formeln i
   // ParentTodoThreadView.css (skalar responsivt med skärmbredden).
   todoBubbleSize?: number;
+  // Standardläge för "Visa avklarade" i Inköp-panelen (2026-07-27, Zaidas
+  // önskemål: "defaultläge skall gå att ställa in under inköpslistorna i
+  // inställningarna") — väljs i Inställningar → Inköpslistor. Gäller bara
+  // listor som inte redan fått ett eget, lokalt sparat val på ENHETEN (se
+  // ShoppingView.tsx, localStorage — enhetsspecifikt, inte synkat via denna
+  // medlemsinställning). Standard (osatt) är "visa", oförändrat beteende.
+  shoppingShowCompletedDefault?: boolean;
   spentStars: number;
   approvedStars: number;
   // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
