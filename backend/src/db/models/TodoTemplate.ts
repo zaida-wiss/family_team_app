@@ -13,8 +13,13 @@ const todoTemplateSchema = new Schema<TodoTemplate>({
     type: { type: String, enum: ["lucide-icon", "image"], required: true },
     value: { type: String, required: true }
   },
+  // Anteckningar + delmomentens varaktighet (2026-07-27, Zaidas fynd:
+  // mallar tappade tyst en recept-skapad uppgifts ingredienslista/tidsstyrda
+  // steg) — samma "kom ihåg BÅDA Zod OCH Mongoose"-påminnelse som redan
+  // dokumenterats efter Member.todoThreadGap-bugen.
+  notes: { type: String, default: null },
   subtasks: {
-    type: [{ title: { type: String, required: true } }],
+    type: [{ title: { type: String, required: true }, timedMinutes: { type: Number, default: null } }],
     default: []
   },
   recurrence: { type: Schema.Types.Mixed, required: true },

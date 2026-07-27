@@ -197,7 +197,10 @@ test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i upp
   await createDialog.locator('input[type="datetime-local"]').fill("2026-08-01T12:00");
   await createDialog.getByRole("button", { name: "Skapa" }).click();
 
-  await expect.poll(() => createdBody?.notes).toBe("Räknat för 4 personer.");
+  // 2026-07-27, Zaidas fråga: "är todo-kopian... uppdaterad med enheterna
+  // och antal från receptet?" — anteckningarna innehåller nu även den
+  // (vid behov skalade) ingredienslistan, inte bara antalet personer.
+  await expect.poll(() => createdBody?.notes).toBe("Räknat för 4 personer.\n\nIngredienser:\n– 500 g köttfärs");
 });
 
 test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar mängderna som har mängd/enhet", async ({ page }) => {

@@ -255,9 +255,15 @@ export function TodoCreatorModal({
     setTitle(template.title);
     setEmoji(template.visual.value);
     setEmojiTouched(true);
+    setNotes(template.notes ?? "");
     setRecurrence(template.recurrence);
     setStarValueInput(String(template.starValue));
-    setSubtasks(template.subtasks.map((s) => ({ id: generateId(), title: s.title, done: false })));
+    setSubtasks(template.subtasks.map((s) => ({
+      id: generateId(),
+      title: s.title,
+      done: false,
+      timedMinutes: s.timedMinutes ?? null
+    })));
   }
 
   // Mallbibliotek: skapar en HEL kategori i ett svep utifrån en kategori-mall
@@ -292,8 +298,13 @@ export function TodoCreatorModal({
         deletedAt: null,
         deletedBy: null,
         personalCategoryId: category.id,
-        notes: null,
-        subtasks: task.subtasks.map((s) => ({ id: generateId(), title: s.title, done: false })),
+        notes: task.notes ?? null,
+        subtasks: task.subtasks.map((s) => ({
+          id: generateId(),
+          title: s.title,
+          done: false,
+          timedMinutes: s.timedMinutes ?? null
+        })),
         timerEnabled: false,
         plannedDurationMinutes: null,
         elapsedMs: null

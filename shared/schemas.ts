@@ -366,7 +366,11 @@ export const RejectTodoBodySchema = z.object({
 export const TodoTemplateTaskSchema = z.object({
   title: z.string().min(1, "Uppgiftstitel krävs"),
   visual: TodoVisualSchema,
-  subtasks: z.array(z.object({ title: z.string().min(1, "Delmomentets titel krävs") })),
+  notes: z.string().nullable().optional(),
+  subtasks: z.array(z.object({
+    title: z.string().min(1, "Delmomentets titel krävs"),
+    timedMinutes: z.number().nullable().optional()
+  })),
   recurrence: RecurrenceRuleSchema,
   starValue: z.number().int().min(0)
 });

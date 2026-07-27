@@ -3,6 +3,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { generateId } from "../../utils/uuid";
+import { ingredientDisplayText } from "./recipeScaling";
 import type { Id, Member, Recipe, Todo } from "@shared/types";
 
 type Props = {
@@ -31,15 +32,22 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [when, setWhen] = useState("");
   // Sträng-baserat lokalt state (samma mönster som RecipeFormModal.tsx:s
-  // servingsInput) — ingredienserna är fri text och räknas INTE om
-  // automatiskt (ingen strukturerad mängd/enhet), antalet sparas bara som
-  // en informativ notering på uppgiften.
+  // servingsInput).
   const [servingsInput, setServingsInput] = useState(initialServings != null ? String(initialServings) : "");
 
   function submit() {
     const visibleFrom = toDateTimeString(when);
     if (!visibleFrom) return;
     const servings = servingsInput ? Math.max(1, Math.floor(Number(servingsInput)) || 0) || null : null;
+    // Ingredienslistan i anteckningarna (2026-07-27, Zaidas fråga: "är
+    // todo-kopian... uppdaterad med enheterna och antal från receptet?") —
+    // skalade mängder (ingredientDisplayText, samma som Handlingslista-
+    // modalen redan använder) för de rader som har mängd, annars bara namnet.
+    const ingredientLines = recipe.ingredients.map((i) => `– ${ingredientDisplayText(i, recipe.servings, servings)}`);
+    const notesLines = [
+      servings ? `Räknat för ${servings} ${servings === 1 ? "person" : "personer"}.` : null,
+      ingredientLines.length > 0 ? ["Ingredienser:", ...ingredientLines].join("\n") : null
+    ].filter((line): line is string => line !== null);
     onCreateTodo({
       id: `todo-${generateId()}`,
       title: recipe.name,
@@ -63,7 +71,7 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
       deletedAt: null,
       deletedBy: null,
       personalCategoryId: null,
-      notes: servings ? `Räknat för ${servings} ${servings === 1 ? "person" : "personer"}.` : null,
+      notes: notesLines.length > 0 ? notesLines.join("\n\n") : null,
       subtasks: recipe.steps.map((step) => ({
         id: generateId() as Id,
         title: step.text,

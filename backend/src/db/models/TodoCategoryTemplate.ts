@@ -10,8 +10,10 @@ const taskSchema = {
     type: { type: String, enum: ["lucide-icon", "image"], required: true },
     value: { type: String, required: true }
   },
+  // Se TodoTemplate.ts:s motsvarande kommentar (2026-07-27).
+  notes: { type: String, default: null },
   subtasks: {
-    type: [{ title: { type: String, required: true } }],
+    type: [{ title: { type: String, required: true }, timedMinutes: { type: Number, default: null } }],
     default: []
   },
   recurrence: { type: Schema.Types.Mixed, required: true },

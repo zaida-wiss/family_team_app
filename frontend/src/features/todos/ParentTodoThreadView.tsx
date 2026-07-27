@@ -886,7 +886,8 @@ export function ParentTodoThreadView({
       .map((t) => ({
         title: t.title,
         visual: t.visual,
-        subtasks: (t.subtasks ?? []).map((s) => ({ title: s.title })),
+        notes: t.notes ?? null,
+        subtasks: (t.subtasks ?? []).map((s) => ({ title: s.title, timedMinutes: s.timedMinutes ?? null })),
         recurrence: t.recurrence,
         starValue: t.starValue
       }));

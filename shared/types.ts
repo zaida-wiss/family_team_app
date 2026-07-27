@@ -771,9 +771,18 @@ export type TodoCategory = {
 export type TodoTemplateTask = {
   title: string;
   visual: TodoVisual;
-  // Bara titlar — en färsk kopia från en mall ska alltid börja obockad, det
-  // finns ingen mening att spara done-status i en mall.
-  subtasks: { title: string }[];
+  // Anteckningar (2026-07-27, Zaidas fråga: "är mallarna uppdaterade med
+  // enheterna och antal från receptet?") — mallar saknade tidigare helt ett
+  // notes-fält, så en recept-skapad uppgifts ingredienslista (i notes)
+  // försvann tyst om man sparade den som mall. Delmomenten fick samtidigt
+  // tillbaka timedMinutes (fanns redan på riktiga TodoSubtask, men mallens
+  // egen, separata typ hade bara title) — annars tappades ett tidsstyrt
+  // delmoments varaktighet på samma sätt.
+  notes?: string | null;
+  // Bara titel+varaktighet — en färsk kopia från en mall ska alltid börja
+  // obockad/otilldelad, det finns ingen mening att spara done-status eller
+  // en specifik familjemedlems tilldelning i en mall.
+  subtasks: { title: string; timedMinutes?: number | null }[];
   recurrence: RecurrenceRule;
   starValue: number;
 };

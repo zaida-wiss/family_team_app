@@ -35,7 +35,8 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
   const task = {
     title: "Packa badkläder",
     visual: { type: "lucide-icon", value: "Shirt" },
-    subtasks: [{ title: "Handduk" }, { title: "Solglasögon" }],
+    notes: "Glöm inte solkräm.",
+    subtasks: [{ title: "Handduk" }, { title: "Solglasögon", timedMinutes: 15 }],
     recurrence: { type: "none" },
     starValue: 0
   };
@@ -77,7 +78,12 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
       .send(task);
     expect(res.status).toBe(201);
     expect(res.body.title).toBe("Packa badkläder");
+    // 2026-07-27, Zaidas fråga: "är mallarna uppdaterade med enheterna och
+    // antal från receptet?" — notes/subtask-timedMinutes saknades tidigare
+    // helt i mallens Mongoose-schema och Zod-schema.
+    expect(res.body.notes).toBe("Glöm inte solkräm.");
     expect(res.body.subtasks).toHaveLength(2);
+    expect(res.body.subtasks[1]).toMatchObject({ title: "Solglasögon", timedMinutes: 15 });
     taskTemplateId = res.body.id;
   });
 
@@ -108,6 +114,8 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     expect(res.status).toBe(201);
     expect(res.body.name).toBe("Packa");
     expect(res.body.tasks).toHaveLength(2);
+    expect(res.body.tasks[0].notes).toBe("Glöm inte solkräm.");
+    expect(res.body.tasks[0].subtasks[1]).toMatchObject({ title: "Solglasögon", timedMinutes: 15 });
     categoryTemplateId = res.body.id;
   });
 

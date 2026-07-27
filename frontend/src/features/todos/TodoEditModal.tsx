@@ -88,7 +88,11 @@ export function TodoEditModal({
     onCreateTaskTemplate({
       title: title.trim() || todo.title,
       visual: { type: "lucide-icon", value: emoji },
-      subtasks: subtasks.filter((s) => s.title.trim().length > 0).map((s) => ({ title: s.title.trim() })),
+      notes: notes.trim() || null,
+      subtasks: subtasks.filter((s) => s.title.trim().length > 0).map((s) => ({
+        title: s.title.trim(),
+        timedMinutes: s.timedMinutes ?? null
+      })),
       recurrence,
       starValue
     }).then(() => {
