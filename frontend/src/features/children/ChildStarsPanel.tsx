@@ -90,8 +90,6 @@ export function ChildStarsPanel({
         >
           <Trophy size={18} />
         </button>
-
-        <small className="child-stars-footnote">1 stjärna = 1 kr</small>
       </div>
     </div>
   );

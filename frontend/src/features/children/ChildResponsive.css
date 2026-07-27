@@ -135,8 +135,7 @@
   gap: 1px;
 }
 
-.child-money-card small,
-.child-stars-footnote {
+.child-money-card small {
   display: none;
 }
 
@@ -312,8 +311,7 @@
     gap: clamp(3px, 0.9vw, 9px);
   }
 
-  .child-money-card small,
-  .child-stars-footnote {
+  .child-money-card small {
     display: block;
   }
 }
