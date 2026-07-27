@@ -13,6 +13,7 @@ type Props = {
   recipe: Recipe;
   currentMember: Member;
   shoppingLists: ShoppingList[];
+  defaultShoppingListId: Id | null;
   onCreateTodo: (todo: Todo) => void;
   onAddShoppingItem: (listId: Id, title: string) => void;
   onCreateShoppingList: (name: string, icon?: string | null) => Id;
@@ -24,7 +25,7 @@ type Props = {
 // ("Skapa uppgift"/"Handlingslista") öppnar var sin liten modal, se
 // CreateTodoFromRecipeModal.tsx/AddToShoppingListModal.tsx.
 export function RecipeDetailView({
-  recipe, currentMember, shoppingLists, onCreateTodo, onAddShoppingItem, onCreateShoppingList, onEdit, onClose
+  recipe, currentMember, shoppingLists, defaultShoppingListId, onCreateTodo, onAddShoppingItem, onCreateShoppingList, onEdit, onClose
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const [showCreateTodo, setShowCreateTodo] = useState(false);
@@ -158,6 +159,7 @@ export function RecipeDetailView({
       )}
       {showShoppingList && (
         <AddToShoppingListModal
+          defaultShoppingListId={defaultShoppingListId}
           initialServings={activeServings}
           onAddShoppingItem={onAddShoppingItem}
           onClose={() => setShowShoppingList(false)}

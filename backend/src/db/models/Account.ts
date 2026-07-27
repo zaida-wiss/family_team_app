@@ -16,7 +16,8 @@ const accountSchema = new Schema<Account>({
   createdBy: { type: String, required: true },
   deletedAt: { type: String, default: null },
   calendarSettings: { type: calendarSettingsSchema, default: undefined },
-  fixedTodoTimes: { type: Boolean, default: false }
+  fixedTodoTimes: { type: Boolean, default: false },
+  defaultRecipeShoppingListId: { type: String, default: null }
 });
 
 export const AccountModel = model<Account>("Account", accountSchema);

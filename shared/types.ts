@@ -23,6 +23,12 @@ export type Account = {
   // familjens hemtidszon (Europe/Stockholm, se utils/todoTimeZone.ts) — ett
   // satt klockslag förblir detsamma oavsett var enheten fysiskt befinner sig.
   fixedTodoTimes?: boolean;
+  // Standard-inköpslista för receptingredienser (2026-07-27, Zaidas önskemål:
+  // "en ny lista som heter 'ingredienser från recept'... så det kan fyllas på
+  // med text 5 recept om man skickar den till inköpslistan") — väljs i
+  // Inställningar → Recept, null = använd/skapa den namngivna standardlistan
+  // istället (se AddToShoppingListModal.tsx).
+  defaultRecipeShoppingListId?: Id | null;
 };
 
 export type AppPanel =

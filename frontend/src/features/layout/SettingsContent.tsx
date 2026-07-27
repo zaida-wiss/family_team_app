@@ -2,6 +2,7 @@ import "./Settings.css";
 import { lazy, useState } from "react";
 import { Baby, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
 import { RecipeImportExport } from "../recipes/RecipeImportExport";
+import { RecipeShoppingListSettings } from "../recipes/RecipeShoppingListSettings";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
 import type { SettingsCategory } from "./SettingsCategoryNav";
@@ -68,6 +69,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     shoppingLists,
     recipes,
     onImportRecipes,
+    onUpdateDefaultRecipeShoppingList,
     canManageMembers,
     canManageRoles,
     canViewTrash,
@@ -403,8 +405,21 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
       subcategories: [
         {
           id: "recipes",
-          label: "Recept",
+          label: "Import/export",
           content: <RecipeImportExport onImport={onImportRecipes} recipes={recipes} />
+        },
+        {
+          // Standard-inköpslista (2026-07-27, Zaidas önskemål: se
+          // RecipeShoppingListSettings.tsx för fullständigt resonemang).
+          id: "shopping-list",
+          label: "Standardlista",
+          content: (
+            <RecipeShoppingListSettings
+              account={activeAccount}
+              onUpdate={onUpdateDefaultRecipeShoppingList}
+              shoppingLists={shoppingLists}
+            />
+          )
         }
       ]
     },

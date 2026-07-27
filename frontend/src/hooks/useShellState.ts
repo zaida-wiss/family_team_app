@@ -180,6 +180,7 @@ export function useShellState(
     onUpdateRecipe: updateRecipe,
     onRemoveRecipe: removeRecipe,
     fixedTodoTimes: activeAccount.fixedTodoTimes ?? false,
+    defaultRecipeShoppingListId: activeAccount.defaultRecipeShoppingListId ?? null,
     ...permissions,
     wishStars,
     onSelectMember: setSelectedDashboardMemberId,
@@ -308,6 +309,10 @@ export function useShellState(
     onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => {
       setActiveAccount({ ...activeAccount, fixedTodoTimes });
       accountsApi.update(activeAccount.id, { fixedTodoTimes }).catch(console.error);
+    },
+    onUpdateDefaultRecipeShoppingList: (defaultRecipeShoppingListId: Id | null) => {
+      setActiveAccount({ ...activeAccount, defaultRecipeShoppingListId });
+      accountsApi.update(activeAccount.id, { defaultRecipeShoppingListId }).catch(console.error);
     },
     onCreateMember: createMember,
     onDeleteMember: (id: string) => softDeleteMember(id, currentMember.id),

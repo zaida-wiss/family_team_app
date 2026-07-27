@@ -12,6 +12,7 @@ type Props = {
   currentMember: Member;
   recipes: Recipe[];
   shoppingLists: ShoppingList[];
+  defaultShoppingListId: Id | null;
   onCreateTodo: (todo: Todo) => void;
   onAddShoppingItem: (listId: Id, title: string) => void;
   onCreateShoppingList: (name: string, icon?: string | null) => Id;
@@ -29,7 +30,7 @@ type Props = {
 // useRecipesState-instans i useShellState.ts, samma mönster som
 // todos/shopping/kalendrar) istället för en egen lokal hook här.
 export function RecipesView({
-  currentMember, recipes, shoppingLists, onCreateTodo, onAddShoppingItem, onCreateShoppingList,
+  currentMember, recipes, shoppingLists, defaultShoppingListId, onCreateTodo, onAddShoppingItem, onCreateShoppingList,
   onCreateRecipe: createRecipe, onUpdateRecipe: updateRecipe, onRemoveRecipe: removeRecipe
 }: Props) {
   const [selectedId, setSelectedId] = useState<Id | null>(null);
@@ -158,6 +159,7 @@ export function RecipesView({
         <RecipeDetailView
           key={selected.id}
           currentMember={currentMember}
+          defaultShoppingListId={defaultShoppingListId}
           onAddShoppingItem={onAddShoppingItem}
           onCreateShoppingList={onCreateShoppingList}
           onCreateTodo={onCreateTodo}

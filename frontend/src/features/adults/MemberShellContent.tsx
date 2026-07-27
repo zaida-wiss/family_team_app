@@ -50,6 +50,7 @@ type Props = {
   onCreateRecipe: (input: RecipeFormInput) => Promise<Recipe>;
   onUpdateRecipe: (id: Id, input: RecipeFormInput) => Promise<void>;
   onRemoveRecipe: (id: Id) => Promise<void>;
+  defaultRecipeShoppingListId: Id | null;
   fixedTodoTimes: boolean;
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
@@ -134,7 +135,7 @@ export function MemberShellContent({
 
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists, recipes, onCreateRecipe, onUpdateRecipe, onRemoveRecipe,
-  fixedTodoTimes, timedTasks, onRecordTimedAttempt,
+  defaultRecipeShoppingListId, fixedTodoTimes, timedTasks, onRecordTimedAttempt,
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
@@ -463,6 +464,7 @@ export function MemberShellContent({
       <Suspense fallback={null}>
         <RecipesView
           currentMember={currentMember}
+          defaultShoppingListId={defaultRecipeShoppingListId}
           onAddShoppingItem={onAddShoppingItem}
           onCreateShoppingList={onCreateShoppingList}
           onCreateTodo={onCreateTodo}

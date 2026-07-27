@@ -49,6 +49,10 @@ test("Inställningar: en egen Recept-kategori har import/export, receptvyn har d
   // egen "Recept"-nav-knapp (samma strict-mode-fälla som redan dokumenterats
   // för "Inställningar" i child-login.spec.ts, 2026-07-22).
   await page.locator(".settings-category-grid").getByRole("button", { name: "Recept" }).click();
+  // Recept-kategorin fick en andra underkategori (Standardlista, 2026-07-27)
+  // — inte längre bara en, så den auto-hoppar-förbi-mekanismen gäller inte
+  // längre, ett extra klick krävs.
+  await page.getByRole("button", { name: "Import/export" }).click();
   await expect(page.getByRole("button", { name: "Ladda ner mall (CSV)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exportera mina recept (CSV)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Importera från CSV" })).toBeVisible();
@@ -275,9 +279,10 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar m
 
   const shoppingDialog = page.getByRole("dialog", { name: "Handlingslista från Köttfärssås" });
   await expect(shoppingDialog.getByLabel("Antal personer")).toHaveValue("4");
-  // 2026-07-27, Zaidas önskemål: "recept på default blir en lista som
-  // heter 'ingredienser till recept'" — inte bara receptets eget namn.
-  await expect(shoppingDialog.getByLabel("Namn på ny lista")).toHaveValue("Ingredienser till Köttfärssås");
+  // 2026-07-27, Zaidas önskemål: en delad standardlista ("Ingredienser från
+  // recept") istället för en ny lista per recept — så flera recept hamnar
+  // under varandra i samma lista.
+  await expect(shoppingDialog.getByLabel("Namn på ny lista")).toHaveValue("Ingredienser från recept");
   // Ändrar till 6 personer (receptet är sparat för 4) — mängden ska skalas.
   await shoppingDialog.getByLabel("Antal personer").fill("6");
   await shoppingDialog.getByRole("button", { name: "Lägg till" }).click();
@@ -287,7 +292,48 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar m
   // huvudnavets Inköp-knapp.
   await page.getByRole("button", { name: "Tillbaka" }).click();
   await page.getByRole("button", { name: "Inköp" }).click();
-  await expect(page.getByText("Ingredienser till Köttfärssås")).toBeVisible();
+  await expect(page.getByText("Ingredienser från recept")).toBeVisible();
   await expect(page.getByText("📐 Skalat från 4 till 6 personer")).toBeVisible();
   await expect(page.getByText("750 g köttfärs")).toBeVisible();
+});
+
+const RECIPE_2 = {
+  ...RECIPE,
+  id: "recipe-2",
+  name: "Pannkakor",
+  ingredients: [{ id: "ing-2", text: "mjölk", quantity: 5, unit: "dl" }],
+};
+
+// 2026-07-27, Zaidas önskemål: "recepten hamnar under varandra i samma
+// shoppinglista" — andra receptets Handlingslista-modal ska hitta och
+// förvälja samma "Ingredienser från recept"-lista som redan skapades av det
+// första receptet, inte föreslå en NY lista.
+test("Två recepts ingredienser hamnar i samma standardlista, inte en ny per recept", async ({ page }) => {
+  await mockAuthAndData(page);
+  await mockRecipes(page, [RECIPE, RECIPE_2]);
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [] }) : route.fulfill({ json: { ok: true } })
+  );
+  await page.route("**/api/shopping/*/items", (route) => route.fulfill({ json: { ok: true } }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Handlingslista" }).click();
+  const firstDialog = page.getByRole("dialog", { name: "Handlingslista från Köttfärssås" });
+  await expect(firstDialog.getByLabel("Namn på ny lista")).toHaveValue("Ingredienser från recept");
+  await firstDialog.getByRole("button", { name: "Lägg till" }).click();
+  await page.getByRole("button", { name: "Tillbaka" }).click();
+
+  await page.getByRole("button", { name: "Pannkakor" }).click();
+  await page.getByRole("dialog", { name: /Pannkakor/ }).getByRole("button", { name: "Handlingslista" }).click();
+  const secondDialog = page.getByRole("dialog", { name: "Handlingslista från Pannkakor" });
+  // Nu ska den redan skapade listan vara FÖRVALD i själva dropdownen, inte
+  // "+ Ny lista…" — inget "Namn på ny lista"-fält ska visas.
+  await expect(secondDialog.getByLabel("Namn på ny lista")).toHaveCount(0);
+  const selectedLabel = await secondDialog
+    .getByLabel("Lista")
+    .evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent);
+  expect(selectedLabel).toBe("Ingredienser från recept");
 });

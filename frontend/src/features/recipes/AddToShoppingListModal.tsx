@@ -3,6 +3,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { ingredientDisplayText } from "./recipeScaling";
+import { DEFAULT_RECIPE_SHOPPING_LIST_NAME } from "./RecipeShoppingListSettings";
 import type { Id, Recipe, ShoppingList } from "@shared/types";
 
 const NEW_LIST_VALUE = "__new__";
@@ -10,6 +11,9 @@ const NEW_LIST_VALUE = "__new__";
 type Props = {
   recipe: Recipe;
   shoppingLists: ShoppingList[];
+  // Kontots valda standardlista (Inställningar → Recept → Standardlista,
+  // RecipeShoppingListSettings.tsx), null = ingen vald.
+  defaultShoppingListId: Id | null;
   // Förifyllt Antal personer (2026-07-26, se CreateTodoFromRecipeModal.tsx
   // för samma resonemang).
   initialServings: number | null;
@@ -21,15 +25,23 @@ type Props = {
 // "Handlingslista" (2026-07-25, ADR-0028) — välj en befintlig inköpslista
 // eller skapa en ny, sedan en onAddShoppingItem-anrop per ingrediens (samma
 // "en operation per rad"-mönster som CSV-importen redan använder).
-export function AddToShoppingListModal({ recipe, shoppingLists, initialServings, onAddShoppingItem, onCreateShoppingList, onClose }: Props) {
+//
+// Default-listval (2026-07-27, Zaidas önskemål, ersätter 2026-07-26-versionen
+// som förvalde en NY lista per recept: "en ny lista som heter 'ingredienser
+// från recept'... recepten hamnar under varandra i samma shoppinglista"):
+// 1) kontots explicit valda standardlista om den fortfarande finns, annars
+// 2) en redan befintlig lista med det namngivna standardnamnet, annars
+// 3) "+ Ny lista…" förifylld med standardnamnet — skapas alltså automatiskt
+// första gången, och återanvänds (fall 2) varje gång därefter, så flera
+// recepts ingredienser samlas i SAMMA lista istället för en ny per recept.
+export function AddToShoppingListModal({ recipe, shoppingLists, defaultShoppingListId, initialServings, onAddShoppingItem, onCreateShoppingList, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const activeLists = shoppingLists.filter((l) => l.deletedAt === null);
-  const [targetListId, setTargetListId] = useState<string>(activeLists[0]?.id ?? NEW_LIST_VALUE);
-  // Förvalt listnamn (2026-07-27, Zaidas önskemål: "recept på default blir
-  // en lista som heter 'ingredienser till recept'") — var tidigare bara
-  // receptets eget namn, kunde se ut som en enda inköpsvara snarare än en
-  // hel lista.
-  const [newListName, setNewListName] = useState(`Ingredienser till ${recipe.name}`);
+  const configuredDefault = defaultShoppingListId ? activeLists.find((l) => l.id === defaultShoppingListId) : undefined;
+  const namedDefault = activeLists.find((l) => l.name === DEFAULT_RECIPE_SHOPPING_LIST_NAME);
+  const resolvedDefault = configuredDefault ?? namedDefault;
+  const [targetListId, setTargetListId] = useState<string>(resolvedDefault?.id ?? NEW_LIST_VALUE);
+  const [newListName, setNewListName] = useState(DEFAULT_RECIPE_SHOPPING_LIST_NAME);
   // Räknar om mängderna som HAR mängd/enhet (2026-07-26, Zaidas önskemål:
   // "sen måste vi fixa mängd och enheter") — en ingrediens utan strukturerad
   // mängd (t.ex. "Salt efter smak") läggs till oförändrad, precis som förut.
