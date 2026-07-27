@@ -144,6 +144,14 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
       .send({ ...recipePayload, ingredients: [{ text: "Salt efter smak" }] });
     expect(res.status).toBe(201);
     expect(res.body.ingredients[0]).toMatchObject({ text: "Salt efter smak", quantity: null, unit: null });
+    // Städar bort det egna testreceptet direkt (2026-07-27, CI-fynd: låg det
+    // kvar bröt "ett barn kan inte ta bort..."-testets tom-lista-assertion
+    // längre ner, som förutsätter att recipeId är kontots ENDA recept vid
+    // det laget).
+    await request(app)
+      .delete(`/api/recipes/${res.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
   });
 
   it("tomt namn avvisas", async () => {
