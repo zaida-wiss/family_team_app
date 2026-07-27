@@ -17,3 +17,11 @@
   background: var(--card);
   min-height: 44px;
 }
+
+/* Överför barn (2026-07-27) — egen underrubrik under samma settings-sub,
+   marginal skiljer den visuellt från delnings-sektionen ovanför. */
+.child-share-settings__transfer-title {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}

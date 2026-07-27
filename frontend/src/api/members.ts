@@ -67,6 +67,14 @@ export const membersApi = {
     request<{ ok: boolean }>(api(`members/${childId}/share/${granteeAccountId}/${granteeMemberId}`), {
       method: "DELETE"
     }),
+  // Överför ett barn permanent till en annan familj (2026-07-27) — samma
+  // lookupShareCandidate ovan hittar mottagaren, oåterkalleligt till
+  // skillnad från delning.
+  transferChild: (childId: string, targetMemberId: string, targetAccountId: string) =>
+    request<{ ok: boolean }>(api(`members/${childId}/transfer`), {
+      method: "POST",
+      body: JSON.stringify({ targetMemberId, targetAccountId })
+    }),
   // Realtidssynk (2026-07-17, Zaidas fynd: stjärnor uppdaterades inte förrän
   // en omladdning) — samma SSE-mönster som todosApi redan använder.
   subscribeToChanges: (onChange: () => void) => {

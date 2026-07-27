@@ -67,8 +67,13 @@ test("Dela barn: söker en vuxen via e-post, ger åtkomst, ser delningen, återk
 
   await openBarnkonton(page);
 
+  // Två "Sök"-knappar sedan Överför-sektionen (2026-07-27) lades till på
+  // samma sida — scopar till formuläret som faktiskt innehåller e-postfältet.
   await page.getByLabel("E-post till en vuxen").fill("annan-foralder@exempel.se");
-  await page.getByRole("button", { name: "Sök" }).click();
+  await page
+    .locator("form", { has: page.getByLabel("E-post till en vuxen") })
+    .getByRole("button", { name: "Sök" })
+    .click();
 
   await expect(page.getByText("Erik (Familjen Andersson)")).toBeVisible();
   await page.getByLabel("Åtkomst").selectOption("edit");
@@ -84,6 +89,53 @@ test("Dela barn: söker en vuxen via e-post, ger åtkomst, ser delningen, återk
   await page.getByRole("button", { name: "Ta bort delning" }).click();
   await expect.poll(() => revoked).toBe(true);
   await expect(page.getByText("Kan redigera")).not.toBeVisible();
+});
+
+// 2026-07-27, Zaidas önskemål: "jag ska även kunna... överföra dem till
+// andra familjer" — permanent, oåterkallelig flytt av hela medlemskapet,
+// till skillnad från delning ovan (som alltid går att återkalla). Kräver
+// två klick ("Överför" → "Bekräfta överföring") innan anropet faktiskt görs.
+test("Överför barn: söker en familj via e-post, kräver två klick för att bekräfta, anropar transfer-endpointen", async ({ page }) => {
+  let transferBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_A] }));
+
+  await page.route("**/api/members/*/share/lookup", (route) => {
+    const body = route.request().postDataJSON();
+    if (body.email === "andra-familjen@exempel.se") {
+      return route.fulfill({
+        json: {
+          memberships: [
+            { memberId: "mem-other", accountId: "acc-2", memberName: "Erik", accountName: "Familjen Andersson" }
+          ]
+        }
+      });
+    }
+    return route.fulfill({ json: { memberships: [] } });
+  });
+  await page.route("**/api/members/*/transfer", (route) => {
+    transferBody = route.request().postDataJSON();
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await openBarnkonton(page);
+
+  await page.getByLabel("E-post till mottagande familjs vuxen").fill("andra-familjen@exempel.se");
+  await page
+    .locator("form", { has: page.getByLabel("E-post till mottagande familjs vuxen") })
+    .getByRole("button", { name: "Sök" })
+    .click();
+  await expect(page.getByText("Erik (Familjen Andersson)")).toBeVisible();
+
+  const transferButton = page.getByRole("button", { name: "Överför" });
+  await transferButton.click();
+  expect(transferBody).toBeNull();
+
+  await page.getByRole("button", { name: "Bekräfta överföring" }).click();
+  await expect.poll(() => transferBody).not.toBeNull();
+  expect(transferBody!.targetMemberId).toBe("mem-other");
+  expect(transferBody!.targetAccountId).toBe("acc-2");
 });
 
 test("Todos-panelen: en delad barn-tråd visas med visnings-läge när access är 'view'", async ({ page }) => {

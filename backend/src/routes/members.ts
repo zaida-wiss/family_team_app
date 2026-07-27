@@ -3,6 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as members from "../services/membersService.js";
 import * as childShares from "../services/childSharesService.js";
+import * as childTransfer from "../services/childTransferService.js";
 import { addMemberEventsClient } from "../realtime/memberEvents.js";
 
 export const membersRouter = Router();
@@ -85,4 +86,23 @@ membersRouter.delete("/:id/share/:granteeAccountId/:granteeMemberId", async (req
     req.params.granteeAccountId
   );
   res.json({ ok: true });
+});
+
+// Överför ett barn permanent till en annan familj (2026-07-27) — samma
+// e-postuppslag som delning (share/lookup ovan) återanvänds av frontend för
+// att hitta mottagaren, den här routen utför själva flytten.
+membersRouter.post("/:id/transfer", async (req, res) => {
+  const { targetMemberId, targetAccountId } = req.body ?? {};
+  if (typeof targetMemberId !== "string" || typeof targetAccountId !== "string") {
+    res.status(400).json({ error: "targetMemberId och targetAccountId krävs" });
+    return;
+  }
+  const result = await childTransfer.transferChild(
+    req.params.id,
+    req.accountId!,
+    req.memberId ?? null,
+    targetMemberId,
+    targetAccountId
+  );
+  res.json(result);
 });

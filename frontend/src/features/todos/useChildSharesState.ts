@@ -89,3 +89,44 @@ export function useChildShareManagement(childId: Id | null) {
 
   return { shares, candidates, loading, lookup, grant, revoke, clearCandidates };
 }
+
+// Överför ett barn permanent till en annan familj (2026-07-27, Zaidas
+// önskemål: "jag ska även kunna... överföra dem till andra familjer") —
+// samma e-postuppslag som delning (membersApi.lookupShareCandidate), men
+// oåterkalleligt: hela medlemskapet flyttas, inte en revocerbar åtkomst-
+// grant. Egen hook, egen candidates-lista — att blanda ihop delnings- och
+// överförings-kandidater i samma state hade riskerat att en knapp av
+// misstag utförde fel operation.
+export function useChildTransfer(childId: Id | null) {
+  const [candidates, setCandidates] = useState<ChildShareCandidate[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+
+  function clearCandidates() {
+    setCandidates(null);
+  }
+
+  async function lookup(email: string) {
+    if (!childId) return;
+    setLoading(true);
+    try {
+      const result = await membersApi.lookupShareCandidate(childId, email);
+      setCandidates(result.memberships);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function transfer(candidate: ChildShareCandidate) {
+    if (!childId) return;
+    setTransferring(true);
+    try {
+      await membersApi.transferChild(childId, candidate.memberId, candidate.accountId);
+      setCandidates(null);
+    } finally {
+      setTransferring(false);
+    }
+  }
+
+  return { candidates, loading, transferring, lookup, transfer, clearCandidates };
+}

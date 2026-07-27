@@ -276,7 +276,7 @@ export type PaginatedPurchasedRewards = {
 // Audit-logg (Sprint 5 S4) — spårar stjärnor/köp/rolländringar. summary är
 // förformaterad server-side vid skrivning (svenska, klar för visning) — enklare
 // än en generisk details-bag som varje klientvy skulle behöva formatera per typ.
-export type AuditLogAction = "stars_approved" | "reward_purchased" | "role_permissions_changed";
+export type AuditLogAction = "stars_approved" | "reward_purchased" | "role_permissions_changed" | "child_transferred";
 
 export type AuditLogEntry = {
   id: Id;

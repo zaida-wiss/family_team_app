@@ -2,8 +2,9 @@ import "./ChildShareSettings.css";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Search, X } from "lucide-react";
-import { useChildShareManagement } from "../todos/useChildSharesState";
+import { useChildShareManagement, useChildTransfer } from "../todos/useChildSharesState";
 import type { AccessLevel, Id, Member } from "@shared/types";
+import type { ChildShareCandidate } from "../../api/members";
 
 type Props = {
   childMembers: Member[];
@@ -25,17 +26,50 @@ export function ChildShareSettings({ childMembers }: Props) {
   const [email, setEmail] = useState("");
   const [access, setAccess] = useState<AccessLevel>("view");
 
+  const {
+    candidates: transferCandidates,
+    loading: transferLookupLoading,
+    transferring,
+    lookup: lookupTransfer,
+    transfer,
+    clearCandidates: clearTransferCandidates
+  } = useChildTransfer(selectedChildId || null);
+  const [transferEmail, setTransferEmail] = useState("");
+  // Tvåstegsbekräftelse (samma mönster som Radera-knappar på andra ställen
+  // i appen) — men extra viktigt här: en överföring går INTE att ångra,
+  // till skillnad från en delning som alltid kan återkallas.
+  const [confirmingTransferKey, setConfirmingTransferKey] = useState<string | null>(null);
+
   if (childMembers.length === 0) return null;
 
   function selectChild(id: Id) {
     setSelectedChildId(id);
     clearCandidates();
     setEmail("");
+    clearTransferCandidates();
+    setTransferEmail("");
+    setConfirmingTransferKey(null);
   }
 
   function submitLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (email.trim()) lookup(email.trim());
+  }
+
+  function submitTransferLookup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (transferEmail.trim()) lookupTransfer(transferEmail.trim());
+    setConfirmingTransferKey(null);
+  }
+
+  function confirmOrExecuteTransfer(candidate: ChildShareCandidate) {
+    const key = `${candidate.accountId}-${candidate.memberId}`;
+    if (confirmingTransferKey !== key) {
+      setConfirmingTransferKey(key);
+      return;
+    }
+    setConfirmingTransferKey(null);
+    transfer(candidate).catch(console.error);
   }
 
   return (
@@ -109,6 +143,52 @@ export function ChildShareSettings({ childMembers }: Props) {
               </button>
             </li>
           ))}
+        </ul>
+      )}
+
+      <h3 className="settings-sub-title child-share-settings__transfer-title">Överför barn till en annan familj</h3>
+      <p className="settings-sub-desc">
+        Flyttar barnet PERMANENT till en annan familjs konto — hela historiken (uppgifter, kalender,
+        belöningar, Medaljer/Rekord) följer med. Går inte att ångra. Barnet försvinner härifrån direkt.
+      </p>
+
+      <form className="wish-form" onSubmit={submitTransferLookup}>
+        <input
+          aria-label="E-post till mottagande familjs vuxen"
+          className="wish-form-input"
+          onChange={(e) => setTransferEmail(e.target.value)}
+          placeholder="E-post till mottagande familjs vuxen"
+          type="email"
+          value={transferEmail}
+        />
+        <button className="wish-form-btn" disabled={transferLookupLoading} type="submit">
+          <Search size={16} /> Sök
+        </button>
+      </form>
+
+      {transferCandidates !== null && transferCandidates.length === 0 && (
+        <p className="settings-sub-desc">Ingen vuxen hittades med den e-postadressen.</p>
+      )}
+
+      {transferCandidates !== null && transferCandidates.length > 0 && (
+        <ul className="child-share-list">
+          {transferCandidates.map((candidate) => {
+            const key = `${candidate.accountId}-${candidate.memberId}`;
+            const confirming = confirmingTransferKey === key;
+            return (
+              <li className="child-share-list__item" key={key}>
+                <span>{candidate.memberName} ({candidate.accountName})</span>
+                <button
+                  className={confirming ? "danger-button" : "secondary-button"}
+                  disabled={transferring}
+                  onClick={() => confirmOrExecuteTransfer(candidate)}
+                  type="button"
+                >
+                  {confirming ? "Bekräfta överföring" : "Överför"}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

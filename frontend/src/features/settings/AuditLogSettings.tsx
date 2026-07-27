@@ -6,7 +6,8 @@ import type { AuditLogAction } from "@shared/types";
 const ACTION_LABELS: Record<AuditLogAction, string> = {
   stars_approved: "Stjärnor godkända",
   reward_purchased: "Köp",
-  role_permissions_changed: "Rolländringar"
+  role_permissions_changed: "Rolländringar",
+  child_transferred: "Barn överfört"
 };
 
 function fmtDate(iso: string) {
@@ -46,6 +47,7 @@ export function AuditLogSettings({ enabled }: Props) {
           <option value="stars_approved">{ACTION_LABELS.stars_approved}</option>
           <option value="reward_purchased">{ACTION_LABELS.reward_purchased}</option>
           <option value="role_permissions_changed">{ACTION_LABELS.role_permissions_changed}</option>
+          <option value="child_transferred">{ACTION_LABELS.child_transferred}</option>
         </select>
       </label>
 
