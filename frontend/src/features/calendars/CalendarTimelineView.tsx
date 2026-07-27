@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Calendar } from "@shared/types";
-import { expandForRange, fmtTime, getISOWeek, toLocalDateStr } from "./calendarHelpers";
+import { expandForRange, fmtTime, getISOWeek, resolveDisplaySymbol, toLocalDateStr } from "./calendarHelpers";
 import type { EnrichedEvent } from "./CalendarEventList";
 
 const DOW_SHORT = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"];
@@ -96,7 +96,7 @@ export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, 
       calendarColor: calendarDisplayColor.get(cal.id) ?? cal.color,
       calendarName: cal.name,
       calendarOwnerId: cal.ownerId,
-      displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : null,
+      displaySymbol: resolveDisplaySymbol(ev, subSymbols),
     }))
   );
 

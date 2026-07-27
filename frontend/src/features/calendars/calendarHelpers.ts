@@ -1,5 +1,26 @@
 import type { EventRecurrence } from "@shared/types";
 
+// Vilken symbol en händelse ska visas med (2026-07-27 fix, Zaidas fynd: "om
+// jag uppdaterar en importerad kalenderhändelse med emoji så vill jag att den
+// emojin skall synas... i nuläget blir det bara text") — tre ställen
+// (useCalendarView.ts, CalendarTimelineView.tsx, ChildTimeline.tsx)
+// beräknade tidigare var sin, INKONSEKVENTA variant av detta: alla lät en
+// prenumererad händelses EGEN, manuellt satta symbol (event.symbol) bli
+// helt överkörd av prenumerationens gemensamma standardsymbol (eller null,
+// om ingen standard fanns) så fort event.subscriptionId var satt — en
+// användare som redigerade EN specifik importerad händelse och gav den en
+// egen emoji såg alltså aldrig effekten, oavsett vy. Rätt prioritet:
+// händelsens EGEN symbol vinner alltid när den finns, prenumerationens
+// standard är bara en fallback för händelser som aldrig fått en egen.
+export function resolveDisplaySymbol(
+  event: { symbol: string | null; subscriptionId: string | null },
+  subscriptionSymbols: Map<string, string>
+): string | null {
+  if (event.symbol) return event.symbol;
+  if (event.subscriptionId) return subscriptionSymbols.get(event.subscriptionId) ?? null;
+  return null;
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 export const DAYS = ["MÅN", "TIS", "ONS", "TOR", "FRE", "LÖR", "SÖN"];

@@ -8,6 +8,7 @@ import {
   expandForRange,
   expandForMonth,
   getMonthCells,
+  resolveDisplaySymbol,
   toLocalDateStr,
   toLocalDateTimeStr,
 } from "./calendarHelpers";
@@ -129,7 +130,7 @@ export function useCalendarView(
         calendarColor: calendarDisplayColor.get(cal.id) ?? cal.color,
         calendarName: cal.name,
         calendarOwnerId: cal.ownerId,
-        displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : null,
+        displaySymbol: resolveDisplaySymbol(ev, subSymbols),
       }))
   );
 

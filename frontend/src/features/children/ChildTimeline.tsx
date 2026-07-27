@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Star } from "lucide-react";
 import type { Calendar, Member, PurchasedReward, Role, Todo } from "@shared/types";
 import "./ChildTimeline.css";
-import { expandForRange, fmtTime, toLocalDateStr } from "../calendars/calendarHelpers";
+import { expandForRange, fmtTime, resolveDisplaySymbol, toLocalDateStr } from "../calendars/calendarHelpers";
 import { canViewResource, hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 import { TimelineEventDetail } from "./TimelineEventDetail";
@@ -70,7 +70,7 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
           calendarColor: cal.color,
           calendarName: cal.name,
           calendarOwnerId: cal.ownerId,
-          displaySymbol: ev.subscriptionId ? (subSymbols.get(ev.subscriptionId) ?? null) : (ev.symbol ?? null),
+          displaySymbol: resolveDisplaySymbol(ev, subSymbols),
         }))
     );
 
