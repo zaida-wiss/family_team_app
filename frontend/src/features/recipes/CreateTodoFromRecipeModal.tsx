@@ -23,6 +23,15 @@ function toDateTimeString(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
 
+// Samma fallback som TodoCreatorModal.tsx:s DEFAULT_EMOJI (2026-07-27,
+// Zaidas fynd: "visual value is required" när man skapade en uppgift av
+// ett recept UTAN emoji satt) — Todo.visual.value är ett obligatoriskt
+// fält (Mongoose `required: true`), och en tom sträng ("", som `recipe.
+// emoji ?? ""` gav för ett receptet utan ikon) räknas som saknat värde.
+// Resten av appen skickar aldrig en tom sträng hit, bara denna modal gjorde
+// det.
+const DEFAULT_EMOJI = "⭐";
+
 // "Skapa uppgift" (2026-07-25, ADR-0028) — datum+tid, sedan EN todo med ett
 // delmoment PER receptsteg. Ingen mottagarväljare i denna första version —
 // hamnar i den delade Familjen-tråden (assignedTo: null), samma
@@ -56,7 +65,7 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
       isShared: false,
       status: "pending",
       starValue: 0,
-      visual: { type: "lucide-icon", value: recipe.emoji ?? "" },
+      visual: { type: "lucide-icon", value: recipe.emoji || DEFAULT_EMOJI },
       recurrence: { type: "none" },
       recurringSourceId: null,
       occurrenceDate: null,

@@ -203,6 +203,35 @@ test("Skapa uppgift-modalen förifylls med aktuellt antal personer, sparas i upp
   await expect.poll(() => createdBody?.notes).toBe("Räknat för 4 personer.\n\nIngredienser:\n– 500 g köttfärs");
 });
 
+// 2026-07-27, Zaidas fynd: "visual value is required" när hon skapade en
+// uppgift av ETT RECEPT UTAN EMOJI — Todo.visual.value är obligatoriskt
+// (Mongoose required:true) och en tom sträng räknas som saknat värde.
+// recipe.emoji ?? "" gav en tom sträng för recept utan ikon (ingen annan
+// plats i appen skickar någonsin en tom sträng hit, alla andra faller
+// tillbaka på en riktig standardemoji).
+test("Skapa uppgift av ett recept UTAN emoji faller tillbaka på en standardsymbol, inte en tom sträng", async ({ page }) => {
+  await mockAuthAndData(page);
+  const recipeWithoutEmoji = { ...RECIPE, emoji: null };
+  await mockRecipes(page, [recipeWithoutEmoji]);
+  let createdBody: Record<string, unknown> | null = null;
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() !== "POST") return route.fulfill({ json: [] });
+    createdBody = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: { id: "todo-new" } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Recept" }).click();
+  await page.getByRole("button", { name: "Köttfärssås" }).click();
+  await page.getByRole("dialog", { name: /Köttfärssås/ }).getByRole("button", { name: "Skapa uppgift" }).click();
+
+  const createDialog = page.getByRole("dialog", { name: "Skapa uppgift av Köttfärssås" });
+  await createDialog.locator('input[type="datetime-local"]').fill("2026-08-01T12:00");
+  await createDialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => (createdBody?.visual as { value?: string } | undefined)?.value).toBe("⭐");
+});
+
 test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar mängderna som har mängd/enhet", async ({ page }) => {
   await mockAuthAndData(page);
   await mockRecipes(page, [RECIPE]);
