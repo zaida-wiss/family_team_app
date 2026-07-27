@@ -2,7 +2,6 @@ import { TodoCategoryModel } from "../db/models/TodoCategory.js";
 import { MemberModel } from "../db/models/Member.js";
 import { RoleModel } from "../db/models/Role.js";
 import { AppError } from "../utils/errors.js";
-import { logger } from "../utils/logger.js";
 
 // Kontobreda (2026-07-07, Zaidas beslut) — tidigare strikt privata per medlem.
 // Nu: alla VUXNA i kontot ser och kan redigera/döpa om/radera/gömma varandras
@@ -12,24 +11,11 @@ import { logger } from "../utils/logger.js";
 export async function requireAdultMember(memberId: string | null | undefined, accountId: string) {
   const member = await MemberModel.findOne({ id: memberId, accountId, deletedAt: null });
   if (!member) {
-    // 2026-07-27: en reproducerbar, oförklarad CI-flakighet i
-    // recipes.integration.test.ts fick EXAKT detta 403 två körningar i rad
-    // för en medlem som borde vara kontots ägare — diagnostikloggning
-    // tillagd här och i barn-roll-grenen nedan tills orsaken är hittad.
-    // Säker att ta bort igen när grundorsaken är identifierad.
-    logger.warn({ memberId, accountId }, "requireAdultMember: ingen medlem hittades för id+accountId+deletedAt:null");
     throw new AppError(403, "Åtkomst nekad");
   }
   const role = await RoleModel.findOne({ id: member.roleId });
   if (role?.isChildRole) {
-    logger.warn(
-      { memberId, accountId, memberRoleId: member.roleId, roleId: role.id, roleName: role.name, roleAccountId: role.accountId },
-      "requireAdultMember: medlemmens roll är en barnroll"
-    );
     throw new AppError(403, "Åtkomst nekad");
-  }
-  if (!role) {
-    logger.warn({ memberId, accountId, memberRoleId: member.roleId }, "requireAdultMember: medlemmens roll hittades inte alls");
   }
   return member;
 }

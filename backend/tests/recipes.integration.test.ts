@@ -38,7 +38,7 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
     servings: 4,
     ingredients: [
       { text: "köttfärs", quantity: 500, unit: "g" },
-      { text: "krossade tomater", quantity: 1, unit: "burk" }
+      { text: "krossade tomater", quantity: 1, unit: "st" }
     ],
     steps: [{ text: "Fräs köttfärsen", timedMinutes: null }, { text: "Sätt in i ugnen", timedMinutes: 25 }]
   };
@@ -98,7 +98,7 @@ describe.skipIf(!RUN)("Recept (ADR-0028)", () => {
     expect(res.body.servings).toBe(4);
     expect(res.body.ingredients).toHaveLength(2);
     expect(res.body.ingredients[0]).toMatchObject({ text: "köttfärs", quantity: 500, unit: "g" });
-    expect(res.body.ingredients[1]).toMatchObject({ text: "krossade tomater", quantity: 1, unit: "burk" });
+    expect(res.body.ingredients[1]).toMatchObject({ text: "krossade tomater", quantity: 1, unit: "st" });
     expect(res.body.steps).toHaveLength(2);
     expect(res.body.steps[1].timedMinutes).toBe(25);
     recipeId = res.body.id;
