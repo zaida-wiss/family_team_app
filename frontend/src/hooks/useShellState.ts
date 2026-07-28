@@ -396,6 +396,7 @@ export function useShellState(
     onRemoveTaskTemplate: removeTaskTemplate,
     onRenameTaskTemplate: renameTaskTemplate,
     onRemoveCategoryTemplate: removeCategoryTemplate,
+    onUpdateCategoryTemplate: updateCategoryTemplate,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => {

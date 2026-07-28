@@ -1,7 +1,7 @@
 import "./TemplatesSettings.css";
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
-import type { Id, TodoCategoryTemplate, TodoTemplate } from "@shared/types";
+import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import type { Id, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
 
 type Props = {
   taskTemplates: TodoTemplate[];
@@ -9,6 +9,7 @@ type Props = {
   onRemoveTaskTemplate: (id: Id) => void;
   onRemoveCategoryTemplate: (id: Id) => void;
   onRenameTaskTemplate: (id: Id, title: string) => void;
+  onUpdateCategoryTemplate: (id: Id, name: string, tasks: TodoTemplateTask[]) => void;
 };
 
 // Mallbibliotek (2026-07-08, Zaidas önskemål: "jag vill spara både
@@ -22,10 +23,22 @@ export function TemplatesSettings({
   categoryTemplates,
   onRemoveTaskTemplate,
   onRemoveCategoryTemplate,
-  onRenameTaskTemplate
+  onRenameTaskTemplate,
+  onUpdateCategoryTemplate
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
+
+  // 2026-07-28, Zaidas fynd: "jag måste kunna öppna, se och redigera en
+  // kategorimall, nu ser jag inte vad den ens innehåller" — Kategori-mallar
+  // visade tidigare bara namn+antal, ingen väg att se eller ändra VILKA
+  // uppgifter som faktiskt ingår. Klick på en kategori-mall expanderar nu en
+  // lista över dess uppgifter (namn+ikon), med byt namn/ta bort per uppgift
+  // och byt namn på hela mallen — sparas via samma redan existerande
+  // PATCH-endpoint som "Uppdatera mall" i kategorimenyn (ADR-0022) använder.
+  const [expandedCategoryId, setExpandedCategoryId] = useState<Id | null>(null);
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
+  const [categoryTasksDraft, setCategoryTasksDraft] = useState<TodoTemplateTask[]>([]);
 
   function startEditing(template: TodoTemplate) {
     setEditingId(template.id);
@@ -35,6 +48,35 @@ export function TemplatesSettings({
   function saveEditing() {
     if (editingId) onRenameTaskTemplate(editingId, draftTitle);
     setEditingId(null);
+  }
+
+  function toggleCategory(template: TodoCategoryTemplate) {
+    if (expandedCategoryId === template.id) {
+      setExpandedCategoryId(null);
+      return;
+    }
+    setExpandedCategoryId(template.id);
+    setCategoryNameDraft(template.name);
+    setCategoryTasksDraft(template.tasks);
+  }
+
+  function saveCategoryName() {
+    if (expandedCategoryId) onUpdateCategoryTemplate(expandedCategoryId, categoryNameDraft, categoryTasksDraft);
+  }
+
+  function updateTaskTitle(index: number, title: string) {
+    setCategoryTasksDraft((current) => current.map((t, i) => (i === index ? { ...t, title } : t)));
+  }
+
+  function saveTaskTitle() {
+    if (expandedCategoryId) onUpdateCategoryTemplate(expandedCategoryId, categoryNameDraft, categoryTasksDraft);
+  }
+
+  function removeTaskAt(index: number) {
+    if (!expandedCategoryId) return;
+    const next = categoryTasksDraft.filter((_, i) => i !== index);
+    setCategoryTasksDraft(next);
+    onUpdateCategoryTemplate(expandedCategoryId, categoryNameDraft, next);
   }
 
   if (taskTemplates.length === 0 && categoryTemplates.length === 0) {
@@ -47,21 +89,89 @@ export function TemplatesSettings({
         <div className="templates-settings__group">
           <h4 className="templates-settings__heading">Kategori-mallar</h4>
           <ul className="templates-settings__list">
-            {categoryTemplates.map((template) => (
-              <li className="templates-settings__row" key={template.id}>
-                <span>
-                  {template.name} <small>({template.tasks.length} uppgifter)</small>
-                </span>
-                <button
-                  aria-label={`Ta bort mallen ${template.name}`}
-                  className="icon-button danger"
-                  onClick={() => onRemoveCategoryTemplate(template.id)}
-                  type="button"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </li>
-            ))}
+            {categoryTemplates.map((template) => {
+              const isExpanded = expandedCategoryId === template.id;
+              return (
+                <li className="templates-settings__category" key={template.id}>
+                  <div className="templates-settings__row">
+                    <button
+                      aria-expanded={isExpanded}
+                      aria-label={`Visa/dölj innehållet i mallen ${template.name}`}
+                      className="icon-button"
+                      onClick={() => toggleCategory(template)}
+                      type="button"
+                    >
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                    {isExpanded ? (
+                      <input
+                        aria-label={`Byt namn på mallen ${template.name}`}
+                        className="text-input templates-settings__rename-input"
+                        onBlur={saveCategoryName}
+                        onChange={(e) => setCategoryNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                        }}
+                        value={categoryNameDraft}
+                      />
+                    ) : (
+                      <span
+                        className="templates-settings__title"
+                        onClick={() => toggleCategory(template)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") toggleCategory(template);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        {template.name} <small>({template.tasks.length} uppgifter)</small>
+                      </span>
+                    )}
+                    <button
+                      aria-label={`Ta bort mallen ${template.name}`}
+                      className="icon-button danger"
+                      onClick={() => onRemoveCategoryTemplate(template.id)}
+                      type="button"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <ul className="templates-settings__category-tasks">
+                      {categoryTasksDraft.length === 0 ? (
+                        <li className="empty-note">Inga uppgifter kvar i den här mallen.</li>
+                      ) : (
+                        categoryTasksDraft.map((task, index) => (
+                          <li className="templates-settings__category-task" key={index}>
+                            {task.visual.value && <span aria-hidden="true">{task.visual.value}</span>}
+                            <input
+                              aria-label={`Uppgift ${index + 1} i mallen ${template.name}`}
+                              className="text-input templates-settings__rename-input"
+                              onBlur={saveTaskTitle}
+                              onChange={(e) => updateTaskTitle(index, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                              value={task.title}
+                            />
+                            {task.subtasks.length > 0 && <small>{task.subtasks.length} delmoment</small>}
+                            <button
+                              aria-label={`Ta bort uppgiften ${task.title} från mallen`}
+                              className="icon-button danger"
+                              onClick={() => removeTaskAt(index)}
+                              type="button"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

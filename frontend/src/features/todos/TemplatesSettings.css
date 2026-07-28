@@ -41,3 +41,30 @@
   flex: 1;
   min-width: 0;
 }
+
+.templates-settings__category {
+  display: grid;
+  gap: 6px;
+}
+
+.templates-settings__category-tasks {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.templates-settings__category-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+
+.templates-settings__category-task small {
+  color: var(--muted-fg);
+  white-space: nowrap;
+}

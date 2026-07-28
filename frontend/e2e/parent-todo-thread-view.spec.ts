@@ -1480,6 +1480,54 @@ test("Inställningar → Mallar: kan byta namn på en sparad uppgiftsmall", asyn
   await expect(page.getByText("Styrketräning (uppdaterad)", { exact: true })).toBeVisible();
 });
 
+// 2026-07-29, Zaidas fynd: "jag måste kunna öppna, se och redigera en
+// kategorimall, nu ser jag inte vad den ens innehåller" — kategori-mallar
+// visade tidigare bara namn+antal, inget sätt att se VILKA uppgifter en mall
+// faktiskt innehåller.
+test("Inställningar → Mallar: kan öppna, se och redigera en kategori-mall", async ({ page }) => {
+  const CATEGORY_TEMPLATE = {
+    id: "todo-category-template-1", accountId: "acc-1", memberId: "mem-1", name: "Packa",
+    tasks: [
+      { title: "Badkläder", visual: { type: "lucide-icon", value: "Shirt" }, subtasks: [{ title: "Handduk" }], recurrence: { type: "none" }, starValue: 0 },
+      { title: "Solkräm", visual: { type: "lucide-icon", value: "Sun" }, subtasks: [], recurrence: { type: "none" }, starValue: 0 }
+    ],
+    createdAt: "2026-07-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  let patched: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-templates/categories", (route) => route.fulfill({ json: [CATEGORY_TEMPLATE] }));
+  await page.route("**/api/todo-templates/categories/todo-category-template-1", (route) => {
+    if (route.request().method() === "PATCH") {
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ...CATEGORY_TEMPLATE, ...patched } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "📋 Mallar" }).click();
+
+  await page.getByRole("button", { name: "Visa/dölj innehållet i mallen Packa" }).click();
+  await expect(page.getByLabel("Uppgift 1 i mallen Packa")).toHaveValue("Badkläder");
+  await expect(page.getByLabel("Uppgift 2 i mallen Packa")).toHaveValue("Solkräm");
+  await expect(page.getByText("1 delmoment")).toBeVisible();
+
+  const firstTask = page.getByLabel("Uppgift 1 i mallen Packa");
+  await firstTask.fill("Regnkläder");
+  await firstTask.blur();
+  await expect.poll(() => patched).toBeTruthy();
+  expect((patched as unknown as { tasks: { title: string }[] }).tasks[0].title).toBe("Regnkläder");
+
+  patched = null;
+  await page.getByRole("button", { name: "Ta bort uppgiften Solkräm från mallen" }).click();
+  await expect.poll(() => patched).toBeTruthy();
+  expect((patched as unknown as { tasks: unknown[] }).tasks).toHaveLength(1);
+  await expect(page.getByLabel("Uppgift 2 i mallen Packa")).toHaveCount(0);
+});
+
 // Mallbiblioteket — hämtar en HEL kategori-mall vid "Ny kategori" i skapa-modalen.
 test("Ny uppgift-modalen: 'Från mall' vid Ny kategori skapar kategorin och alla dess uppgifter", async ({ page }) => {
   const CATEGORY_TEMPLATE = {
