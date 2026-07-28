@@ -256,7 +256,7 @@
 
 .subInfo small {
   font-size: 0.72rem;
-  color: var(--muted-foreground);
+  color: var(--muted-fg);
 }
 
 .subActions,
@@ -290,12 +290,12 @@
   flex-direction: column;
   gap: 4px;
   font-size: 0.78rem;
-  color: var(--muted-foreground);
+  color: var(--muted-fg);
 }
 
 .subIntervalHint {
   font-size: 0.72rem;
-  color: var(--muted-foreground);
+  color: var(--muted-fg);
   line-height: 1.4;
 }
 
@@ -334,7 +334,7 @@
 
 .tagLabel {
   font-size: 0.72rem;
-  color: var(--muted-foreground);
+  color: var(--muted-fg);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -359,7 +359,7 @@
   gap: 3px;
   padding: 2px 8px 2px 10px;
   background: var(--primary);
-  color: var(--primary-foreground);
+  color: var(--primary-fg);
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 500;
@@ -395,7 +395,7 @@
 }
 
 .tagDraft::placeholder {
-  color: var(--muted-foreground);
+  color: var(--muted-fg);
 }
 
 @media (max-width: 759px) {

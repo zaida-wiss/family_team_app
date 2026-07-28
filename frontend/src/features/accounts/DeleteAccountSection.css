@@ -4,7 +4,7 @@
 
 .ghost-button {
   background: transparent;
-  border: 1.5px solid var(--color-border, #ddd);
+  border: 1.5px solid var(--border);
   color: inherit;
   border-radius: var(--radius-sm);
   padding: 0.55rem 1.1rem;

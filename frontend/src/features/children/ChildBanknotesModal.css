@@ -488,7 +488,7 @@
   top: -8px;
   right: -10px;
   background: var(--primary);
-  color: #fff;
+  color: var(--primary-fg);
   font-size: 0.75rem;
   font-weight: 800;
   line-height: 1;

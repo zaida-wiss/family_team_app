@@ -367,7 +367,7 @@
 .rcr-day--on {
   background: var(--primary, #3d6b4f);
   border-color: var(--primary, #3d6b4f);
-  color: white;
+  color: var(--primary-fg, white);
   opacity: 1;
 }
 
@@ -377,7 +377,7 @@
   height: 30px;
   border-radius: 50%;
   background: var(--primary, #3d6b4f);
-  color: white;
+  color: var(--primary-fg, white);
   border: none;
   display: flex;
   align-items: center;

@@ -11,8 +11,8 @@
   gap: 10px;
   padding: 12px;
   margin-bottom: 16px;
-  background: var(--card-bg, #f9f9f9);
-  border: 1px solid var(--border, #e5e5e5);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
 }
