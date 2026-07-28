@@ -1,7 +1,9 @@
 import "./TemplatesSettings.css";
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Trash2 } from "lucide-react";
 import type { Id, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
+import { describeRecurrence, describeRecurrenceEnd } from "./recurringTodos";
+import { useDragReorder } from "../../hooks/useDragReorder";
 
 type Props = {
   taskTemplates: TodoTemplate[];
@@ -10,6 +12,11 @@ type Props = {
   onRemoveCategoryTemplate: (id: Id) => void;
   onRenameTaskTemplate: (id: Id, title: string) => void;
   onUpdateCategoryTemplate: (id: Id, name: string, tasks: TodoTemplateTask[]) => void;
+  // Manuell ordning (2026-07-29, Zaidas önskemål: "flytta ordningen snabbt i
+  // uppgiftsmallarna") — samma "olistade hamnar sist"-princip som
+  // RecurringTodosSettings.tsx:s order/onReorder.
+  order: Id[];
+  onReorder: (order: Id[]) => void;
 };
 
 // Mallbibliotek (2026-07-08, Zaidas önskemål: "jag vill spara både
@@ -24,10 +31,26 @@ export function TemplatesSettings({
   onRemoveTaskTemplate,
   onRemoveCategoryTemplate,
   onRenameTaskTemplate,
-  onUpdateCategoryTemplate
+  onUpdateCategoryTemplate,
+  order,
+  onReorder
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
+
+  const orderIndex = new Map(order.map((id, i) => [id, i]));
+  const sortedTaskTemplates = [...taskTemplates].sort((a, b) => {
+    const ai = orderIndex.get(a.id);
+    const bi = orderIndex.get(b.id);
+    if (ai !== undefined && bi !== undefined) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    return 0;
+  });
+  const taskDrag = useDragReorder(
+    sortedTaskTemplates.map((t) => t.id),
+    onReorder
+  );
 
   // 2026-07-28, Zaidas fynd: "jag måste kunna öppna, se och redigera en
   // kategorimall, nu ser jag inte vad den ens innehåller" — Kategori-mallar
@@ -176,48 +199,74 @@ export function TemplatesSettings({
         </div>
       )}
 
-      {taskTemplates.length > 0 && (
+      {sortedTaskTemplates.length > 0 && (
         <div className="templates-settings__group">
           <h4 className="templates-settings__heading">Uppgiftsmallar</h4>
           <ul className="templates-settings__list">
-            {taskTemplates.map((template) => (
-              <li className="templates-settings__row" key={template.id}>
-                {editingId === template.id ? (
-                  <input
-                    aria-label={`Byt namn på mallen ${template.title}`}
-                    autoFocus
-                    className="text-input templates-settings__rename-input"
-                    onBlur={saveEditing}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") e.currentTarget.blur();
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                    value={draftTitle}
-                  />
-                ) : (
-                  <span
-                    className="templates-settings__title"
-                    onClick={() => startEditing(template)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") startEditing(template);
-                    }}
-                  >
-                    {template.title}
-                  </span>
-                )}
-                <button
-                  aria-label={`Ta bort mallen ${template.title}`}
-                  className="icon-button danger"
-                  onClick={() => onRemoveTaskTemplate(template.id)}
-                  type="button"
+            {sortedTaskTemplates.map((template) => {
+              const recurrenceLabel = describeRecurrence(template.recurrence);
+              const endLabel = describeRecurrenceEnd(template.recurrence);
+              return (
+                <li
+                  className={`templates-settings__row${taskDrag.dragOverKey === template.id ? " templates-settings__row--drag-over" : ""}`}
+                  data-drag-key={template.id}
+                  key={template.id}
                 >
-                  <Trash2 size={16} />
-                </button>
-              </li>
-            ))}
+                  <button
+                    aria-label={`Flytta ${template.title}`}
+                    className="icon-button templates-settings__drag-handle"
+                    onPointerDown={(e) => taskDrag.handlePointerDown(e, template.id)}
+                    onPointerMove={taskDrag.handlePointerMove}
+                    onPointerUp={taskDrag.handlePointerUp}
+                    type="button"
+                  >
+                    <GripVertical size={16} />
+                  </button>
+                  <div className="templates-settings__info">
+                    {editingId === template.id ? (
+                      <input
+                        aria-label={`Byt namn på mallen ${template.title}`}
+                        autoFocus
+                        className="text-input templates-settings__rename-input"
+                        onBlur={saveEditing}
+                        onChange={(e) => setDraftTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        value={draftTitle}
+                      />
+                    ) : (
+                      <span
+                        className="templates-settings__title"
+                        onClick={() => startEditing(template)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") startEditing(template);
+                        }}
+                      >
+                        {template.title}
+                      </span>
+                    )}
+                    {recurrenceLabel && (
+                      <small>
+                        {recurrenceLabel}
+                        {endLabel && ` · ${endLabel}`}
+                      </small>
+                    )}
+                  </div>
+                  <button
+                    aria-label={`Ta bort mallen ${template.title}`}
+                    className="icon-button danger"
+                    onClick={() => onRemoveTaskTemplate(template.id)}
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

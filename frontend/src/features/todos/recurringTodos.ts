@@ -1,4 +1,4 @@
-import type { RecurrenceRule, Todo, TodoTimeWindow, Weekday } from "@shared/types";
+import type { RecurrenceRule, RecurrenceUnit, Todo, TodoTimeWindow, Weekday } from "@shared/types";
 import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput, withWallClockOnDate } from "../../utils/todoTimeZone";
 
 const weekdays: Weekday[] = [
@@ -22,6 +22,36 @@ export const WEEKDAY_SHORT: Record<Weekday, string> = {
   saturday: "lör",
   sunday: "sön"
 };
+
+const RECURRENCE_UNIT_LABEL: Record<RecurrenceUnit, string> = {
+  day: "dag",
+  week: "vecka",
+  month: "månad",
+  year: "år"
+};
+
+// Läsbar beskrivning av ett återkommelsemönster — delad mellan
+// RecurringTodosSettings.tsx (mallens Todo.recurrence) och
+// TemplatesSettings.tsx (en mallbiblioteks-uppgifts TodoTemplateTask.recurrence,
+// samma RecurrenceRule-typ) (2026-07-29, Zaidas önskemål: "mer specificerat...
+// med starttid och sluttid, om de är återkommande, hur ofta och när").
+export function describeRecurrence(recurrence: RecurrenceRule): string {
+  if (recurrence.type !== "recurring") return "";
+  const unitLabel = RECURRENCE_UNIT_LABEL[recurrence.unit];
+  const everyLabel = recurrence.every === 1 ? `Varje ${unitLabel}` : `Var ${recurrence.every}:e ${unitLabel}`;
+  if (recurrence.unit === "week" && recurrence.daysOfWeek) {
+    return `${everyLabel}: ${recurrence.daysOfWeek.map((d) => WEEKDAY_SHORT[d]).join(", ")}`;
+  }
+  return everyLabel;
+}
+
+// Slutvillkoret (ADR-0017) — "till {datum}"/"{N} gånger", eller null om
+// serien aldrig tar slut ("never", eller inget end-fält alls på äldre data).
+export function describeRecurrenceEnd(recurrence: RecurrenceRule): string | null {
+  if (recurrence.type !== "recurring" || !recurrence.end || recurrence.end.type === "never") return null;
+  if (recurrence.end.type === "until") return `till ${isoToDateOnly(recurrence.end.date)}`;
+  return `${recurrence.end.count} gånger`;
+}
 
 // Tid-input-hjälpare, delade mellan TimeWindowsPicker och skapa/redigera-
 // modalerna. Själva tidszons-logiken (fixedTodoTimes) ligger i utils/

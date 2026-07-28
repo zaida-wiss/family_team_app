@@ -382,6 +382,11 @@ export function useShellState(
     recurringTemplateOrder: currentMember.recurringTemplateOrder ?? [],
     onReorderRecurringTemplates: (order: Id[]) =>
       updateMemberNavigation(currentMember.id, { recurringTemplateOrder: order }),
+    // Samma mönster, för mallbibliotekets fristående uppgiftsmallar
+    // (2026-07-29, Zaidas önskemål: "flytta ordningen snabbt i uppgiftsmallarna").
+    taskTemplateOrder: currentMember.taskTemplateOrder ?? [],
+    onReorderTaskTemplates: (order: Id[]) =>
+      updateMemberNavigation(currentMember.id, { taskTemplateOrder: order }),
     todoImportResult: lastImportResult,
     onSetTodoImportResult: setLastImportResult,
     todoImportUndo: lastImportUndo,

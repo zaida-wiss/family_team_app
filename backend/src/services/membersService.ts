@@ -84,6 +84,7 @@ const SELF_NAV_FIELDS = new Set([
   "todoThreadOrder",
   "todoBubbleOrder",
   "recurringTemplateOrder",
+  "taskTemplateOrder",
   "todoThreadRange",
   "todoThreadGap",
   "todoBubbleSize",

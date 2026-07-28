@@ -26,6 +26,8 @@ const memberSchema = new Schema<Member>({
   // efterföljande commit — se todoThreadGap-incidentens kommentar nedan för
   // varför det spelar roll.
   recurringTemplateOrder: { type: [String], default: undefined },
+  // Samma "lägg till i Zod OCH Mongoose samtidigt"-lärdom som ovan.
+  taskTemplateOrder: { type: [String], default: undefined },
   todoThreadRange: { type: String, default: undefined },
   // Saknades i Mongoose-schemat (2026-07-26, Zaida upptäckte att reglaget
   // "studsade tillbaka" till standardvärdet) — fältet fanns i Zod-schemat

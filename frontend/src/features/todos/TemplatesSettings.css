@@ -42,6 +42,24 @@
   min-width: 0;
 }
 
+.templates-settings__info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.templates-settings__drag-handle {
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.templates-settings__row--drag-over {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+}
+
 .templates-settings__category {
   display: grid;
   gap: 6px;

@@ -263,6 +263,7 @@ export function useMembersState() {
       todoThreadOrder?: Id[];
       todoBubbleOrder?: Record<Id, Id[]>;
       recurringTemplateOrder?: Id[];
+      taskTemplateOrder?: Id[];
       todoThreadRange?: TodoThreadRange;
       todoThreadGap?: number;
       todoBubbleSize?: number;

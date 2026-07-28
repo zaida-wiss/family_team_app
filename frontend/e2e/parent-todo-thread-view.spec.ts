@@ -1480,6 +1480,55 @@ test("Inställningar → Mallar: kan byta namn på en sparad uppgiftsmall", asyn
   await expect(page.getByText("Styrketräning (uppdaterad)", { exact: true })).toBeVisible();
 });
 
+// 2026-07-29, Zaidas önskemål: "jag behöver kunna flytta ordningen snabbt i
+// uppgiftsmallarna... dessutom behöver det vara mer specificerat... med
+// starttid och sluttid, om de är återkommande, hur ofta och när."
+// Uppgiftsmallar saknar en starttid (sätts först när mallen tillämpas), men
+// visar återkommelsemönster + slutvillkor.
+test("Inställningar → Mallar: uppgiftsmallar går att flytta med drag-and-drop, raden visar återkommelse/sluttid", async ({ page }) => {
+  const FIRST = {
+    id: "todo-template-a", accountId: "acc-1", memberId: "mem-1",
+    title: "Städa", visual: { type: "lucide-icon", value: "Star" },
+    subtasks: [], recurrence: { type: "recurring", unit: "week", every: 2, daysOfWeek: ["monday"], end: { type: "count", count: 5 } }, starValue: 0,
+    createdAt: "2026-07-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  const SECOND = { ...FIRST, id: "todo-template-b", title: "Träna", recurrence: { type: "none" } };
+  let savedOrder: string[] | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-templates/tasks", (route) => route.fulfill({ json: [FIRST, SECOND] }));
+  await page.route("**/api/members/mem-1", (route) => {
+    const body = route.request().postDataJSON() as { taskTemplateOrder?: string[] };
+    if (body.taskTemplateOrder) savedOrder = body.taskTemplateOrder;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "📋 Mallar" }).click();
+
+  const rows = page.locator(".templates-settings__row");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Var 2:e vecka: mån");
+  await expect(rows.nth(0)).toContainText("5 gånger");
+  await expect(rows.nth(1)).not.toContainText("Var");
+
+  const firstHandle = rows.nth(0).locator(".templates-settings__drag-handle");
+  const secondHandle = rows.nth(1).locator(".templates-settings__drag-handle");
+  const firstBox = (await firstHandle.boundingBox())!;
+  const secondBox = (await secondHandle.boundingBox())!;
+
+  await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(() => savedOrder).toEqual(["todo-template-b", "todo-template-a"]);
+  await expect(rows.nth(0)).toContainText("Träna");
+  await expect(rows.nth(1)).toContainText("Städa");
+});
+
 // 2026-07-29, Zaidas fynd: "jag måste kunna öppna, se och redigera en
 // kategorimall, nu ser jag inte vad den ens innehåller" — kategori-mallar
 // visade tidigare bara namn+antal, inget sätt att se VILKA uppgifter en mall
@@ -2058,8 +2107,8 @@ test("Inställningar: återkommande uppgifter kan sorteras på namn och filtrera
   await expect(rows.nth(0)).toContainText("Läsa");
   await expect(rows.nth(1)).toContainText("Städa");
   await expect(rows.nth(2)).toContainText("Träna");
-  // I sorteringslägen (allt utom "Egen ordning") göms upp/ner-pilarna.
-  await expect(page.getByRole("button", { name: /Flytta .* upp/ })).toHaveCount(0);
+  // I sorteringslägen (allt utom "Egen ordning") göms drag-handtaget.
+  await expect(page.locator(".recurring-todos-settings__drag-handle")).toHaveCount(0);
 
   await page.getByLabel("Visa").selectOption("family");
   await expect(rows).toHaveCount(1);
@@ -2105,6 +2154,59 @@ test("Inställningar: återkommande uppgifter delas upp i Barn och Övriga", asy
   await expect(otherGroup.getByText("Träna")).toBeVisible();
   await expect(otherGroup.getByText("Städa")).toBeVisible();
   await expect(otherGroup.getByText("Läxor")).toHaveCount(0);
+});
+
+// 2026-07-29, Zaidas önskemål: "jag behöver kunna flytta ordningen snabbt...
+// drag-and-drop" istället för pil-för-pil, samma pointer-baserade mönster
+// som kategori-/bubbel-drag i tråd-vyn. Verifierar samtidigt att raden visar
+// "mer specificerat" info (starttid, hur ofta, sluttid) per Zaidas följdsvar.
+test("Inställningar: återkommande uppgifter går att flytta med drag-and-drop, raden visar starttid/återkommelse/sluttid", async ({ page }) => {
+  const FIRST = {
+    id: "todo-first", accountId: "acc-1", title: "Städa", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "week", every: 2, daysOfWeek: ["monday", "wednesday"], end: { type: "until", date: "2026-12-31T00:00:00.000Z" } },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, personalCategoryId: null
+  };
+  const SECOND = { ...FIRST, id: "todo-second", title: "Träna", recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null } };
+  let savedOrder: string[] | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [FIRST, SECOND] }));
+  await page.route("**/api/members/mem-1", (route) => {
+    const body = route.request().postDataJSON() as { recurringTemplateOrder?: string[] };
+    if (body.recurringTemplateOrder) savedOrder = body.recurringTemplateOrder;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
+
+  const rows = page.locator(".recurring-todos-settings__row");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("från 2026-07-01");
+  await expect(rows.nth(0)).toContainText("Var 2:e vecka: mån, ons");
+  await expect(rows.nth(0)).toContainText("till 2026-12-31");
+
+  const firstHandle = rows.nth(0).locator(".recurring-todos-settings__drag-handle");
+  const secondHandle = rows.nth(1).locator(".recurring-todos-settings__drag-handle");
+  const firstBox = (await firstHandle.boundingBox())!;
+  const secondBox = (await secondHandle.boundingBox())!;
+
+  await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(() => savedOrder).toEqual(["todo-second", "todo-first"]);
+  await expect(rows.nth(0)).toContainText("Träna");
+  await expect(rows.nth(1)).toContainText("Städa");
 });
 
 // Zaida: "Anteckningar och delmoment ska stå [i visa-vyn] också... det ska

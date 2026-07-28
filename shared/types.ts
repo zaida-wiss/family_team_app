@@ -191,6 +191,10 @@ export type Member = {
   // vanliga automatiska sortering (startdatum) — samma "olistade hamnar
   // sist"-princip som todoThreadOrder/todoBubbleOrder.
   recurringTemplateOrder?: Id[];
+  // Samma princip, för mallbibliotekets fristående uppgiftsmallar
+  // (TemplatesSettings.tsx, 2026-07-29, Zaidas önskemål: "flytta ordningen
+  // snabbt i uppgiftsmallarna").
+  taskTemplateOrder?: Id[];
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode. Standard "today" om osatt.
   todoThreadRange?: TodoThreadRange;

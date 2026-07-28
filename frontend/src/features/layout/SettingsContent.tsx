@@ -121,6 +121,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onDeleteTodo,
     recurringTemplateOrder,
     onReorderRecurringTemplates,
+    taskTemplateOrder,
+    onReorderTaskTemplates,
     todoImportResult,
     onSetTodoImportResult,
     todoImportUndo,
@@ -552,6 +554,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onRenameTaskTemplate={onRenameTaskTemplate}
               onRemoveCategoryTemplate={onRemoveCategoryTemplate}
               onUpdateCategoryTemplate={onUpdateCategoryTemplate}
+              order={taskTemplateOrder}
+              onReorder={onReorderTaskTemplates}
             />
           )
         },

@@ -1,9 +1,10 @@
 import "./RecurringTodosSettings.css";
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
-import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
+import { GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { getAssigneeName, getVisibleTodos, groupByChildAssignee } from "./selectors";
-import { isoToDateOnly, isRecurringTemplate, WEEKDAY_SHORT } from "./recurringTodos";
+import { describeRecurrence, describeRecurrenceEnd, isoToDateOnly, isRecurringTemplate } from "./recurringTodos";
+import { useDragReorder } from "../../hooks/useDragReorder";
 import { TodoEditModal } from "./TodoEditModal";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 
@@ -29,13 +30,6 @@ type Props = {
   onReorder: (order: Id[]) => void;
 };
 
-const UNIT_LABEL: Record<RecurrenceUnit, string> = {
-  day: "dag",
-  week: "vecka",
-  month: "månad",
-  year: "år"
-};
-
 // Ankardatumets tidsstämpel, för sortering — mallar utan startdatum (borde
 // inte förekomma i praktiken, se ADR-0015/incidents/2026-07-06) hamnar sist
 // istället för att krascha sorteringen.
@@ -58,17 +52,6 @@ function endTimeValue(todo: Todo): number {
 
 type SortMode = "manual" | "name" | "start" | "end";
 type MemberFilter = "all" | "family" | Id;
-
-function describeRecurrence(todo: Todo): string {
-  const recurrence = todo.recurrence;
-  if (recurrence.type !== "recurring") return "";
-  const unitLabel = UNIT_LABEL[recurrence.unit];
-  const everyLabel = recurrence.every === 1 ? `Varje ${unitLabel}` : `Var ${recurrence.every}:e ${unitLabel}`;
-  if (recurrence.unit === "week" && recurrence.daysOfWeek) {
-    return `${everyLabel}: ${recurrence.daysOfWeek.map((d) => WEEKDAY_SHORT[d]).join(", ")}`;
-  }
-  return everyLabel;
-}
 
 // De återkommande MALLARNA (recurringSourceId===null) visas inte längre som
 // vanliga bollar/rader i Todos-panelen (2026-07-06) — de tävlade om
@@ -142,21 +125,33 @@ export function RecurringTodosSettings({
   // OneOffTodosSettings.tsx/TodoHistory.tsx).
   const { childItems, otherItems } = groupByChildAssignee(templates, members, roles);
 
-  // Flyttar ett item upp/ner INOM sin egen grupp (barn eller övriga) — hittar
-  // grannens id i gruppens EGNA ordning, byter sedan plats på just DE TVÅ
-  // id:na i den FULLA ordningslistan (oavsett om de råkar ligga intill
-  // varandra där också), så en flytt aldrig hoppar över till fel grupp.
-  function moveWithinGroup(group: Todo[], id: Id, direction: -1 | 1) {
-    const groupIds = group.map((t) => t.id);
-    const index = groupIds.indexOf(id);
-    const swapWithId = groupIds[index + direction];
-    if (!swapWithId) return;
+  // Håll-och-dra istället för pil-för-pil (2026-07-29, Zaidas önskemål:
+  // "flytta ordningen snabbt") — reorderGroup tar emot gruppens NYA ordning
+  // (från useDragReorder) och skriver in den på just DE POSITIONER gruppens
+  // id:n redan låg på i den FULLA ordningslistan (oavsett om de råkar ligga
+  // intill varandra där), så en drag aldrig hoppar över till fel grupp.
+  function reorderGroup(group: Todo[], newGroupOrder: Id[]) {
     const fullIds = templates.map((t) => t.id);
-    const i1 = fullIds.indexOf(id);
-    const i2 = fullIds.indexOf(swapWithId);
-    [fullIds[i1], fullIds[i2]] = [fullIds[i2], fullIds[i1]];
-    onReorder(fullIds);
+    const groupIdSet = new Set(group.map((t) => t.id));
+    const positions: number[] = [];
+    fullIds.forEach((id, i) => {
+      if (groupIdSet.has(id)) positions.push(i);
+    });
+    const next = [...fullIds];
+    newGroupOrder.forEach((id, i) => {
+      next[positions[i]] = id;
+    });
+    onReorder(next);
   }
+
+  const childDrag = useDragReorder(
+    childItems.map((t) => t.id),
+    (newOrder) => reorderGroup(childItems, newOrder)
+  );
+  const otherDrag = useDragReorder(
+    otherItems.map((t) => t.id),
+    (newOrder) => reorderGroup(otherItems, newOrder)
+  );
 
   // En mall "används just nu" om den har minst en ännu ej raderad,
   // väntande occurrence — samma relation som useTodosState.ts:s
@@ -180,31 +175,25 @@ export function RecurringTodosSettings({
     onDeleteTodo(id);
   }
 
-  function renderRow(todo: Todo, group: Todo[]) {
-    const index = group.indexOf(todo);
+  function renderRow(todo: Todo, drag: ReturnType<typeof useDragReorder<Id>>) {
+    const endLabel = describeRecurrenceEnd(todo.recurrence);
     return (
-      <li className="recurring-todos-settings__row" key={todo.id}>
+      <li
+        className={`recurring-todos-settings__row${drag.dragOverKey === todo.id ? " recurring-todos-settings__row--drag-over" : ""}`}
+        data-drag-key={todo.id}
+        key={todo.id}
+      >
         {sortMode === "manual" && (
-          <div className="recurring-todos-settings__reorder">
-            <button
-              aria-label={`Flytta ${todo.title} upp`}
-              className="icon-button"
-              disabled={index === 0}
-              onClick={() => moveWithinGroup(group, todo.id, -1)}
-              type="button"
-            >
-              <ArrowUp size={14} />
-            </button>
-            <button
-              aria-label={`Flytta ${todo.title} ner`}
-              className="icon-button"
-              disabled={index === group.length - 1}
-              onClick={() => moveWithinGroup(group, todo.id, 1)}
-              type="button"
-            >
-              <ArrowDown size={14} />
-            </button>
-          </div>
+          <button
+            aria-label={`Flytta ${todo.title}`}
+            className="icon-button recurring-todos-settings__drag-handle"
+            onPointerDown={(e) => drag.handlePointerDown(e, todo.id)}
+            onPointerMove={drag.handlePointerMove}
+            onPointerUp={drag.handlePointerUp}
+            type="button"
+          >
+            <GripVertical size={16} />
+          </button>
         )}
 
         <div className="recurring-todos-settings__info">
@@ -213,8 +202,9 @@ export function RecurringTodosSettings({
             {todo.title}
           </strong>
           <small>
-            {getAssigneeName(todo, members)} · {describeRecurrence(todo)}
+            {getAssigneeName(todo, members)} · {describeRecurrence(todo.recurrence)}
             {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}
+            {endLabel && ` · ${endLabel}`}
           </small>
         </div>
 
@@ -312,13 +302,13 @@ export function RecurringTodosSettings({
           {childItems.length > 0 && (
             <div>
               <h4 className="recurring-todos-settings__group-heading">👶 Barn</h4>
-              <ul className="recurring-todos-settings__list">{childItems.map((todo) => renderRow(todo, childItems))}</ul>
+              <ul className="recurring-todos-settings__list">{childItems.map((todo) => renderRow(todo, childDrag))}</ul>
             </div>
           )}
           {otherItems.length > 0 && (
             <div>
               <h4 className="recurring-todos-settings__group-heading">Övriga</h4>
-              <ul className="recurring-todos-settings__list">{otherItems.map((todo) => renderRow(todo, otherItems))}</ul>
+              <ul className="recurring-todos-settings__list">{otherItems.map((todo) => renderRow(todo, otherDrag))}</ul>
             </div>
           )}
         </div>
