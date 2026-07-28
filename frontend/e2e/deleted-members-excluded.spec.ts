@@ -90,6 +90,7 @@ test("ShoppingListsPanel: en raderad medlem erbjuds inte i dela-med-listan", asy
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Inköpslistor" }).click();
+  await page.getByRole("button", { name: "Inköpslistor" }).click();
 
   const shareSelect = page.getByRole("combobox", { name: "Välj medlem att dela med" });
   await expect(shareSelect).toBeVisible();

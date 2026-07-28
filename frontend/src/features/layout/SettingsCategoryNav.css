@@ -52,6 +52,7 @@
   justify-content: center;
   gap: 8px;
   min-height: 96px;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--card);
@@ -62,6 +63,21 @@
   cursor: pointer;
   padding: 12px;
   transition: background 0.15s, border-color 0.15s;
+}
+
+/* 2026-07-28, Zaidas fynd: "familjemedlemmar texten... syns inte hela texten
+   om jag väljer största textstorleken" — ett långt, obrytbart ord (inget
+   mellanslag) räknas som en flex-items min-content-bredd som standard,
+   vilket tvingar knappen/kortet att antingen svälla över sin container eller
+   klippas av en overflow:hidden-förälder, istället för att radbryta. Samma
+   "bryt hellre ordet än klipp texten"-princip som redan gäller ChildTasks/
+   CalendarEventDetail (2026-07-21) — texten får bara brytas mitt i ordet om
+   det inte får plats ens ensamt på en rad. Gäller båda label-typerna
+   (kategori-kort OCH underkategori-knapp), inte bara Familjemedlemmar. */
+.settings-category-card span,
+.settings-subcategory-btn__label {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .settings-category-card:hover {
