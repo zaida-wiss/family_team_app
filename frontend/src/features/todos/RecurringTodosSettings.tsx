@@ -43,6 +43,22 @@ function startTimeValue(todo: Todo): number {
   return todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.POSITIVE_INFINITY;
 }
 
+// "Sluttid" (2026-07-29, Zaidas önskemål: "sortera... efter namn, starttid
+// och sluttid") — en mall har bara ett riktigt slutDATUM när dess
+// återkommelse har ett explicit "until"-slutvillkor (ADR-0017); "never"/
+// "count" har inget fast datum att sortera på, hamnar sist precis som en
+// mall utan startdatum.
+function endTimeValue(todo: Todo): number {
+  const recurrence = todo.recurrence;
+  if (recurrence.type === "recurring" && recurrence.end?.type === "until") {
+    return new Date(recurrence.end.date).getTime();
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+type SortMode = "manual" | "name" | "start" | "end";
+type MemberFilter = "all" | "family" | Id;
+
 function describeRecurrence(todo: Todo): string {
   const recurrence = todo.recurrence;
   if (recurrence.type !== "recurring") return "";
@@ -84,14 +100,31 @@ export function RecurringTodosSettings({
   // ifall den används för tillfället") — ett litet tvåstegs-kort istället för
   // en direkt radering, bara när mallen faktiskt har en aktiv occurrence.
   const [confirmDeleteId, setConfirmDeleteId] = useState<Id | null>(null);
+  // Sortering + filter (2026-07-29, Zaidas önskemål: "sortera uppgifterna
+  // efter namn, starttid och sluttid... få fram alla uppgifter som tillhör
+  // en familjemedlem, eller de som tillhör familjen"). "Egen ordning" är
+  // default (den redan befintliga manuella dra-ordningen, oförändrad) — de
+  // tre övriga lägena åsidosätter den tillfälligt (upp/ner-pilarna göms då,
+  // eftersom en aktiv sortering och en manuell ordning annars motsäger
+  // varandra visuellt).
+  const [sortMode, setSortMode] = useState<SortMode>("manual");
+  const [memberFilter, setMemberFilter] = useState<MemberFilter>("all");
 
   // Strukturerad överblick, primärt i Zaidas egen manuella ordning (2026-07-28)
   // — mallar som saknas i `order` (t.ex. nyskapade) hamnar sist, i tidsordning
   // (tidigast startdatum, samma princip som tidigare).
   const unordered = [...getVisibleTodos(currentMember, roles, todos).filter(isRecurringTemplate)]
     .sort((a, b) => startTimeValue(a) - startTimeValue(b));
+  const filtered = unordered.filter((t) => {
+    if (memberFilter === "all") return true;
+    if (memberFilter === "family") return !t.assignedTo;
+    return t.assignedTo === memberFilter;
+  });
   const orderIndex = new Map(order.map((id, i) => [id, i]));
-  const templates = [...unordered].sort((a, b) => {
+  const templates = [...filtered].sort((a, b) => {
+    if (sortMode === "name") return a.title.localeCompare(b.title, "sv");
+    if (sortMode === "start") return startTimeValue(a) - startTimeValue(b);
+    if (sortMode === "end") return endTimeValue(a) - endTimeValue(b);
     const ai = orderIndex.get(a.id);
     const bi = orderIndex.get(b.id);
     if (ai !== undefined && bi !== undefined) return ai - bi;
@@ -100,6 +133,7 @@ export function RecurringTodosSettings({
     return 0;
   });
   const editingTodo = templates.find((t) => t.id === editingId) ?? null;
+  const assignableMembers = members.filter((m) => m.deletedAt === null);
 
   function moveTemplate(id: Id, direction: -1 | 1) {
     const ids = templates.map((t) => t.id);
@@ -138,34 +172,67 @@ export function RecurringTodosSettings({
         <button className="secondary-button" onClick={() => setCreating(true)} type="button">
           <Plus size={16} /> Ny återkommande uppgift
         </button>
+        <label className="recurring-todos-settings__toolbar-field">
+          Sortera
+          <select
+            className="text-input"
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            value={sortMode}
+          >
+            <option value="manual">Egen ordning</option>
+            <option value="name">Namn</option>
+            <option value="start">Starttid</option>
+            <option value="end">Sluttid</option>
+          </select>
+        </label>
+        <label className="recurring-todos-settings__toolbar-field">
+          Visa
+          <select
+            className="text-input"
+            onChange={(e) => setMemberFilter(e.target.value as MemberFilter)}
+            value={memberFilter}
+          >
+            <option value="all">Alla</option>
+            <option value="family">Familjen (otilldelade)</option>
+            {assignableMembers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {templates.length === 0 ? (
-        <p className="empty-note">Inga återkommande uppgifter ännu.</p>
+        <p className="empty-note">
+          {unordered.length === 0 ? "Inga återkommande uppgifter ännu." : "Inga uppgifter matchar det valda filtret."}
+        </p>
       ) : (
         <ul className="recurring-todos-settings__list">
           {templates.map((todo, index) => (
             <li className="recurring-todos-settings__row" key={todo.id}>
-              <div className="recurring-todos-settings__reorder">
-                <button
-                  aria-label={`Flytta ${todo.title} upp`}
-                  className="icon-button"
-                  disabled={index === 0}
-                  onClick={() => moveTemplate(todo.id, -1)}
-                  type="button"
-                >
-                  <ArrowUp size={14} />
-                </button>
-                <button
-                  aria-label={`Flytta ${todo.title} ner`}
-                  className="icon-button"
-                  disabled={index === templates.length - 1}
-                  onClick={() => moveTemplate(todo.id, 1)}
-                  type="button"
-                >
-                  <ArrowDown size={14} />
-                </button>
-              </div>
+              {sortMode === "manual" && (
+                <div className="recurring-todos-settings__reorder">
+                  <button
+                    aria-label={`Flytta ${todo.title} upp`}
+                    className="icon-button"
+                    disabled={index === 0}
+                    onClick={() => moveTemplate(todo.id, -1)}
+                    type="button"
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    aria-label={`Flytta ${todo.title} ner`}
+                    className="icon-button"
+                    disabled={index === templates.length - 1}
+                    onClick={() => moveTemplate(todo.id, 1)}
+                    type="button"
+                  >
+                    <ArrowDown size={14} />
+                  </button>
+                </div>
+              )}
 
               <div className="recurring-todos-settings__info">
                 <strong>

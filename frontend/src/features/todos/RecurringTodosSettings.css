@@ -27,7 +27,23 @@
 }
 
 .recurring-todos-settings__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
+}
+
+.recurring-todos-settings__toolbar-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted-fg);
+}
+
+.recurring-todos-settings__toolbar-field select {
+  min-width: 0;
 }
 
 .recurring-todos-settings__reorder {

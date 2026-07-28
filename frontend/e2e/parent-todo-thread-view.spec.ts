@@ -2019,6 +2019,57 @@ test("Inställningar: återkommande uppgifter listas i tidsordning (tidigast sta
   await expect(rows.nth(1)).toContainText("från 2026-10-01");
 });
 
+// 2026-07-29, Zaidas önskemål: "jag skall även kunna sortera uppgifterna
+// efter namn, starttid och sluttid, samt få fram alla uppgifter som tillhör
+// en familjemedlem, eller de som tillhör familjen."
+test("Inställningar: återkommande uppgifter kan sorteras på namn och filtreras per medlem/familjen", async ({ page }) => {
+  const PARENT2 = { id: "mem-2", accountId: "acc-1", userId: "user-2", name: "Hanna", roleId: "role-1", isChild: false, avatarUrl: null, color: null, dashboardTheme: "clear", spentStars: 0, deletedAt: null, deletedBy: null };
+  const TRANA = {
+    id: "todo-trana", accountId: "acc-1", title: "Träna", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, personalCategoryId: null
+  };
+  const STADA = {
+    ...TRANA, id: "todo-stada", title: "Städa", assignedTo: null, visibleFrom: "2026-07-02T00:00:00.000Z"
+  };
+  const LASA = {
+    ...TRANA, id: "todo-lasa", title: "Läsa", assignedTo: "mem-2", visibleFrom: "2026-07-03T00:00:00.000Z"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, PARENT2] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TRANA, STADA, LASA] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
+
+  const rows = page.locator(".recurring-todos-settings__row");
+  await expect(rows).toHaveCount(3);
+
+  await page.getByLabel("Sortera").selectOption("name");
+  await expect(rows.nth(0)).toContainText("Läsa");
+  await expect(rows.nth(1)).toContainText("Städa");
+  await expect(rows.nth(2)).toContainText("Träna");
+  // I sorteringslägen (allt utom "Egen ordning") göms upp/ner-pilarna.
+  await expect(page.getByRole("button", { name: /Flytta .* upp/ })).toHaveCount(0);
+
+  await page.getByLabel("Visa").selectOption("family");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.nth(0)).toContainText("Städa");
+
+  await page.getByLabel("Visa").selectOption("mem-2");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.nth(0)).toContainText("Läsa");
+});
+
 // Zaida: "Anteckningar och delmoment ska stå [i visa-vyn] också... det ska
 // inte behöva vara redigeringsläge" (2026-07-06) — rubrikerna syns nu alltid,
 // med en platshållartext när det inte finns något ännu, istället för att hela
