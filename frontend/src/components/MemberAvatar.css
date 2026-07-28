@@ -39,7 +39,7 @@
 .avatar-small .avatar-icon {
   display: grid;
   place-items: center;
-  border: 3px solid var(--primary);
+  border: 3px solid var(--member-avatar-border, var(--primary));
   border-radius: 50%;
   background: var(--muted);
   object-fit: cover;
@@ -55,7 +55,7 @@
 .avatar-xs .avatar-icon {
   width: 24px;
   height: 24px;
-  border: 2px solid var(--primary);
+  border: 2px solid var(--member-avatar-border, var(--primary));
   border-radius: 50%;
   background: var(--muted);
   object-fit: cover;

@@ -30,8 +30,16 @@ export function MemberAvatar({
     setImageFailed(false);
   }, [member.avatarUrl]);
 
+  // 2026-07-28, Zaidas önskemål: profilbildens kant ska ha medlemmens egen
+  // valda färg (Inställningar → Familj → Familjemedlemmar), inte alltid
+  // temats --primary — samma "member.color = identitet"-princip som redan
+  // används för todo-bubblornas kant (--assignee-color) och Barn-tråden.
+  // Ingen egen färg vald: oförändrat, faller tillbaka på --primary.
   return (
-    <span className={`avatar-frame avatar-${size}`}>
+    <span
+      className={`avatar-frame avatar-${size}`}
+      style={member.color ? ({ "--member-avatar-border": member.color } as React.CSSProperties) : undefined}
+    >
       {member.avatarUrl && !imageFailed ? (
         <img
           alt=""
