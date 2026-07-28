@@ -1,7 +1,7 @@
 import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
-import { ShoppingItemSchema } from "../../../shared/schemas.js";
+import { ShoppingItemSchema, ShoppingListPatchSchema } from "../../../shared/schemas.js";
 import { getAllRoles } from "./rolesService.js";
 import { canEditSharedResource, getExternalShoppingListAccess, hasPermission } from "../../../shared/permissions.js";
 import type { PermissionKey, ShoppingList } from "../../../shared/types.js";
@@ -112,6 +112,21 @@ export async function unshareList(
   list.sharedWith = list.sharedWith.filter((s) => s.memberId !== targetMemberId);
   list.markModified("sharedWith");
   await list.save();
+}
+
+// 2026-07-28, Zaidas önskemål: "inköpslistorna måste gå att ändra namn på
+// när man trycker på redigera" — samma requireEditAccess som övriga
+// skrivningar i denna fil.
+export async function updateList(id: string, accountId: string, memberId: string | null, data: unknown) {
+  const list = await ShoppingListModel.findOne({ id, accountId });
+  if (!list) {
+    throw new AppError(404, "Inköpslista hittades inte");
+  }
+  await requireEditAccess(list, accountId, memberId);
+  const validated = ShoppingListPatchSchema.parse(data);
+  list.name = validated.name;
+  await list.save();
+  return { id: list.id, name: list.name };
 }
 
 export async function deleteList(id: string, accountId: string, memberId: string | null) {

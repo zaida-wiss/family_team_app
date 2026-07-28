@@ -308,7 +308,10 @@ test("kan dela en lista med en annan familjemedlem direkt i Inköp-panelen", asy
 // inköpslistor." Tre nya delar i Inköp-panelen (listradering fanns redan,
 // men bara i Inställningar → Inköpslistor, inte här).
 
-test("kan radera en hel inköpslista i redigeringsläge, kräver bekräftelse", async ({ page }) => {
+// 2026-07-28, Zaidas önskemål: "man ska inte behöva trycka flera ggr på tex
+// delete knappen" — det extra Bekräfta-steget togs bort, Redigera-läget är
+// redan själva säkerhetsspärren.
+test("kan radera en hel inköpslista i redigeringsläge, ett klick räcker", async ({ page }) => {
   await mockCommon(page);
   const list = {
     id: "shop-1", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
@@ -331,10 +334,39 @@ test("kan radera en hel inköpslista i redigeringsläge, kräver bekräftelse", 
 
   await page.getByRole("button", { name: "Redigera" }).click();
   await page.getByRole("button", { name: "Radera Veckohandling" }).click();
-  await page.getByRole("button", { name: "Bekräfta radering av Veckohandling" }).click();
 
-  expect(deleteCalled).toBe(true);
+  await expect.poll(() => deleteCalled).toBe(true);
   await expect(page.getByText("Veckohandling")).toHaveCount(0);
+});
+
+// 2026-07-28, Zaidas önskemål: "inköpslistorna måste gå att ändra namn på
+// när man trycker på redigera".
+test("kan byta namn på en inköpslista i redigeringsläge", async ({ page }) => {
+  await mockCommon(page);
+  const list = {
+    id: "shop-1", name: "Veckohandling", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null, items: [],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  let patchBody: Record<string, unknown> | null = null;
+  await page.route("**/api/shopping/shop-1", (route) => {
+    if (route.request().method() !== "PATCH") return route.continue();
+    patchBody = route.request().postDataJSON();
+    route.fulfill({ json: { id: list.id, name: (patchBody as { name: string }).name } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Redigera" }).click();
+
+  const nameInput = page.getByLabel("Namn på Veckohandling");
+  await expect(nameInput).toBeVisible();
+  await nameInput.fill("Storhandling");
+  await nameInput.blur();
+
+  await expect.poll(() => patchBody).toEqual({ name: "Storhandling" });
 });
 
 test("kan dra och släppa för att ändra ordning på varorna i redigeringsläge", async ({ page }) => {
@@ -405,7 +437,11 @@ test("kan slå ihop två inköpslistor i redigeringsläge", async ({ page }) => 
   await page.goto("/");
   await page.getByRole("button", { name: "Inköp" }).click();
 
-  const veckoCard = page.locator("article", { hasText: "Veckohandling" });
+  // Ankrad på varans namn ("Mjölk"), inte listans eget namn — listnamnet blir
+  // en <input> (inte längre ren textContent) i redigeringsläge sedan
+  // namnbyte-funktionen tillkom (2026-07-28), så en hasText-filtrering på
+  // "Veckohandling" hade slutat matcha så fort Redigera klickats.
+  const veckoCard = page.locator("article", { hasText: "Mjölk" });
   await veckoCard.getByRole("button", { name: "Redigera" }).click();
   await veckoCard.getByRole("button", { name: "Slå ihop Veckohandling med en annan lista" }).click();
   await veckoCard.getByLabel("Slå ihop Veckohandling med", { exact: true }).selectOption("shop-2");

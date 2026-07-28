@@ -40,6 +40,7 @@ type Props = {
   onClearCompleted: (listId: Id) => void;
   onCreateList: (name: string, icon?: string | null) => void;
   onDeleteList: (listId: Id) => void;
+  onRenameList: (listId: Id, name: string) => void;
   onShareList: (listId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveListShare: (listId: Id, memberId: Id) => void;
 };
@@ -68,6 +69,7 @@ export function ShoppingView({
   onClearCompleted,
   onCreateList,
   onDeleteList,
+  onRenameList,
   onShareList,
   onRemoveListShare
 }: Props) {
@@ -91,11 +93,23 @@ export function ShoppingView({
   const [creatingList, setCreatingList] = useState(false);
   const [draftListName, setDraftListName] = useState("");
   const [draftListIcon, setDraftListIcon] = useState("");
-  // Radera lista + slå ihop två listor (2026-07-26, Zaidas önskemål) — båda
-  // bara nåbara i redigeringsläge, samma "ingenting raderbart utan Redigera
-  // först"-princip som varu-raderaknappen redan följer.
-  const [confirmDeleteListId, setConfirmDeleteListId] = useState<Id | null>(null);
   const [mergingListId, setMergingListId] = useState<Id | null>(null);
+  // Byt namn i redigeringsläge (2026-07-28, Zaidas önskemål: "inköpslistorna
+  // måste gå att ändra namn på när man trycker på redigera") — sparas vid
+  // blur/Enter, samma mönster som ShoppingListsPanel.tsx.
+  const [nameDrafts, setNameDrafts] = useState<Record<Id, string>>({});
+
+  function saveListName(list: ShoppingList) {
+    const draft = nameDrafts[list.id]?.trim();
+    if (draft && draft !== list.name) {
+      onRenameList(list.id, draft);
+    }
+    setNameDrafts((current) => {
+      const next = { ...current };
+      delete next[list.id];
+      return next;
+    });
+  }
   const [mergeTargetId, setMergeTargetId] = useState<Id | null>(null);
   // Drag-and-drop-ordning på varorna (2026-07-26) — pointer-baserat, samma
   // mönster som ParentTodoThreadView.tsx:s bubbel-drag inom en tråd.
@@ -279,7 +293,21 @@ export function ShoppingView({
             <div className={styles.header}>
               <div>
                 <ListIcon icon={list.icon} />
-                <strong>{list.name}</strong>
+                {isEditing ? (
+                  <input
+                    aria-label={`Namn på ${list.name}`}
+                    className="text-input"
+                    onBlur={() => saveListName(list)}
+                    onChange={(e) => setNameDrafts((current) => ({ ...current, [list.id]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                    type="text"
+                    value={nameDrafts[list.id] ?? list.name}
+                  />
+                ) : (
+                  <strong>{list.name}</strong>
+                )}
               </div>
               {activeItems.length > 0 && (
                 <small style={{ color: "var(--muted-fg)" }}>
@@ -314,13 +342,15 @@ export function ShoppingView({
                     aria-pressed={isEditing}
                     className={`icon-button${isEditing ? " icon-button--active" : ""}`}
                     onClick={() => {
-                      setEditingLists((prev) => ({ ...prev, [list.id]: !isEditing }));
-                      if (isEditing) {
-                        // Lämnar redigeringsläget — nollställ eventuella
-                        // öppna raderings-/sammanslagningsbekräftelser.
-                        setConfirmDeleteListId((current) => (current === list.id ? null : current));
-                        setMergingListId((current) => (current === list.id ? null : current));
+                      if (!isEditing) {
+                        setEditingLists((prev) => ({ ...prev, [list.id]: true }));
+                        return;
                       }
+                      // Lämnar redigeringsläget — spara ett ev. öppet
+                      // namnbyte och nollställ en öppen sammanslagning.
+                      saveListName(list);
+                      setEditingLists((prev) => ({ ...prev, [list.id]: false }));
+                      setMergingListId((current) => (current === list.id ? null : current));
                     }}
                     type="button"
                   >
@@ -340,36 +370,23 @@ export function ShoppingView({
                       <Combine size={16} />
                     </button>
                   )}
+                  {/* 2026-07-28, Zaidas önskemål: "man ska inte behöva
+                      trycka flera ggr på tex delete knappen" — Radera-knappen
+                      tar bort direkt i redigeringsläge (ett klick, inte ett
+                      extra Bekräfta-steg ovanpå), samma mönster som
+                      ShoppingListsPanel.tsx (Inställningar → Inköpslistor)
+                      redan använde. Redigeringsläget är själva säkerhets-
+                      spärren (2026-07-22: "ingenting skall gå att radera om
+                      man inte trycker redigera först"), oförändrat. */}
                   {isEditing && (
-                    confirmDeleteListId === list.id ? (
-                      <>
-                        <button
-                          aria-label={`Bekräfta radering av ${list.name}`}
-                          className="icon-button danger"
-                          onClick={() => onDeleteList(list.id)}
-                          type="button"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                        <button
-                          aria-label="Avbryt radering"
-                          className="icon-button"
-                          onClick={() => setConfirmDeleteListId(null)}
-                          type="button"
-                        >
-                          <X size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        aria-label={`Radera ${list.name}`}
-                        className="icon-button danger"
-                        onClick={() => setConfirmDeleteListId(list.id)}
-                        type="button"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )
+                    <button
+                      aria-label={`Radera ${list.name}`}
+                      className="icon-button danger"
+                      onClick={() => onDeleteList(list.id)}
+                      type="button"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   )}
                 </div>
               )}

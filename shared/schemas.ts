@@ -223,6 +223,13 @@ export const ShoppingItemSchema = z.object({
   deletedBy: IdSchema.nullable()
 });
 
+// 2026-07-28, Zaidas önskemål: "inköpslistorna måste gå att ändra namn på
+// när man trycker på redigera" — bara namnet, inte hela listan (ingen
+// endpoint fanns alls för att ändra en redan skapad listas egna fält).
+export const ShoppingListPatchSchema = z.object({
+  name: z.string().min(1, "Listnamn krävs")
+});
+
 export const TodoStatusSchema = z.enum([
   "pending",
   "done",

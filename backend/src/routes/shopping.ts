@@ -102,6 +102,10 @@ shoppingRouter.delete("/:id/external-share/:granteeAccountId/:granteeMemberId", 
   res.json({ ok: true });
 });
 
+shoppingRouter.patch("/:id", async (req, res) => {
+  res.json(await shopping.updateList(req.params.id, req.accountId!, req.memberId ?? null, req.body));
+});
+
 shoppingRouter.delete("/:id", async (req, res) => {
   await shopping.deleteList(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });

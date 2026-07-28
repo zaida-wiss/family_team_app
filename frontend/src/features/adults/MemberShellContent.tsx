@@ -110,6 +110,7 @@ type Props = {
   // "handlingslista"-flöde behöver kunna lägga till varor direkt efter.
   onCreateShoppingList: (name: string, icon?: string | null) => Id;
   onDeleteShoppingList: (listId: string) => void;
+  onRenameShoppingList: (listId: Id, name: string) => void;
   onShareShoppingList: (listId: Id, memberId: Id, access: "view" | "edit") => void;
   onRemoveShoppingListShare: (listId: string, memberId: string) => void;
   onToggleShoppingItem: (listId: string, itemId: string) => void;
@@ -155,7 +156,7 @@ export function MemberShellContent({
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
   onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onReorderShoppingItems, onClearCompletedShoppingItems,
   shoppingShowCompletedDefault,
-  onCreateShoppingList, onDeleteShoppingList, onShareShoppingList, onRemoveShoppingListShare,
+  onCreateShoppingList, onDeleteShoppingList, onRenameShoppingList, onShareShoppingList, onRemoveShoppingListShare,
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
   otherFamilies, onSwitchFamily,
@@ -404,6 +405,7 @@ export function MemberShellContent({
           onClearCompleted={onClearCompletedShoppingItems}
           onCreateList={onCreateShoppingList}
           onDeleteList={onDeleteShoppingList}
+          onRenameList={onRenameShoppingList}
           onShareList={onShareShoppingList}
           onRemoveListShare={onRemoveShoppingListShare}
         />

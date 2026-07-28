@@ -126,6 +126,16 @@ export function useShoppingState() {
     );
   }
 
+  // 2026-07-28, Zaidas önskemål: "inköpslistorna måste gå att ändra namn på
+  // när man trycker på redigera" — samma optimistiska mönster som övriga
+  // mutationer i denna hook.
+  function renameShoppingList(listId: Id, name: string) {
+    shoppingApi.update(listId, { name }).catch(console.error);
+    setShoppingLists((current) =>
+      current.map((list) => (list.id === listId ? { ...list, name } : list))
+    );
+  }
+
   function restoreShoppingList(listId: Id) {
     shoppingApi.restore(listId).catch(console.error);
     setShoppingLists((current) =>
@@ -258,6 +268,7 @@ export function useShoppingState() {
     shareShoppingList,
     removeShoppingListShare,
     softDeleteShoppingList,
+    renameShoppingList,
     restoreShoppingList,
     purgeShoppingTrash,
     toggleShoppingItem,

@@ -430,6 +430,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 onAddItem={memberContentProps.onAddShoppingItem}
                 onCreateList={memberContentProps.onCreateShoppingList}
                 onDeleteList={memberContentProps.onDeleteShoppingList}
+                onRenameList={memberContentProps.onRenameShoppingList}
                 onShareList={memberContentProps.onShareShoppingList}
                 onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
                 onToggleItem={memberContentProps.onToggleShoppingItem}

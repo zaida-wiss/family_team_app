@@ -18,6 +18,7 @@ type ShoppingListsPanelProps = {
   onCreateList: (name: string) => void;
   onAddItem: (listId: Id, title: string) => void;
   onDeleteList: (listId: Id) => void;
+  onRenameList: (listId: Id, name: string) => void;
   onRemoveListShare: (listId: Id, memberId: Id) => void;
   onShareList: (listId: Id, memberId: Id, access: AccessLevel) => void;
   onToggleItem: (listId: Id, itemId: Id) => void;
@@ -37,6 +38,7 @@ export function ShoppingListsPanel({
   onCreateList,
   onAddItem,
   onDeleteList,
+  onRenameList,
   onRemoveListShare,
   onShareList,
   onToggleItem
@@ -49,6 +51,23 @@ export function ShoppingListsPanel({
   // låg tidigare alltid synlig här, till skillnad från Inköp-panelens
   // motsvarighet som redan hade den regeln.
   const [editingLists, setEditingLists] = useState<Record<Id, boolean>>({});
+  // Byt namn i redigeringsläge (2026-07-28, Zaidas önskemål: "inköpslistorna
+  // måste gå att ändra namn på när man trycker på redigera") — sparas vid
+  // blur/Enter, samma autospara-mönster som redan används på andra ställen
+  // i appen (t.ex. delmomentens etiketter i TodoDetailView.tsx).
+  const [nameDrafts, setNameDrafts] = useState<Record<Id, string>>({});
+
+  function saveListName(list: ShoppingList) {
+    const draft = nameDrafts[list.id]?.trim();
+    if (draft && draft !== list.name) {
+      onRenameList(list.id, draft);
+    }
+    setNameDrafts((current) => {
+      const next = { ...current };
+      delete next[list.id];
+      return next;
+    });
+  }
   const canCreateShoppingLists = hasPermission(currentMember, roles, "canCreateShoppingLists");
   const canEditShoppingLists = hasPermission(currentMember, roles, "canEditShoppingLists");
   // Soft-deletade medlemmar ska inte gå att välja i delnings-listan
@@ -174,7 +193,21 @@ export function ShoppingListsPanel({
                 ) : (
                   <ShoppingCart size={18} />
                 )}
-                <strong>{list.name}</strong>
+                {isEditingList ? (
+                  <input
+                    aria-label={`Namn på ${list.name}`}
+                    className="text-input"
+                    onBlur={() => saveListName(list)}
+                    onChange={(e) => setNameDrafts((current) => ({ ...current, [list.id]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                    type="text"
+                    value={nameDrafts[list.id] ?? list.name}
+                  />
+                ) : (
+                  <strong>{list.name}</strong>
+                )}
               </div>
               {canEditThisList && (
                 <div className={styles.toolbarActions}>

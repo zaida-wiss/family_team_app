@@ -57,6 +57,12 @@ export const shoppingApi = {
     }),
   unshare: (listId: string, memberId: string) =>
     request<{ ok: boolean }>(api(`shopping/${listId}/share/${memberId}`), { method: "DELETE" }),
+  // 2026-07-28, Zaidas önskemål: byt namn på en lista i redigeringsläge.
+  update: (id: string, patch: { name: string }) =>
+    request<{ id: string; name: string }>(api(`shopping/${id}`), {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`shopping/${id}`), { method: "DELETE" }),
   restore: (id: string) =>

@@ -98,3 +98,29 @@ test("ShoppingListsPanel: en raderad medlem erbjuds inte i dela-med-listan", asy
   expect(optionTexts).toContain("Aktiv förälder");
   expect(optionTexts).not.toContain("Raderad förälder");
 });
+
+// 2026-07-28, Zaidas önskemål: "inköpslistorna måste gå att ändra namn på
+// när man trycker på redigera" — samma funktion i Inställningar → Inköpslistor
+// (ShoppingListsPanel.tsx) som i Inköp-panelen (ShoppingView.tsx).
+test("ShoppingListsPanel: kan byta namn på en lista i redigeringsläge", async ({ page }) => {
+  await setUpCommonRoutes(page);
+  let patchBody: Record<string, unknown> | null = null;
+  await page.route("**/api/shopping/list-1", (route) => {
+    if (route.request().method() !== "PATCH") return route.continue();
+    patchBody = route.request().postDataJSON();
+    route.fulfill({ json: { id: "list-1", name: (patchBody as { name: string }).name } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Inköpslistor" }).click();
+  await page.getByRole("button", { name: "Inköpslistor" }).click();
+
+  await page.getByRole("button", { name: "Redigera Veckohandling" }).click();
+  const nameInput = page.getByLabel("Namn på Veckohandling");
+  await expect(nameInput).toBeVisible();
+  await nameInput.fill("Storhandling");
+  await nameInput.blur();
+
+  await expect.poll(() => patchBody).toEqual({ name: "Storhandling" });
+});

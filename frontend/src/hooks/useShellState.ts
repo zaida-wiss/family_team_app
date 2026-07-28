@@ -47,7 +47,7 @@ export function useShellState(
     connectAppleCalDav, disconnectCalDav, updateCalDavInterval, syncCalDavNow } = calendarsState;
 
   const { shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
-    removeShoppingListShare, softDeleteShoppingList, restoreShoppingList, purgeShoppingTrash,
+    removeShoppingListShare, softDeleteShoppingList, renameShoppingList, restoreShoppingList, purgeShoppingTrash,
     toggleShoppingItem, deleteShoppingItem, reorderShoppingItems, clearCompletedShoppingItems,
     softDeleteShoppingForMember } = shoppingState;
 
@@ -269,6 +269,7 @@ export function useShellState(
     onCreateShoppingList: (name: string, icon?: string | null) =>
       createShoppingList(name, currentMember.id, icon ?? null),
     onDeleteShoppingList: (listId: string) => softDeleteShoppingList(listId, currentMember.id),
+    onRenameShoppingList: renameShoppingList,
     onShareShoppingList: shareShoppingList,
     onRemoveShoppingListShare: removeShoppingListShare,
     onToggleShoppingItem: toggleShoppingItem,

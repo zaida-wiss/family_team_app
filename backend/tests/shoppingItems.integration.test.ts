@@ -395,6 +395,32 @@ describe.skipIf(!RUN)("shoppingService: server-side behörighetskontroll (create
     expect(list.ownerId).toBe(ownerMemberId);
   });
 
+  // 2026-07-28, Zaidas önskemål: "inköpslistorna måste gå att ändra namn på
+  // när man trycker på redigera" — samma requireEditAccess som övriga
+  // skrivningar i filen.
+  it("nekar PATCH (byt namn) för en behörighetslös medlem, tillåter för ägaren, namnet persisteras", async () => {
+    const denied = await request(app)
+      .patch(`/api/shopping/${listId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId)
+      .send({ name: "Nytt namn" });
+    expect(denied.status).toBe(403);
+
+    const renamed = await request(app)
+      .patch(`/api/shopping/${listId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({ name: "Veckohandling" });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.name).toBe("Veckohandling");
+
+    const list = await request(app)
+      .get("/api/shopping")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(list.body.find((l: { id: string }) => l.id === listId).name).toBe("Veckohandling");
+  });
+
   it("nekar toggleItem/shareList/unshareList/deleteList för en behörighetslös medlem", async () => {
     itemId = `shopping-item-perm2-${crypto.randomUUID()}`;
     const addItem = await request(app)
