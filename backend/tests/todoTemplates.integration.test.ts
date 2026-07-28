@@ -12,6 +12,8 @@ import request from "supertest";
 import mongoose from "mongoose";
 import { app } from "../src/app.js";
 import { connectDB } from "../src/db/connection.js";
+import { TodoTemplateModel } from "../src/db/models/TodoTemplate.js";
+import { TodoCategoryTemplateModel } from "../src/db/models/TodoCategoryTemplate.js";
 
 const uri = process.env.MONGODB_URI ?? "";
 const RUN = uri.startsWith("mongodb://");
@@ -87,6 +89,19 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     taskTemplateId = res.body.id;
   });
 
+  // 2026-07-28, Zaidas begäran "deluppgifter ska krypteras" avslöjade att
+  // mallbiblioteket saknade all kryptering — title/notes/subtask-titel
+  // krypteras nu här också (ADR-0014-mönstret), samma som en riktig Todo.
+  it("mallens title/notes/subtask-titel ligger krypterade i det råa MongoDB-dokumentet", async () => {
+    const doc = await TodoTemplateModel.findOne({ id: taskTemplateId }).lean();
+    expect(doc?.title).not.toBe("Packa badkläder");
+    expect(doc?.title.startsWith("v1:")).toBe(true);
+    expect(doc?.notes).not.toBe("Glöm inte solkräm.");
+    expect(doc?.notes?.startsWith("v1:")).toBe(true);
+    expect(doc?.subtasks[1]?.title).not.toBe("Solglasögon");
+    expect(doc?.subtasks[1]?.title.startsWith("v1:")).toBe(true);
+  });
+
   it("listar kontots uppgiftsmallar", async () => {
     const res = await request(app)
       .get("/api/todo-templates/tasks")
@@ -117,6 +132,15 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     expect(res.body.tasks[0].notes).toBe("Glöm inte solkräm.");
     expect(res.body.tasks[0].subtasks[1]).toMatchObject({ title: "Solglasögon", timedMinutes: 15 });
     categoryTemplateId = res.body.id;
+  });
+
+  it("kategori-mallens uppgifters title/subtask-titel ligger krypterade i det råa MongoDB-dokumentet, kategorins EGET namn gör det inte", async () => {
+    const doc = await TodoCategoryTemplateModel.findOne({ id: categoryTemplateId }).lean();
+    expect(doc?.name).toBe("Packa");
+    expect(doc?.tasks[0]?.title).not.toBe("Packa badkläder");
+    expect(doc?.tasks[0]?.title.startsWith("v1:")).toBe(true);
+    expect(doc?.tasks[0]?.subtasks[1]?.title).not.toBe("Solglasögon");
+    expect(doc?.tasks[0]?.subtasks[1]?.title.startsWith("v1:")).toBe(true);
   });
 
   // 500, inte 400: samma som övriga routes i kodbasen som anropar ett Zod-

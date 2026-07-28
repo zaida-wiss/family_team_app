@@ -11,6 +11,10 @@
  *
  * Säkert att köra flera gånger: decryptField/encryptField-mönstret använder ett
  * "v1:"-prefix för krypterad data — fält som redan har prefixet hoppas över.
+ *
+ * 2026-07-28 tillägg: krypterar även Todo.subtasks[].title (glömdes i den
+ * ursprungliga migreringen — subtask-titlar fick fält-kryptering i koden
+ * först 2026-07-28, se todosService.ts). Samma idempotens-mönster.
  */
 
 import "dotenv/config";
@@ -74,6 +78,7 @@ async function migrateCalendars() {
 async function migrateTodos() {
   const todos = await TodoModel.find({ accountId: { $ne: null } });
   let updated = 0;
+  let updatedSubtaskTitles = 0;
   const withoutAccount = await TodoModel.countDocuments({ accountId: null });
 
   for (const todo of todos) {
@@ -86,13 +91,27 @@ async function migrateTodos() {
       todo.rejectedReason = encryptNullable(todo.accountId!, todo.rejectedReason) ?? null;
       changed = true;
     }
+    let subtasksChanged = false;
+    for (const subtask of todo.subtasks ?? []) {
+      if (needsEncryption(subtask.title)) {
+        subtask.title = encryptField(todo.accountId!, subtask.title);
+        subtasksChanged = true;
+        updatedSubtaskTitles++;
+      }
+    }
+    if (subtasksChanged) {
+      todo.markModified("subtasks");
+      changed = true;
+    }
     if (changed) {
       await todo.save();
       updated++;
     }
   }
 
-  console.log(`Todos: ${updated} uppdaterade, ${withoutAccount} utan accountId hoppade över.`);
+  console.log(
+    `Todos: ${updated} uppdaterade, ${updatedSubtaskTitles} delmomentstitlar krypterade, ${withoutAccount} utan accountId hoppade över.`
+  );
 }
 
 async function migrateRewards() {
