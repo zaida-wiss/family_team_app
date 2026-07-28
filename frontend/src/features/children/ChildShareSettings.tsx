@@ -121,7 +121,7 @@ export function ChildShareSettings({ childMembers }: Props) {
               <div className="child-share-list__row">
                 <div>
                   <strong>{childNameById.get(share.childId) ?? "Barn"}</strong>
-                  <small> delas med {share.memberName} ({share.accountName})</small>
+                  <small> delas med {share.memberName ?? "okänd person"} ({share.accountName ?? "okänt konto"})</small>
                 </div>
                 <button
                   aria-label={`Ta bort delning av ${childNameById.get(share.childId) ?? "barnet"} med ${share.memberName}`}
