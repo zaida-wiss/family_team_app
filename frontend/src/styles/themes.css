@@ -328,6 +328,87 @@
   --sidebar: color-mix(in oklab, #232dd8 16%, oklch(0.96 0.018 78));
 }
 
+.app-shell.theme-spektrum {
+  /* 2026-07-28, Zaidas 8 färger, ingen mockup — beräknat, inte samplat
+     (samma "beräkna, inte gissa"-metod som Karneval). Sorterat efter WCAG-
+     luminans: de två mörkaste (#1d2ec9 indigo, #6320c6 lila) blir c0/c1 och
+     primary/primary-dark (bäst vit-text-kontrast för knappar), resten i
+     Zaidas egen ordning, den ljusaste av de kvarvarande (#17cfbd, turkos)
+     placerad som c4 (bubblornas basfyllnad bakom alltid-svart title-text,
+     samma c4-roll som i alla tidigare teman). */
+  --c0: #1d2ec9;
+  --c1: #6320c6;
+  --c2: #b323c3;
+  --c3: #1a84cc;
+  --c4: #17cfbd;
+  --c5: #2ec91d;
+  --c6: #1acc62;
+  --c7: #83c620;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--white);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #f4effb 0%, #e3f9f7 100%);
+  --theme-nav-border: #d8c7f1;
+  --theme-nav-fg: #2d0e59;
+  --theme-nav-muted: #7450a8;
+  --theme-nav-hover-bg: rgba(99, 32, 198, 0.12);
+  --theme-nav-active-bg: #6320c6;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #6320c6;
+  --primary-dark: #1d2ec9;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #6320c6 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #6320c6 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #6320c6 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #6320c6 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #6320c6 16%, oklch(0.96 0.018 78));
+}
+
+.app-shell.theme-juveltoner {
+  /* 2026-07-28, Zaidas 8 färger, ingen mockup — samma beräknade metod som
+     Spektrum ovan. De två mörkaste (#8c29a3 lila, #a7253d vinröd) blir
+     c0/c1 och primary/primary-dark, resten i Zaidas egen ordning, den
+     ljusaste av de kvarvarande (#7fa527, oliv) som c4. */
+  --c0: #8c29a3;
+  --c1: #a7253d;
+  --c2: #a5277f;
+  --c3: #aa4c22;
+  --c4: #7fa527;
+  --c5: #2ba14e;
+  --c6: #40a329;
+  --c7: #a78f25;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--white);
+  --on-c3: var(--white);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #f9f0f1 0%, #f0f4e5 100%);
+  --theme-nav-border: #e9c8ce;
+  --theme-nav-fg: #4b111b;
+  --theme-nav-muted: #985360;
+  --theme-nav-hover-bg: rgba(167, 37, 61, 0.12);
+  --theme-nav-active-bg: #a7253d;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #a7253d;
+  --primary-dark: #8c29a3;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #a7253d 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #a7253d 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #a7253d 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #a7253d 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #a7253d 16%, oklch(0.96 0.018 78));
+}
+
 /* Zaidas önskemål 2026-07-12: gradient i sidbakgrunden på ALLA vuxenteman
    (var tidigare bara Orkidé/Skymning, se historiken nedan) — istället för
    att skriva en egen hårdkodad --theme-page-gradient per tema räcker EN
@@ -348,7 +429,9 @@
 .app-shell.theme-orchid,
 .app-shell.theme-dusk,
 .app-shell.theme-salvia,
-.app-shell.theme-karneval {
+.app-shell.theme-karneval,
+.app-shell.theme-spektrum,
+.app-shell.theme-juveltoner {
   --theme-page-gradient:
     radial-gradient(circle at 18% 15%, color-mix(in oklab, var(--c4) 20%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 50%),
@@ -369,7 +452,9 @@
 .app-shell.theme-orchid .app-shell-content,
 .app-shell.theme-dusk .app-shell-content,
 .app-shell.theme-salvia .app-shell-content,
-.app-shell.theme-karneval .app-shell-content {
+.app-shell.theme-karneval .app-shell-content,
+.app-shell.theme-spektrum .app-shell-content,
+.app-shell.theme-juveltoner .app-shell-content {
   background: var(--theme-page-gradient);
 }
 
@@ -523,6 +608,20 @@
   --on-c4: var(--white); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
 }
 
+.app-shell.theme-spektrum.dark-mode {
+  --c0: #83c620; --c1: #1acc62; --c2: #2ec91d; --c3: #17cfbd;
+  --c4: #1a84cc; --c5: #b323c3; --c6: #6320c6; --c7: #1d2ec9;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--black); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-juveltoner.dark-mode {
+  --c0: #a78f25; --c1: #40a329; --c2: #2ba14e; --c3: #7fa527;
+  --c4: #aa4c22; --c5: #a5277f; --c6: #a7253d; --c7: #8c29a3;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--white); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
+}
+
 /* =========================================================
    CHILD THEME TOKENS
    8 colors + white/black + contrast text colors
@@ -600,24 +699,55 @@
   --on-c7: var(--black);
 }
 
-/* Rainbow */
+/* Rainbow (2026-07-28, Zaidas 8 nya färger — ersätter de tidigare) — c4
+   är den mörkaste (#6820ac, lila) enligt barntemans etablerade princip
+   (c4 driver hela dashboardens bakgrundsgradient/nav-bg, behöver vara mörk),
+   resten i Zaidas egen ordning. */
 .app-shell.theme-rainbow,
 .child-dashboard.theme-rainbow {
-  --c0: #ff3b8d;
-  --c1: #ffd84d;
-  --c2: #3b82f6;
-  --c3: #ff7a3d;
-  --c4: #30144f;
-  --c5: #7c3aed;
-  --c6: #2dd4bf;
-  --c7: #ffb3d9;
+  --c0: #ac2087;
+  --c1: #ac2220;
+  --c2: #ac8b20;
+  --c3: #64ac20;
+  --c4: #6820ac;
+  --c5: #20ac45;
+  --c6: #20aaac;
+  --c7: #2041ac;
 
   --on-c0: var(--white);
-  --on-c1: var(--black);
-  --on-c2: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--black);
   --on-c3: var(--black);
   --on-c4: var(--white);
-  --on-c5: var(--white);
+  --on-c5: var(--black);
+  --on-c6: var(--black);
+  --on-c7: var(--white);
+}
+
+/* Rainbow Light (2026-07-28, Zaidas nya barntema — en medvetet ljus/pastell
+   variant, motsatsen till övriga barnteman som alla har en mörk c4-ankare.
+   Alla 8 färger är pastelliga (WCAG-luminans 0.58–0.82) — ingen av dem
+   fungerar som en "mörk botten", så c4 blir helt enkelt den minst ljusa av
+   de åtta (#d9bff3, lavendel) istället för att tvinga fram en färg som
+   inte fanns i Zaidas lista. Hela dashboardens bakgrundsgradient blir
+   därför pastell-till-pastell, vilket är precis "ljus regnbåge"-känslan. */
+.app-shell.theme-rainbow-light,
+.child-dashboard.theme-rainbow-light {
+  --c0: #f3bfe5;
+  --c1: #f3bfbf;
+  --c2: #f3e7bf;
+  --c3: #d8f3bf;
+  --c4: #d9bff3;
+  --c5: #bff3cc;
+  --c6: #bff2f3;
+  --c7: #bfcbf3;
+
+  --on-c0: var(--black);
+  --on-c1: var(--black);
+  --on-c2: var(--black);
+  --on-c3: var(--black);
+  --on-c4: var(--black);
+  --on-c5: var(--black);
   --on-c6: var(--black);
   --on-c7: var(--black);
 }
@@ -740,6 +870,7 @@
 .app-shell.theme-cosmic-cobalt,
 .app-shell.theme-lavender-blossom,
 .app-shell.theme-rainbow,
+.app-shell.theme-rainbow-light,
 .app-shell.theme-ocean,
 .app-shell.theme-forest,
 .app-shell.theme-superhero,
@@ -1214,6 +1345,40 @@
   color: #ffffff;
 }
 
+.theme-option.theme-spektrum {
+  /* Samma 8 nyanser som .app-shell.theme-spektrum ovan, ljusast→mörkast
+     (c4→c7→c6→c5→c3→c2→c1→c0) — samma "glömdes bort"-lärdom som Karneval,
+     tillagd direkt den här gången. */
+  background: linear-gradient(
+    135deg,
+    #17cfbd 0%,
+    #83c620 14%,
+    #1acc62 28%,
+    #2ec91d 43%,
+    #1a84cc 57%,
+    #b323c3 71%,
+    #6320c6 86%,
+    #1d2ec9 100%
+  );
+  color: #ffffff;
+}
+
+.theme-option.theme-juveltoner {
+  /* Samma 8 nyanser som .app-shell.theme-juveltoner ovan, ljusast→mörkast. */
+  background: linear-gradient(
+    135deg,
+    #7fa527 0%,
+    #a78f25 14%,
+    #40a329 28%,
+    #2ba14e 43%,
+    #aa4c22 57%,
+    #a5277f 71%,
+    #a7253d 86%,
+    #8c29a3 100%
+  );
+  color: #ffffff;
+}
+
 .theme-option.theme-space {
   background: #25215c;
   color: #ffffff;
@@ -1230,8 +1395,17 @@
 }
 
 .theme-option.theme-rainbow {
-  background: linear-gradient(145deg, #ff3b8d, #ffd84d, #3b82f6);
-  color: #30144f;
+  /* 2026-07-28, uppdaterad till Zaidas nya 8 färger. */
+  background: linear-gradient(145deg, #ac2087, #ac2220, #ac8b20);
+  color: #6820ac;
+}
+
+.theme-option.theme-rainbow-light {
+  /* Ljus/pastell variant (2026-07-28) — c4 är själv ljus här (till
+     skillnad från övriga barnteman), en hårdkodad svart textfärg används
+     istället för var(--c4)-motsvarigheten för läsbarhet mot swatchen. */
+  background: linear-gradient(145deg, #f3bfe5, #f3bfbf, #f3e7bf);
+  color: #000000;
 }
 
 .theme-option.theme-ocean {

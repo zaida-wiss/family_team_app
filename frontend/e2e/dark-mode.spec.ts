@@ -127,7 +127,8 @@ test("Mörkt läge: text/bakgrund-kontrast klarar WCAG AA (4.5:1) för alla vuxe
   // Ingen egen bugg (bakgrund/kort/kant deriveras generiskt ur --primary
   // för ALLA teman, se .app-shell.dark-mode ovan i themes.css, så de klarade
   // sannolikt redan innan de begärdes explicit här) — men bör täckas.
-  for (const themeId of ["clear", "sunset", "turquoise", "lagoon", "orchid", "dusk", "salvia", "karneval"]) {
+  // Spektrum/Juveltoner (2026-07-28) tillagda direkt den här gången.
+  for (const themeId of ["clear", "sunset", "turquoise", "lagoon", "orchid", "dusk", "salvia", "karneval", "spektrum", "juveltoner"]) {
     await page.locator(`.theme-option.theme-${themeId}`).click();
     await page.locator(".theme-dark-mode-toggle input").check();
 

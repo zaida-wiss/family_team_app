@@ -94,7 +94,10 @@ export type DashboardThemeId =
   | "orchid"
   | "dusk"
   | "salvia"
-  | "karneval";
+  | "karneval"
+  | "spektrum"
+  | "juveltoner"
+  | "rainbow-light";
 
 export type User = {
   id: Id;
