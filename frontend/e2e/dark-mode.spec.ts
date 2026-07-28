@@ -96,7 +96,6 @@ test("Mörkt läge: växeln finns bara för vuxenteman, sätter dark-mode-klasse
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
-  await page.getByRole("button", { name: "Utseende" }).click();
 
   await expect(page.locator(".theme-dark-mode-toggle")).toBeVisible();
 
@@ -119,7 +118,6 @@ test("Mörkt läge: text/bakgrund-kontrast klarar WCAG AA (4.5:1) för alla vuxe
   await mockCommon(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
 
   // Salvia (2026-07-25) och Karneval (2026-07-26) saknades här sedan de
@@ -156,7 +154,6 @@ test("Mörkt läge: rubriker utan egen color-regel (t.ex. Inställningar-h2) är
   await mockCommon(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
   await page.locator(".theme-dark-mode-toggle input").check();
 

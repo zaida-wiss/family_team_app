@@ -20,7 +20,6 @@ async function openInkopslistorSettings(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Inköpslistor" }).click();
-  await page.getByRole("button", { name: "Inköpslistor" }).click();
 }
 
 test("Dela med annan familj: söker en vuxen via e-post, ger åtkomst, ser delningen, återkallar den", async ({ page }) => {

@@ -185,7 +185,6 @@ test("Standardläget för Visa avklarade i Inställningar styr en lista utan ege
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Inköpslistor" }).click();
-  await page.getByRole("button", { name: "Inköpslistor" }).click();
   await page.getByLabel("Visa avklarade som standard").uncheck();
   await expect.poll(() => savedDefault).toBe(false);
 

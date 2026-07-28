@@ -78,7 +78,6 @@ async function openThreadView(page: import("@playwright/test").Page) {
 async function switchToListViewInSettings(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
-  await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByLabel("Todos-vy").selectOption("list");
   await page.getByRole("button", { name: "Todos" }).click();
 }
@@ -288,7 +287,6 @@ test("Bollar i tråd: tidsspannet i Inställningar styr hur långt fram todos vi
   async function selectRange(label: string) {
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
-    await page.getByRole("button", { name: "Utseende" }).click();
     // 2026-07-27: etiketten döptes om och gäller nu båda vyerna (Zaidas
     // önskemål om att kunna välja tidsspannet i listläget också).
     await page.getByLabel("Hur mycket ska visas?").selectOption(label);
@@ -340,7 +338,6 @@ test("Todos-vy: tidsspannet i Inställningar styr även listläget", async ({ pa
   await expect(page.getByText("Listläge om tjugo dagar")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Inställningar" }).click();
-  await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByLabel("Hur mycket ska visas?").selectOption("all");
   await page.getByRole("button", { name: "Todos" }).click();
