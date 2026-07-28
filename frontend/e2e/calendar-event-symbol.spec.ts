@@ -42,9 +42,14 @@ const LOGIN_RESPONSE = {
   memberships: [{ member: PARENT, account: ACCOUNT }],
 };
 
+// Ingen Math.min(..., 27)-cap — samma tidsberoende testfälla som
+// dokumenterats flera gånger tidigare denna session (t.ex. 2026-07-08):
+// en cap under 31 bryter exakt de dagar i månaden som ligger över capen
+// (28:e-31:a), eftersom now.getDate() alltid redan är giltig för
+// now.getFullYear()/now.getMonth().
 const now = new Date();
-const eventStart = new Date(now.getFullYear(), now.getMonth(), Math.min(now.getDate(), 27), 9, 0).toISOString();
-const eventEnd = new Date(now.getFullYear(), now.getMonth(), Math.min(now.getDate(), 27), 10, 0).toISOString();
+const eventStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0).toISOString();
+const eventEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0).toISOString();
 
 // Importerad händelse (subscriptionId satt) med en EGEN, manuellt satt
 // symbol — prenumerationens EGEN standardsymbol (🎌) skiljer sig medvetet
