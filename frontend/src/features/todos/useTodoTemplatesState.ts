@@ -47,6 +47,20 @@ export function useTodoTemplatesState() {
     setTaskTemplates((current) => current.filter((t) => t.id !== id));
   }
 
+  // 2026-07-28, Zaidas önskemål: "jag behöver även kunna se och redigera i
+  // uppgiftsmallarna" — mallbiblioteket hade tidigare bara se+radera. Bara ett
+  // enkelt namnbyte (inte en full redigeringsmodal) — övriga fält (delmoment/
+  // återkommelse/stjärnor) sätts redan korrekt vid själva "Spara som mall".
+  function renameTaskTemplate(id: Id, title: string) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const existing = taskTemplates.find((t) => t.id === id);
+    if (!existing) return;
+    const { id: _id, accountId: _accountId, memberId: _memberId, createdAt: _createdAt, deletedAt: _deletedAt, ...task } = existing;
+    todoTemplatesApi.updateTask(id, { ...task, title: trimmed }).catch(console.error);
+    setTaskTemplates((current) => current.map((t) => (t.id === id ? { ...t, title: trimmed } : t)));
+  }
+
   function createCategoryTemplate(name: string, tasks: TodoTemplateTask[], sourceCategoryId?: Id | null) {
     return todoTemplatesApi.createCategory(name, tasks, sourceCategoryId).then((template) => {
       setCategoryTemplates((current) => [...current, template]);
@@ -71,6 +85,7 @@ export function useTodoTemplatesState() {
     categoryTemplates,
     createTaskTemplate,
     removeTaskTemplate,
+    renameTaskTemplate,
     createCategoryTemplate,
     updateCategoryTemplate,
     removeCategoryTemplate

@@ -65,6 +65,27 @@ export async function deleteTaskTemplate(id: string, accountId: string, memberId
   return { ok: true };
 }
 
+// 2026-07-28, Zaidas önskemål: "jag behöver även kunna se och redigera i
+// uppgiftsmallarna" — TemplatesSettings.tsx visade tidigare bara namnet +
+// en radera-knapp, ingen väg att ändra innehållet efter att mallen sparats.
+export async function updateTaskTemplate(id: string, accountId: string, memberId: string, task: TodoTemplateTask) {
+  await requireAdultMember(memberId, accountId);
+  const template = await TodoTemplateModel.findOne({ id, accountId, deletedAt: null });
+  if (!template) {
+    throw new AppError(404, "Mall hittades inte");
+  }
+  const encrypted = encryptTask(accountId, task);
+  template.title = encrypted.title;
+  template.visual = encrypted.visual;
+  template.notes = encrypted.notes;
+  template.subtasks = encrypted.subtasks as never;
+  template.recurrence = encrypted.recurrence as never;
+  template.starValue = encrypted.starValue;
+  template.markModified("subtasks");
+  await template.save();
+  return decryptTask(accountId, template.toObject());
+}
+
 export async function getAllCategoryTemplates(accountId: string) {
   const templates = await TodoCategoryTemplateModel.find(
     { accountId, deletedAt: null },

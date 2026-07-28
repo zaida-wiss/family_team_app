@@ -113,10 +113,13 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     categoryTemplates,
     onCreateTaskTemplate,
     onRemoveTaskTemplate,
+    onRenameTaskTemplate,
     onRemoveCategoryTemplate,
     onCreateTodo,
     onUpdateTodo,
     onDeleteTodo,
+    recurringTemplateOrder,
+    onReorderRecurringTemplates,
     todoImportResult,
     onSetTodoImportResult,
     todoImportUndo,
@@ -505,12 +508,17 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               roles={roles}
               todos={todos}
               categories={personalCategories}
+              taskTemplates={taskTemplates}
+              categoryTemplates={categoryTemplates}
               onUpdateTodo={onUpdateTodo}
+              onCreateTodo={onCreateTodo}
               onCreateCategory={onCreateCategory}
               onCreateTaskTemplate={onCreateTaskTemplate}
               onDeleteTodo={onDeleteTodo}
               onRefreshRoutine={settingsProps.onRefreshRoutine}
               fixedTodoTimes={activeAccount.fixedTodoTimes ?? false}
+              order={recurringTemplateOrder}
+              onReorder={onReorderRecurringTemplates}
             />
           )
         },
@@ -540,6 +548,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               taskTemplates={taskTemplates}
               categoryTemplates={categoryTemplates}
               onRemoveTaskTemplate={onRemoveTaskTemplate}
+              onRenameTaskTemplate={onRenameTaskTemplate}
               onRemoveCategoryTemplate={onRemoveCategoryTemplate}
             />
           )

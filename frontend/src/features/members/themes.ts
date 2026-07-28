@@ -17,6 +17,7 @@ export const dashboardThemes: DashboardTheme[] = [
   { id: "karneval",         name: "Karneval",       audience: "adult" },
   { id: "spektrum",         name: "Spektrum",       audience: "adult" },
   { id: "juveltoner",       name: "Juveltoner",     audience: "adult" },
+  { id: "dova",             name: "Dova",           audience: "adult" },
   { id: "space",            name: "Rymd",           audience: "child" },
   { id: "cosmic-cobalt",    name: "Cosmic cobalt",  audience: "child" },
   { id: "lavender-blossom", name: "Lavendelblom",   audience: "child" },

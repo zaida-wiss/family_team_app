@@ -31,6 +31,13 @@ todoTemplatesRouter.post("/tasks", async (req, res) => {
   res.status(201).json(template);
 });
 
+todoTemplatesRouter.patch("/tasks/:id", async (req, res) => {
+  const memberId = requireMemberId(req.memberId);
+  const task = CreateTodoTemplateBodySchema.parse(req.body);
+  const template = await todoTemplates.updateTaskTemplate(req.params.id, req.accountId!, memberId, task);
+  res.json(template);
+});
+
 todoTemplatesRouter.delete("/tasks/:id", async (req, res) => {
   const memberId = requireMemberId(req.memberId);
   res.json(await todoTemplates.deleteTaskTemplate(req.params.id, req.accountId!, memberId));

@@ -50,6 +50,7 @@ export const DashboardThemeIdSchema = z.enum([
   "karneval",
   "spektrum",
   "juveltoner",
+  "dova",
   "rainbow-light"
 ]);
 
@@ -74,6 +75,7 @@ export const MemberSchema = z.object({
   todoViewMode: TodoViewModeSchema.optional(),
   todoThreadOrder: z.array(IdSchema).optional(),
   todoBubbleOrder: z.record(z.string(), z.array(IdSchema)).optional(),
+  recurringTemplateOrder: z.array(IdSchema).optional(),
   todoThreadRange: TodoThreadRangeSchema.optional(),
   todoThreadGap: z.number().min(0).max(32).optional(),
   todoBubbleSize: z.number().min(60).max(200).optional(),
@@ -104,6 +106,7 @@ export const MemberPatchSchema = MemberSchema.pick({
   todoViewMode: true,
   todoThreadOrder: true,
   todoBubbleOrder: true,
+  recurringTemplateOrder: true,
   todoThreadRange: true,
   todoThreadGap: true,
   todoBubbleSize: true,

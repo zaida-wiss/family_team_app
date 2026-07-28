@@ -87,6 +87,7 @@ export function useShellState(
     categoryTemplates,
     createTaskTemplate,
     removeTaskTemplate,
+    renameTaskTemplate,
     createCategoryTemplate,
     updateCategoryTemplate,
     removeCategoryTemplate
@@ -375,6 +376,12 @@ export function useShellState(
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,
     onDeleteTodo: (id: string) => softDeleteTodo(id, currentMember, roles),
+    // Manuell ordning på återkommande mallar i Inställningar (2026-07-28,
+    // Zaidas önskemål: "ändra ordning på dem") — samma updateMemberNavigation-
+    // mönster som onReorderThreads/todoThreadOrder.
+    recurringTemplateOrder: currentMember.recurringTemplateOrder ?? [],
+    onReorderRecurringTemplates: (order: Id[]) =>
+      updateMemberNavigation(currentMember.id, { recurringTemplateOrder: order }),
     todoImportResult: lastImportResult,
     onSetTodoImportResult: setLastImportResult,
     todoImportUndo: lastImportUndo,
@@ -387,6 +394,7 @@ export function useShellState(
     onCreateTaskTemplate: createTaskTemplate,
     onCreateCategoryTemplate: createCategoryTemplate,
     onRemoveTaskTemplate: removeTaskTemplate,
+    onRenameTaskTemplate: renameTaskTemplate,
     onRemoveCategoryTemplate: removeCategoryTemplate,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),

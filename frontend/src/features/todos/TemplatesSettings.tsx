@@ -1,4 +1,5 @@
 import "./TemplatesSettings.css";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import type { Id, TodoCategoryTemplate, TodoTemplate } from "@shared/types";
 
@@ -7,6 +8,7 @@ type Props = {
   categoryTemplates: TodoCategoryTemplate[];
   onRemoveTaskTemplate: (id: Id) => void;
   onRemoveCategoryTemplate: (id: Id) => void;
+  onRenameTaskTemplate: (id: Id, title: string) => void;
 };
 
 // Mallbibliotek (2026-07-08, Zaidas önskemål: "jag vill spara både
@@ -19,8 +21,22 @@ export function TemplatesSettings({
   taskTemplates,
   categoryTemplates,
   onRemoveTaskTemplate,
-  onRemoveCategoryTemplate
+  onRemoveCategoryTemplate,
+  onRenameTaskTemplate
 }: Props) {
+  const [editingId, setEditingId] = useState<Id | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+
+  function startEditing(template: TodoTemplate) {
+    setEditingId(template.id);
+    setDraftTitle(template.title);
+  }
+
+  function saveEditing() {
+    if (editingId) onRenameTaskTemplate(editingId, draftTitle);
+    setEditingId(null);
+  }
+
   if (taskTemplates.length === 0 && categoryTemplates.length === 0) {
     return <p className="empty-note">Inga sparade mallar än. Spara en uppgift eller en hel kategori som mall för att se den här.</p>;
   }
@@ -56,7 +72,32 @@ export function TemplatesSettings({
           <ul className="templates-settings__list">
             {taskTemplates.map((template) => (
               <li className="templates-settings__row" key={template.id}>
-                <span>{template.title}</span>
+                {editingId === template.id ? (
+                  <input
+                    aria-label={`Byt namn på mallen ${template.title}`}
+                    autoFocus
+                    className="text-input templates-settings__rename-input"
+                    onBlur={saveEditing}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    value={draftTitle}
+                  />
+                ) : (
+                  <span
+                    className="templates-settings__title"
+                    onClick={() => startEditing(template)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") startEditing(template);
+                    }}
+                  >
+                    {template.title}
+                  </span>
+                )}
                 <button
                   aria-label={`Ta bort mallen ${template.title}`}
                   className="icon-button danger"

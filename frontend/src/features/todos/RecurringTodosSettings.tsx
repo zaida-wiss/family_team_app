@@ -1,10 +1,11 @@
 import "./RecurringTodosSettings.css";
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
-import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory, TodoTemplate, TodoTemplateTask } from "@shared/types";
-import { getVisibleTodos } from "./selectors";
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
+import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
+import { getAssigneeName, getVisibleTodos } from "./selectors";
 import { isoToDateOnly, isRecurringTemplate, WEEKDAY_SHORT } from "./recurringTodos";
 import { TodoEditModal } from "./TodoEditModal";
+import { TodoCreatorModal } from "./TodoCreatorModal";
 
 type Props = {
   currentMember: Member;
@@ -12,12 +13,20 @@ type Props = {
   roles: Role[];
   todos: Todo[];
   categories: TodoCategory[];
+  taskTemplates: TodoTemplate[];
+  categoryTemplates: TodoCategoryTemplate[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  onCreateTodo: (todo: Todo) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
   onDeleteTodo: (todoId: Id) => void;
   onRefreshRoutine: (routineId: Id) => void;
   fixedTodoTimes: boolean;
+  // Manuell ordning (2026-07-28, Zaidas önskemål: "ändra ordning på dem") —
+  // lista av mall-id:n, samma "olistade hamnar sist"-princip som
+  // todoThreadOrder.
+  order: Id[];
+  onReorder: (order: Id[]) => void;
 };
 
 const UNIT_LABEL: Record<RecurrenceUnit, string> = {
@@ -57,61 +66,166 @@ export function RecurringTodosSettings({
   roles,
   todos,
   categories,
+  taskTemplates,
+  categoryTemplates,
   onUpdateTodo,
+  onCreateTodo,
   onCreateCategory,
   onCreateTaskTemplate,
   onDeleteTodo,
   onRefreshRoutine,
-  fixedTodoTimes
+  fixedTodoTimes,
+  order,
+  onReorder
 }: Props) {
   const [editingId, setEditingId] = useState<Id | null>(null);
-  // Strukturerad överblick i tidsordning (2026-07-07, Zaidas önskemål) —
-  // sorterad på startdatum, tidigast överst, samma princip som tråd-vyns
-  // sortByEndThenStartTime.
-  const templates = [...getVisibleTodos(currentMember, roles, todos).filter(isRecurringTemplate)]
+  const [creating, setCreating] = useState(false);
+  // Radera-varning (2026-07-28, Zaidas önskemål: "få en varning vid radering
+  // ifall den används för tillfället") — ett litet tvåstegs-kort istället för
+  // en direkt radering, bara när mallen faktiskt har en aktiv occurrence.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<Id | null>(null);
+
+  // Strukturerad överblick, primärt i Zaidas egen manuella ordning (2026-07-28)
+  // — mallar som saknas i `order` (t.ex. nyskapade) hamnar sist, i tidsordning
+  // (tidigast startdatum, samma princip som tidigare).
+  const unordered = [...getVisibleTodos(currentMember, roles, todos).filter(isRecurringTemplate)]
     .sort((a, b) => startTimeValue(a) - startTimeValue(b));
+  const orderIndex = new Map(order.map((id, i) => [id, i]));
+  const templates = [...unordered].sort((a, b) => {
+    const ai = orderIndex.get(a.id);
+    const bi = orderIndex.get(b.id);
+    if (ai !== undefined && bi !== undefined) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    return 0;
+  });
   const editingTodo = templates.find((t) => t.id === editingId) ?? null;
 
-  if (templates.length === 0) {
-    return <p className="empty-note">Inga återkommande uppgifter ännu.</p>;
+  function moveTemplate(id: Id, direction: -1 | 1) {
+    const ids = templates.map((t) => t.id);
+    const index = ids.indexOf(id);
+    const swapWith = index + direction;
+    if (swapWith < 0 || swapWith >= ids.length) return;
+    [ids[index], ids[swapWith]] = [ids[swapWith], ids[index]];
+    onReorder(ids);
+  }
+
+  // En mall "används just nu" om den har minst en ännu ej raderad,
+  // väntande occurrence — samma relation som useTodosState.ts:s
+  // softDeleteTodo redan cascade-raderar automatiskt vid radering. Varningen
+  // är extra transparens ovanpå det (Zaida vill veta INNAN, inte bara att
+  // det städas bort tyst).
+  function activeOccurrenceCount(templateId: Id): number {
+    return todos.filter((t) => t.recurringSourceId === templateId && t.deletedAt === null && t.status === "pending").length;
+  }
+
+  function requestDelete(id: Id) {
+    if (activeOccurrenceCount(id) > 0) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    onDeleteTodo(id);
+  }
+
+  function confirmDelete(id: Id) {
+    setConfirmDeleteId(null);
+    onDeleteTodo(id);
   }
 
   return (
     <>
-      <ul className="recurring-todos-settings__list">
-        {templates.map((todo) => (
-          <li className="recurring-todos-settings__row" key={todo.id}>
-            <div className="recurring-todos-settings__info">
-              <strong>
-                {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
-                {todo.title}
-              </strong>
-              <small>
-                {describeRecurrence(todo)}
-                {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}
-              </small>
-            </div>
-            <button
-              aria-label={`Redigera ${todo.title}`}
-              className="icon-button"
-              onClick={() => setEditingId(todo.id)}
-              title="Redigera"
-              type="button"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              aria-label={`Ta bort serien ${todo.title}`}
-              className="icon-button danger"
-              onClick={() => onDeleteTodo(todo.id)}
-              title="Ta bort serien"
-              type="button"
-            >
-              <Trash2 size={16} />
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="recurring-todos-settings__toolbar">
+        <button className="secondary-button" onClick={() => setCreating(true)} type="button">
+          <Plus size={16} /> Ny återkommande uppgift
+        </button>
+      </div>
+
+      {templates.length === 0 ? (
+        <p className="empty-note">Inga återkommande uppgifter ännu.</p>
+      ) : (
+        <ul className="recurring-todos-settings__list">
+          {templates.map((todo, index) => (
+            <li className="recurring-todos-settings__row" key={todo.id}>
+              <div className="recurring-todos-settings__reorder">
+                <button
+                  aria-label={`Flytta ${todo.title} upp`}
+                  className="icon-button"
+                  disabled={index === 0}
+                  onClick={() => moveTemplate(todo.id, -1)}
+                  type="button"
+                >
+                  <ArrowUp size={14} />
+                </button>
+                <button
+                  aria-label={`Flytta ${todo.title} ner`}
+                  className="icon-button"
+                  disabled={index === templates.length - 1}
+                  onClick={() => moveTemplate(todo.id, 1)}
+                  type="button"
+                >
+                  <ArrowDown size={14} />
+                </button>
+              </div>
+
+              <div className="recurring-todos-settings__info">
+                <strong>
+                  {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+                  {todo.title}
+                </strong>
+                <small>
+                  {getAssigneeName(todo, members)} · {describeRecurrence(todo)}
+                  {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}
+                </small>
+              </div>
+
+              {confirmDeleteId === todo.id ? (
+                <div className="recurring-todos-settings__confirm">
+                  <small>
+                    Används just nu ({activeOccurrenceCount(todo.id)} väntande). Radera ändå?
+                  </small>
+                  <button
+                    aria-label={`Bekräfta radering av serien ${todo.title}`}
+                    className="icon-button danger"
+                    onClick={() => confirmDelete(todo.id)}
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button
+                    aria-label="Avbryt radering"
+                    className="icon-button"
+                    onClick={() => setConfirmDeleteId(null)}
+                    type="button"
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    aria-label={`Redigera ${todo.title}`}
+                    className="icon-button"
+                    onClick={() => setEditingId(todo.id)}
+                    title="Redigera"
+                    type="button"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    aria-label={`Ta bort serien ${todo.title}`}
+                    className="icon-button danger"
+                    onClick={() => requestDelete(todo.id)}
+                    title="Ta bort serien"
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {editingTodo && (
         <TodoEditModal
@@ -127,6 +241,21 @@ export function RecurringTodosSettings({
           onClose={() => setEditingId(null)}
           onUpdateTodo={onUpdateTodo}
           todo={editingTodo}
+          fixedTodoTimes={fixedTodoTimes}
+        />
+      )}
+
+      {creating && (
+        <TodoCreatorModal
+          currentMember={currentMember}
+          members={members}
+          roles={roles}
+          categories={categories}
+          onCreateCategory={onCreateCategory}
+          onCreateTodo={onCreateTodo}
+          taskTemplates={taskTemplates}
+          categoryTemplates={categoryTemplates}
+          onClose={() => setCreating(false)}
           fixedTodoTimes={fixedTodoTimes}
         />
       )}

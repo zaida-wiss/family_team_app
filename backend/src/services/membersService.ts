@@ -83,6 +83,7 @@ const SELF_NAV_FIELDS = new Set([
   "todoViewMode",
   "todoThreadOrder",
   "todoBubbleOrder",
+  "recurringTemplateOrder",
   "todoThreadRange",
   "todoThreadGap",
   "todoBubbleSize",

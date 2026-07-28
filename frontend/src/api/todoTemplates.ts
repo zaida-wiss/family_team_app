@@ -8,6 +8,11 @@ export const todoTemplatesApi = {
       method: "POST",
       body: JSON.stringify(task)
     }),
+  updateTask: (id: Id, task: TodoTemplateTask) =>
+    request<TodoTemplate>(api(`todo-templates/tasks/${id}`), {
+      method: "PATCH",
+      body: JSON.stringify(task)
+    }),
   removeTask: (id: Id) =>
     request<{ ok: boolean }>(api(`todo-templates/tasks/${id}`), { method: "DELETE" }),
   getAllCategories: () => request<TodoCategoryTemplate[]>(api("todo-templates/categories")),

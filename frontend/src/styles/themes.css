@@ -409,6 +409,52 @@
   --sidebar: color-mix(in oklab, #a7253d 16%, oklch(0.96 0.018 78));
 }
 
+.app-shell.theme-dova {
+  /* 2026-07-28, Zaida gav 4 distinkta färger (teal #3e7b8e, lila #793e8e,
+     rost #8e513e, grönt #538e3e) — alla exakt samma S=0.392/L=0.400 i HSL,
+     jämnt fördelade var 90:e grad runt hjulet (194°/284°/14°/104°). Zaida
+     bad om 4 FLER passande färger snarare än att duplicera/nästan duplicera
+     dessa (hennes ursprungliga 8-lista hade en exakt upprepning + tre
+     nästan-dubbletter). Samma "45°-punkter runt hjulet"-metod som Karneval/
+     Spektrum/Juveltoner: fyller igen de fyra mellanliggande 45°-punkterna
+     (239°/329°/59°/149°) med SAMMA S/L, vilket ger en perfekt jämnt
+     fördelad 8-punkts hjulskala i exakt samma dova, avmättade stil som
+     originalfärgerna. c0/c1 = de två mörkaste (indigo #3e3f8e, lila
+     #793e8e — Zaidas egen lila-nyans), c4 = ljusaste (oliv #8e8d3e). */
+  --c0: #3e3f8e;
+  --c1: #793e8e;
+  --c2: #8e3e67;
+  --c3: #8e513e;
+  --c4: #8e8d3e;
+  --c5: #3e7b8e;
+  --c6: #3e8e65;
+  --c7: #538e3e;
+  --on-c0: var(--white);
+  --on-c1: var(--white);
+  --on-c2: var(--white);
+  --on-c3: var(--white);
+  --on-c4: var(--black);
+  --on-c5: var(--white);
+  --on-c6: var(--black);
+  --on-c7: var(--black);
+
+  --theme-nav-bg: linear-gradient(180deg, #f6f1f7 0%, #f1f1e8 100%);
+  --theme-nav-border: #decfe3;
+  --theme-nav-fg: #361c40;
+  --theme-nav-muted: #80608a;
+  --theme-nav-hover-bg: rgba(121, 62, 142, 0.12);
+  --theme-nav-active-bg: #793e8e;
+  --theme-nav-active-fg: #ffffff;
+  --primary: #793e8e;
+  --primary-dark: #3e3f8e;
+  --primary-fg: #ffffff;
+  --background: color-mix(in oklab, #793e8e 10%, oklch(0.975 0.014 78));
+  --card: color-mix(in oklab, #793e8e 6%, oklch(0.982 0.012 78));
+  --muted: color-mix(in oklab, #793e8e 16%, oklch(0.94 0.018 78));
+  --border: color-mix(in oklab, #793e8e 40%, oklch(0.88 0.02 75));
+  --sidebar: color-mix(in oklab, #793e8e 16%, oklch(0.96 0.018 78));
+}
+
 /* Zaidas önskemål 2026-07-12: gradient i sidbakgrunden på ALLA vuxenteman
    (var tidigare bara Orkidé/Skymning, se historiken nedan) — istället för
    att skriva en egen hårdkodad --theme-page-gradient per tema räcker EN
@@ -431,7 +477,8 @@
 .app-shell.theme-salvia,
 .app-shell.theme-karneval,
 .app-shell.theme-spektrum,
-.app-shell.theme-juveltoner {
+.app-shell.theme-juveltoner,
+.app-shell.theme-dova {
   --theme-page-gradient:
     radial-gradient(circle at 18% 15%, color-mix(in oklab, var(--c4) 20%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 50%),
@@ -454,7 +501,8 @@
 .app-shell.theme-salvia .app-shell-content,
 .app-shell.theme-karneval .app-shell-content,
 .app-shell.theme-spektrum .app-shell-content,
-.app-shell.theme-juveltoner .app-shell-content {
+.app-shell.theme-juveltoner .app-shell-content,
+.app-shell.theme-dova .app-shell-content {
   background: var(--theme-page-gradient);
 }
 
@@ -619,6 +667,13 @@
   --c0: #a78f25; --c1: #40a329; --c2: #2ba14e; --c3: #7fa527;
   --c4: #aa4c22; --c5: #a5277f; --c6: #a7253d; --c7: #8c29a3;
   --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--black); --on-c3: var(--black);
+  --on-c4: var(--white); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
+}
+
+.app-shell.theme-dova.dark-mode {
+  --c0: #538e3e; --c1: #3e8e65; --c2: #3e7b8e; --c3: #8e8d3e;
+  --c4: #8e513e; --c5: #8e3e67; --c6: #793e8e; --c7: #3e3f8e;
+  --on-c0: var(--black); --on-c1: var(--black); --on-c2: var(--white); --on-c3: var(--black);
   --on-c4: var(--white); --on-c5: var(--white); --on-c6: var(--white); --on-c7: var(--white);
 }
 
@@ -1375,6 +1430,23 @@
     #a5277f 71%,
     #a7253d 86%,
     #8c29a3 100%
+  );
+  color: #ffffff;
+}
+
+.theme-option.theme-dova {
+  /* Samma 8 nyanser som .app-shell.theme-dova ovan, ljusast→mörkast
+     (c4→c7→c6→c5→c3→c2→c1→c0). */
+  background: linear-gradient(
+    135deg,
+    #8e8d3e 0%,
+    #538e3e 14%,
+    #3e8e65 28%,
+    #3e7b8e 43%,
+    #8e513e 57%,
+    #8e3e67 71%,
+    #793e8e 86%,
+    #3e3f8e 100%
   );
   color: #ffffff;
 }

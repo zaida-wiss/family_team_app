@@ -25,3 +25,32 @@
 .recurring-todos-settings__info small {
   color: var(--muted-fg);
 }
+
+.recurring-todos-settings__toolbar {
+  margin-bottom: 10px;
+}
+
+.recurring-todos-settings__reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recurring-todos-settings__reorder .icon-button {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.recurring-todos-settings__confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.recurring-todos-settings__confirm small {
+  color: var(--destructive);
+  font-weight: 600;
+}

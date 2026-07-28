@@ -97,6 +97,7 @@ export type DashboardThemeId =
   | "karneval"
   | "spektrum"
   | "juveltoner"
+  | "dova"
   | "rainbow-light";
 
 export type User = {
@@ -184,6 +185,12 @@ export type Member = {
   // sortering (sluttid/starttid) — samma "olistade hamnar sist"-princip som
   // todoThreadOrder.
   todoBubbleOrder?: Record<Id, Id[]>;
+  // Manuell ordning på listan över återkommande MALLAR i Inställningar
+  // (2026-07-28, Zaidas önskemål: "ändra ordning på dem") — lista av mall-id:n
+  // i vald ordning. Mallar som saknas i listan (nyskapade) hamnar sist, i sin
+  // vanliga automatiska sortering (startdatum) — samma "olistade hamnar
+  // sist"-princip som todoThreadOrder/todoBubbleOrder.
+  recurringTemplateOrder?: Id[];
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode. Standard "today" om osatt.
   todoThreadRange?: TodoThreadRange;

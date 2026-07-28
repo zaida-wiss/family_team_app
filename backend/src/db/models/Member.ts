@@ -22,6 +22,10 @@ const memberSchema = new Schema<Member>({
   todoViewMode: { type: String, default: undefined },
   todoThreadOrder: { type: [String], default: undefined },
   todoBubbleOrder: { type: Schema.Types.Mixed, default: undefined },
+  // Tillagd i Mongoose-schemat SAMTIDIGT som Zod (2026-07-28) — inte i en
+  // efterföljande commit — se todoThreadGap-incidentens kommentar nedan för
+  // varför det spelar roll.
+  recurringTemplateOrder: { type: [String], default: undefined },
   todoThreadRange: { type: String, default: undefined },
   // Saknades i Mongoose-schemat (2026-07-26, Zaida upptäckte att reglaget
   // "studsade tillbaka" till standardvärdet) — fältet fanns i Zod-schemat

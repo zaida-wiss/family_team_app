@@ -1446,6 +1446,43 @@ test("Redigera-modalen: 'Spara som mall' skapar en fristående uppgiftsmall", as
   await expect(page.getByRole("button", { name: /Sparad som mall/ })).toBeVisible();
 });
 
+// 2026-07-28, Zaidas önskemål: "jag behöver även kunna se och redigera i
+// uppgiftsmallarna" — mallbiblioteket (Inställningar → Todo-lista → Mallar)
+// hade tidigare bara se+radera, ingen väg att ändra en sparad mall.
+test("Inställningar → Mallar: kan byta namn på en sparad uppgiftsmall", async ({ page }) => {
+  const TASK_TEMPLATE = {
+    id: "todo-template-1", accountId: "acc-1", memberId: "mem-1",
+    title: "Styrketräning", visual: { type: "lucide-icon", value: "Dumbbell" },
+    subtasks: [], recurrence: { type: "none" }, starValue: 0,
+    createdAt: "2026-07-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  let patched: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-templates/tasks", (route) => route.fulfill({ json: [TASK_TEMPLATE] }));
+  await page.route("**/api/todo-templates/tasks/todo-template-1", (route) => {
+    if (route.request().method() === "PATCH") {
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ...TASK_TEMPLATE, ...patched } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "📋 Mallar" }).click();
+
+  await page.getByText("Styrketräning", { exact: true }).click();
+  const input = page.getByLabel("Byt namn på mallen Styrketräning");
+  await input.fill("Styrketräning (uppdaterad)");
+  await input.blur();
+
+  await expect.poll(() => patched).toBeTruthy();
+  expect((patched as unknown as { title: string }).title).toBe("Styrketräning (uppdaterad)");
+  await expect(page.getByText("Styrketräning (uppdaterad)", { exact: true })).toBeVisible();
+});
+
 // Mallbiblioteket — hämtar en HEL kategori-mall vid "Ny kategori" i skapa-modalen.
 test("Ny uppgift-modalen: 'Från mall' vid Ny kategori skapar kategorin och alla dess uppgifter", async ({ page }) => {
   const CATEGORY_TEMPLATE = {
@@ -1796,14 +1833,28 @@ test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en eg
     rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
     deletedAt: null, deletedBy: null, personalCategoryId: null
   };
-  let deletedId: string | null = null;
+  // En aktiv daglig mall genererar alltid dagens occurrence klientsidan
+  // (samma mekanism som "Bollar i tråd"-testet ovan) — id:t måste matcha
+  // appens egen occurrenceId()-formel, annars tror syncScheduledTodos att
+  // dagens occurrence saknas och skapar ännu en (ett tredje todo i listan).
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: `todo-template-occurrence-${dateKey}`,
+    recurrence: { type: "none" },
+    recurringSourceId: "todo-template",
+    occurrenceDate: dateKey
+  };
+  const deletedIds: string[] = [];
 
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE] }));
-  await page.route("**/api/todos/todo-template", (route) => {
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+  await page.route(new RegExp(`/api/todos/(todo-template|todo-template-occurrence-${dateKey})$`), (route) => {
     if (route.request().method() === "DELETE") {
-      deletedId = "todo-template";
+      deletedIds.push(route.request().url().split("/").pop()!);
       return route.fulfill({ json: { ok: true } });
     }
     return route.fulfill({ json: {} });
@@ -1818,7 +1869,12 @@ test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en eg
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: /Ta bort serien/ }).click();
 
-  await expect.poll(() => deletedId).toBe("todo-template");
+  // Mallen har en aktiv occurrence, så en varning visas istället för att
+  // radera direkt (samma beteende som produktionens riktiga dagliga rutiner).
+  await expect(row.getByText(/Används just nu/)).toBeVisible();
+  await row.getByRole("button", { name: /Bekräfta radering av serien/ }).click();
+
+  await expect.poll(() => deletedIds.sort()).toEqual([`todo-template-occurrence-${dateKey}`, "todo-template"].sort());
 });
 
 // 2026-07-28, Zaidas fynd: "när jag klickar in i barnvyn ser jag uppgifter
@@ -1865,6 +1921,12 @@ test("Inställningar: 'Ta bort serien' raderar även dagens redan genererade occ
 
   const row = page.getByText("Borsta tänderna").locator("../..");
   await row.getByRole("button", { name: /Ta bort serien/ }).click();
+
+  // 2026-07-28, Zaidas önskemål: "få en varning vid radering ifall den
+  // används för tillfället" — mallen har en aktiv occurrence, så en varning
+  // visas istället för att radera direkt.
+  await expect(page.getByText(/Används just nu/)).toBeVisible();
+  await row.getByRole("button", { name: /Bekräfta radering av serien/ }).click();
 
   await expect.poll(() => deletedIds.sort()).toEqual(["todo-occurrence-today", "todo-template"]);
 });
