@@ -12,9 +12,15 @@
  * Säkert att köra flera gånger: decryptField/encryptField-mönstret använder ett
  * "v1:"-prefix för krypterad data — fält som redan har prefixet hoppas över.
  *
- * 2026-07-28 tillägg: krypterar även Todo.subtasks[].title (glömdes i den
+ * 2026-07-28 tillägg 1: krypterar även Todo.subtasks[].title (glömdes i den
  * ursprungliga migreringen — subtask-titlar fick fält-kryptering i koden
  * först 2026-07-28, se todosService.ts). Samma idempotens-mönster.
+ *
+ * 2026-07-28 tillägg 2: krypterar även Todo.notes (fanns i koden sedan
+ * 2026-07-05 men glömdes helt i den ursprungliga migreringen — upptäckt vid
+ * samma genomgång som tillägg 1) samt mallbibliotekets TodoTemplate/
+ * TodoCategoryTemplate title/notes/subtasks[].title (fick fält-kryptering i
+ * koden först 2026-07-28, se todoTemplatesService.ts).
  */
 
 import "dotenv/config";
@@ -23,6 +29,8 @@ import { connectDB } from "../src/db/connection.js";
 import { CalendarModel } from "../src/db/models/Calendar.js";
 import { TodoModel } from "../src/db/models/Todo.js";
 import { RewardModel } from "../src/db/models/Reward.js";
+import { TodoTemplateModel } from "../src/db/models/TodoTemplate.js";
+import { TodoCategoryTemplateModel } from "../src/db/models/TodoCategoryTemplate.js";
 import { encryptField, encryptNullable } from "../src/utils/fieldEncryption.js";
 
 const ENCRYPTED_PREFIX = "v1:";
@@ -91,6 +99,10 @@ async function migrateTodos() {
       todo.rejectedReason = encryptNullable(todo.accountId!, todo.rejectedReason) ?? null;
       changed = true;
     }
+    if (needsEncryption(todo.notes)) {
+      todo.notes = encryptNullable(todo.accountId!, todo.notes) ?? null;
+      changed = true;
+    }
     let subtasksChanged = false;
     for (const subtask of todo.subtasks ?? []) {
       if (needsEncryption(subtask.title)) {
@@ -130,11 +142,78 @@ async function migrateRewards() {
   console.log(`Rewards: ${updated} uppdaterade, ${withoutAccount} utan accountId hoppade över.`);
 }
 
+async function migrateTodoTemplates() {
+  const templates = await TodoTemplateModel.find({ accountId: { $ne: null } });
+  let updated = 0;
+  let updatedSubtaskTitles = 0;
+
+  for (const template of templates) {
+    let changed = false;
+    if (needsEncryption(template.title)) {
+      template.title = encryptField(template.accountId, template.title);
+      changed = true;
+    }
+    if (needsEncryption(template.notes)) {
+      template.notes = encryptNullable(template.accountId, template.notes) ?? null;
+      changed = true;
+    }
+    for (const subtask of template.subtasks ?? []) {
+      if (needsEncryption(subtask.title)) {
+        subtask.title = encryptField(template.accountId, subtask.title);
+        changed = true;
+        updatedSubtaskTitles++;
+      }
+    }
+    if (changed) {
+      template.markModified("subtasks");
+      await template.save();
+      updated++;
+    }
+  }
+
+  const categoryTemplates = await TodoCategoryTemplateModel.find({ accountId: { $ne: null } });
+  let updatedCategories = 0;
+  let updatedCategoryTaskTitles = 0;
+  let updatedCategorySubtaskTitles = 0;
+
+  for (const categoryTemplate of categoryTemplates) {
+    let changed = false;
+    for (const task of categoryTemplate.tasks ?? []) {
+      if (needsEncryption(task.title)) {
+        task.title = encryptField(categoryTemplate.accountId, task.title);
+        changed = true;
+        updatedCategoryTaskTitles++;
+      }
+      if (needsEncryption(task.notes)) {
+        task.notes = encryptNullable(categoryTemplate.accountId, task.notes) ?? null;
+        changed = true;
+      }
+      for (const subtask of task.subtasks ?? []) {
+        if (needsEncryption(subtask.title)) {
+          subtask.title = encryptField(categoryTemplate.accountId, subtask.title);
+          changed = true;
+          updatedCategorySubtaskTitles++;
+        }
+      }
+    }
+    if (changed) {
+      categoryTemplate.markModified("tasks");
+      await categoryTemplate.save();
+      updatedCategories++;
+    }
+  }
+
+  console.log(
+    `Uppgiftsmallar: ${updated} uppdaterade, ${updatedSubtaskTitles} delmomentstitlar krypterade. Kategori-mallar: ${updatedCategories} uppdaterade, ${updatedCategoryTaskTitles} uppgiftstitlar + ${updatedCategorySubtaskTitles} delmomentstitlar krypterade.`
+  );
+}
+
 async function run() {
   await connectDB();
   await migrateCalendars();
   await migrateTodos();
   await migrateRewards();
+  await migrateTodoTemplates();
   console.log("\nKlart.");
   await mongoose.disconnect();
 }
