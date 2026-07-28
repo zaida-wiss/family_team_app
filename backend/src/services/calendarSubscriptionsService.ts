@@ -3,7 +3,7 @@ import type { IcsSubscription } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import { validateAndNormalizeIcsUrl } from "../utils/icsUrl.js";
-import { decryptField, encryptField } from "../utils/fieldEncryption.js";
+import { decryptField, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 
 // ── ICS-parsning (privat) ─────────────────────────────────────────────────────
 
@@ -220,18 +220,19 @@ export function reconcileExistingEvents(
   subId: string,
   incomingByUid: Map<string, ReturnType<typeof parseIcsEvents>[number]>,
   cutoffSub: string,
-  nowStr: string
+  nowStr: string,
+  accountId: string
 ) {
   for (const ev of calendar.events) {
     if (ev.subscriptionId !== subId || ev.deletedAt) continue;
     if ((ev.startsAt ?? "").slice(0, 10) < cutoffSub) continue;
     if (ev.uid && incomingByUid.has(ev.uid)) {
       const src = incomingByUid.get(ev.uid)!;
-      ev.title = src.title;
+      ev.title = encryptField(accountId, src.title);
       ev.startsAt = src.startsAt;
       ev.endsAt = src.endsAt;
       ev.isAllDay = src.isAllDay;
-      ev.notes = src.notes ?? null;
+      ev.notes = encryptNullable(accountId, src.notes) ?? null;
       incomingByUid.delete(ev.uid);
     } else {
       ev.deletedAt = nowStr;
@@ -244,7 +245,8 @@ export function insertNewEvents(
   calendar: { events: any[]; ownerId: string },
   calendarId: string,
   subId: string,
-  incoming: ReturnType<typeof parseIcsEvents>
+  incoming: ReturnType<typeof parseIcsEvents>,
+  accountId: string
 ) {
   const existingUids = new Set(calendar.events.filter((e) => e.subscriptionId === subId).map((e) => e.uid));
   for (const src of incoming) {
@@ -253,7 +255,7 @@ export function insertNewEvents(
     calendar.events.push({
       id: `event-${crypto.randomUUID()}`,
       calendarId,
-      title: src.title,
+      title: encryptField(accountId, src.title),
       startsAt: src.startsAt,
       endsAt: src.endsAt,
       isAllDay: src.isAllDay,
@@ -261,7 +263,7 @@ export function insertNewEvents(
       uid: src.uid ?? null,
       subscriptionId: subId,
       location: null,
-      notes: src.notes ?? null,
+      notes: encryptNullable(accountId, src.notes) ?? null,
       recurrence: { type: "none", interval: 1, until: null },
       attendees: [],
       createdBy: calendar.ownerId,
@@ -311,8 +313,8 @@ export async function syncSubscription(calendarId: string, accountId: string, su
     .filter((ev) => ev.startsAt.slice(0, 10) >= cutoffSub);
   const incomingByUid = new Map(incoming.filter((e) => e.uid).map((e) => [e.uid!, e]));
 
-  reconcileExistingEvents(calendar, sub.id, incomingByUid, cutoffSub, nowStr);
-  insertNewEvents(calendar, calendarId, sub.id, incoming);
+  reconcileExistingEvents(calendar, sub.id, incomingByUid, cutoffSub, nowStr, accountId);
+  insertNewEvents(calendar, calendarId, sub.id, incoming, accountId);
   calendar.markModified("events");
 
   const pruned = pruneOldEvents(calendar, cutoffSub, cutoffAll);

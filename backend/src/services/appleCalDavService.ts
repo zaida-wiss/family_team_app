@@ -3,7 +3,7 @@ import { CalendarModel } from "../db/models/Calendar.js";
 import type { CalDavConnection, CalendarEvent } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
-import { decryptField, encryptField } from "../utils/fieldEncryption.js";
+import { decryptField, decryptNullable, encryptField } from "../utils/fieldEncryption.js";
 import {
   parseIcsEvents,
   reconcileExistingEvents,
@@ -211,8 +211,8 @@ export async function pullConnection(calendarId: string, accountId: string, conn
     .filter((ev) => ev.startsAt.slice(0, 10) >= cutoffSub);
   const incomingByUid = new Map(incoming.filter((e) => e.uid).map((e) => [e.uid as string, e]));
 
-  reconcileExistingEvents(calendar as never, conn.id, incomingByUid, cutoffSub, nowStr);
-  insertNewEvents(calendar as never, calendarId, conn.id, incoming);
+  reconcileExistingEvents(calendar as never, conn.id, incomingByUid, cutoffSub, nowStr, accountId);
+  insertNewEvents(calendar as never, calendarId, conn.id, incoming, accountId);
   calendar.markModified("events");
 
   const stored = (calendar.calDavConnections as unknown as CalDavConnection[]).find((c) => c.id === conn.id);
@@ -265,8 +265,21 @@ export async function pushEventUpsert(calendarId: string, accountId: string, eve
   // fälla som redan fixades i calendarsService.ts:s updateEvent 2026-07-15.
   // .toObject() ger de RIKTIGA fältvärdena. Görs EFTER mutation+save ovan så
   // uid/subscriptionId redan är korrekta på den riktiga posten.
+  //
+  // 2026-07-28-fynd: title/notes ligger fält-krypterade i databasen (ADR-0014)
+  // — .toObject() ger fortfarande RÅ ciffertext, inte klartext. Utan denna
+  // dekryptering hade den skickade ICS-filens SUMMARY/DESCRIPTION varit
+  // olösbar ciffertext på det riktiga Apple-kalenderkontot, aldrig upptäckt
+  // eftersom pushen aldrig kraschar av det (bara skriver fel innehåll).
   const plainEvent = (event as unknown as { toObject(): CalendarEvent }).toObject();
-  const icsString = buildVeventIcs({ ...plainEvent, uid: plainEvent.uid as string });
+  const decryptedTitle = decryptField(accountId, plainEvent.title);
+  const decryptedNotes = decryptNullable(accountId, plainEvent.notes) ?? null;
+  const icsString = buildVeventIcs({
+    ...plainEvent,
+    uid: plainEvent.uid as string,
+    title: decryptedTitle,
+    notes: decryptedNotes
+  });
   let response: Response | null = null;
   try {
     if (event.calDavHref) {
@@ -277,7 +290,7 @@ export async function pushEventUpsert(calendarId: string, accountId: string, eve
         await recordSyncError(
           calendarId,
           conn.id,
-          `"${event.title}" ändrades samtidigt på Apple-kalendern — din ändring skrevs inte över, hämta om och försök igen`
+          `"${decryptedTitle}" ändrades samtidigt på Apple-kalendern — din ändring skrevs inte över, hämta om och försök igen`
         );
         return;
       }
@@ -290,12 +303,12 @@ export async function pushEventUpsert(calendarId: string, accountId: string, eve
       });
     }
   } catch {
-    await recordSyncError(calendarId, conn.id, `Kunde inte skriva "${event.title}" till Apple`);
+    await recordSyncError(calendarId, conn.id, `Kunde inte skriva "${decryptedTitle}" till Apple`);
     return;
   }
 
   if (!response.ok) {
-    await recordSyncError(calendarId, conn.id, `Apple avvisade "${event.title}" (${response.status})`);
+    await recordSyncError(calendarId, conn.id, `Apple avvisade "${decryptedTitle}" (${response.status})`);
     return;
   }
 
@@ -326,7 +339,8 @@ export async function pushEventDelete(calendarId: string, accountId: string, eve
     return;
   }
 
+  const decryptedTitle = decryptField(accountId, event.title);
   await client
     .deleteCalendarObject({ calendarObject: { url: event.calDavHref, etag: event.calDavEtag ?? undefined } as never })
-    .catch(() => recordSyncError(calendarId, conn.id, `Kunde inte radera "${event.title}" på Apple`));
+    .catch(() => recordSyncError(calendarId, conn.id, `Kunde inte radera "${decryptedTitle}" på Apple`));
 }
