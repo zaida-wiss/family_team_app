@@ -32,11 +32,13 @@ const ROUTINE = {
   personalCategoryId: null, notes: null
 };
 
+// 2026-07-28: "Kopiera rutiner"-knappen flyttad från Barnkonton till en egen
+// "Data"-underkategori (Zaidas önskemål).
 async function openBarnSettings(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Barn", exact: true }).click();
-  await page.getByRole("button", { name: "Barnkonton" }).click();
+  await page.getByRole("button", { name: "Data", exact: true }).click();
 }
 
 test("Kopiera rutiner: skapar en kopia av källbarnets rutin åt mottagaren", async ({ page }) => {

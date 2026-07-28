@@ -1,34 +1,27 @@
 import "./ChildSettings.css";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { CheckCircle2, Pencil, Save, Star, X, XCircle } from "lucide-react";
-import { ChildRoutineCreator } from "./ChildRoutineCreator";
-import { CopyRoutinesModal } from "./CopyRoutinesModal";
-import { ChildShareSettings } from "./ChildShareSettings";
+import { CheckCircle2, Pencil, Save, X, XCircle } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
+import { isChildMember } from "../todos/selectors";
 import { hasPermission } from "../../utils/permissions";
-import type { ChildTimelineSettings, Id, Member, Reward, Role, Todo, TodoCategory } from "@shared/types";
+import type { ChildTimelineSettings, Id, Member, Reward, Role } from "@shared/types";
 
+// 2026-07-28 (Zaidas önskemål): Rutiner/Dela-Överför-barn utbrutet till
+// ChildDataSettings.tsx ("Data"), Godkännande utbrutet till
+// ChildApprovalSettings.tsx ("Godkännande av uppgifter") — egna
+// underkategorier istället för sektioner inuti Barnkonton. Kvar här:
+// Önskningar + Tidslinje, den dagliga barnkonto-hanteringen.
 type Props = {
   currentMember: Member;
   members: Member[];
   roles: Role[];
-  todos: Todo[];
   rewards: Reward[];
-  categories: TodoCategory[];
-  onCreateCategory: (name: string) => Promise<TodoCategory>;
   onCreateWish: (childId: Id, starsNeeded: number, title: string) => void;
-  onApproveTodo: (todoId: Id) => void;
-  onRejectTodo: (todoId: Id, reason: string | null) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
   onUpdateWish: (rewardId: Id, patch: { title?: string; starsNeeded?: number; symbol?: string | null }) => void;
-  onCreateTodo: (todo: Todo) => void;
-  onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onUpdateChildTimelineSettings: (memberId: Id, settings: ChildTimelineSettings) => void;
-  onRefreshRoutine: (routineId: Id) => void;
-  onDeleteTodo: (todoId: Id) => void;
-  fixedTodoTimes: boolean;
 };
 
 const DEFAULT_CHILD_TIMELINE_SETTINGS: ChildTimelineSettings = {
@@ -40,22 +33,12 @@ export function ChildSettings({
   currentMember,
   members,
   roles,
-  todos,
   rewards,
-  categories,
-  onCreateCategory,
   onCreateWish,
-  onApproveTodo,
-  onRejectTodo,
   onApproveWish,
   onRejectWish,
   onUpdateWish,
-  onCreateTodo,
-  onUpdateTodo,
   onUpdateChildTimelineSettings,
-  onRefreshRoutine,
-  onDeleteTodo,
-  fixedTodoTimes,
 }: Props) {
   const [wishChildId, setWishChildId] = useState("");
   const [timelineChildId, setTimelineChildId] = useState("");
@@ -65,54 +48,23 @@ export function ChildSettings({
   const [editWishTitle, setEditWishTitle] = useState("");
   const [editWishStars, setEditWishStars] = useState(10);
   const [editWishSymbol, setEditWishSymbol] = useState("");
-  const [rejectingTodoId, setRejectingTodoId] = useState<Id | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [showCopyRoutines, setShowCopyRoutines] = useState(false);
-
-  function startRejecting(todoId: Id) {
-    setRejectingTodoId(todoId);
-    setRejectionReason("");
-  }
-
-  function cancelRejecting() {
-    setRejectingTodoId(null);
-    setRejectionReason("");
-  }
-
-  function confirmRejecting(todoId: Id) {
-    onRejectTodo(todoId, rejectionReason.trim() || null);
-    setRejectingTodoId(null);
-    setRejectionReason("");
-  }
 
   const childMembers = members.filter((member) => {
-    const role = roles.find((candidate) => candidate.id === member.roleId);
     return (
       member.accountId === currentMember.accountId &&
       member.deletedAt === null &&
-      (member.isChild || role?.isChildRole)
+      isChildMember(member, roles)
     );
   });
   const childIds = new Set(childMembers.map((child) => child.id));
   const childById = new Map(childMembers.map((child) => [child.id, child]));
   const canApprove = hasPermission(currentMember, roles, "canApproveTodos");
-  const canManageChildTodos = hasPermission(currentMember, roles, "canManageChildTodos");
-  // Dela barn (ADR-0024) kräver samma canManageMembers som backend kollar
-  // (canManageChildShares i shared/permissions.ts) — annars visas knappen
-  // men serverns anrop 403:ar ändå, förvirrande.
-  const canManageMembers = hasPermission(currentMember, roles, "canManageMembers");
 
   const pendingWishes = rewards.filter(
     (reward) =>
       childIds.has(reward.wishedBy) &&
       reward.deletedAt === null &&
       reward.status === "suggested"
-  );
-  const pendingTodos = todos.filter(
-    (todo) =>
-      childIds.has(todo.assignedTo ?? "") &&
-      todo.status === "done" &&
-      todo.deletedAt === null
   );
 
   function getChildName(memberId: Id) {
@@ -306,103 +258,6 @@ export function ChildSettings({
         </div>
         {!timelineHasValidRange && (
           <p className="settings-sub-desc">Sluttiden behöver vara senare än starttiden.</p>
-        )}
-      </div>
-
-      {canManageChildTodos && (
-        <div className="settings-sub">
-          <h3 className="settings-sub-title">Rutiner</h3>
-          {childMembers.length > 1 && (
-            <button
-              className="secondary-button"
-              onClick={() => setShowCopyRoutines(true)}
-              type="button"
-            >
-              Kopiera rutiner från ett annat barn
-            </button>
-          )}
-          {showCopyRoutines && (
-            <CopyRoutinesModal
-              currentMember={currentMember}
-              children={childMembers}
-              todos={todos}
-              onCreateTodo={onCreateTodo}
-              onClose={() => setShowCopyRoutines(false)}
-            />
-          )}
-          <ChildRoutineCreator
-            currentMember={currentMember}
-            children={childMembers}
-            roles={roles}
-            todos={todos}
-            categories={categories}
-            onCreateCategory={onCreateCategory}
-            showTitle={false}
-            onCreateTodo={onCreateTodo}
-            onUpdateTodo={onUpdateTodo}
-            onRefreshRoutine={onRefreshRoutine}
-            onDeleteTodo={onDeleteTodo}
-            fixedTodoTimes={fixedTodoTimes}
-          />
-        </div>
-      )}
-
-      {canManageMembers && <ChildShareSettings childMembers={childMembers} />}
-
-      <div className="settings-sub">
-        <h3 className="settings-sub-title">Godkännande</h3>
-        {!canApprove ? (
-          <p className="settings-sub-desc">Din roll kan inte godkänna barns uppgifter.</p>
-        ) : pendingTodos.length === 0 ? (
-          <p className="settings-sub-desc">Inga uppgifter väntar på godkännande.</p>
-        ) : (
-          <section className="approval-panel child-settings-panel" aria-label="Barnens godkännanden">
-            <div className="approval-header">
-              <strong>Väntar</strong>
-              <span>{pendingTodos.length}</span>
-            </div>
-            {pendingTodos.map((todo) => (
-              <div className="approval-row" key={todo.id}>
-                <div>
-                  <strong>{todo.title}</strong>
-                  <small>
-                    <Star size={14} fill="currentColor" />
-                    {getChildName(todo.assignedTo ?? "")} · {todo.starValue} stjärnor
-                  </small>
-                </div>
-                {rejectingTodoId === todo.id ? (
-                  <div className="approval-reject-form">
-                    <input
-                      autoFocus
-                      className="text-input"
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmRejecting(todo.id);
-                        if (e.key === "Escape") cancelRejecting();
-                      }}
-                      placeholder="Varför? (valfritt)"
-                      value={rejectionReason}
-                    />
-                    <button className="icon-button danger" onClick={() => confirmRejecting(todo.id)} title="Skicka" type="button">
-                      <XCircle size={16} />
-                    </button>
-                    <button className="icon-button" onClick={cancelRejecting} title="Avbryt" type="button">
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="approval-actions">
-                    <button className="icon-button" onClick={() => onApproveTodo(todo.id)} title="Godkänn" type="button">
-                      <CheckCircle2 size={16} />
-                    </button>
-                    <button className="icon-button danger" onClick={() => startRejecting(todo.id)} title="Neka" type="button">
-                      <XCircle size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </section>
         )}
       </div>
     </>

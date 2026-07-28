@@ -42,7 +42,8 @@ test("Analytics-spårning skickar Authorization-headern (fick tidigare alltid 40
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Barn", exact: true }).click();
-  await page.getByRole("button", { name: "Barnkonton" }).click();
+  // 2026-07-28: Godkännande flyttat till en egen underkategori (Zaidas önskemål).
+  await page.getByRole("button", { name: "Godkännande av uppgifter" }).click();
   await page.getByRole("region", { name: "Barnens godkännanden" }).getByTitle("Godkänn").click();
 
   await expect.poll(() => receivedAuthHeader).toBe("Bearer fake-access-token");

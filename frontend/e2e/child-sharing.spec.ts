@@ -4,10 +4,13 @@ import { mockAuthAndData, MEMBER } from "./helpers";
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
 // 2026-07-22, Zaidas beslut: "separerade föräldrar utan god relation ändå
 // skall kunna dela information om ett gemensamt barn"). Två flöden testas:
-// (1) Inställningar → Barn → Barnkonton → "Dela barn": sök en vuxen via
+// (1) Inställningar → Barn → Data → "Dela barn": sök en vuxen via
 // e-post, ge access, se delningen i listan, återkalla den. (2) Todos-panelen
 // (tråd-vyn): en "Delade barn"-tråd visas för barn NÅGON ANNAN delat med
 // mig, med ett låst (endast visning) läge när access är "view".
+//
+// 2026-07-28: Dela/Överför barn flyttat från Barnkonton till en egen "Data"-
+// underkategori (Zaidas önskemål) — navigeringen nedan uppdaterad.
 
 const CHILD_A = {
   id: "mem-child-a", accountId: "acc-1", userId: null,
@@ -20,7 +23,7 @@ async function openBarnkonton(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Barn", exact: true }).click();
-  await page.getByRole("button", { name: "Barnkonton" }).click();
+  await page.getByRole("button", { name: "Data", exact: true }).click();
 }
 
 test("Dela barn: söker en vuxen via e-post, ger åtkomst, ser delningen, återkallar den", async ({ page }) => {

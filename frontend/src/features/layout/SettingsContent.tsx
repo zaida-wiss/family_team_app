@@ -30,6 +30,12 @@ const CalendarPanel = lazy(() =>
 const ChildSettings = lazy(() =>
   import("../children/ChildSettings").then((m) => ({ default: m.ChildSettings }))
 );
+const ChildApprovalSettings = lazy(() =>
+  import("../children/ChildApprovalSettings").then((m) => ({ default: m.ChildApprovalSettings }))
+);
+const ChildDataSettings = lazy(() =>
+  import("../children/ChildDataSettings").then((m) => ({ default: m.ChildDataSettings }))
+);
 const DeleteAccountSection = lazy(() =>
   import("../accounts/DeleteAccountSection").then((m) => ({ default: m.DeleteAccountSection }))
 );
@@ -584,22 +590,51 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               currentMember={currentMember}
               members={members}
               roles={roles}
-              todos={todos}
               rewards={rewards}
-              categories={personalCategories}
-              onCreateCategory={onCreateCategory}
               onCreateWish={settingsProps.onCreateWish}
-              onApproveTodo={settingsProps.onApproveTodo}
-              onRejectTodo={settingsProps.onRejectTodo}
               onApproveWish={settingsProps.onApproveWish}
               onRejectWish={settingsProps.onRejectWish}
               onUpdateWish={onUpdateWish}
+              onUpdateChildTimelineSettings={settingsProps.onUpdateChildTimelineSettings}
+            />
+          )
+        },
+        {
+          // 2026-07-28, Zaidas önskemål: en egen underkategori för
+          // uppgifts-godkännande, separat från Barnkonton.
+          id: "child-approval",
+          label: "Godkännande av uppgifter",
+          content: (
+            <ChildApprovalSettings
+              currentMember={currentMember}
+              members={members}
+              roles={roles}
+              todos={todos}
+              onApproveTodo={settingsProps.onApproveTodo}
+              onRejectTodo={settingsProps.onRejectTodo}
+            />
+          )
+        },
+        {
+          // 2026-07-28, Zaidas önskemål: "en som heter data... överföra
+          // barn, dela barn, ... kopiera uppgifter till ett annat barn och
+          // allt som har med datan att göra" — samlar rutinkopiering och
+          // dela/överför-barn (fanns redan, låg spritt i Barnkonton).
+          id: "child-data",
+          label: "Data",
+          content: (
+            <ChildDataSettings
+              currentMember={currentMember}
+              members={members}
+              roles={roles}
+              todos={todos}
+              categories={personalCategories}
+              onCreateCategory={onCreateCategory}
               onCreateTodo={settingsProps.onCreateTodo}
               onUpdateTodo={settingsProps.onUpdateTodo}
-              onUpdateChildTimelineSettings={settingsProps.onUpdateChildTimelineSettings}
               onRefreshRoutine={settingsProps.onRefreshRoutine}
-              fixedTodoTimes={activeAccount.fixedTodoTimes ?? false}
               onDeleteTodo={settingsProps.onDeleteTodo}
+              fixedTodoTimes={activeAccount.fixedTodoTimes ?? false}
             />
           )
         },
