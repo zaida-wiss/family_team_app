@@ -38,7 +38,11 @@ function formatDuration(ms: number) {
 // härifrån — samma "godkännande/stjärnor sker bara i barnets eget konto"-
 // princip som redan gäller för todos.
 export function SharedChildrenThreads() {
-  const { sharedChildren, completeSharedTodo } = useSharedChildrenTodos();
+  // approveSharedTodo/rejectSharedTodo (2026-07-29, Zaidas beslut: "full
+  // åtkomst, som en riktig förälder") — en edit-mottagare kan nu även
+  // godkänna (delar ut stjärnor i barnets EGET konto) och neka en uppgift i
+  // status "done", inte bara markera "pending" klar.
+  const { sharedChildren, completeSharedTodo, approveSharedTodo, rejectSharedTodo } = useSharedChildrenTodos();
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
   const [expandedChildId, setExpandedChildId] = useState<Id | null>(null);
 
@@ -48,6 +52,7 @@ export function SharedChildrenThreads() {
     <div className="todo-thread-view">
       {sharedChildren.map(({ child, access, todos, calendarEvents, purchasedRewards, stars, timedTasks }) => {
         const pending = todos.filter((t) => t.status === "pending");
+        const awaitingApproval = todos.filter((t) => t.status === "done");
         const expanded = expandedChildId === child.id;
         return (
           <section className="todo-thread" aria-label={`Delad tråd: ${child.name}`} key={child.id}>
@@ -149,6 +154,35 @@ export function SharedChildrenThreads() {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {access === "edit" && awaitingApproval.length > 0 && (
+              <div className="shared-child-thread__approval">
+                <p className="shared-child-thread__details-title">Väntar på godkännande</p>
+                <ul className="shared-child-thread__details-list">
+                  {awaitingApproval.map((todo) => (
+                    <li className="shared-child-thread__approval-row" key={todo.id}>
+                      <span>{todo.title}</span>
+                      <button
+                        aria-label={`Godkänn ${todo.title} för ${child.name}`}
+                        className="secondary-button"
+                        onClick={() => approveSharedTodo(child.accountId, child.id, todo.id)}
+                        type="button"
+                      >
+                        Godkänn
+                      </button>
+                      <button
+                        aria-label={`Neka ${todo.title} för ${child.name}`}
+                        className="icon-button danger"
+                        onClick={() => rejectSharedTodo(child.accountId, child.id, todo.id, null)}
+                        type="button"
+                      >
+                        Neka
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
         );

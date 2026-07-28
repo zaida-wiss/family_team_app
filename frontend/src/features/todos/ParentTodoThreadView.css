@@ -732,3 +732,19 @@
   margin: 0;
   padding-left: 18px;
 }
+
+/* Godkänn/neka (2026-07-29, Zaidas beslut: "full åtkomst, som en riktig
+   förälder") — en edit-mottagare kan nu även godkänna/neka en uppgift i
+   status "done", inte bara markera "pending" klar. */
+.shared-child-thread__approval {
+  margin-top: 8px;
+}
+
+.shared-child-thread__approval-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+  padding: 4px 0;
+}

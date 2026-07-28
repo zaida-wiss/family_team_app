@@ -53,6 +53,43 @@ todosRouter.patch(
   }
 );
 
+// Godkänn/neka på ett delat barns todos (2026-07-29, ADR-0024-uppföljning,
+// Zaidas beslut: "full åtkomst, som en riktig förälder") — kräver "edit"-
+// åtkomst, samma spärr som complete ovan.
+todosRouter.patch(
+  "/shared/:childAccountId/:childMemberId/:id/approve",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    await todos.approveSharedChildTodo(
+      req.params.id,
+      req.params.childAccountId,
+      req.params.childMemberId,
+      req.memberId!,
+      req.accountId!
+    );
+    res.json({ ok: true });
+  }
+);
+
+todosRouter.patch(
+  "/shared/:childAccountId/:childMemberId/:id/reject",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    const { reason } = RejectTodoBodySchema.parse(req.body ?? {});
+    await todos.rejectSharedChildTodo(
+      req.params.id,
+      req.params.childAccountId,
+      req.params.childMemberId,
+      req.memberId!,
+      req.accountId!,
+      reason ?? null
+    );
+    res.json({ ok: true });
+  }
+);
+
 // Mina familjekonton (2026-07-25) — mina EGNA andra medlemskap, inte en
 // delnings-grant. Måste registreras FÖRE PATCH-rutterna med /:id nedan.
 todosRouter.get("/family-across-accounts", requireAuth, attachAccountId, async (req, res) => {

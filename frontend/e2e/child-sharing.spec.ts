@@ -202,6 +202,110 @@ test("Överför barn: söker en familj via e-post, kräver två klick för att b
   expect(transferBody!.targetAccountId).toBe("acc-2");
 });
 
+// 2026-07-29, Zaidas önskemål: "jag ska kunna välja relation till personen
+// barn delas med och vilket tidsspann delningen gäller. tills vidare, eller
+// tex bara under en semestervecka."
+test("Dela barn: kan välja relation och ett tidsspann, skickas med i delningen", async ({ page }) => {
+  let shareBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_A] }));
+  await page.route("**/api/members/*/share/lookup", (route) =>
+    route.fulfill({
+      json: { memberships: [{ memberId: "mem-other", accountId: "acc-2", memberName: "Erik", accountName: "Familjen Andersson" }] }
+    })
+  );
+  await page.route("**/api/members/*/share", (route) => {
+    if (route.request().method() === "POST") {
+      shareBody = route.request().postDataJSON();
+      return route.fulfill({ status: 201, json: [] });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await openBarnkonton(page);
+  await page.getByLabel("E-post till en vuxen").fill("erik@exempel.se");
+  await page
+    .locator("form", { has: page.getByLabel("E-post till en vuxen") })
+    .getByRole("button", { name: "Sök" })
+    .click();
+  await expect(page.getByText("Erik (Familjen Andersson)")).toBeVisible();
+
+  await page.getByLabel("Relation till personen").fill("Mormor");
+  await page.getByRole("radio", { name: "Till ett visst datum" }).check();
+  await page.getByLabel("Delningen gäller till och med").fill("2026-08-15");
+  await page.getByRole("button", { name: "Dela" }).click();
+
+  await expect.poll(() => shareBody).not.toBeNull();
+  expect(shareBody!.relation).toBe("Mormor");
+  expect(new Date(shareBody!.expiresAt as string).toISOString().slice(0, 10)).toBe("2026-08-15");
+});
+
+// Mottagarsidan (2026-07-29) — en väntande delning visas i Inställningar →
+// Barn → Data (även för ett konto UTAN egna barn, se PendingChildShares.tsx)
+// och kan accepteras eller avböjas.
+test("Väntande delningar: kan accepteras eller avböjas", async ({ page }) => {
+  const PENDING = {
+    childId: "mem-other-child", childAccountId: "acc-2", childName: "Sara",
+    homeAccountName: "Familjen Andersson", grantedByName: "Erik",
+    access: "edit", relation: "Faster", expiresAt: null
+  };
+  let accepted: string | null = null;
+  let declined: string | null = null;
+  let pendingList = [PENDING];
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
+  await page.route("**/api/members/pending-child-shares", (route) => route.fulfill({ json: pendingList }));
+  await page.route("**/api/members/pending-child-shares/acc-2/mem-other-child/accept", (route) => {
+    accepted = "mem-other-child";
+    pendingList = [];
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/members/pending-child-shares/acc-2/mem-other-child/decline", (route) => {
+    declined = "mem-other-child";
+    pendingList = [];
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await openBarnkonton(page);
+
+  await expect(page.getByText("Sara")).toBeVisible();
+  await expect(page.getByText(/Familjen Andersson.*delas av Erik, Faster/)).toBeVisible();
+  await expect(page.getByText("Full åtkomst (kan godkänna/redigera)")).toBeVisible();
+  await expect(page.getByText("gäller tills vidare")).toBeVisible();
+
+  await page.getByRole("button", { name: "Acceptera" }).click();
+  await expect.poll(() => accepted).toBe("mem-other-child");
+  await expect(page.getByText("Sara")).not.toBeVisible();
+
+  expect(declined).toBeNull();
+});
+
+// Placeringsbeslut (2026-07-29, Zaidas svar: "barnet skall vara på samma
+// ställe, men med en text under som informerar") — ett accepterat delat barn
+// syns i Familjemedlemmar-listan bland riktiga medlemmar, med en informerande
+// undertext (vilken familj det delas av, relation, åtkomstnivå).
+test("Familjemedlemmar: ett delat barn visas i listan med en informerande text", async ({ page }) => {
+  const SHARED = {
+    child: { id: "mem-other-child", accountId: "acc-2", name: "Sara", avatarUrl: null, color: null, dashboardTheme: null },
+    access: "view", homeAccountName: "Familjen Andersson", relation: "Faster",
+    todos: [], calendarEvents: [], purchasedRewards: [], stars: { approved: 12, spent: 4 }, timedTasks: []
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
+  await page.route("**/api/todos/shared-children", (route) => route.fulfill({ json: [SHARED] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Familj" }).click();
+  await page.getByRole("button", { name: "Familjemedlemmar" }).click();
+
+  await expect(page.getByText("Sara")).toBeVisible();
+  await expect(page.getByText(/Delas av Familjen Andersson.*Faster.*kan bara visa/)).toBeVisible();
+});
+
 test("Todos-panelen: en delad barn-tråd visas med visnings-läge när access är 'view'", async ({ page }) => {
   const SHARED_TODO = {
     id: "todo-shared-1", accountId: "acc-2", title: "Läxor", createdBy: "mem-other-parent",

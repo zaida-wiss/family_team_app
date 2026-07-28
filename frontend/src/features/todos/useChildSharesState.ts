@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { membersApi, todosApi } from "../../api";
-import type { ChildShare, ChildShareCandidate } from "../../api/members";
+import type { ChildShare, ChildShareCandidate, PendingChildShare } from "../../api/members";
 import type { SharedChildData } from "../../api/todos";
 import type { AccessLevel, Id } from "@shared/types";
 
@@ -39,7 +39,31 @@ export function useSharedChildrenTodos() {
     });
   }
 
-  return { sharedChildren, completeSharedTodo };
+  // 2026-07-29, Zaidas beslut: "full åtkomst, som en riktig förälder" — en
+  // edit-mottagare kan nu även godkänna (delar ut stjärnor i barnets EGET
+  // konto) och neka, inte bara markera klar.
+  function approveSharedTodo(childAccountId: Id, childMemberId: Id, todoId: Id) {
+    setSharedChildren((current) =>
+      current.map((entry) =>
+        entry.child.id !== childMemberId
+          ? entry
+          : { ...entry, todos: entry.todos.map((t) => (t.id === todoId ? { ...t, status: "approved" as const } : t)) }
+      )
+    );
+    todosApi.approveShared(childAccountId, childMemberId, todoId).then(refresh).catch((error) => {
+      console.error(error);
+      refresh();
+    });
+  }
+
+  function rejectSharedTodo(childAccountId: Id, childMemberId: Id, todoId: Id, reason: string | null) {
+    todosApi.rejectShared(childAccountId, childMemberId, todoId, reason).then(refresh).catch((error) => {
+      console.error(error);
+      refresh();
+    });
+  }
+
+  return { sharedChildren, completeSharedTodo, approveSharedTodo, rejectSharedTodo };
 }
 
 // 2026-07-28, Zaidas önskemål: "det ska stå bekräftat vilka barn man delar
@@ -88,10 +112,21 @@ export function useChildShareManagement(childIds: Id[]) {
     }
   }
 
-  async function grant(candidate: ChildShareCandidate, access: AccessLevel, targetChildIds: Id[]) {
+  // relation/expiresAt tillagda 2026-07-29 (Zaidas önskemål: "jag ska kunna
+  // välja relation till personen barn delas med och vilket tidsspann
+  // delningen gäller. tills vidare, eller tex bara under en semestervecka").
+  async function grant(
+    candidate: ChildShareCandidate,
+    access: AccessLevel,
+    targetChildIds: Id[],
+    relation: string | null,
+    expiresAt: string | null
+  ) {
     if (targetChildIds.length === 0) return;
     await Promise.all(
-      targetChildIds.map((id) => membersApi.shareChild(id, candidate.memberId, candidate.accountId, access))
+      targetChildIds.map((id) =>
+        membersApi.shareChild(id, candidate.memberId, candidate.accountId, access, relation, expiresAt)
+      )
     );
     setCandidates(null);
     refresh();
@@ -144,4 +179,32 @@ export function useChildTransfer(childId: Id | null) {
   }
 
   return { candidates, loading, transferring, lookup, transfer, clearCandidates };
+}
+
+// 2026-07-29, mottagarsidan av ADR-0024-uppföljningen: "denna först
+// godkänna att barnet skall delas" — en helt ny delning är alltid "pending"
+// tills DEN HÄR hooken (i Inställningar → Familj, eller var som helst en
+// vuxen loggar in) visar upp den och låter mottagaren acceptera/avböja.
+export function usePendingChildShares() {
+  const [pendingShares, setPendingShares] = useState<PendingChildShare[]>([]);
+
+  const refresh = useCallback(() => {
+    membersApi.getPendingChildShares().then(setPendingShares).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  async function accept(share: PendingChildShare) {
+    await membersApi.acceptChildShare(share.childAccountId, share.childId);
+    refresh();
+  }
+
+  async function decline(share: PendingChildShare) {
+    await membersApi.declineChildShare(share.childAccountId, share.childId);
+    refresh();
+  }
+
+  return { pendingShares, accept, decline, refresh };
 }

@@ -53,7 +53,13 @@ const memberSchema = new Schema<Member>({
         accountId: { type: String, required: true },
         access: { type: String, required: true },
         grantedBy: { type: String, required: true },
-        grantedAt: { type: String, required: true }
+        grantedAt: { type: String, required: true },
+        // Tillagda i Mongoose-schemat SAMTIDIGT som Zod/service (2026-07-29)
+        // — se todoThreadGap-incidentens kommentar (2026-07-28) för varför
+        // det spelar roll att inte lägga till dem i en efterföljande commit.
+        status: { type: String, default: "accepted" },
+        relation: { type: String, default: null },
+        expiresAt: { type: String, default: null }
       }
     ],
     default: []

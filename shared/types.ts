@@ -229,12 +229,28 @@ export type Member = {
   // i BARNETS EGET konto (childSharesService.ts), en mottagare som bara har
   // åtkomst via det här fältet uppfyller aldrig det villkoret och kan därför
   // aldrig dela vidare, oavsett egen roll i sitt eget konto.
+  // Utökad 2026-07-29 (ADR-0024, uppföljning — Zaidas önskemål: "denna först
+  // godkänna att barnet skall delas... full åtkomst, som en riktig
+  // förälder... relation till personen... tidsspann"): en delning kräver nu
+  // ett uttryckligt accept-steg från mottagaren innan den är aktiv —
+  // `status` saknas på ÄLDRE, redan levande produktionsdelningar (skapade
+  // innan detta fält fanns); de tolkas som redan "accepted" (isShareActive i
+  // shared/permissions.ts) så att de inte plötsligt slutar fungera. En NY
+  // delning sätts alltid till "pending" vid skapande (childSharesService.ts),
+  // oavsett om mottagaren redan haft en tidigare delning för samma barn.
   childSharedWith?: {
     memberId: Id;
     accountId: Id;
     access: AccessLevel;
     grantedBy: Id;
     grantedAt: string;
+    status?: "pending" | "accepted";
+    // Fri text (t.ex. "Mormor", "Pappa") — bara informativ, styr ingen logik.
+    relation: string | null;
+    // null = "tills vidare" (ingen bortre gräns). Satt = delningen upphör
+    // automatiskt efter detta datum (isShareActive), utan att behöva
+    // återkallas manuellt — t.ex. "bara under en semestervecka".
+    expiresAt: string | null;
   }[];
   deletedAt: string | null;
   deletedBy: Id | null;

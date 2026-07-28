@@ -117,6 +117,16 @@ export function canCreateChildAccount(member: Member, roles: Role[]): boolean {
   return hasPermission(member, roles, "canCreateChildAccounts");
 }
 
+// En delning måste vara accepterad AV MOTTAGAREN och inte ha gått ut för att
+// räknas som aktiv (2026-07-29, ADR-0024-uppföljning) — status saknas på
+// äldre, redan levande delningar (skapade innan accept-steget fanns) och
+// tolkas då som redan accepterade, så de inte plötsligt tappar åtkomst.
+export function isShareActive(share: { status?: "pending" | "accepted"; expiresAt?: string | null }): boolean {
+  if ((share.status ?? "accepted") !== "accepted") return false;
+  if (!share.expiresAt) return true;
+  return new Date(share.expiresAt).getTime() > Date.now();
+}
+
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
 // 2026-07-22) — Member.childSharedWith. memberId+accountId kollas EXPLICIT
 // (inte bara memberId) som försvar på djupet, även om id:n redan är
@@ -125,7 +135,8 @@ export function getChildShareAccess(caller: Member, child: Member): AccessLevel 
   const grant = (child.childSharedWith ?? []).find(
     (share) => share.memberId === caller.id && share.accountId === caller.accountId
   );
-  return grant?.access ?? null;
+  if (!grant || !isShareActive(grant)) return null;
+  return grant.access;
 }
 
 // En förälder i barnets EGET konto med canManageChildTodos har redan full

@@ -5,6 +5,7 @@ import { MemberAvatar } from "../../components/MemberAvatar";
 import { MemberEditModal } from "./MemberEditModal";
 import { hasPermission } from "../../utils/permissions";
 import { generateId } from "../../utils/uuid";
+import { useSharedChildrenTodos } from "../todos/useChildSharesState";
 import type { AccessLevel, Account, Calendar, CalendarSettings, Id, Member, Role } from "@shared/types";
 
 const DEFAULT_CALENDAR_SETTINGS: CalendarSettings = {
@@ -99,6 +100,13 @@ export function AccountSettings({
     (m) => m.accountId === account.id && m.deletedAt === null
   );
 
+  // Delade barn i Familjemedlemmar (2026-07-29, Zaidas placeringsbeslut:
+  // "barnet skall vara på samma ställe, men med en text under som
+  // informerar") — samma lista som redan matar SharedChildrenThreads.tsx i
+  // Todos-panelen, en egen, oberoende hämtning (samma återanvändningsmönster
+  // som resten av appen redan följer för den här hooken).
+  const { sharedChildren } = useSharedChildrenTodos();
+
   return (
     <>
       {canManageMembers && (
@@ -131,7 +139,7 @@ export function AccountSettings({
         </div>
       )}
 
-      {activeMembers.length > 0 && (
+      {(activeMembers.length > 0 || sharedChildren.length > 0) && (
         <div className="settings-sub">
           <h3 className="settings-sub-title">Familjemedlemmar</h3>
           <div className="settings-member-list">
@@ -153,6 +161,42 @@ export function AccountSettings({
                     <Pencil size={16} />
                   </button>
                 )}
+              </div>
+            ))}
+            {/* Delade barn (ADR-0024-uppföljning, 2026-07-29) — samma plats
+                som riktiga medlemmar, men med en informerande undertext så
+                det aldrig kan förväxlas med ett eget barn. */}
+            {sharedChildren.map((shared) => (
+              <div className="settings-member-row" key={`shared-${shared.child.accountId}-${shared.child.id}`}>
+                <MemberAvatar
+                  member={{
+                    id: shared.child.id,
+                    accountId: shared.child.accountId,
+                    userId: null,
+                    name: shared.child.name,
+                    roleId: "",
+                    isChild: true,
+                    avatarUrl: shared.child.avatarUrl,
+                    color: shared.child.color,
+                    // MemberAvatar läser aldrig dashboardTheme — null räcker,
+                    // undviker en onödig typkonvertering av den råa strängen
+                    // SharedChildData bär på.
+                    dashboardTheme: null,
+                    spentStars: shared.stars.spent,
+                    approvedStars: shared.stars.approved,
+                    deletedAt: null,
+                    deletedBy: null
+                  }}
+                  size="small"
+                />
+                <div className="settings-member-info">
+                  <strong>{shared.child.name}</strong>
+                  <small>
+                    Delas av {shared.homeAccountName}
+                    {shared.relation ? ` · ${shared.relation}` : ""}
+                    {shared.access === "edit" ? " · full åtkomst" : " · kan bara visa"}
+                  </small>
+                </div>
               </div>
             ))}
           </div>

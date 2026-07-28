@@ -4,18 +4,22 @@ import { UserModel } from "../db/models/User.js";
 import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
 import { getAllRoles } from "./rolesService.js";
-import { canManageChildShares } from "../../../shared/permissions.js";
+import { canManageChildShares, isShareActive } from "../../../shared/permissions.js";
 import type { AccessLevel } from "../../../shared/types.js";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,
 // 2026-07-22) — se Member.childSharedWith i shared/types.ts och
 // canManageChildShares i shared/permissions.ts för den strukturella
-// spärren mot vidaredelning.
+// spärren mot vidaredelning. Utökad 2026-07-29 med ett accept-steg
+// (mottagaren måste godkänna innan delningen är aktiv), en fri
+// relations-text och ett valfritt tidsspann (isShareActive).
 
 export const ShareChildBodySchema = z.object({
   granteeMemberId: z.string().min(1),
   granteeAccountId: z.string().min(1),
-  access: z.enum(["view", "edit"])
+  access: z.enum(["view", "edit"]),
+  relation: z.string().nullable().optional(),
+  expiresAt: z.string().nullable().optional()
 });
 
 async function requireMember(memberId: string | null, accountId: string) {
@@ -91,14 +95,23 @@ export async function listShares(childId: string, accountId: string, callerMembe
     access: s.access,
     grantedBy: s.grantedBy,
     grantedAt: s.grantedAt,
+    status: s.status ?? "accepted",
+    relation: s.relation ?? null,
+    expiresAt: s.expiresAt ?? null,
     memberName: members.find((m) => m.id === s.memberId)?.name ?? "Okänd",
     accountName: accounts.find((a) => a.id === s.accountId)?.name ?? "Okänt konto"
   }));
 }
 
+// Skapar (eller ersätter) en delning — sätts ALLTID till "pending", även om
+// mottagaren redan hade en tidigare, accepterad delning för samma barn: en
+// ändrad behörighetsnivå/relation/tidsspann är ett nytt förslag som ska
+// godkännas på nytt, inte tyst utökas. Delningen är alltså inaktiv
+// (isShareActive false) tills mottagaren själv accepterar den, se
+// acceptShare nedan.
 export async function shareChild(childId: string, accountId: string, callerMemberId: string | null, data: unknown) {
   const child = await requireManageableChild(childId, accountId, callerMemberId);
-  const { granteeMemberId, granteeAccountId, access } = ShareChildBodySchema.parse(data);
+  const { granteeMemberId, granteeAccountId, access, relation, expiresAt } = ShareChildBodySchema.parse(data);
 
   const grantee = await MemberModel.findOne({ id: granteeMemberId, accountId: granteeAccountId, deletedAt: null, isChild: false });
   if (!grantee) {
@@ -116,7 +129,10 @@ export async function shareChild(childId: string, accountId: string, callerMembe
       accountId: granteeAccountId,
       access: access as AccessLevel,
       grantedBy: callerMemberId!,
-      grantedAt: new Date().toISOString()
+      grantedAt: new Date().toISOString(),
+      status: "pending",
+      relation: relation ?? null,
+      expiresAt: expiresAt ?? null
     }
   ];
   child.markModified("childSharedWith");
@@ -128,6 +144,89 @@ export async function revokeShare(childId: string, accountId: string, callerMemb
   const child = await requireManageableChild(childId, accountId, callerMemberId);
   child.childSharedWith = (child.childSharedWith ?? []).filter(
     (s) => !(s.memberId === granteeMemberId && s.accountId === granteeAccountId)
+  );
+  child.markModified("childSharedWith");
+  await child.save();
+}
+
+// 2026-07-29 — mottagarsidan av delningsflödet. Till skillnad från alla
+// funktioner ovan (som kräver canManageChildShares i BARNETS EGET konto)
+// styrs dessa av vem den INLOGGADE ANROPAREN är — de hittar sina egna
+// pending-delningar via (memberId, accountId), oavsett vilket konto barnet
+// tillhör.
+export async function getPendingSharesForMe(callerMemberId: string, callerAccountId: string) {
+  const children = await MemberModel.find({
+    isChild: true,
+    deletedAt: null,
+    childSharedWith: { $elemMatch: { memberId: callerMemberId, accountId: callerAccountId, status: "pending" } }
+  });
+
+  const homeAccountIds = [...new Set(children.map((c) => c.accountId))];
+  const grantedByIds = [
+    ...new Set(
+      children.flatMap((c) =>
+        (c.childSharedWith ?? [])
+          .filter((s) => s.memberId === callerMemberId && s.accountId === callerAccountId && s.status === "pending")
+          .map((s) => s.grantedBy)
+      )
+    )
+  ];
+  const [accounts, granters] = await Promise.all([
+    AccountModel.find({ id: { $in: homeAccountIds } }, { _id: 0, __v: 0 }),
+    MemberModel.find({ id: { $in: grantedByIds } })
+  ]);
+
+  return children.flatMap((child) => {
+    const share = (child.childSharedWith ?? []).find(
+      (s) => s.memberId === callerMemberId && s.accountId === callerAccountId && s.status === "pending"
+    );
+    if (!share) return [];
+    return [
+      {
+        childId: child.id,
+        childAccountId: child.accountId,
+        childName: child.name,
+        homeAccountName: accounts.find((a) => a.id === child.accountId)?.name ?? "Okänt konto",
+        grantedByName: granters.find((m) => m.id === share.grantedBy)?.name ?? "Okänd",
+        access: share.access,
+        relation: share.relation ?? null,
+        expiresAt: share.expiresAt ?? null
+      }
+    ];
+  });
+}
+
+async function requirePendingShare(childId: string, childAccountId: string, callerMemberId: string, callerAccountId: string) {
+  await requireMember(callerMemberId, callerAccountId);
+  const child = await MemberModel.findOne({ id: childId, accountId: childAccountId, deletedAt: null, isChild: true });
+  if (!child) {
+    throw new AppError(404, "Barnet hittades inte");
+  }
+  const share = (child.childSharedWith ?? []).find(
+    (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
+  );
+  if (!share || share.status !== "pending") {
+    throw new AppError(404, "Ingen väntande delning hittades");
+  }
+  return child;
+}
+
+export async function acceptShare(childId: string, childAccountId: string, callerMemberId: string, callerAccountId: string) {
+  const child = await requirePendingShare(childId, childAccountId, callerMemberId, callerAccountId);
+  const share = (child.childSharedWith ?? []).find(
+    (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
+  )!;
+  share.status = "accepted";
+  child.markModified("childSharedWith");
+  await child.save();
+}
+
+// Avböjer en väntande delning — tar bort posten helt (samma som en
+// återkallelse, fast utförd av MOTTAGAREN istället för barnets egen familj).
+export async function declineShare(childId: string, childAccountId: string, callerMemberId: string, callerAccountId: string) {
+  const child = await requirePendingShare(childId, childAccountId, callerMemberId, callerAccountId);
+  child.childSharedWith = (child.childSharedWith ?? []).filter(
+    (s) => !(s.memberId === callerMemberId && s.accountId === callerAccountId)
   );
   child.markModified("childSharedWith");
   await child.save();

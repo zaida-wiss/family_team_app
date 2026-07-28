@@ -25,6 +25,10 @@ export type SharedChildData = {
     dashboardTheme: string | null;
   };
   access: AccessLevel;
+  // Placeringsbeslut (2026-07-29): barnet visas i Familjemedlemmar, denna
+  // text under namnet informerar om varifrån det delas.
+  homeAccountName: string;
+  relation: string | null;
   todos: Todo[];
   calendarEvents: (CalendarEvent & { calendarName: string })[];
   purchasedRewards: PurchasedReward[];
@@ -93,6 +97,19 @@ export const todosApi = {
     request<{ ok: boolean }>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
+    }),
+  // Godkänn/neka på ett delat barns todos (2026-07-29, Zaidas beslut: "full
+  // åtkomst, som en riktig förälder") — kräver "edit"-åtkomst, samma spärr
+  // som completeShared.
+  approveShared: (childAccountId: string, childMemberId: string, id: string) =>
+    request<{ ok: boolean }>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/approve`), {
+      method: "PATCH",
+      body: JSON.stringify({})
+    }),
+  rejectShared: (childAccountId: string, childMemberId: string, id: string, reason: string | null) =>
+    request<{ ok: boolean }>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/reject`), {
+      method: "PATCH",
+      body: JSON.stringify({ reason })
     }),
   // Mina familjekonton (2026-07-25) — mina EGNA andra medlemskap, inte en
   // delnings-grant (skiljer sig från getSharedChildren ovan).

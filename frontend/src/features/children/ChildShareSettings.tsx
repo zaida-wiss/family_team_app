@@ -36,6 +36,13 @@ export function ChildShareSettings({ childMembers }: Props) {
   );
   const [email, setEmail] = useState("");
   const [access, setAccess] = useState<AccessLevel>("view");
+  // 2026-07-29, Zaidas önskemål: "jag ska kunna välja relation till personen
+  // barn delas med och vilket tidsspann delningen gäller. tills vidare,
+  // eller tex bara under en semestervecka." Fri text för relation (varierar
+  // för mycket mellan familjer för ett fast set — mormor/farmor/gudmor/...).
+  const [relation, setRelation] = useState("");
+  const [expiryMode, setExpiryMode] = useState<"forever" | "until">("forever");
+  const [expiryDate, setExpiryDate] = useState("");
 
   // Transfer-flödet gäller fortsatt bara ETT barn i taget (en oåterkallelig
   // flytt av hela medlemskapet, inte en delnings-grant — ingen anledning
@@ -121,7 +128,11 @@ export function ChildShareSettings({ childMembers }: Props) {
               <div className="child-share-list__row">
                 <div>
                   <strong>{childNameById.get(share.childId) ?? "Barn"}</strong>
-                  <small> delas med {share.memberName ?? "okänd person"} ({share.accountName ?? "okänt konto"})</small>
+                  <small>
+                    {" "}
+                    delas med {share.memberName ?? "okänd person"} ({share.accountName ?? "okänt konto"})
+                    {share.relation ? `, ${share.relation}` : ""}
+                  </small>
                 </div>
                 <button
                   aria-label={`Ta bort delning av ${childNameById.get(share.childId) ?? "barnet"} med ${share.memberName}`}
@@ -132,7 +143,13 @@ export function ChildShareSettings({ childMembers }: Props) {
                   <X size={16} />
                 </button>
               </div>
-              <small>{share.access === "edit" ? "Kan redigera" : "Kan visa"}</small>
+              <small>
+                {share.access === "edit" ? "Kan redigera" : "Kan visa"}
+                {share.status === "pending" && " · Väntar på godkännande"}
+                {share.expiresAt
+                  ? ` · till ${new Date(share.expiresAt).toLocaleDateString("sv-SE")}`
+                  : " · tills vidare"}
+              </small>
             </li>
           ))}
         </ul>
@@ -177,25 +194,68 @@ export function ChildShareSettings({ childMembers }: Props) {
       )}
 
       {candidates !== null && candidates.length > 0 && (
-        <ul className="child-share-list">
-          {candidates.map((candidate) => (
-            <li className="child-share-list__item" key={`${candidate.accountId}-${candidate.memberId}`}>
-              <span>{candidate.memberName} ({candidate.accountName})</span>
-              <select aria-label="Åtkomst" onChange={(e) => setAccess(e.target.value as AccessLevel)} value={access}>
-                <option value="view">Kan visa</option>
-                <option value="edit">Kan redigera</option>
-              </select>
-              <button
-                className="secondary-button"
-                disabled={selectedChildIds.size === 0}
-                onClick={() => grant(candidate, access, Array.from(selectedChildIds))}
-                type="button"
-              >
-                Dela ({selectedChildIds.size || 0})
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="child-share-settings__grant-options">
+            <input
+              aria-label="Relation till personen"
+              className="wish-form-input"
+              onChange={(e) => setRelation(e.target.value)}
+              placeholder="Relation (t.ex. Mormor, Pappa) — valfritt"
+              value={relation}
+            />
+            <label className="child-share-settings__expiry-label">
+              <input
+                checked={expiryMode === "forever"}
+                onChange={() => setExpiryMode("forever")}
+                type="radio"
+              />
+              Tills vidare
+            </label>
+            <label className="child-share-settings__expiry-label">
+              <input
+                checked={expiryMode === "until"}
+                onChange={() => setExpiryMode("until")}
+                type="radio"
+              />
+              Till ett visst datum
+            </label>
+            {expiryMode === "until" && (
+              <input
+                aria-label="Delningen gäller till och med"
+                onChange={(e) => setExpiryDate(e.target.value)}
+                type="date"
+                value={expiryDate}
+              />
+            )}
+          </div>
+          <ul className="child-share-list">
+            {candidates.map((candidate) => (
+              <li className="child-share-list__item" key={`${candidate.accountId}-${candidate.memberId}`}>
+                <span>{candidate.memberName} ({candidate.accountName})</span>
+                <select aria-label="Åtkomst" onChange={(e) => setAccess(e.target.value as AccessLevel)} value={access}>
+                  <option value="view">Kan visa</option>
+                  <option value="edit">Full åtkomst (som en förälder)</option>
+                </select>
+                <button
+                  className="secondary-button"
+                  disabled={selectedChildIds.size === 0 || (expiryMode === "until" && !expiryDate)}
+                  onClick={() =>
+                    grant(
+                      candidate,
+                      access,
+                      Array.from(selectedChildIds),
+                      relation.trim() || null,
+                      expiryMode === "until" && expiryDate ? new Date(expiryDate).toISOString() : null
+                    )
+                  }
+                  type="button"
+                >
+                  Dela ({selectedChildIds.size || 0})
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {candidates !== null && candidates.length > 0 && selectedChildIds.size === 0 && (
         <p className="settings-sub-desc">Välj minst ett barn ovan innan du delar.</p>

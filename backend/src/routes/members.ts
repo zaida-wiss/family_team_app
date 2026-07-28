@@ -32,6 +32,23 @@ membersRouter.get("/events", async (_req, res) => {
   addMemberEventsClient(res);
 });
 
+// Mina väntande barn-delningar att godkänna/avböja (2026-07-29, ADR-0024-
+// uppföljning) — måste registreras FÖRE "/:id"-rutterna nedan, av samma skäl
+// som "/my-memberships"/"/events" ovan.
+membersRouter.get("/pending-child-shares", async (req, res) => {
+  res.json(await childShares.getPendingSharesForMe(req.memberId!, req.accountId!));
+});
+
+membersRouter.post("/pending-child-shares/:childAccountId/:childId/accept", async (req, res) => {
+  await childShares.acceptShare(req.params.childId, req.params.childAccountId, req.memberId!, req.accountId!);
+  res.json({ ok: true });
+});
+
+membersRouter.post("/pending-child-shares/:childAccountId/:childId/decline", async (req, res) => {
+  await childShares.declineShare(req.params.childId, req.params.childAccountId, req.memberId!, req.accountId!);
+  res.json({ ok: true });
+});
+
 membersRouter.post("/", async (req, res) => {
   res.status(201).json(await members.createMember(req.accountId!, req.memberId ?? null, req.body));
 });

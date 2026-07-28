@@ -9,7 +9,7 @@ import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { getAllRoles } from "./rolesService.js";
-import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, getChildShareAccess, hasPermission } from "../../../shared/permissions.js";
+import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, getChildShareAccess, hasPermission, isShareActive } from "../../../shared/permissions.js";
 import type { CalendarEvent, Member, Role, Todo } from "../../../shared/types.js";
 // Dela ALLT kopplat till barnets konto, inte bara todos (2026-07-27, Zaidas
 // önskemål: "en förälder som tillhör en annan familj ska få åtkomst till
@@ -169,13 +169,14 @@ export async function getSharedChildrenData(callerMemberId: string, callerAccoun
     const grant = (child.childSharedWith ?? []).find(
       (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
     );
-    if (!grant) continue;
+    if (!grant || !isShareActive(grant)) continue;
 
-    const [accountTodos, calendars, purchased, timedTasks] = await Promise.all([
+    const [accountTodos, calendars, purchased, timedTasks, homeAccount] = await Promise.all([
       getAllTodos(child.accountId),
       getAllCalendars(child.accountId, fromStr, untilStr),
       getPurchasedRewardsForMember(child.accountId, child.id, 25),
-      getAllTimedTasks(child.accountId)
+      getAllTimedTasks(child.accountId),
+      AccountModel.findOne({ id: child.accountId })
     ]);
 
     results.push({
@@ -188,6 +189,11 @@ export async function getSharedChildrenData(callerMemberId: string, callerAccoun
         dashboardTheme: child.dashboardTheme
       },
       access: grant.access,
+      // 2026-07-29, Zaidas placeringsbeslut: "barnet skall vara på samma
+      // ställe [Familjemedlemmar], men med en text under som informerar" —
+      // hemkontots namn + relationen (om satt) är precis den informationen.
+      homeAccountName: homeAccount?.name ?? "Okänt konto",
+      relation: grant.relation ?? null,
       todos: accountTodos.filter((t) => t.assignedTo === child.id),
       // Nästa 30 dagar, samma fönster som CalendarPanel default visar —
       // en delnings-vy är tänkt för samordning framåt, inte historik.
@@ -245,14 +251,104 @@ export async function completeCrossAccountFamilyTodo(
   await completeTodo(todoId, targetAccountId, memberInTarget.id, elapsedMs);
 }
 
-// Enda mutationen på ett delat barns todos i denna första version (ADR-0024s
-// uppföljningsavsnitt) — bara "markera klar", inte skapa/godkänna/neka/
-// delmoment/in-progress. assignedMemberNeedsApproval är alltid true för ett
-// barn, så resultatet blir alltid status "done" (väntar på godkännande) —
-// ALDRIG "approved" direkt, ingen stjärntilldelning sker här. Slutgiltigt
-// godkännande (och stjärnorna) sker bara via barnets EGET konto, som
-// tidigare, av en medlem DÄR. Ingen risk att en delning kringgår den
-// gränsen.
+// Mutationer på ett delat barns todos (2026-07-29, ADR-0024-uppföljning,
+// Zaidas beslut: "full åtkomst, som en riktig förälder") — utökar den
+// ursprungliga "bara markera klar"-begränsningen med godkänn/neka, samma
+// mönster som completeSharedChildTodo redan etablerade: hitta barnet i DESS
+// EGET konto, kräv "edit"-åtkomst (getChildShareAccess, som nu även
+// kontrollerar att delningen är accepterad och inte utgången), applicera
+// exakt samma statusövergång/stjärntilldelning som normal approveTodo/
+// rejectTodo (samma konto, bara en annan anropare). Skapa/redigera/
+// delmoment/in-progress för ett delat barns todos är MEDVETET INTE med i
+// denna omgång — se ADR-0024-uppföljningens scope-avsnitt.
+async function requireEditableSharedChild(childAccountId: string, childMemberId: string, callerMemberId: string, callerAccountId: string) {
+  const child = await MemberModel.findOne({ id: childMemberId, accountId: childAccountId, deletedAt: null, isChild: true });
+  if (!child) {
+    throw new AppError(404, "Barnet hittades inte");
+  }
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  if (getChildShareAccess(caller, child) !== "edit") {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return child;
+}
+
+export async function approveSharedChildTodo(
+  todoId: string,
+  childAccountId: string,
+  childMemberId: string,
+  callerMemberId: string,
+  callerAccountId: string
+) {
+  const child = await requireEditableSharedChild(childAccountId, childMemberId, callerMemberId, callerAccountId);
+
+  const todo = await TodoModel.findOne({ id: todoId, accountId: childAccountId, assignedTo: childMemberId });
+  if (!todo || todo.status !== "done") {
+    throw new AppError(404, "Todo hittades inte eller är inte done");
+  }
+  todo.status = "approved";
+  todo.approvedBy = callerMemberId;
+  todo.approvedAt = new Date().toISOString();
+  await todo.save();
+  if (todo.starValue) {
+    await MemberModel.updateOne({ id: childMemberId }, { $inc: { approvedStars: todo.starValue } });
+    await writeAuditLog(
+      childAccountId,
+      "stars_approved",
+      callerMemberId,
+      `Godkände ${todo.starValue} stjärnor för "${decryptField(childAccountId, todo.title)}" (${child.name}) — delad åtkomst från ett annat konto`
+    );
+    broadcastMembersChanged();
+  }
+  broadcastTodosChanged();
+}
+
+export async function rejectSharedChildTodo(
+  todoId: string,
+  childAccountId: string,
+  childMemberId: string,
+  callerMemberId: string,
+  callerAccountId: string,
+  reason: string | null
+) {
+  await requireEditableSharedChild(childAccountId, childMemberId, callerMemberId, callerAccountId);
+
+  const todo = await TodoModel.findOne({ id: todoId, accountId: childAccountId, assignedTo: childMemberId });
+  if (!todo || todo.status !== "done") {
+    throw new AppError(404, "Todo hittades inte eller är inte done");
+  }
+  const encryptedReason = encryptNullable(childAccountId, reason) ?? null;
+  if (canRetryRejectedTodo({ expiresAt: todo.expiresAt })) {
+    todo.status = "pending";
+    todo.completedAt = null;
+    todo.approvedBy = null;
+    todo.approvedAt = null;
+    todo.rejectedBy = null;
+    todo.rejectedAt = null;
+    todo.rejectedReason = encryptedReason;
+    await todo.save();
+    broadcastTodosChanged();
+    return;
+  }
+
+  todo.status = "rejected";
+  todo.rejectedBy = callerMemberId;
+  todo.rejectedAt = new Date().toISOString();
+  todo.rejectedReason = encryptedReason;
+  await todo.save();
+  broadcastTodosChanged();
+}
+
+// Enda mutationen på ett delat barns todos i den ALLRA första versionen
+// (ADR-0024s uppföljningsavsnitt) — bara "markera klar", inte skapa/godkänna/
+// neka/delmoment/in-progress. assignedMemberNeedsApproval är alltid true för
+// ett barn, så resultatet blir alltid status "done" (väntar på godkännande)
+// — ALDRIG "approved" direkt, ingen stjärntilldelning sker här. Godkännande/
+// nekande (och stjärnorna) sker via approveSharedChildTodo/
+// rejectSharedChildTodo ovan (tillagda 2026-07-29), samma "edit"-krav.
 export async function completeSharedChildTodo(
   todoId: string,
   childAccountId: string,

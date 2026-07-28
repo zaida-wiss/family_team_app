@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChildRoutineCreator } from "./ChildRoutineCreator";
 import { CopyRoutinesModal } from "./CopyRoutinesModal";
 import { ChildShareSettings } from "./ChildShareSettings";
+import { PendingChildShares } from "./PendingChildShares";
 import { isChildMember } from "../todos/selectors";
 import { hasPermission } from "../../utils/permissions";
 import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
@@ -55,15 +56,19 @@ export function ChildDataSettings({
 
   if (childMembers.length === 0) {
     return (
-      <div className="settings-sub">
-        <h3 className="settings-sub-title">Data</h3>
-        <p className="settings-sub-desc">Lägg till ett barn under Familjemedlemmar först.</p>
-      </div>
+      <>
+        <PendingChildShares />
+        <div className="settings-sub">
+          <h3 className="settings-sub-title">Data</h3>
+          <p className="settings-sub-desc">Lägg till ett barn under Familjemedlemmar först.</p>
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      <PendingChildShares />
       {canManageChildTodos && (
         <div className="settings-sub">
           <h3 className="settings-sub-title">Rutiner</h3>

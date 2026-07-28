@@ -183,6 +183,54 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
     expect(share.status).toBe(201);
   });
 
+  // 2026-07-29, ADR-0024-uppföljning (Zaidas önskemål: "denna först godkänna
+  // att barnet skall delas") — en NY delning är alltid "pending" tills
+  // mottagaren själv accepterar den. Utan accept ska familj B fortfarande se
+  // ingenting.
+  it("familj B ser INGENTING innan de accepterat den väntande delningen", async () => {
+    const list = await request(app)
+      .get("/api/todos/shared-children")
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(list.body).toEqual([]);
+
+    const pending = await request(app)
+      .get("/api/members/pending-child-shares")
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(pending.status).toBe(200);
+    expect(pending.body).toHaveLength(1);
+    expect(pending.body[0]).toMatchObject({
+      childId,
+      childAccountId: familyA.accountId,
+      childName: "Barnet",
+      homeAccountName: "Familj A",
+      access: "view"
+    });
+  });
+
+  it("familj C ser inte familj B:s väntande delning (bara den avsedda mottagaren ser den)", async () => {
+    const pending = await request(app)
+      .get("/api/members/pending-child-shares")
+      .set("Authorization", `Bearer ${familyC.accessToken}`)
+      .set("x-member-id", familyC.parentMemberId);
+    expect(pending.body).toEqual([]);
+  });
+
+  it("familj B accepterar delningen — syns nu i shared-children", async () => {
+    const accept = await request(app)
+      .post(`/api/members/pending-child-shares/${familyA.accountId}/${childId}/accept`)
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(accept.status).toBe(200);
+
+    const pending = await request(app)
+      .get("/api/members/pending-child-shares")
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(pending.body).toEqual([]);
+  });
+
   // 2026-07-28, Zaidas önskemål: "det skall stå bekräftat vilka barn man
   // delar med vem och vilka behörigheter de har" — GET-listan ska visa
   // mottagarens namn och kontonamn, inte bara rå memberId/accountId.
@@ -270,13 +318,35 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
     expect(res.status).toBe(404);
   });
 
-  it("uppgraderar delningen till 'edit' — familj B kan nu markera klar (blir 'done', väntar godkännande, inga stjärnor delas ut här)", async () => {
+  // 2026-07-29: en ändrad behörighetsnivå är ett NYTT förslag — sätts tillbaka
+  // till "pending", precis som en helt ny delning, tills mottagaren
+  // accepterar på nytt (inte tyst uppgraderad utan samtycke).
+  it("uppgraderar delningen till 'edit' — kräver ett nytt accept innan familj B kan markera klar", async () => {
     const upgrade = await request(app)
       .post(`/api/members/${childId}/share`)
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId)
-      .send({ granteeMemberId: familyB.parentMemberId, granteeAccountId: familyB.accountId, access: "edit" });
+      .send({ granteeMemberId: familyB.parentMemberId, granteeAccountId: familyB.accountId, access: "edit", relation: "Moster" });
     expect(upgrade.status).toBe(201);
+
+    const completeBeforeAccept = await request(app)
+      .patch(`/api/todos/shared/${familyA.accountId}/${childId}/${todoId}/complete`)
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId)
+      .send({});
+    expect(completeBeforeAccept.status).toBe(403);
+
+    const pending = await request(app)
+      .get("/api/members/pending-child-shares")
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(pending.body[0]).toMatchObject({ access: "edit", relation: "Moster" });
+
+    const accept = await request(app)
+      .post(`/api/members/pending-child-shares/${familyA.accountId}/${childId}/accept`)
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    expect(accept.status).toBe(200);
 
     const complete = await request(app)
       .patch(`/api/todos/shared/${familyA.accountId}/${childId}/${todoId}/complete`)
@@ -292,6 +362,42 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
     const saved = (all.body as Array<{ id: string; status: string; approvedBy: string | null }>).find((t) => t.id === todoId)!;
     expect(saved.status).toBe("done");
     expect(saved.approvedBy).toBeNull();
+  });
+
+  // 2026-07-29, Zaidas beslut: "full åtkomst, som en riktig förälder" — en
+  // "edit"-mottagare kan nu även godkänna (delar ut stjärnor) och neka, inte
+  // bara markera klar.
+  it("familj B (edit-åtkomst) godkänner den nu 'done'-uppgiften — stjärnor delas ut i familj A", async () => {
+    const approve = await request(app)
+      .patch(`/api/todos/shared/${familyA.accountId}/${childId}/${todoId}/approve`)
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId)
+      .send({});
+    expect(approve.status).toBe(200);
+
+    const all = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    const saved = (all.body as Array<{ id: string; status: string; approvedBy: string | null }>).find((t) => t.id === todoId)!;
+    expect(saved.status).toBe("approved");
+    expect(saved.approvedBy).toBe(familyB.parentMemberId);
+
+    const members = await request(app)
+      .get("/api/members")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    const child = (members.body as Array<{ id: string; approvedStars: number }>).find((m) => m.id === childId)!;
+    expect(child.approvedStars).toBe(5);
+  });
+
+  it("familj C (view-åtkomst saknas helt) kan INTE godkänna/neka, och familj B med bara 'view' hade inte heller kunnat", async () => {
+    const approveByC = await request(app)
+      .patch(`/api/todos/shared/${familyA.accountId}/${childId}/${todoId}/approve`)
+      .set("Authorization", `Bearer ${familyC.accessToken}`)
+      .set("x-member-id", familyC.parentMemberId)
+      .send({});
+    expect(approveByC.status).toBe(403);
   });
 
   it("återkallar delningen — familj B förlorar åtkomsten helt", async () => {
@@ -323,11 +429,76 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
       .send({ granteeMemberId: otherAdultId, granteeAccountId: familyA.accountId, access: "view" });
     expect(share.status).toBe(201);
 
+    const accept = await request(app)
+      .post(`/api/members/pending-child-shares/${familyA.accountId}/${childId}/accept`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", otherAdultId);
+    expect(accept.status).toBe(200);
+
     const list = await request(app)
       .get("/api/todos/shared-children")
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", otherAdultId);
     expect(list.body).toHaveLength(1);
     expect(list.body[0].child.id).toBe(childId);
+  });
+
+  // 2026-07-29, Zaidas önskemål: "vilket tidsspann delningen gäller. tills
+  // vidare, eller tex bara under en semestervecka" — ett expiresAt i det
+  // FÖRFLUTNA gör en redan accepterad delning inaktiv utan att behöva
+  // återkallas manuellt.
+  it("en delning med expiresAt i det förflutna räknas som inaktiv trots att den är accepterad", async () => {
+    const shortLived = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ name: "Semestervikarie", roleId: familyA.parentRoleId, isChild: false, avatarUrl: null, color: null, dashboardTheme: null });
+    const shortLivedId = (shortLived.body as { id: string }).id;
+
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const share = await request(app)
+      .post(`/api/members/${childId}/share`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ granteeMemberId: shortLivedId, granteeAccountId: familyA.accountId, access: "view", relation: "Granne", expiresAt: past });
+    expect(share.status).toBe(201);
+
+    await request(app)
+      .post(`/api/members/pending-child-shares/${familyA.accountId}/${childId}/accept`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", shortLivedId);
+
+    const list = await request(app)
+      .get("/api/todos/shared-children")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", shortLivedId);
+    expect(list.body).toEqual([]);
+  });
+
+  it("en mottagare kan avböja en väntande delning istället för att acceptera — tar bort den helt", async () => {
+    const declineTarget = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ name: "Farbror", roleId: familyA.parentRoleId, isChild: false, avatarUrl: null, color: null, dashboardTheme: null });
+    const declineTargetId = (declineTarget.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/members/${childId}/share`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ granteeMemberId: declineTargetId, granteeAccountId: familyA.accountId, access: "view" });
+
+    const decline = await request(app)
+      .post(`/api/members/pending-child-shares/${familyA.accountId}/${childId}/decline`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", declineTargetId);
+    expect(decline.status).toBe(200);
+
+    const shares = await request(app)
+      .get(`/api/members/${childId}/share`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    expect((shares.body as Array<{ memberId: string }>).some((s) => s.memberId === declineTargetId)).toBe(false);
   });
 });

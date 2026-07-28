@@ -40,6 +40,13 @@ export async function mockDataAPIs(page: Page) {
   // panelbyte) igenom till en riktig, ej mockad backend och gav ett äkta 401
   // (ogiltig fake-access-token), vilket triggade "Sessionen kunde inte förnyas".
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
+  // Mina väntande barn-delningar (2026-07-29) — hämtas globalt av
+  // PendingChildShares.tsx (renderas alltid, oavsett om kontot har egna
+  // barn), MÅSTE registreras EFTER den bredare **/api/members/*-mockningen
+  // ovan (Playwright kör senast registrerade matchning först) — annars
+  // fångas den av den generiska {ok:true}-stubben (fel form, en array
+  // förväntas), vilket kraschar renderingen tyst i en ErrorBoundary.
+  await page.route("**/api/members/pending-child-shares", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
   // Todo-historik/Papperskorg, paginerad (2026-07-26) — default-stubb så
@@ -51,6 +58,11 @@ export async function mockDataAPIs(page: Page) {
   // SSE-strömmen för todo-ändringar — utan denna faller den igenom till en riktig
   // backend och 401:ar (ofarligt i sig, men brusigt och kan racea med riktiga tester).
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
+  // Delade barns todos/data (ADR-0024) — hämtas globalt av
+  // useSharedChildrenTodos (AccountSettings.tsx/SharedChildrenThreads.tsx),
+  // default-stubb så ett test utan egen mock inte faller igenom till ett
+  // riktigt, ej mockat nätverksanrop.
+  await page.route("**/api/todos/shared-children", (route) => route.fulfill({ json: [] }));
   // Vuxenvyns personliga kategori-trådar (2026-07-05) — hämtas globalt av
   // useShellState oavsett aktiv panel, precis som timed-tasks/reward-shop.
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
