@@ -42,18 +42,29 @@ export function useSharedChildrenTodos() {
   return { sharedChildren, completeSharedTodo };
 }
 
-export function useChildShareManagement(childId: Id | null) {
-  const [shares, setShares] = useState<ChildShare[]>([]);
+// 2026-07-28, Zaidas önskemål: "det ska stå bekräftat vilka barn man delar
+// med vem och vilka behörigheter de har... man ska även kunna välja flera
+// barn på en gång" — hanterar nu ALLA barn samtidigt (inte ett i taget):
+// shares aggregeras över samtliga childIds till en enda lista (taggad med
+// vilket barn varje delning gäller), och grant() kan bevilja SAMMA mottagare
+// åtkomst till FLERA valda barn i en enda åtgärd (ett API-anrop per barn,
+// samma "en todo per mottagare"-mönster som CSV-importen redan använder).
+export function useChildShareManagement(childIds: Id[]) {
+  const [sharesByChild, setSharesByChild] = useState<Record<Id, ChildShare[]>>({});
   const [candidates, setCandidates] = useState<ChildShareCandidate[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const childIdsKey = childIds.join(",");
 
   const refresh = useCallback(() => {
-    if (!childId) {
-      setShares([]);
+    if (childIds.length === 0) {
+      setSharesByChild({});
       return;
     }
-    membersApi.listShares(childId).then(setShares).catch(console.error);
-  }, [childId]);
+    Promise.all(childIds.map((id) => membersApi.listShares(id).then((shares) => [id, shares] as const)))
+      .then((entries) => setSharesByChild(Object.fromEntries(entries)))
+      .catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childIdsKey]);
 
   useEffect(() => {
     refresh();
@@ -63,31 +74,35 @@ export function useChildShareManagement(childId: Id | null) {
     setCandidates(null);
   }
 
+  // Sökningen (e-post → kandidat-medlemskap) beror inte på VILKET barn den
+  // görs mot — anropet kräver bara en giltig, hanterbar childId som ankare.
   async function lookup(email: string) {
-    if (!childId) return;
+    const anchorChildId = childIds[0];
+    if (!anchorChildId) return;
     setLoading(true);
     try {
-      const result = await membersApi.lookupShareCandidate(childId, email);
+      const result = await membersApi.lookupShareCandidate(anchorChildId, email);
       setCandidates(result.memberships);
     } finally {
       setLoading(false);
     }
   }
 
-  async function grant(candidate: ChildShareCandidate, access: AccessLevel) {
-    if (!childId) return;
-    await membersApi.shareChild(childId, candidate.memberId, candidate.accountId, access);
+  async function grant(candidate: ChildShareCandidate, access: AccessLevel, targetChildIds: Id[]) {
+    if (targetChildIds.length === 0) return;
+    await Promise.all(
+      targetChildIds.map((id) => membersApi.shareChild(id, candidate.memberId, candidate.accountId, access))
+    );
     setCandidates(null);
     refresh();
   }
 
-  async function revoke(share: ChildShare) {
-    if (!childId) return;
+  async function revoke(childId: Id, share: ChildShare) {
     await membersApi.revokeShare(childId, share.accountId, share.memberId);
     refresh();
   }
 
-  return { shares, candidates, loading, lookup, grant, revoke, clearCandidates };
+  return { sharesByChild, candidates, loading, lookup, grant, revoke, clearCandidates };
 }
 
 // Överför ett barn permanent till en annan familj (2026-07-27, Zaidas

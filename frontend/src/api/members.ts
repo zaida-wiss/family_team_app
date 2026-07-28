@@ -1,12 +1,16 @@
 import type { AccessLevel, Member, MyMembership } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
+// memberName/accountName läggs på server-side (2026-07-28, live uppslag,
+// aldrig lagrat/inaktuellt) — se childSharesService.ts:s listShares.
 export type ChildShare = {
   memberId: string;
   accountId: string;
   access: AccessLevel;
   grantedBy: string;
   grantedAt: string;
+  memberName: string;
+  accountName: string;
 };
 
 export type ChildShareCandidate = {

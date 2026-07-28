@@ -19,6 +19,13 @@ const CHILD_A = {
   spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null
 };
 
+const CHILD_B = {
+  id: "mem-child-b", accountId: "acc-1", userId: null,
+  name: "Leo", roleId: "role-child", isChild: true,
+  avatarUrl: null, color: null, dashboardTheme: null,
+  spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null
+};
+
 async function openBarnkonton(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
@@ -54,7 +61,8 @@ test("Dela barn: söker en vuxen via e-post, ger åtkomst, ser delningen, återk
       shares = [
         {
           memberId: "mem-other", accountId: "acc-2", access: shareBody!.access,
-          grantedBy: "mem-1", grantedAt: "2026-07-22T10:00:00.000Z"
+          grantedBy: "mem-1", grantedAt: "2026-07-22T10:00:00.000Z",
+          memberName: "Erik", accountName: "Familjen Andersson"
         }
       ];
       return route.fulfill({ status: 201, json: shares });
@@ -87,11 +95,64 @@ test("Dela barn: söker en vuxen via e-post, ger åtkomst, ser delningen, återk
   expect(shareBody!.granteeAccountId).toBe("acc-2");
   expect(shareBody!.access).toBe("edit");
 
+  // 2026-07-28, Zaidas önskemål: bekräftelse-listan ska visa vilket barn +
+  // vem det delas med, inte bara behörighetsnivån.
+  await expect(page.getByText("Nova")).toBeVisible();
+  await expect(page.getByText("delas med Erik (Familjen Andersson)")).toBeVisible();
   await expect(page.getByText("Kan redigera")).toBeVisible();
 
-  await page.getByRole("button", { name: "Ta bort delning" }).click();
+  await page.getByRole("button", { name: "Ta bort delning av Nova med Erik" }).click();
   await expect.poll(() => revoked).toBe(true);
   await expect(page.getByText("Kan redigera")).not.toBeVisible();
+});
+
+// 2026-07-28, Zaidas önskemål: "man ska även kunna välja flera barn på en
+// gång, inte bara ett i taget" — kryssar i BÅDA barnen, delar med samma
+// mottagare i en enda åtgärd (ett POST-anrop per barn), och listan visar
+// därefter en rad PER BARN, tydligt namngivna.
+test("Dela barn: kan välja flera barn samtidigt, delar med samma mottagare i en åtgärd", async ({ page }) => {
+  const shareCalls: Record<string, unknown>[] = [];
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_A, CHILD_B] }));
+
+  await page.route("**/api/members/*/share/lookup", (route) =>
+    route.fulfill({
+      json: {
+        memberships: [
+          { memberId: "mem-other", accountId: "acc-2", memberName: "Erik", accountName: "Familjen Andersson" }
+        ]
+      }
+    })
+  );
+
+  await page.route(/\/api\/members\/(mem-child-a|mem-child-b)\/share$/, (route) => {
+    if (route.request().method() === "POST") {
+      shareCalls.push({ childId: route.request().url(), ...(route.request().postDataJSON() as object) });
+      return route.fulfill({ status: 201, json: [] });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await openBarnkonton(page);
+
+  const picker = page.getByRole("group", { name: "Vilka barn ska delas?" });
+  await expect(picker.getByRole("button", { name: "Nova" })).toBeVisible();
+  await picker.getByRole("button", { name: "Nova" }).click();
+  await picker.getByRole("button", { name: "Leo" }).click();
+
+  await page.getByLabel("E-post till en vuxen").fill("annan-foralder@exempel.se");
+  await page
+    .locator("form", { has: page.getByLabel("E-post till en vuxen") })
+    .getByRole("button", { name: "Sök" })
+    .click();
+
+  await expect(page.getByText("Erik (Familjen Andersson)")).toBeVisible();
+  await page.getByRole("button", { name: "Dela (2)" }).click();
+
+  await expect.poll(() => shareCalls.length).toBe(2);
+  expect(shareCalls.some((c) => (c.childId as string).includes("mem-child-a"))).toBe(true);
+  expect(shareCalls.some((c) => (c.childId as string).includes("mem-child-b"))).toBe(true);
 });
 
 // 2026-07-27, Zaidas önskemål: "jag ska även kunna... överföra dem till

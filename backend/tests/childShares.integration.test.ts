@@ -183,6 +183,25 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
     expect(share.status).toBe(201);
   });
 
+  // 2026-07-28, Zaidas önskemål: "det skall stå bekräftat vilka barn man
+  // delar med vem och vilka behörigheter de har" — GET-listan ska visa
+  // mottagarens namn och kontonamn, inte bara rå memberId/accountId.
+  it("GET /:id/share visar mottagarens namn och kontonamn, inte bara memberId/accountId", async () => {
+    const list = await request(app)
+      .get(`/api/members/${childId}/share`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    expect(list.status).toBe(200);
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0]).toMatchObject({
+      memberId: familyB.parentMemberId,
+      accountId: familyB.accountId,
+      access: "view",
+      memberName: "Förälder",
+      accountName: "Familj B"
+    });
+  });
+
   it("familj B ser nu barnets todos, men kan INTE markera klar med bara 'view'-åtkomst", async () => {
     const list = await request(app)
       .get("/api/todos/shared-children")

@@ -25,3 +25,58 @@
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
+
+/* Flerval av barn vid delning (2026-07-28, Zaidas önskemål: "man ska även
+   kunna välja flera barn på en gång, inte bara ett i taget") — egen, lokal
+   kopia av samma flerval-knappgrupp-mönster som redan finns i
+   TodoCreatorModal.css (--assignee-picker), inte en delad klass därifrån:
+   Inställningar och Todos-panelen är olika lazy-laddade chunks, en delad
+   klass mellan dem har redan orsakat cross-chunk-CSS-buggar denna session
+   (recept-modalerna, HouseholdSecretsSettings). */
+.child-share-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.child-share-picker__btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.child-share-picker__btn--on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg, white);
+}
+
+.child-share-list__item--confirmed {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.child-share-list__item--confirmed strong {
+  font-size: 0.95rem;
+}
+
+.child-share-list__item--confirmed small {
+  color: var(--muted-fg);
+}
+
+.child-share-list__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}

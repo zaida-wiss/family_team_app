@@ -67,9 +67,33 @@ export async function lookupShareCandidate(childId: string, accountId: string, c
   };
 }
 
+// 2026-07-28, Zaidas önskemål: "det skall stå bekräftat vilka barn man
+// delar med vem och vilka behörigheter de har" — den råa lagrade posten har
+// bara memberId/accountId, inget läsbart namn. Slår upp mottagarens namn +
+// kontonamn live (samma mönster som lookupShareCandidate ovan) istället för
+// att denormalisera vid skapande, så namnet aldrig kan bli inaktuellt om
+// mottagaren byter namn.
 export async function listShares(childId: string, accountId: string, callerMemberId: string | null) {
   const child = await requireManageableChild(childId, accountId, callerMemberId);
-  return child.childSharedWith ?? [];
+  const shares = child.childSharedWith ?? [];
+  if (shares.length === 0) return [];
+
+  const memberIds = [...new Set(shares.map((s) => s.memberId))];
+  const accountIds = [...new Set(shares.map((s) => s.accountId))];
+  const [members, accounts] = await Promise.all([
+    MemberModel.find({ id: { $in: memberIds } }),
+    AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 })
+  ]);
+
+  return shares.map((s) => ({
+    memberId: s.memberId,
+    accountId: s.accountId,
+    access: s.access,
+    grantedBy: s.grantedBy,
+    grantedAt: s.grantedAt,
+    memberName: members.find((m) => m.id === s.memberId)?.name ?? "Okänd",
+    accountName: accounts.find((a) => a.id === s.accountId)?.name ?? "Okänt konto"
+  }));
 }
 
 export async function shareChild(childId: string, accountId: string, callerMemberId: string | null, data: unknown) {
