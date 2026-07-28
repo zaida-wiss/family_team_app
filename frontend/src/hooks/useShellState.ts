@@ -46,7 +46,7 @@ export function useShellState(
     addSubscription, updateSubscription, removeSubscription, syncSubscription,
     connectAppleCalDav, disconnectCalDav, updateCalDavInterval, syncCalDavNow } = calendarsState;
 
-  const { shoppingLists, createShoppingList, addShoppingItem, shareShoppingList,
+  const { shoppingLists, createShoppingList, addShoppingItem, importShoppingItems, shareShoppingList,
     removeShoppingListShare, softDeleteShoppingList, renameShoppingList, restoreShoppingList, purgeShoppingTrash,
     toggleShoppingItem, deleteShoppingItem, reorderShoppingItems, clearCompletedShoppingItems,
     softDeleteShoppingForMember } = shoppingState;
@@ -270,6 +270,7 @@ export function useShellState(
       createShoppingList(name, currentMember.id, icon ?? null),
     onDeleteShoppingList: (listId: string) => softDeleteShoppingList(listId, currentMember.id),
     onRenameShoppingList: renameShoppingList,
+    onImportShoppingItems: importShoppingItems,
     onShareShoppingList: shareShoppingList,
     onRemoveShoppingListShare: removeShoppingListShare,
     onToggleShoppingItem: toggleShoppingItem,

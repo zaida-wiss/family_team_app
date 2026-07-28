@@ -1,0 +1,10 @@
+/* Egen, lokal kopia av samma layout som RecipesView.css:s .recipe-import-export
+   (2026-07-28) — INTE en delad klass över features: Inköpslistor och Recept
+   är olika lazy-laddade chunks, en delad klass mellan dem har redan orsakat
+   cross-chunk-CSS-buggar denna session (receptmodalerna/HouseholdSecretsSettings). */
+.shopping-import-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}

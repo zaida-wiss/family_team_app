@@ -71,6 +71,49 @@ export function useShoppingState() {
     );
   }
 
+  // Massimport (2026-07-28, Zaidas önskemål: "all data ska alltid gå att
+  // importera och exportera i de olika kategorierna i inställningar") — en
+  // rad = en vara, grupperad per listnamn. En lista med matchande namn
+  // (skiftlägesokänsligt) återanvänds, annars skapas en ny (samma
+  // "Egen kategori"-auto-skapande-princip som todoCsv.ts:s import). Buntar i
+  // grupper om 4 med en kort paus (ADR-0023), samma mönster som
+  // useRecipesState.ts:s importRecipes.
+  async function importShoppingItems(rows: { listName: string; title: string; done: boolean }[], memberId: Id) {
+    const listIdByName = new Map(
+      shoppingLists.filter((l) => l.deletedAt === null).map((l) => [l.name.toLowerCase(), l.id])
+    );
+
+    for (let i = 0; i < rows.length; i += 4) {
+      const batch = rows.slice(i, i + 4);
+      await Promise.all(
+        batch.map(async (row) => {
+          const key = row.listName.toLowerCase();
+          let listId = listIdByName.get(key);
+          if (!listId) {
+            listId = createShoppingList(row.listName, memberId);
+            listIdByName.set(key, listId);
+          }
+          const item: ShoppingList["items"][number] = {
+            id: `shopping-item-${generateId()}`,
+            title: row.title,
+            createdBy: memberId,
+            done: row.done,
+            deletedAt: null,
+            deletedBy: null
+          };
+          await shoppingApi.addItem(listId, item);
+          if (row.done) {
+            await shoppingApi.toggleItem(listId, item.id);
+          }
+        })
+      );
+      if (i + 4 < rows.length) await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    const fresh = await shoppingApi.getAll();
+    setShoppingLists(fresh);
+  }
+
   function shareShoppingList(listId: Id, memberId: Id, access: AccessLevel) {
     shoppingApi.share(listId, memberId, access).catch(console.error);
     setShoppingLists((current) =>
@@ -265,6 +308,7 @@ export function useShoppingState() {
     shoppingLists,
     createShoppingList,
     addShoppingItem,
+    importShoppingItems,
     shareShoppingList,
     removeShoppingListShare,
     softDeleteShoppingList,

@@ -2,6 +2,7 @@ import "./Settings.css";
 import { lazy, useState } from "react";
 import { Baby, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
 import { RecipeImportExport } from "../recipes/RecipeImportExport";
+import { ShoppingImportExport } from "../shopping/ShoppingImportExport";
 import { RecipeShoppingListSettings } from "../recipes/RecipeShoppingListSettings";
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
@@ -436,6 +437,17 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 onToggleItem={memberContentProps.onToggleShoppingItem}
               />
             </>
+          )
+        },
+        {
+          id: "shopping-import-export",
+          label: "📥 Importera/exportera",
+          content: (
+            <ShoppingImportExport
+              currentMemberId={currentMember.id}
+              onImport={memberContentProps.onImportShoppingItems}
+              shoppingLists={shoppingLists}
+            />
           )
         }
       ]
