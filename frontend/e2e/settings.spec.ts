@@ -87,6 +87,7 @@ test.describe("Inställningar", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
 
     const slider = page.getByLabel(/Avstånd mellan kategoritrådarna/);
     await expect(slider).toBeVisible();
@@ -109,6 +110,7 @@ test.describe("Inställningar", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
 
     const slider = page.getByLabel(/Bubblornas storlek/);

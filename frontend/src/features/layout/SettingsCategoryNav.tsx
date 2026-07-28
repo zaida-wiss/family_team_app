@@ -32,17 +32,22 @@ type Props = {
 // samtidigt öppningsbara accordion-sektioner (settings-section.tsx) — bara
 // EN kategori och EN underkategori kan vara öppen åt gången, en brödsmule
 // visar alltid var man är.
+//
+// 2026-07-28, Zaidas önskemål: "alla inställningskategorier skall ha sina
+// underkategorier" — den tidigare genvägen som hoppade förbi underkategori-
+// listan när en kategori bara hade EN underkategori (Utseende/Kalender/
+// Inköpslistor) togs bort. Alla kategorier beter sig nu likadant: kategori
+// → underkategori-lista → innehåll, alltid tre brödsmule-nivåer.
 export function SettingsCategoryNav({ categories, onCategoryChange }: Props) {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId) ?? null;
   const activeSub = activeCategory?.subcategories.find((s) => s.id === activeSubId) ?? null;
-  const hasSingleSub = (activeCategory?.subcategories.length ?? 0) <= 1;
 
   function openCategory(category: SettingsCategory) {
     setActiveCategoryId(category.id);
-    setActiveSubId(category.subcategories.length === 1 ? category.subcategories[0].id : null);
+    setActiveSubId(null);
     onCategoryChange?.(category.id);
   }
 
@@ -53,10 +58,6 @@ export function SettingsCategoryNav({ categories, onCategoryChange }: Props) {
   }
 
   function backToSubcategories() {
-    if (hasSingleSub) {
-      backToCategories();
-      return;
-    }
     setActiveSubId(null);
   }
 
@@ -64,10 +65,9 @@ export function SettingsCategoryNav({ categories, onCategoryChange }: Props) {
     { label: "Inställningar", onClick: activeCategory ? backToCategories : undefined }
   ];
   if (activeCategory) {
-    const categoryIsLastCrumb = !activeSub || hasSingleSub;
-    crumbs.push({ label: activeCategory.label, onClick: categoryIsLastCrumb ? undefined : backToSubcategories });
+    crumbs.push({ label: activeCategory.label, onClick: activeSub ? backToSubcategories : undefined });
   }
-  if (activeCategory && activeSub && !hasSingleSub) {
+  if (activeCategory && activeSub) {
     crumbs.push({ label: activeSub.label });
   }
 

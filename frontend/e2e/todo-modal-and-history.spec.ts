@@ -95,6 +95,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     // kontrollerar listlägets aktiva/historik-filtrering, växlar dit explicit.
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Todos-vy").selectOption("list");
     await page.getByRole("button", { name: "Todos" }).click();
 
@@ -125,6 +126,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Todos-vy").selectOption("list");
     await page.getByRole("button", { name: "Todos" }).click();
