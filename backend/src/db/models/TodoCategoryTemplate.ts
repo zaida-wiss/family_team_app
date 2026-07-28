@@ -28,7 +28,11 @@ const todoCategoryTemplateSchema = new Schema<TodoCategoryTemplate>({
   tasks: { type: [taskSchema], required: true },
   createdAt: { type: String, required: true },
   deletedAt: { type: String, default: null },
-  deletedBy: { type: String, default: null }
+  deletedBy: { type: String, default: null },
+  // 2026-07-28 — se shared/types.ts:s kommentar. Måste läggas till HÄR (inte
+  // bara i Zod-schemat) samma dag som fältet införs, annars strippas det
+  // tyst av Mongoose strict-läge (samma bugklass som todoThreadGap-incidenten).
+  sourceCategoryId: { type: String, default: null }
 });
 
 todoCategoryTemplateSchema.index({ accountId: 1 });

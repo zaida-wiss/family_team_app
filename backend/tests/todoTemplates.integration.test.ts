@@ -167,6 +167,42 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     expect(res.body).toHaveLength(1);
   });
 
+  // 2026-07-28, Zaidas önskemål: "man ska alltid kunna uppdatera mallen i
+  // kategorimenyn, om man tex ändrat ordning på dem" — PATCH uppdaterar den
+  // BEFINTLIGA mallen (samma id) istället för att en ny sparning skapar en
+  // duplicerad mall.
+  it("uppdaterar en befintlig kategori-mall via PATCH, samma id behålls, uppgifternas ordning ändras", async () => {
+    const res = await request(app)
+      .patch(`/api/todo-templates/categories/${categoryTemplateId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Packa", tasks: [{ ...task, title: "Packa solkräm" }, task] });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(categoryTemplateId);
+    expect(res.body.tasks).toHaveLength(2);
+    expect(res.body.tasks[0].title).toBe("Packa solkräm");
+    expect(res.body.tasks[1].title).toBe("Packa badkläder");
+
+    const doc = await TodoCategoryTemplateModel.findOne({ id: categoryTemplateId }).lean();
+    expect(doc?.tasks[0]?.title).not.toBe("Packa solkräm");
+    expect(doc?.tasks[0]?.title.startsWith("v1:")).toBe(true);
+
+    const list = await request(app)
+      .get("/api/todo-templates/categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(list.body).toHaveLength(1);
+  });
+
+  it("ett barn kan inte uppdatera en kategori-mall", async () => {
+    const res = await request(app)
+      .patch(`/api/todo-templates/categories/${categoryTemplateId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childMemberId)
+      .send({ name: "Packa", tasks: [task] });
+    expect(res.status).toBe(403);
+  });
+
   it("tar bort en uppgiftsmall (mjuk radering)", async () => {
     const del = await request(app)
       .delete(`/api/todo-templates/tasks/${taskTemplateId}`)

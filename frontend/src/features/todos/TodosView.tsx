@@ -51,7 +51,12 @@ type Props = {
   taskTemplates: TodoTemplate[];
   categoryTemplates: TodoCategoryTemplate[];
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
-  onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
+  onCreateCategoryTemplate: (
+    name: string,
+    tasks: TodoTemplateTask[],
+    sourceCategoryId?: Id | null
+  ) => Promise<TodoCategoryTemplate>;
+  onUpdateCategoryTemplate: (id: Id, name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
   onSoftDeleteTodo: (todoId: Id) => void;
   onApproveWish: (rewardId: Id) => void;
   onRejectWish: (rewardId: Id) => void;
@@ -98,6 +103,7 @@ export function TodosView({
   categoryTemplates,
   onCreateTaskTemplate,
   onCreateCategoryTemplate,
+  onUpdateCategoryTemplate,
   onSoftDeleteTodo,
   onApproveWish,
   onRejectWish,
@@ -228,6 +234,7 @@ export function TodosView({
             onSetCategoryHidden={onSetCategoryHidden}
             onCreateTaskTemplate={onCreateTaskTemplate}
             onCreateCategoryTemplate={onCreateCategoryTemplate}
+            onUpdateCategoryTemplate={onUpdateCategoryTemplate}
             categoryTemplates={categoryTemplates}
             onCreateTodo={onCreateTodo}
             onDeleteTodo={onSoftDeleteTodo}

@@ -3,7 +3,11 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as todoTemplates from "../services/todoTemplatesService.js";
 import { AppError } from "../utils/errors.js";
-import { CreateTodoTemplateBodySchema, CreateTodoCategoryTemplateBodySchema } from "../../../shared/schemas.js";
+import {
+  CreateTodoTemplateBodySchema,
+  CreateTodoCategoryTemplateBodySchema,
+  UpdateTodoCategoryTemplateBodySchema
+} from "../../../shared/schemas.js";
 
 export const todoTemplatesRouter = Router();
 todoTemplatesRouter.use(requireAuth, attachAccountId);
@@ -40,8 +44,27 @@ todoTemplatesRouter.get("/categories", async (req, res) => {
 todoTemplatesRouter.post("/categories", async (req, res) => {
   const memberId = requireMemberId(req.memberId);
   const body = CreateTodoCategoryTemplateBodySchema.parse(req.body);
-  const template = await todoTemplates.createCategoryTemplate(req.accountId!, memberId, body.name, body.tasks);
+  const template = await todoTemplates.createCategoryTemplate(
+    req.accountId!,
+    memberId,
+    body.name,
+    body.tasks,
+    body.sourceCategoryId
+  );
   res.status(201).json(template);
+});
+
+todoTemplatesRouter.patch("/categories/:id", async (req, res) => {
+  const memberId = requireMemberId(req.memberId);
+  const body = UpdateTodoCategoryTemplateBodySchema.parse(req.body);
+  const template = await todoTemplates.updateCategoryTemplate(
+    req.params.id,
+    req.accountId!,
+    memberId,
+    body.name,
+    body.tasks
+  );
+  res.json(template);
 });
 
 todoTemplatesRouter.delete("/categories/:id", async (req, res) => {

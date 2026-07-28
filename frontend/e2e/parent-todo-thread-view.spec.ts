@@ -1369,6 +1369,56 @@ test("Bollar i tråd: 'Spara som mall' i kategorimenyn skapar en kategori-mall a
   expect(tasks[0].subtasks.map((s) => s.title)).toEqual(["Uppvärmning", "Bänkpress"]);
 });
 
+// 2026-07-28, Zaidas önskemål: "man ska alltid kunna uppdatera mallen i
+// kategorimenyn, om man tex ändrat ordning på dem" — har kategorin redan en
+// länkad mall (sourceCategoryId) visar menyn "Uppdatera mall" och PATCHar
+// den befintliga mallen istället för att skapa en ny, duplicerad.
+test("Bollar i tråd: redan sparad kategori-mall visas som 'Uppdatera mall' och PATCHar istället för att skapa ny", async ({ page }) => {
+  const EXISTING_TEMPLATE = {
+    id: "todo-category-template-existing",
+    accountId: "acc-1",
+    memberId: "mem-1",
+    name: "Träning",
+    tasks: [{ title: "Gammal ordning", visual: { type: "lucide-icon", value: "Dumbbell" }, subtasks: [], recurrence: { type: "none" }, starValue: 0 }],
+    createdAt: "2026-07-01T00:00:00.000Z",
+    deletedAt: null,
+    deletedBy: null,
+    sourceCategoryId: "cat-1"
+  };
+  let patchedTemplate: Record<string, unknown> | null = null;
+  let postCalled = false;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] }));
+  await page.route("**/api/todo-templates/categories", (route) => {
+    if (route.request().method() === "POST") {
+      postCalled = true;
+      return route.fulfill({ status: 201, json: { id: "should-not-be-created", name: "x", tasks: [] } });
+    }
+    return route.fulfill({ json: [EXISTING_TEMPLATE] });
+  });
+  await page.route("**/api/todo-templates/categories/todo-category-template-existing", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedTemplate = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ...EXISTING_TEMPLATE, ...patchedTemplate } });
+    }
+    return route.fulfill({ json: EXISTING_TEMPLATE });
+  });
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await thread.getByRole("button", { name: /Träning/ }).click();
+  await expect(page.getByRole("button", { name: "Uppdatera mall" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Spara som mall" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Uppdatera mall" }).click();
+
+  await expect.poll(() => patchedTemplate).toBeTruthy();
+  expect((patchedTemplate as unknown as { name: string }).name).toBe("Träning");
+  const tasks = (patchedTemplate as unknown as { tasks: { title: string }[] }).tasks;
+  expect(tasks[0].title).toBe("Styrketräning");
+  expect(postCalled).toBe(false);
+});
+
 // Mallbiblioteket, uppgifts-delen — sparas via redigera-modalens knapp.
 test("Redigera-modalen: 'Spara som mall' skapar en fristående uppgiftsmall", async ({ page }) => {
   let createdTemplate: Record<string, unknown> | null = null;

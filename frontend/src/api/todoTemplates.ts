@@ -11,9 +11,14 @@ export const todoTemplatesApi = {
   removeTask: (id: Id) =>
     request<{ ok: boolean }>(api(`todo-templates/tasks/${id}`), { method: "DELETE" }),
   getAllCategories: () => request<TodoCategoryTemplate[]>(api("todo-templates/categories")),
-  createCategory: (name: string, tasks: TodoTemplateTask[]) =>
+  createCategory: (name: string, tasks: TodoTemplateTask[], sourceCategoryId?: Id | null) =>
     request<TodoCategoryTemplate>(api("todo-templates/categories"), {
       method: "POST",
+      body: JSON.stringify({ name, tasks, sourceCategoryId })
+    }),
+  updateCategory: (id: Id, name: string, tasks: TodoTemplateTask[]) =>
+    request<TodoCategoryTemplate>(api(`todo-templates/categories/${id}`), {
+      method: "PATCH",
       body: JSON.stringify({ name, tasks })
     }),
   removeCategory: (id: Id) =>

@@ -80,7 +80,8 @@ export async function createCategoryTemplate(
   accountId: string,
   memberId: string,
   name: string,
-  tasks: TodoTemplateTask[]
+  tasks: TodoTemplateTask[],
+  sourceCategoryId?: string | null
 ) {
   await requireAdultMember(memberId, accountId);
   const trimmed = name.trim();
@@ -95,8 +96,37 @@ export async function createCategoryTemplate(
     tasks: tasks.map((task) => encryptTask(accountId, task)),
     createdAt: new Date().toISOString(),
     deletedAt: null,
-    deletedBy: null
+    deletedBy: null,
+    sourceCategoryId: sourceCategoryId ?? null
   });
+  const obj = template.toObject();
+  return { ...obj, tasks: obj.tasks.map((task) => decryptTask(accountId, task)) };
+}
+
+// 2026-07-28, Zaidas önskemål: "man ska alltid kunna uppdatera mallen i
+// kategorimenyn, om man tex ändrat ordning på dem" — uppdaterar en redan
+// sparad kategori-mall i stället för att skapa en duplicerad ny. Rör aldrig
+// sourceCategoryId (satt en gång vid skapande).
+export async function updateCategoryTemplate(
+  id: string,
+  accountId: string,
+  memberId: string,
+  name: string,
+  tasks: TodoTemplateTask[]
+) {
+  await requireAdultMember(memberId, accountId);
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new AppError(400, "Kategorinamn kan inte vara tomt");
+  }
+  const template = await TodoCategoryTemplateModel.findOne({ id, accountId, deletedAt: null });
+  if (!template) {
+    throw new AppError(404, "Mall hittades inte");
+  }
+  template.name = trimmed;
+  template.tasks = tasks.map((task) => encryptTask(accountId, task)) as never;
+  template.markModified("tasks");
+  await template.save();
   const obj = template.toObject();
   return { ...obj, tasks: obj.tasks.map((task) => decryptTask(accountId, task)) };
 }

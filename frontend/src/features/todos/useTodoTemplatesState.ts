@@ -47,9 +47,16 @@ export function useTodoTemplatesState() {
     setTaskTemplates((current) => current.filter((t) => t.id !== id));
   }
 
-  function createCategoryTemplate(name: string, tasks: TodoTemplateTask[]) {
-    return todoTemplatesApi.createCategory(name, tasks).then((template) => {
+  function createCategoryTemplate(name: string, tasks: TodoTemplateTask[], sourceCategoryId?: Id | null) {
+    return todoTemplatesApi.createCategory(name, tasks, sourceCategoryId).then((template) => {
       setCategoryTemplates((current) => [...current, template]);
+      return template;
+    });
+  }
+
+  function updateCategoryTemplate(id: Id, name: string, tasks: TodoTemplateTask[]) {
+    return todoTemplatesApi.updateCategory(id, name, tasks).then((template) => {
+      setCategoryTemplates((current) => current.map((t) => (t.id === id ? template : t)));
       return template;
     });
   }
@@ -65,6 +72,7 @@ export function useTodoTemplatesState() {
     createTaskTemplate,
     removeTaskTemplate,
     createCategoryTemplate,
+    updateCategoryTemplate,
     removeCategoryTemplate
   };
 }

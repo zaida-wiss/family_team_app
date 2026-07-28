@@ -829,6 +829,12 @@ export type TodoCategoryTemplate = {
   createdAt: string;
   deletedAt: string | null;
   deletedBy: Id | null;
+  // 2026-07-28, Zaidas önskemål: "man ska alltid kunna uppdatera mallen i
+  // kategorimenyn, om man tex ändrat ordning på dem" — sätts när mallen
+  // skapades via "Spara som mall" FRÅN en specifik kategori (inte via en
+  // fristående "Ny mall"-flöde), så menyn kan visa "Uppdatera mall" istället
+  // för att alltid skapa en ny, duplicerad mall.
+  sourceCategoryId?: Id | null;
 };
 
 export type Reward = {

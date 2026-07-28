@@ -88,6 +88,7 @@ export function useShellState(
     createTaskTemplate,
     removeTaskTemplate,
     createCategoryTemplate,
+    updateCategoryTemplate,
     removeCategoryTemplate
   } = useTodoTemplatesState();
 
@@ -200,6 +201,7 @@ export function useShellState(
     categoryTemplates,
     onCreateTaskTemplate: createTaskTemplate,
     onCreateCategoryTemplate: createCategoryTemplate,
+    onUpdateCategoryTemplate: updateCategoryTemplate,
     onSoftDeleteTodo: (todoId: string) => softDeleteTodo(todoId, currentMember, roles),
     // Todos-panelens visningsläge väljs i Inställningar, ingen egen växlare
     // i panelen (2026-07-05, Zaidas beslut) — se settingsProps nedan.

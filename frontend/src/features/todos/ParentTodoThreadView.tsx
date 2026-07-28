@@ -52,7 +52,12 @@ type Props = {
   onRemoveCategory: (id: Id) => void;
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
-  onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
+  onCreateCategoryTemplate: (
+    name: string,
+    tasks: TodoTemplateTask[],
+    sourceCategoryId?: Id | null
+  ) => Promise<TodoCategoryTemplate>;
+  onUpdateCategoryTemplate: (id: Id, name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
   // Ny kategori-knapp längst till höger i verktygsfältet (2026-07-25, Zaidas
   // önskemål) — samma "tom eller från mall"-flöde som redan fanns inbäddat i
   // TodoCreatorModal.tsx, nu även nåbart direkt från tråd-vyn.
@@ -229,6 +234,7 @@ export function ParentTodoThreadView({
   onSetCategoryHidden,
   onCreateTaskTemplate,
   onCreateCategoryTemplate,
+  onUpdateCategoryTemplate,
   categoryTemplates,
   onCreateTodo,
   onDeleteTodo,
@@ -864,6 +870,11 @@ export function ParentTodoThreadView({
   // DEFINIERANDE uppgifter (mallar och engångsuppgifter, inte deras redan
   // genererade dagliga occurrences — samma urval som handleReuseFromMenu
   // använder). Kategorin/uppgifterna rörs inte, bara läses.
+  //
+  // 2026-07-28, Zaidas önskemål: "man ska alltid kunna uppdatera mallen i
+  // kategorimenyn, om man tex ändrat ordning på dem" — har kategorin redan
+  // en länkad mall (sourceCategoryId) UPPDATERAS den mallen istället för att
+  // skapa en ny, duplicerad. Bara den FÖRSTA sparningen skapar en ny mall.
   function handleSaveCategoryAsTemplate(categoryId: Id) {
     setMenuCategoryId(null);
     const category = categories.find((c) => c.id === categoryId);
@@ -879,7 +890,12 @@ export function ParentTodoThreadView({
         starValue: t.starValue
       }));
     if (tasks.length === 0) return;
-    onCreateCategoryTemplate(category.name, tasks);
+    const existing = categoryTemplates.find((t) => t.sourceCategoryId === categoryId);
+    if (existing) {
+      onUpdateCategoryTemplate(existing.id, category.name, tasks);
+    } else {
+      onCreateCategoryTemplate(category.name, tasks, categoryId);
+    }
   }
 
   function handleReuseFromMenu(categoryId: Id) {
@@ -1193,7 +1209,9 @@ export function ParentTodoThreadView({
                         Återanvänd
                       </button>
                       <button onClick={() => handleSaveCategoryAsTemplate(thread.id)} type="button">
-                        Spara som mall
+                        {categoryTemplates.some((t) => t.sourceCategoryId === thread.id)
+                          ? "Uppdatera mall"
+                          : "Spara som mall"}
                       </button>
                       <button onClick={() => handleHideFromMenu(thread.id)} type="button">
                         Göm

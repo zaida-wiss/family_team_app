@@ -85,7 +85,12 @@ type Props = {
   taskTemplates: TodoTemplate[];
   categoryTemplates: TodoCategoryTemplate[];
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
-  onCreateCategoryTemplate: (name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
+  onCreateCategoryTemplate: (
+    name: string,
+    tasks: TodoTemplateTask[],
+    sourceCategoryId?: Id | null
+  ) => Promise<TodoCategoryTemplate>;
+  onUpdateCategoryTemplate: (id: Id, name: string, tasks: TodoTemplateTask[]) => Promise<TodoCategoryTemplate>;
   onSoftDeleteTodo: (todoId: string) => void;
   onApproveWish: (rewardId: string) => void;
   onRejectWish: (rewardId: string) => void;
@@ -144,7 +149,7 @@ export function MemberShellContent({
   todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange, todoThreadGap, todoBubbleSize,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
-  taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate,
+  taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate, onUpdateCategoryTemplate,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
   onUpdateCalendarFilterSettings, onUpdateCalendarView,
@@ -458,6 +463,7 @@ export function MemberShellContent({
           categoryTemplates={categoryTemplates}
           onCreateTaskTemplate={onCreateTaskTemplate}
           onCreateCategoryTemplate={onCreateCategoryTemplate}
+          onUpdateCategoryTemplate={onUpdateCategoryTemplate}
           onSoftDeleteTodo={onSoftDeleteTodo}
           onApproveWish={onApproveWish}
           onRejectWish={onRejectWish}

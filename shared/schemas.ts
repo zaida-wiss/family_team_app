@@ -383,6 +383,14 @@ export const CreateTodoTemplateBodySchema = TodoTemplateTaskSchema;
 
 export const CreateTodoCategoryTemplateBodySchema = z.object({
   name: z.string().min(1, "Kategorinamn krävs"),
+  tasks: z.array(TodoTemplateTaskSchema).min(1, "Kategorin har inga uppgifter att spara"),
+  sourceCategoryId: IdSchema.nullable().optional()
+});
+
+// Uppdatera en redan sparad kategori-mall (2026-07-28) — samma body-form
+// som create, men utan sourceCategoryId (rörs aldrig efter skapande).
+export const UpdateTodoCategoryTemplateBodySchema = z.object({
+  name: z.string().min(1, "Kategorinamn krävs"),
   tasks: z.array(TodoTemplateTaskSchema).min(1, "Kategorin har inga uppgifter att spara")
 });
 
