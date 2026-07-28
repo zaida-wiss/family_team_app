@@ -246,21 +246,37 @@ export function useTodosState(fixedTodoTimes = false) {
     );
   }
 
+  // 2026-07-28, Zaidas fynd: "när jag klickar in i barnvyn ser jag uppgifter
+  // där som jag inte får bort" — grundorsak: "Ta bort serien" (Återkommande
+  // uppgifter) raderade bara MALLEN. En redan genererad dagens-occurrence är
+  // ett eget, separat Todo-dokument (recurringSourceId pekar på mallen) och
+  // fanns kvar orört — stoppar bara FRAMTIDA dagars kopior, exakt som
+  // recurringTodos.ts:s egen kommentar om Återanvänd-funktionen redan säger,
+  // men ingen hade kopplat det till radering tidigare. Raderar man mallen
+  // (recurringSourceId===null, recurrence.type!=="none") tas nu även alla
+  // dess ännu ej raderade occurrences bort i samma svep.
   function softDeleteTodo(todoId: Id, member: Member, roles: Role[]) {
-    setTodos((current) =>
-      current.map((todo) => {
-        if (todo.id !== todoId || !canDeleteTodo(member, roles, todo)) {
+    setTodos((current) => {
+      const target = current.find((t) => t.id === todoId);
+      const isRecurringTemplate =
+        !!target && target.recurringSourceId === null && target.recurrence.type !== "none";
+
+      return current.map((todo) => {
+        const isTarget = todo.id === todoId;
+        const isActiveOccurrenceOfTarget =
+          isRecurringTemplate && todo.recurringSourceId === todoId && todo.deletedAt === null;
+        if ((!isTarget && !isActiveOccurrenceOfTarget) || !canDeleteTodo(member, roles, todo)) {
           return todo;
         }
 
-        todosApi.remove(todoId).catch(console.error);
+        todosApi.remove(todo.id).catch(console.error);
         return {
           ...todo,
           deletedAt: new Date().toISOString(),
           deletedBy: member.id
         };
-      })
-    );
+      });
+    });
   }
 
   function restoreTodo(todoId: Id) {

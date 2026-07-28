@@ -1821,6 +1821,54 @@ test("Inställningar: återkommande uppgifter kan redigeras och tas bort i en eg
   await expect.poll(() => deletedId).toBe("todo-template");
 });
 
+// 2026-07-28, Zaidas fynd: "när jag klickar in i barnvyn ser jag uppgifter
+// där som jag inte får bort" — grundorsak: "Ta bort serien" raderade bara
+// mallen, en redan genererad dagens-occurrence (eget Todo-dokument,
+// recurringSourceId pekar på mallen) fanns kvar orört och gick inte att
+// bli av med i barnvyn (som saknar en delete-knapp). Radering av serien
+// ska nu ta bort ANDRA aktiva occurrences av samma mall också.
+test("Inställningar: 'Ta bort serien' raderar även dagens redan genererade occurrence, inte bara mallen", async ({ page }) => {
+  const TEMPLATE = {
+    id: "todo-template", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-1",
+    assignedTo: "mem-child", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🪥" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, personalCategoryId: null
+  };
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: "todo-occurrence-today",
+    recurrence: { type: "none" },
+    recurringSourceId: "todo-template",
+    occurrenceDate: "2026-07-28"
+  };
+  const deletedIds: string[] = [];
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+  await page.route(/\/api\/todos\/(todo-template|todo-occurrence-today)$/, (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedIds.push(route.request().url().split("/").pop()!);
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
+
+  const row = page.getByText("Borsta tänderna").locator("../..");
+  await row.getByRole("button", { name: /Ta bort serien/ }).click();
+
+  await expect.poll(() => deletedIds.sort()).toEqual(["todo-occurrence-today", "todo-template"]);
+});
+
 // 2026-07-07 (Zaidas önskemål: "en lika strukturerad överblick i tidsordning")
 // — listan sorteras på startdatum, tidigast överst, och visar datumet.
 test("Inställningar: återkommande uppgifter listas i tidsordning (tidigast startdatum överst)", async ({ page }) => {
