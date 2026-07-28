@@ -1,4 +1,4 @@
-import type { Member, Role, Todo, TodoThreadRange } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoThreadRange } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
@@ -8,6 +8,30 @@ export function isChildMember(member: Member | undefined, roles: Role[]): boolea
   if (!member) return false;
   if (member.isChild) return true;
   return roles.find((r) => r.id === member.roleId)?.isChildRole ?? false;
+}
+
+// 2026-07-29, Zaidas önskemål: "i inställningar skall vi särskilja på
+// barnens uppgifter och övrigas" — delad av RecurringTodosSettings.tsx/
+// OneOffTodosSettings.tsx/TodoHistory.tsx, som tidigare alla listade
+// barns och vuxnas uppgifter blandat i en enda lista. En otilldelad
+// (Familjen) eller vuxen-tilldelad uppgift räknas båda som "Övriga" — bara
+// ett riktigt barn-assignerat item hamnar under "Barn".
+export function groupByChildAssignee<T extends { assignedTo: Id | null }>(
+  items: T[],
+  members: Member[],
+  roles: Role[]
+): { childItems: T[]; otherItems: T[] } {
+  const childItems: T[] = [];
+  const otherItems: T[] = [];
+  for (const item of items) {
+    const assignee = members.find((m) => m.id === item.assignedTo);
+    if (isChildMember(assignee, roles)) {
+      childItems.push(item);
+    } else {
+      otherItems.push(item);
+    }
+  }
+  return { childItems, otherItems };
 }
 
 export function getVisibleTodos(

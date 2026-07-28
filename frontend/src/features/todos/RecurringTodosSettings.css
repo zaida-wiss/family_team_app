@@ -70,3 +70,14 @@
   color: var(--destructive);
   font-weight: 600;
 }
+
+.recurring-todos-settings__groups {
+  display: grid;
+  gap: 16px;
+}
+
+.recurring-todos-settings__group-heading {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted-fg);
+}

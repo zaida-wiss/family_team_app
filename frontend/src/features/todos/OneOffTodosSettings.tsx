@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
-import { getAssigneeName, getVisibleTodos, isOneOffTodo } from "./selectors";
+import { getAssigneeName, getVisibleTodos, groupByChildAssignee, isOneOffTodo } from "./selectors";
 import { TodoEditModal } from "./TodoEditModal";
 
 type Props = {
@@ -54,50 +54,68 @@ export function OneOffTodosSettings({
     .sort((a, b) => startTimeValue(a) - startTimeValue(b));
   const editingTodo = oneOffTodos.find((t) => t.id === editingId) ?? null;
 
+  // 2026-07-29, Zaidas önskemål: "i inställningar skall vi särskilja på
+  // barnens uppgifter och övrigas" — samma delade grupperingsprincip som
+  // RecurringTodosSettings.tsx/TodoHistory.tsx.
+  const { childItems, otherItems } = groupByChildAssignee(oneOffTodos, members, roles);
+
   if (oneOffTodos.length === 0) {
     return <p className="empty-note">Inga engångsuppgifter ännu.</p>;
   }
 
+  function renderRow(todo: Todo) {
+    const schedule = describeSchedule(todo);
+    const assignee = getAssigneeName(todo, members);
+    return (
+      <li className="one-off-todos-settings__row" key={todo.id}>
+        <div className="one-off-todos-settings__info">
+          <strong>
+            {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+            {todo.title}
+          </strong>
+          <small>
+            {todo.assignedTo !== currentMember.id && `${assignee} · `}
+            {schedule ?? "Inget schema"}
+          </small>
+        </div>
+        <button
+          aria-label={`Redigera ${todo.title}`}
+          className="icon-button"
+          onClick={() => setEditingId(todo.id)}
+          title="Redigera"
+          type="button"
+        >
+          <Pencil size={16} />
+        </button>
+        <button
+          aria-label={`Ta bort ${todo.title}`}
+          className="icon-button danger"
+          onClick={() => onDeleteTodo(todo.id)}
+          title="Ta bort"
+          type="button"
+        >
+          <Trash2 size={16} />
+        </button>
+      </li>
+    );
+  }
+
   return (
     <>
-      <ul className="one-off-todos-settings__list">
-        {oneOffTodos.map((todo) => {
-          const schedule = describeSchedule(todo);
-          const assignee = getAssigneeName(todo, members);
-          return (
-            <li className="one-off-todos-settings__row" key={todo.id}>
-              <div className="one-off-todos-settings__info">
-                <strong>
-                  {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
-                  {todo.title}
-                </strong>
-                <small>
-                  {todo.assignedTo !== currentMember.id && `${assignee} · `}
-                  {schedule ?? "Inget schema"}
-                </small>
-              </div>
-              <button
-                aria-label={`Redigera ${todo.title}`}
-                className="icon-button"
-                onClick={() => setEditingId(todo.id)}
-                title="Redigera"
-                type="button"
-              >
-                <Pencil size={16} />
-              </button>
-              <button
-                aria-label={`Ta bort ${todo.title}`}
-                className="icon-button danger"
-                onClick={() => onDeleteTodo(todo.id)}
-                title="Ta bort"
-                type="button"
-              >
-                <Trash2 size={16} />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="one-off-todos-settings__groups">
+        {childItems.length > 0 && (
+          <div>
+            <h4 className="one-off-todos-settings__group-heading">👶 Barn</h4>
+            <ul className="one-off-todos-settings__list">{childItems.map(renderRow)}</ul>
+          </div>
+        )}
+        {otherItems.length > 0 && (
+          <div>
+            <h4 className="one-off-todos-settings__group-heading">Övriga</h4>
+            <ul className="one-off-todos-settings__list">{otherItems.map(renderRow)}</ul>
+          </div>
+        )}
+      </div>
 
       {editingTodo && (
         <TodoEditModal

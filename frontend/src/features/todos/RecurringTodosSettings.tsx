@@ -2,7 +2,7 @@ import "./RecurringTodosSettings.css";
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Id, Member, RecurrenceUnit, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
-import { getAssigneeName, getVisibleTodos } from "./selectors";
+import { getAssigneeName, getVisibleTodos, groupByChildAssignee } from "./selectors";
 import { isoToDateOnly, isRecurringTemplate, WEEKDAY_SHORT } from "./recurringTodos";
 import { TodoEditModal } from "./TodoEditModal";
 import { TodoCreatorModal } from "./TodoCreatorModal";
@@ -135,13 +135,27 @@ export function RecurringTodosSettings({
   const editingTodo = templates.find((t) => t.id === editingId) ?? null;
   const assignableMembers = members.filter((m) => m.deletedAt === null);
 
-  function moveTemplate(id: Id, direction: -1 | 1) {
-    const ids = templates.map((t) => t.id);
-    const index = ids.indexOf(id);
-    const swapWith = index + direction;
-    if (swapWith < 0 || swapWith >= ids.length) return;
-    [ids[index], ids[swapWith]] = [ids[swapWith], ids[index]];
-    onReorder(ids);
+  // 2026-07-29, Zaidas önskemål: "i inställningar skall vi särskilja på
+  // barnens uppgifter och övrigas" — två alltid synliga sektioner istället
+  // för en enda blandad lista. Ett otilldelat (Familjen) eller vuxen-
+  // tilldelat item räknas båda som "Övriga" (groupByChildAssignee, delad med
+  // OneOffTodosSettings.tsx/TodoHistory.tsx).
+  const { childItems, otherItems } = groupByChildAssignee(templates, members, roles);
+
+  // Flyttar ett item upp/ner INOM sin egen grupp (barn eller övriga) — hittar
+  // grannens id i gruppens EGNA ordning, byter sedan plats på just DE TVÅ
+  // id:na i den FULLA ordningslistan (oavsett om de råkar ligga intill
+  // varandra där också), så en flytt aldrig hoppar över till fel grupp.
+  function moveWithinGroup(group: Todo[], id: Id, direction: -1 | 1) {
+    const groupIds = group.map((t) => t.id);
+    const index = groupIds.indexOf(id);
+    const swapWithId = groupIds[index + direction];
+    if (!swapWithId) return;
+    const fullIds = templates.map((t) => t.id);
+    const i1 = fullIds.indexOf(id);
+    const i2 = fullIds.indexOf(swapWithId);
+    [fullIds[i1], fullIds[i2]] = [fullIds[i2], fullIds[i1]];
+    onReorder(fullIds);
   }
 
   // En mall "används just nu" om den har minst en ännu ej raderad,
@@ -164,6 +178,92 @@ export function RecurringTodosSettings({
   function confirmDelete(id: Id) {
     setConfirmDeleteId(null);
     onDeleteTodo(id);
+  }
+
+  function renderRow(todo: Todo, group: Todo[]) {
+    const index = group.indexOf(todo);
+    return (
+      <li className="recurring-todos-settings__row" key={todo.id}>
+        {sortMode === "manual" && (
+          <div className="recurring-todos-settings__reorder">
+            <button
+              aria-label={`Flytta ${todo.title} upp`}
+              className="icon-button"
+              disabled={index === 0}
+              onClick={() => moveWithinGroup(group, todo.id, -1)}
+              type="button"
+            >
+              <ArrowUp size={14} />
+            </button>
+            <button
+              aria-label={`Flytta ${todo.title} ner`}
+              className="icon-button"
+              disabled={index === group.length - 1}
+              onClick={() => moveWithinGroup(group, todo.id, 1)}
+              type="button"
+            >
+              <ArrowDown size={14} />
+            </button>
+          </div>
+        )}
+
+        <div className="recurring-todos-settings__info">
+          <strong>
+            {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+            {todo.title}
+          </strong>
+          <small>
+            {getAssigneeName(todo, members)} · {describeRecurrence(todo)}
+            {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}
+          </small>
+        </div>
+
+        {confirmDeleteId === todo.id ? (
+          <div className="recurring-todos-settings__confirm">
+            <small>
+              Används just nu ({activeOccurrenceCount(todo.id)} väntande). Radera ändå?
+            </small>
+            <button
+              aria-label={`Bekräfta radering av serien ${todo.title}`}
+              className="icon-button danger"
+              onClick={() => confirmDelete(todo.id)}
+              type="button"
+            >
+              <Trash2 size={16} />
+            </button>
+            <button
+              aria-label="Avbryt radering"
+              className="icon-button"
+              onClick={() => setConfirmDeleteId(null)}
+              type="button"
+            >
+              Avbryt
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              aria-label={`Redigera ${todo.title}`}
+              className="icon-button"
+              onClick={() => setEditingId(todo.id)}
+              title="Redigera"
+              type="button"
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              aria-label={`Ta bort serien ${todo.title}`}
+              className="icon-button danger"
+              onClick={() => requestDelete(todo.id)}
+              title="Ta bort serien"
+              type="button"
+            >
+              <Trash2 size={16} />
+            </button>
+          </>
+        )}
+      </li>
+    );
   }
 
   return (
@@ -208,90 +308,20 @@ export function RecurringTodosSettings({
           {unordered.length === 0 ? "Inga återkommande uppgifter ännu." : "Inga uppgifter matchar det valda filtret."}
         </p>
       ) : (
-        <ul className="recurring-todos-settings__list">
-          {templates.map((todo, index) => (
-            <li className="recurring-todos-settings__row" key={todo.id}>
-              {sortMode === "manual" && (
-                <div className="recurring-todos-settings__reorder">
-                  <button
-                    aria-label={`Flytta ${todo.title} upp`}
-                    className="icon-button"
-                    disabled={index === 0}
-                    onClick={() => moveTemplate(todo.id, -1)}
-                    type="button"
-                  >
-                    <ArrowUp size={14} />
-                  </button>
-                  <button
-                    aria-label={`Flytta ${todo.title} ner`}
-                    className="icon-button"
-                    disabled={index === templates.length - 1}
-                    onClick={() => moveTemplate(todo.id, 1)}
-                    type="button"
-                  >
-                    <ArrowDown size={14} />
-                  </button>
-                </div>
-              )}
-
-              <div className="recurring-todos-settings__info">
-                <strong>
-                  {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
-                  {todo.title}
-                </strong>
-                <small>
-                  {getAssigneeName(todo, members)} · {describeRecurrence(todo)}
-                  {todo.visibleFrom && ` · från ${isoToDateOnly(todo.visibleFrom)}`}
-                </small>
-              </div>
-
-              {confirmDeleteId === todo.id ? (
-                <div className="recurring-todos-settings__confirm">
-                  <small>
-                    Används just nu ({activeOccurrenceCount(todo.id)} väntande). Radera ändå?
-                  </small>
-                  <button
-                    aria-label={`Bekräfta radering av serien ${todo.title}`}
-                    className="icon-button danger"
-                    onClick={() => confirmDelete(todo.id)}
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <button
-                    aria-label="Avbryt radering"
-                    className="icon-button"
-                    onClick={() => setConfirmDeleteId(null)}
-                    type="button"
-                  >
-                    Avbryt
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    aria-label={`Redigera ${todo.title}`}
-                    className="icon-button"
-                    onClick={() => setEditingId(todo.id)}
-                    title="Redigera"
-                    type="button"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    aria-label={`Ta bort serien ${todo.title}`}
-                    className="icon-button danger"
-                    onClick={() => requestDelete(todo.id)}
-                    title="Ta bort serien"
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="recurring-todos-settings__groups">
+          {childItems.length > 0 && (
+            <div>
+              <h4 className="recurring-todos-settings__group-heading">👶 Barn</h4>
+              <ul className="recurring-todos-settings__list">{childItems.map((todo) => renderRow(todo, childItems))}</ul>
+            </div>
+          )}
+          {otherItems.length > 0 && (
+            <div>
+              <h4 className="recurring-todos-settings__group-heading">Övriga</h4>
+              <ul className="recurring-todos-settings__list">{otherItems.map((todo) => renderRow(todo, otherItems))}</ul>
+            </div>
+          )}
+        </div>
       )}
 
       {editingTodo && (

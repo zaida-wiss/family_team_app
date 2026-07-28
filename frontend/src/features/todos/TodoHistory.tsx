@@ -1,6 +1,6 @@
 import "./TodoHistory.css";
 import type { Member, Role, Todo } from "@shared/types";
-import { getAssigneeName, getTodoHistory } from "./selectors";
+import { getAssigneeName, getTodoHistory, groupByChildAssignee } from "./selectors";
 import { useTodosHistoryState } from "./useTodosHistoryState";
 
 type Props = {
@@ -28,31 +28,52 @@ export function TodoHistory({ currentMember, roles, allMembers }: Props) {
   const history = getTodoHistory(currentMember, roles, items);
   const hasMore = total !== null && items.length < total;
 
+  // 2026-07-29, Zaidas önskemål: "i inställningar skall vi särskilja på
+  // barnens uppgifter och övrigas" — samma delade grupperingsprincip som
+  // RecurringTodosSettings.tsx/OneOffTodosSettings.tsx. Pagineringen (Ladda
+  // fler) är gemensam för båda grupperna, inte separat per grupp.
+  const { childItems, otherItems } = groupByChildAssignee(history, allMembers, roles);
+
   if (history.length === 0) {
     return <p className="empty-note">{loading ? "Laddar…" : "Ingen historik än."}</p>;
   }
 
+  function renderRow(todo: Todo) {
+    return (
+      <li className="todo-history-row" key={todo.id}>
+        <div className="todo-history-info">
+          <strong>{todo.title}</strong>
+          <small>{getAssigneeName(todo, allMembers)}</small>
+        </div>
+        <div className="todo-history-status">
+          <span className={`todo-history-badge todo-history-badge--${todo.status}`}>
+            {statusLabel(todo.status)}
+          </span>
+          <small>{fmtDate(todo.approvedAt ?? todo.rejectedAt ?? todo.expiresAt ?? todo.completedAt ?? new Date().toISOString())}</small>
+          {todo.status === "rejected" && todo.rejectedReason && (
+            <small className="todo-history-reason">{todo.rejectedReason}</small>
+          )}
+        </div>
+      </li>
+    );
+  }
+
   return (
     <>
-      <ul className="todo-history-list" aria-label="Todo-historik">
-        {history.map((todo) => (
-          <li className="todo-history-row" key={todo.id}>
-            <div className="todo-history-info">
-              <strong>{todo.title}</strong>
-              <small>{getAssigneeName(todo, allMembers)}</small>
-            </div>
-            <div className="todo-history-status">
-              <span className={`todo-history-badge todo-history-badge--${todo.status}`}>
-                {statusLabel(todo.status)}
-              </span>
-              <small>{fmtDate(todo.approvedAt ?? todo.rejectedAt ?? todo.expiresAt ?? todo.completedAt ?? new Date().toISOString())}</small>
-              {todo.status === "rejected" && todo.rejectedReason && (
-                <small className="todo-history-reason">{todo.rejectedReason}</small>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="todo-history-groups">
+        {childItems.length > 0 && (
+          <div>
+            <h4 className="todo-history-group-heading">👶 Barn</h4>
+            <ul className="todo-history-list" aria-label="Barnens todo-historik">{childItems.map(renderRow)}</ul>
+          </div>
+        )}
+        {otherItems.length > 0 && (
+          <div>
+            <h4 className="todo-history-group-heading">Övriga</h4>
+            <ul className="todo-history-list" aria-label="Övrigas todo-historik">{otherItems.map(renderRow)}</ul>
+          </div>
+        )}
+      </div>
       {hasMore && (
         <button className="secondary-button" disabled={loading} onClick={loadMore} type="button">
           {loading ? "Laddar…" : "Ladda fler"}

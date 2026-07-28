@@ -202,4 +202,55 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await page.getByRole("button", { name: "Ta bort Dammsuga" }).click();
     await expect.poll(() => deletedId).toBe("todo-pending");
   });
+
+  // 2026-07-29, Zaidas önskemål: "i inställningar skall vi särskilja på
+  // barnens uppgifter och övrigas" — samma delade grupperingsprincip i
+  // Engångsuppgifter och Todo-historik som i Återkommande uppgifter.
+  test("Engångsuppgifter delas upp i Barn och Övriga", async ({ page }) => {
+    const CHILD_MEMBER = {
+      id: "mem-child-1", accountId: "acc-1", userId: null, name: "Lilla Barnet",
+      roleId: "role-child", isChild: true, avatarUrl: null, color: null, dashboardTheme: null,
+      spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null
+    };
+    const CHILD_ONE_OFF = { ...PENDING_TODO, id: "todo-child-one-off", title: "Läxor", assignedTo: "mem-child-1" };
+
+    await page.route("**/api/members", (route) => route.fulfill({ json: [{ id: "mem-1", accountId: "acc-1", userId: "user-1", name: "Testförälder", roleId: "role-1", isChild: false, avatarUrl: null, color: null, dashboardTheme: null, spentStars: 0, deletedAt: null, deletedBy: null }, CHILD_MEMBER] }));
+    await page.route("**/api/todos", (route) =>
+      route.fulfill({ json: route.request().method() === "GET" ? [PENDING_TODO, CHILD_ONE_OFF] : {} })
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Todo-lista" }).click();
+    await page.getByRole("button", { name: "📌 Engångsuppgifter" }).click();
+
+    const childGroup = page.getByRole("heading", { name: "👶 Barn" }).locator("..");
+    await expect(childGroup.getByText("Läxor")).toBeVisible();
+    const otherGroup = page.getByRole("heading", { name: "Övriga" }).locator("..");
+    await expect(otherGroup.getByText("Dammsuga")).toBeVisible();
+    await expect(otherGroup.getByText("Läxor")).toHaveCount(0);
+  });
+
+  test("Todo-historik delas upp i Barn och Övriga", async ({ page }) => {
+    const CHILD_APPROVED = { ...APPROVED_TODO, id: "todo-child-approved", title: "Läxor", assignedTo: "mem-child-1" };
+
+    await page.route("**/api/members", (route) => route.fulfill({ json: [{ id: "mem-1", accountId: "acc-1", userId: "user-1", name: "Testförälder", roleId: "role-1", isChild: false, avatarUrl: null, color: null, dashboardTheme: null, spentStars: 0, deletedAt: null, deletedBy: null }, { id: "mem-child-1", accountId: "acc-1", userId: null, name: "Lilla Barnet", roleId: "role-child", isChild: true, avatarUrl: null, color: null, dashboardTheme: null, spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null }] }));
+    await page.route("**/api/todos", (route) =>
+      route.fulfill({ json: route.request().method() === "GET" ? [] : {} })
+    );
+    await page.route("**/api/todos/history**", (route) =>
+      route.fulfill({ json: { items: [APPROVED_TODO, CHILD_APPROVED], page: 1, pageSize: 25, total: 2 } })
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Todo-lista" }).click();
+    await page.getByRole("button", { name: "📋 Todo-historik" }).click();
+
+    const childGroup = page.getByRole("heading", { name: "👶 Barn" }).locator("..");
+    await expect(childGroup.getByText("Läxor")).toBeVisible();
+    const otherGroup = page.getByRole("heading", { name: "Övriga" }).locator("..");
+    await expect(otherGroup.getByText("Diska")).toBeVisible();
+    await expect(otherGroup.getByText("Läxor")).toHaveCount(0);
+  });
 });

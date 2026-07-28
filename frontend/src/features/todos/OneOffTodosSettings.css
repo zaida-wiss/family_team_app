@@ -25,3 +25,14 @@
 .one-off-todos-settings__info small {
   color: var(--muted-fg);
 }
+
+.one-off-todos-settings__groups {
+  display: grid;
+  gap: 16px;
+}
+
+.one-off-todos-settings__group-heading {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted-fg);
+}

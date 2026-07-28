@@ -68,3 +68,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.todo-history-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.todo-history-group-heading {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted-fg);
+}

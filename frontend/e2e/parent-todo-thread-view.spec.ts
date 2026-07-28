@@ -2070,6 +2070,43 @@ test("Inställningar: återkommande uppgifter kan sorteras på namn och filtrera
   await expect(rows.nth(0)).toContainText("Läsa");
 });
 
+// 2026-07-29, Zaidas önskemål: "i inställningar skall vi särskilja på
+// barnens uppgifter och övrigas" — två alltid synliga sektioner (👶 Barn /
+// Övriga) istället för en enda blandad lista.
+test("Inställningar: återkommande uppgifter delas upp i Barn och Övriga", async ({ page }) => {
+  const BARN_MALL = {
+    id: "todo-barn-mall", accountId: "acc-1", title: "Läxor", createdBy: "mem-1",
+    assignedTo: "mem-child-1", isShared: false, status: "pending", starValue: 2,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: "2026-07-01T00:00:00.000Z", expiresAt: null,
+    deletedAt: null, deletedBy: null, personalCategoryId: null
+  };
+  const VUXEN_MALL = { ...BARN_MALL, id: "todo-vuxen-mall", title: "Träna", assignedTo: "mem-1", starValue: 0 };
+  const FAMILJ_MALL = { ...BARN_MALL, id: "todo-familj-mall", title: "Städa", assignedTo: null, starValue: 0 };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [BARN_MALL, VUXEN_MALL, FAMILJ_MALL] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "🔁 Återkommande uppgifter" }).click();
+
+  const childGroup = page.getByRole("heading", { name: "👶 Barn" }).locator("..");
+  await expect(childGroup.getByText("Läxor")).toBeVisible();
+  await expect(childGroup.getByText("Träna")).toHaveCount(0);
+
+  const otherGroup = page.getByRole("heading", { name: "Övriga" }).locator("..");
+  await expect(otherGroup.getByText("Träna")).toBeVisible();
+  await expect(otherGroup.getByText("Städa")).toBeVisible();
+  await expect(otherGroup.getByText("Läxor")).toHaveCount(0);
+});
+
 // Zaida: "Anteckningar och delmoment ska stå [i visa-vyn] också... det ska
 // inte behöva vara redigeringsläge" (2026-07-06) — rubrikerna syns nu alltid,
 // med en platshållartext när det inte finns något ännu, istället för att hela
