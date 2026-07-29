@@ -10,6 +10,7 @@ import type { SettingsCategory } from "./SettingsCategoryNav";
 import { LogoutConfirmModal } from "./LogoutConfirmModal";
 import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
+import { RewardShopImportExport } from "../rewards/RewardShopImportExport";
 import { TodoHistory } from "../todos/TodoHistory";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
@@ -697,6 +698,19 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onRemove={onRemoveShopItem}
               onMovePurchased={onMovePurchased}
               onDeletePurchased={onDeletePurchased}
+            />
+          )
+        },
+        {
+          id: "reward-shop-import-export",
+          label: "📥 Importera/exportera",
+          content: (
+            <RewardShopImportExport
+              items={shopItems}
+              categories={personalCategories}
+              currentMemberId={currentMember.id}
+              onAdd={onAddShopItem}
+              onUpdate={onUpdateShopItem}
             />
           )
         }
