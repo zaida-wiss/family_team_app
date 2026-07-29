@@ -1,4 +1,4 @@
-import type { Calendar } from "@shared/types";
+import type { Calendar, CalendarEvent } from "@shared/types";
 
 export type ImportedCalendarEvent = {
   title: string;
@@ -85,24 +85,56 @@ function parseIcsDate(value: string | null): string | null {
   return null;
 }
 
+function buildVevent(event: CalendarEvent, categories?: string) {
+  return [
+    "BEGIN:VEVENT",
+    `UID:${event.id}`,
+    `SUMMARY:${escapeIcs(event.title)}`,
+    `DTSTART:${formatIcsDate(event.startsAt)}`,
+    `DTEND:${formatIcsDate(event.endsAt)}`,
+    event.notes ? `DESCRIPTION:${escapeIcs(event.notes)}` : null,
+    categories ? `CATEGORIES:${escapeIcs(categories)}` : null,
+    "END:VEVENT"
+  ].filter(Boolean).join("\r\n");
+}
+
 export function toIcs(calendar: Calendar) {
   const events = calendar.events
     .filter((event) => event.deletedAt === null)
-    .map((event) => [
-      "BEGIN:VEVENT",
-      `UID:${event.id}`,
-      `SUMMARY:${escapeIcs(event.title)}`,
-      `DTSTART:${formatIcsDate(event.startsAt)}`,
-      `DTEND:${formatIcsDate(event.endsAt)}`,
-      event.notes ? `DESCRIPTION:${escapeIcs(event.notes)}` : null,
-      "END:VEVENT"
-    ].filter(Boolean).join("\r\n"))
+    .map((event) => buildVevent(event))
     .join("\r\n");
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Family Team App//SV",
     `X-WR-CALNAME:${escapeIcs(calendar.name)}`,
+    events,
+    "END:VCALENDAR"
+  ].join("\r\n");
+}
+
+// Utökad export (2026-07-29, del av Zaidas önskemål "all data ska gå att
+// importera och exportera i de olika kategorierna i inställningar") —
+// exportCalendar() i CalendarManagementCard.tsx exporterade sedan tidigare
+// bara EN vald kalender i taget. Den här slår ihop ALLA kalendrar man äger
+// till EN sammanhängande .ics-fil (samma händelser, samma UID:n — går att
+// dela/importera i valfri annan kalenderapp i ett svep istället för en
+// export per kalender). Varje händelse taggas med sin ursprungskalenders
+// namn (CATEGORIES) så det fortfarande går att se varifrån den kom efter
+// sammanslagningen.
+export function toIcsMerged(calendars: Calendar[], fileName: string) {
+  const events = calendars
+    .flatMap((calendar) =>
+      calendar.events
+        .filter((event) => event.deletedAt === null)
+        .map((event) => buildVevent(event, calendar.name))
+    )
+    .join("\r\n");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Family Team App//SV",
+    `X-WR-CALNAME:${escapeIcs(fileName)}`,
     events,
     "END:VCALENDAR"
   ].join("\r\n");

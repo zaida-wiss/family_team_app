@@ -3,7 +3,7 @@ import { Check, Download, Pencil, Upload, X } from "lucide-react";
 import { canExportCalendar } from "../../utils/permissions";
 import styles from "./CalendarPanel.module.css";
 import type { AccessLevel, Calendar, Id, IcsSubscription, Member, Role } from "@shared/types";
-import { filterByDateRange, parseIcsEvents, toIcs } from "./calendarIcs";
+import { filterByDateRange, parseIcsEvents, toIcs, toIcsMerged } from "./calendarIcs";
 import type { ImportedCalendarEvent } from "./calendarIcs";
 import { PreviewSelector } from "./PreviewSelector";
 import { CalendarSubscriptionsSection } from "./CalendarSubscriptionsSection";
@@ -134,6 +134,23 @@ export function CalendarManagementCard({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url; link.download = `${selectedCalendar.name}.ics`; link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Utökad export (2026-07-29, del av Zaidas önskemål "all data ska gå att
+  // importera och exportera i de olika kategorierna i inställningar") —
+  // exportCalendar ovan exporterar bara EN vald kalender i taget. Den här
+  // slår ihop ALLA kalendrar jag ÄGER (inte delade/prenumererade — samma
+  // "exporten täcker mina egna saker"-princip som redan gäller recept/todos/
+  // inköpslistor) till en enda .ics-fil.
+  const myCalendars = calendars.filter((c) => c.ownerId === currentMember.id && c.deletedAt === null);
+
+  function exportAllMyCalendars() {
+    if (myCalendars.length === 0) return;
+    const blob = new Blob([toIcsMerged(myCalendars, "Mina kalendrar")], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = "mina-kalendrar.ics"; link.click();
     URL.revokeObjectURL(url);
   }
 
@@ -295,6 +312,16 @@ export function CalendarManagementCard({
         >
           <Download size={16} />
           Exportera
+        </button>
+        <button
+          className="secondary-button"
+          disabled={myCalendars.length === 0}
+          onClick={exportAllMyCalendars}
+          title="Alla kalendrar du äger, i en enda fil"
+          type="button"
+        >
+          <Download size={16} />
+          Exportera alla mina kalendrar
         </button>
       </div>
 
