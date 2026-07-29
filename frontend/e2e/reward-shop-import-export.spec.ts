@@ -17,7 +17,7 @@ async function openImportExportSettings(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Barn", exact: true }).click();
-  await page.getByRole("button", { name: "📥 Importera/exportera" }).click();
+  await page.getByRole("button", { name: "📥 Importera/exportera belöningar" }).click();
 }
 
 test("Belöningsbutiken-import/export: laddar ner mallen med rätt rubriker", async ({ page }) => {

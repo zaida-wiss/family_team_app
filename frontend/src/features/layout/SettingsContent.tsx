@@ -21,6 +21,7 @@ import { HouseholdPinGate } from "../settings/HouseholdPinGate";
 import { useHouseholdPin } from "../settings/useHouseholdPin";
 import { TemplatesSettings } from "../todos/TemplatesSettings";
 import { TimedTaskSettings } from "../timedTasks/TimedTaskSettings";
+import { TimedTaskImportExport } from "../timedTasks/TimedTaskImportExport";
 import type { useShellState } from "../../hooks/useShellState";
 
 const AccountSettings = lazy(() =>
@@ -680,6 +681,17 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           )
         },
         {
+          id: "timed-tasks-import-export",
+          label: "📥 Importera/exportera Medaljer/Rekord",
+          content: (
+            <TimedTaskImportExport
+              timedTasks={timedTasks}
+              children={members.filter((m) => m.deletedAt === null && m.isChild)}
+              onCreate={onCreateTimedTask}
+            />
+          )
+        },
+        {
           id: "reward-shop",
           label: "🏪 Belöningsbutiken",
           content: (
@@ -703,7 +715,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
         },
         {
           id: "reward-shop-import-export",
-          label: "📥 Importera/exportera",
+          label: "📥 Importera/exportera belöningar",
           content: (
             <RewardShopImportExport
               items={shopItems}
