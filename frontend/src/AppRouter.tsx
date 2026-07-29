@@ -45,6 +45,22 @@ export function AppRouter() {
   }
   return (
     <Shell
+      // 2026-07-29, Zaidas fynd: "när jag växlar i hemvyn till en annan
+      // familj så kommer jag inte tillbaka till min primära familj" —
+      // Shell fick tidigare ingen key, så ett familjebyte (activeMembership
+      // ändras) bara skickade nya props in i SAMMA komponentinstans.
+      // useAccountState/useAppState:s useState(initial)-hooks respekterar
+      // bara sitt initial-värde vid FÖRSTA mount — activeAccount frös
+      // därför permanent på den familj som var aktiv när Shell först
+      // monterades (oftast den primära), oavsett hur många gånger man bytte
+      // familj efteråt. Eftersom otherFamilies-filtret (useShellState.ts)
+      // jämför mot detta frusna activeAccount.id, exkluderades den
+      // ursprungliga familjen permanent ur "andra familjer"-listan i
+      // dropdownen — man kunde alltså aldrig växla TILLBAKA. En key tvingar
+      // fram en full remount vid varje familjebyte (samma "behöver
+      // nollställas helt"-mönster som ErrorBoundary key={activePanel} redan
+      // använder), så alla per-konto-hookar startar om med rätt initialvärde.
+      key={nav.activeMembership.member.id}
       activeMembership={nav.activeMembership}
       memberships={nav.memberships}
       onLogout={nav.onLogout}
