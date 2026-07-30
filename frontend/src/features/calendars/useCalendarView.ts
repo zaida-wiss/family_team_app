@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
+import { isoToLocalDateTimeStr, localDateTimeToISO } from "../../utils/fixedTimeZone";
 import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
 import type { FormState, ModalMode } from "./CalendarView";
@@ -63,6 +64,12 @@ export function useCalendarView(
   // medvetet INTE ska scopas om) faller allt tillbaka på currentMember,
   // oförändrat beteende.
   focusMemberId?: Id,
+  // Fast klockslag oavsett var enheten befinner sig (2026-07-30,
+  // Account.fixedCalendarTimes — en EGEN inställning, oberoende av
+  // todos/rutiners fixedTodoTimes). Påverkar bara skapa/redigera (openEdit/
+  // submitForm nedan) — se utils/fixedTimeZone.ts:s filhuvud för den kända
+  // begränsningen kring återkommande händelsers framtida förekomster.
+  fixedCalendarTimes = false,
 ) {
   const now = new Date();
   const todayStr = toLocalDateStr(now);
@@ -237,8 +244,8 @@ export function useCalendarView(
       calendarId: ev.calendarId,
       title: ev.title,
       isAllDay: ev.isAllDay ?? false,
-      startsAt: ev.isAllDay ? toLocalDateStr(new Date(ev.startsAt)) : toLocalDateTimeStr(new Date(ev.startsAt)),
-      endsAt: ev.isAllDay ? toLocalDateStr(new Date(ev.endsAt)) : toLocalDateTimeStr(new Date(ev.endsAt)),
+      startsAt: ev.isAllDay ? toLocalDateStr(new Date(ev.startsAt)) : isoToLocalDateTimeStr(ev.startsAt, fixedCalendarTimes),
+      endsAt: ev.isAllDay ? toLocalDateStr(new Date(ev.endsAt)) : isoToLocalDateTimeStr(ev.endsAt, fixedCalendarTimes),
       location: ev.location ?? "",
       notes: ev.notes ?? "",
       recurrenceType: rec.type,
@@ -263,8 +270,8 @@ export function useCalendarView(
       until: form.recurrenceUntil ? new Date(form.recurrenceUntil).toISOString() : null,
     };
 
-    const isoStart = form.isAllDay ? `${form.startsAt}T12:00:00.000Z` : new Date(form.startsAt).toISOString();
-    const isoEnd = form.isAllDay ? `${form.endsAt}T12:00:00.000Z` : new Date(form.endsAt).toISOString();
+    const isoStart = form.isAllDay ? `${form.startsAt}T12:00:00.000Z` : localDateTimeToISO(form.startsAt, fixedCalendarTimes);
+    const isoEnd = form.isAllDay ? `${form.endsAt}T12:00:00.000Z` : localDateTimeToISO(form.endsAt, fixedCalendarTimes);
 
     const attendees = form.attendeeIds.map((memberId) => ({ memberId, status: "pending" as const }));
 

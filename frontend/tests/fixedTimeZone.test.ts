@@ -1,7 +1,13 @@
 import { describe, test, expect } from "vitest";
-import { timeToAnchorISO, isoToTimeInput, withWallClockOnDate } from "../src/utils/todoTimeZone";
+import {
+  timeToAnchorISO,
+  isoToTimeInput,
+  withWallClockOnDate,
+  isoToLocalDateTimeStr,
+  localDateTimeToISO,
+} from "../src/utils/fixedTimeZone";
 
-describe("todoTimeZone", () => {
+describe("fixedTimeZone", () => {
   test("fixedTodoTimes=false (standard): läses tillbaka i det tidszon koden själv körs i", () => {
     const iso = timeToAnchorISO("10:00", false);
     expect(isoToTimeInput(iso, false)).toBe("10:00");
@@ -37,5 +43,31 @@ describe("todoTimeZone", () => {
   test("isoToTimeInput: null-värde ger tom sträng", () => {
     expect(isoToTimeInput(null)).toBe("");
     expect(timeToAnchorISO("")).toBeNull();
+  });
+
+  // Kalenderhändelser (2026-07-30, Account.fixedCalendarTimes) — en HELT EGEN
+  // inställning från fixedTodoTimes ovan, men samma underliggande primitiver.
+  // Till skillnad från todos har kalenderhändelser ett RIKTIGT datum (inte
+  // bara ett klockslag på en fast ankardag), så dessa funktioner rundtrippar
+  // hela "YYYY-MM-DDTHH:MM"-strängen som ett <input type="datetime-local"> ger.
+  test("localDateTimeToISO/isoToLocalDateTimeStr: fixed=false rundtrippar i körmiljöns egen tidszon", () => {
+    const iso = localDateTimeToISO("2026-07-20T10:00", false);
+    expect(isoToLocalDateTimeStr(iso, false)).toBe("2026-07-20T10:00");
+  });
+
+  test("localDateTimeToISO/isoToLocalDateTimeStr: fixed=true ger alltid samma datum+klockslag tillbaka, oavsett körmiljöns tidszon", () => {
+    const iso = localDateTimeToISO("2026-07-20T10:00", true);
+    expect(isoToLocalDateTimeStr(iso, true)).toBe("2026-07-20T10:00");
+  });
+
+  test("localDateTimeToISO: fixed=true kodar mot Sveriges faktiska UTC-offset (sommartid CEST/UTC+2 i juli)", () => {
+    const iso = localDateTimeToISO("2026-07-20T10:00", true);
+    expect(new Date(iso).getUTCHours()).toBe(8);
+    expect(new Date(iso).getUTCMinutes()).toBe(0);
+  });
+
+  test("localDateTimeToISO: fixed=true kodar mot vintertid (CET/UTC+1) för ett datum i januari", () => {
+    const iso = localDateTimeToISO("2026-01-20T10:00", true);
+    expect(new Date(iso).getUTCHours()).toBe(9);
   });
 });

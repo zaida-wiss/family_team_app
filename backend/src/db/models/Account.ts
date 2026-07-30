@@ -38,6 +38,7 @@ const accountSchema = new Schema<Account>({
   deletedAt: { type: String, default: null },
   calendarSettings: { type: calendarSettingsSchema, default: undefined },
   fixedTodoTimes: { type: Boolean, default: false },
+  fixedCalendarTimes: { type: Boolean, default: false },
   defaultRecipeShoppingListId: { type: String, default: null },
   familyConnections: { type: [familyConnectionSchema], default: [] }
 });

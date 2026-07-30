@@ -19,6 +19,7 @@ type Props = {
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   calendarSettings?: CalendarSettings;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
+  fixedCalendarTimes?: boolean;
 };
 
 export function MemberOverview({
@@ -35,6 +36,7 @@ export function MemberOverview({
   onDeleteEvent,
   calendarSettings,
   onLoadEventsForMonth,
+  fixedCalendarTimes,
 }: Props) {
   return (
     <div className={styles.home}>
@@ -55,6 +57,7 @@ export function MemberOverview({
             onUpdateEvent={onUpdateEvent}
             onDeleteEvent={onDeleteEvent}
             onMonthChange={onLoadEventsForMonth}
+            fixedCalendarTimes={fixedCalendarTimes}
           />
         </div>
       )}

@@ -42,13 +42,14 @@ export type EventListProps = {
   navExtra?: ReactNode;
   onClearDay?: () => void;
   onNewEvent?: () => void;
+  fixedCalendarTimes?: boolean;
 };
 
 export function CalendarEventList({
   allEvents, selectedDay, scope = "month", viewYear, viewMonth, visible,
   calendarDisplayColor, holidayBgColor, holidayTextColor,
   searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds,
-  onEventClick, navExtra, onClearDay, onNewEvent,
+  onEventClick, navExtra, onClearDay, onNewEvent, fixedCalendarTimes = false,
 }: EventListProps) {
   const hasFilter = !!searchQuery.trim() || hiddenCalendarIds.size > 0;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -126,6 +127,7 @@ export function CalendarEventList({
               holidayBgColor={holidayBgColor}
               holidayTextColor={holidayTextColor}
               onEventClick={onEventClick}
+              fixedCalendarTimes={fixedCalendarTimes}
             />
           ))}
           {visibleCount < allEvents.length && (
@@ -241,10 +243,11 @@ type RowProps = {
   holidayBgColor: string;
   holidayTextColor: string;
   onEventClick: (ev: EnrichedEvent) => void;
+  fixedCalendarTimes?: boolean;
 };
 
 const EventRow = forwardRef<HTMLDivElement, RowProps>(function EventRow(
-  { ev, isPast, calendarDisplayColor, holidayBgColor, holidayTextColor, onEventClick },
+  { ev, isPast, calendarDisplayColor, holidayBgColor, holidayTextColor, onEventClick, fixedCalendarTimes = false },
   ref
 ) {
   const holiday = isHolidayEvent(ev);
@@ -257,7 +260,7 @@ const EventRow = forwardRef<HTMLDivElement, RowProps>(function EventRow(
   };
   const dateStr = ev.isAllDay
     ? `${fmtFullDate(ev.startsAt.slice(0, 10))} · Heldag`
-    : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}–${fmtTime(ev.endsAt)}`;
+    : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt, fixedCalendarTimes)}–${fmtTime(ev.endsAt, fixedCalendarTimes)}`;
 
   return (
     <div

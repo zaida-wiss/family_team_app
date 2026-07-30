@@ -17,11 +17,12 @@ type Props = {
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onClose: () => void;
   onEdit: (ev: EnrichedEvent) => void;
+  fixedCalendarTimes?: boolean;
 };
 
 export function CalendarEventDetail({
   event, calendarDisplayColor, activeMembers,
-  canEditEvent, onUpdateEvent, onClose, onEdit,
+  canEditEvent, onUpdateEvent, onClose, onEdit, fixedCalendarTimes = false,
 }: Props) {
   const owner = activeMembers.find((m) => m.id === event.calendarOwnerId);
   const eventColorStyle: CalendarCssVars = {
@@ -53,7 +54,7 @@ export function CalendarEventDetail({
           <p className="cal-event-row-meta">
             {event.isAllDay
               ? `${fmtFullDate(event.startsAt.slice(0, 10))} · Heldag`
-              : `${fmtFullDate(event.startsAt)} · ${fmtTime(event.startsAt)}–${fmtTime(event.endsAt)}`}
+              : `${fmtFullDate(event.startsAt)} · ${fmtTime(event.startsAt, fixedCalendarTimes)}–${fmtTime(event.endsAt, fixedCalendarTimes)}`}
           </p>
           {event.location && (
             <p className="cal-event-row-meta cal-event-detail-location">

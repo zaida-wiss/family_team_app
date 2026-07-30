@@ -182,6 +182,7 @@ export function useShellState(
     onUpdateRecipe: updateRecipe,
     onRemoveRecipe: removeRecipe,
     fixedTodoTimes: activeAccount.fixedTodoTimes ?? false,
+    fixedCalendarTimes: activeAccount.fixedCalendarTimes ?? false,
     defaultRecipeShoppingListId: activeAccount.defaultRecipeShoppingListId ?? null,
     ...permissions,
     wishStars,
@@ -321,6 +322,12 @@ export function useShellState(
     onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => {
       setActiveAccount({ ...activeAccount, fixedTodoTimes });
       accountsApi.update(activeAccount.id, { fixedTodoTimes }).catch(console.error);
+    },
+    // Samma mönster som ovan, men en HELT EGEN inställning för
+    // kalenderhändelser (2026-07-30) — se AccountSettings.tsx.
+    onUpdateFixedCalendarTimes: (fixedCalendarTimes: boolean) => {
+      setActiveAccount({ ...activeAccount, fixedCalendarTimes });
+      accountsApi.update(activeAccount.id, { fixedCalendarTimes }).catch(console.error);
     },
     onUpdateDefaultRecipeShoppingList: (defaultRecipeShoppingListId: Id | null) => {
       setActiveAccount({ ...activeAccount, defaultRecipeShoppingListId });

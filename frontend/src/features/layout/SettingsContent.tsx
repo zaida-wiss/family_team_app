@@ -256,6 +256,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 onSetChildCredentials={settingsProps.onSetChildCredentials}
                 onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
                 onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
+                onUpdateFixedCalendarTimes={settingsProps.onUpdateFixedCalendarTimes}
                 onShareCalendar={memberContentProps.onShareCalendar}
                 onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
               />

@@ -34,11 +34,14 @@ type Props = {
   onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
   onMonthChange?: (year: number, month: number) => void;
   focusMemberId?: Id;
+  // Fast klockslag oavsett var enheten befinner sig (2026-07-30,
+  // Account.fixedCalendarTimes) — se utils/fixedTimeZone.ts.
+  fixedCalendarTimes?: boolean;
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent, onMonthChange, focusMemberId }: Props) {
+export function CalendarView({ calendars, currentMember, activeMembers, roles, displayOnly = false, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent, onMonthChange, focusMemberId, fixedCalendarTimes = false }: Props) {
   const [internalSearch, setInternalSearch] = useState("");
   const [internalHidden, setInternalHidden] = useState<Set<string>>(new Set());
   const [internalCalView, setInternalCalView] = useState<CalendarViewMode>("month");
@@ -61,7 +64,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
     calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
-  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent, onMonthChange, focusMemberId);
+  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent, onMonthChange, focusMemberId, fixedCalendarTimes);
 
   const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds };
   const filteredVisible = visible.filter((calendar) => !hiddenCalendarIds.has(calendar.id));
@@ -105,6 +108,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
   const eventModal = modal ? (
     <CalendarEventModal
+      fixedCalendarTimes={fixedCalendarTimes}
       modal={modal}
       isEditing={isEditing}
       eventIsEditable={eventIsEditable}
@@ -122,6 +126,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
 
   const detailModal = detailEvent ? (
     <CalendarEventDetail
+      fixedCalendarTimes={fixedCalendarTimes}
       event={detailEvent}
       calendarDisplayColor={calendarDisplayColor}
       activeMembers={activeMembers}
@@ -194,6 +199,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             onTouchStart={startSwipe}
           >
             <CalendarWeekView
+              fixedCalendarTimes={fixedCalendarTimes}
               weekEvents={weekEvents}
               weekStart={weekStart}
               weekEnd={weekEnd}
@@ -206,6 +212,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               onEventClick={setDetailEvent}
             />
             <CalendarEventList
+              fixedCalendarTimes={fixedCalendarTimes}
               key={`week-${weekStart.toISOString()}`}
               allEvents={weekListEvents}
               selectedDay={null}
@@ -225,6 +232,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           </div>
         ) : calView === "list" ? (
           <CalendarEventList
+            fixedCalendarTimes={fixedCalendarTimes}
             key="list"
             allEvents={allListEvents}
             selectedDay={null}
@@ -244,6 +252,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           />
         ) : calView === "timeline" ? (
           <CalendarTimelineView
+            fixedCalendarTimes={fixedCalendarTimes}
             visible={filteredVisible}
             calendarDisplayColor={calendarDisplayColor}
             todayStr={todayStr}
@@ -266,6 +275,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               onDayTouchEnd={handleDayTouchEnd}
             />
             <CalendarEventList
+              fixedCalendarTimes={fixedCalendarTimes}
               key={`${viewYear}-${viewMonth}`}
               allEvents={listEvents}
               selectedDay={selectedDay}
@@ -302,7 +312,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               <div className="cal-event-row-info">
                 <span className="cal-event-row-title">{ev.title}</span>
                 <span className="cal-event-row-meta">
-                  {ev.isAllDay ? fmtFullDate(ev.startsAt.slice(0, 10)) : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt)}`}
+                  {ev.isAllDay ? fmtFullDate(ev.startsAt.slice(0, 10)) : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt, fixedCalendarTimes)}`}
                   {ev.location && ` · ${ev.location}`}
                 </span>
               </div>
@@ -322,6 +332,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
           onTouchStart={startSwipe}
         >
           <CalendarWeekView
+            fixedCalendarTimes={fixedCalendarTimes}
             weekEvents={weekEvents}
             weekStart={weekStart}
             weekEnd={weekEnd}
@@ -333,6 +344,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             onEventClick={setDetailEvent}
           />
           <CalendarEventList
+            fixedCalendarTimes={fixedCalendarTimes}
             key={`week-${weekStart.toISOString()}`}
             allEvents={weekListEvents}
             selectedDay={null}
@@ -352,6 +364,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         </div>
       ) : calView === "list" ? (
         <CalendarEventList
+          fixedCalendarTimes={fixedCalendarTimes}
           key="list"
           allEvents={allListEvents}
           selectedDay={null}
@@ -371,6 +384,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
         />
       ) : calView === "timeline" ? (
         <CalendarTimelineView
+          fixedCalendarTimes={fixedCalendarTimes}
           visible={filteredVisible}
           calendarDisplayColor={calendarDisplayColor}
           todayStr={todayStr}
@@ -391,6 +405,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
             onEventClick={setDetailEvent}
           />
           <CalendarEventList
+            fixedCalendarTimes={fixedCalendarTimes}
             key={`${viewYear}-${viewMonth}`}
             allEvents={listEvents}
             selectedDay={selectedDay}

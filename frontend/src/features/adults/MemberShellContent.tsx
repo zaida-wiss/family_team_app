@@ -52,6 +52,7 @@ type Props = {
   onRemoveRecipe: (id: Id) => Promise<void>;
   defaultRecipeShoppingListId: Id | null;
   fixedTodoTimes: boolean;
+  fixedCalendarTimes: boolean;
   timedTasks: TimedTaskWithBest[];
   onRecordTimedAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
   onListTimedAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
@@ -143,7 +144,7 @@ export function MemberShellContent({
 
   currentMember, activeMembers, members, selectedDashboardMemberId, roles,
   todos, rewards, calendars, shoppingLists, recipes, onCreateRecipe, onUpdateRecipe, onRemoveRecipe,
-  defaultRecipeShoppingListId, fixedTodoTimes, timedTasks, onRecordTimedAttempt,
+  defaultRecipeShoppingListId, fixedTodoTimes, fixedCalendarTimes, timedTasks, onRecordTimedAttempt,
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
@@ -383,6 +384,7 @@ export function MemberShellContent({
           onDeleteEvent={onDeleteCalendarEvent}
           onRsvpEvent={onRsvpCalendarEvent}
           onMonthChange={onLoadEventsForMonth}
+          fixedCalendarTimes={fixedCalendarTimes}
         />
       </Suspense>
     );
@@ -520,6 +522,7 @@ export function MemberShellContent({
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
         onLoadEventsForMonth={onLoadEventsForMonth}
+        fixedCalendarTimes={fixedCalendarTimes}
       />
     );
   }
@@ -561,6 +564,7 @@ export function MemberShellContent({
         onUpdateEvent={onUpdateCalendarEvent}
         onDeleteEvent={onDeleteCalendarEvent}
         onLoadEventsForMonth={onLoadEventsForMonth}
+        fixedCalendarTimes={fixedCalendarTimes}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

@@ -1,4 +1,5 @@
 import type { EventRecurrence } from "@shared/types";
+import { isoToTimeInput } from "../../utils/fixedTimeZone";
 
 // Vilken symbol en händelse ska visas med (2026-07-27 fix, Zaidas fynd: "om
 // jag uppdaterar en importerad kalenderhändelse med emoji så vill jag att den
@@ -70,9 +71,12 @@ export function toLocalDateTimeStr(date: Date) {
   return `${toLocalDateStr(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-export function fmtTime(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+// fixedCalendarTimes (2026-07-30) — samma "10:00 förblir alltid 10:00
+// oavsett var enheten befinner sig"-princip som todos/rutiner redan har
+// (fixedTodoTimes), en HELT EGEN inställning. Standard (false, oförändrat
+// beteende): visar enhetens egen aktuella tidszon.
+export function fmtTime(iso: string, fixedCalendarTimes = false) {
+  return isoToTimeInput(iso, fixedCalendarTimes);
 }
 
 export function fmtFullDate(iso: string) {

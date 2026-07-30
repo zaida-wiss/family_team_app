@@ -26,9 +26,10 @@ type Props = {
   onNextWeek: () => void;
   navExtra?: ReactNode;
   onEventClick?: (ev: EnrichedEvent) => void;
+  fixedCalendarTimes?: boolean;
 };
 
-export function CalendarWeekView({ weekEvents, weekStart, weekEnd, todayStr, showWeekNumbers, eventDisplay = "text", onPrevWeek, onNextWeek, navExtra, onEventClick }: Props) {
+export function CalendarWeekView({ weekEvents, weekStart, weekEnd, todayStr, showWeekNumbers, eventDisplay = "text", onPrevWeek, onNextWeek, navExtra, onEventClick, fixedCalendarTimes = false }: Props) {
   const weekNum = getISOWeek(weekStart);
 
   function getEventsForDay(dayStr: string): EnrichedEvent[] {
@@ -99,11 +100,11 @@ export function CalendarWeekView({ weekEvents, weekStart, weekEnd, todayStr, sho
                         className="cal-week-col-event"
                         style={{ "--event-color": color } as CalendarCssVars}
                         onClick={() => onEventClick?.(ev)}
-                        title={ev.isAllDay ? ev.title : `${fmtTime(ev.startsAt)} ${ev.title}`}
+                        title={ev.isAllDay ? ev.title : `${fmtTime(ev.startsAt, fixedCalendarTimes)} ${ev.title}`}
                       >
                         {ev.displaySymbol && <span>{ev.displaySymbol} </span>}
                         {!ev.isAllDay && (
-                          <span className="cal-week-col-event-time">{fmtTime(ev.startsAt)}</span>
+                          <span className="cal-week-col-event-time">{fmtTime(ev.startsAt, fixedCalendarTimes)}</span>
                         )}
                         {ev.title}
                       </div>

@@ -1,5 +1,5 @@
 import type { RecurrenceRule, RecurrenceUnit, Todo, TodoTimeWindow, Weekday } from "@shared/types";
-import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput, withWallClockOnDate } from "../../utils/todoTimeZone";
+import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput, withWallClockOnDate } from "../../utils/fixedTimeZone";
 
 const weekdays: Weekday[] = [
   "sunday",
@@ -55,8 +55,9 @@ export function describeRecurrenceEnd(recurrence: RecurrenceRule): string | null
 
 // Tid-input-hjälpare, delade mellan TimeWindowsPicker och skapa/redigera-
 // modalerna. Själva tidszons-logiken (fixedTodoTimes) ligger i utils/
-// todoTimeZone.ts — delad med routineHelpers.ts (barnens rutinskapare), som
-// tidigare hade en egen, icke tidszon-medveten kopia av samma konvertering.
+// fixedTimeZone.ts — delad med routineHelpers.ts (barnens rutinskapare) och
+// (sedan 2026-07-30) kalendern, som tidigare hade en egen, icke tidszon-
+// medveten kopia av samma konvertering.
 export function timeToAnchorISO(hhmm: string, fixedTodoTimes = false): string | null {
   return sharedTimeToAnchorISO(hhmm, fixedTodoTimes);
 }

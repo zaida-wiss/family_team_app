@@ -17,9 +17,10 @@ type Props = {
   onRsvpEvent?: (calendarId: string, eventId: string, status: "accepted" | "declined") => void;
   onMonthChange?: (year: number, month: number) => void;
   focusMemberId?: Id;
+  fixedCalendarTimes?: boolean;
 };
 
-export function CalendarPage({ calendars, currentMember, activeMembers, roles, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent, onMonthChange, focusMemberId }: Props) {
+export function CalendarPage({ calendars, currentMember, activeMembers, roles, calendarSettings, calendarView, filter, onCalendarViewChange, onAddEvent, onUpdateEvent, onDeleteEvent, onRsvpEvent, onMonthChange, focusMemberId, fixedCalendarTimes }: Props) {
   return (
     <CalendarView
       calendars={calendars}
@@ -36,6 +37,7 @@ export function CalendarPage({ calendars, currentMember, activeMembers, roles, c
       onRsvpEvent={onRsvpEvent}
       onMonthChange={onMonthChange}
       focusMemberId={focusMemberId}
+      fixedCalendarTimes={fixedCalendarTimes}
     />
   );
 }

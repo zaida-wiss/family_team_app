@@ -64,9 +64,10 @@ type Props = {
   showWeekNumbers?: boolean;
   navExtra?: ReactNode;
   onEventClick?: (ev: EnrichedEvent) => void;
+  fixedCalendarTimes?: boolean;
 };
 
-export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, showWeekNumbers, navExtra, onEventClick }: Props) {
+export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, showWeekNumbers, navExtra, onEventClick, fixedCalendarTimes = false }: Props) {
   const [offset, setOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -234,7 +235,7 @@ export function CalendarTimelineView({ visible, calendarDisplayColor, todayStr, 
                         {ev.title}
                       </span>
                       {height > 30 && (
-                        <span className="cal-vtl-event-time">{fmtTime(ev.startsAt)}–{fmtTime(ev.endsAt)}</span>
+                        <span className="cal-vtl-event-time">{fmtTime(ev.startsAt, fixedCalendarTimes)}–{fmtTime(ev.endsAt, fixedCalendarTimes)}</span>
                       )}
                     </div>
                   );

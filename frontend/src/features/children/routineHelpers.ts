@@ -1,6 +1,6 @@
 import type { Id, Member, Todo, Weekday } from "@shared/types";
 import { generateId } from "../../utils/uuid";
-import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput } from "../../utils/todoTimeZone";
+import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput } from "../../utils/fixedTimeZone";
 
 export const WEEKDAYS: { key: Weekday; short: string }[] = [
   { key: "monday",    short: "M" },
@@ -14,7 +14,7 @@ export const WEEKDAYS: { key: Weekday; short: string }[] = [
 
 export const STAR_PRESETS = [1, 2, 3, 4, 5];
 
-// Själva tidszons-logiken (fixedTodoTimes) ligger i utils/todoTimeZone.ts —
+// Själva tidszons-logiken (fixedTodoTimes) ligger i utils/fixedTimeZone.ts —
 // delad med recurringTodos.ts, som tidigare hade en egen, icke tidszon-
 // medveten kopia av samma konvertering.
 export function timeToAnchorISO(hhmm: string, fixedTodoTimes = false): string | null {

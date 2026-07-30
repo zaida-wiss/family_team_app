@@ -21,12 +21,13 @@ type Props = {
   onDelete: () => void;
   onSetField: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   onToggleAttendee: (memberId: string) => void;
+  fixedCalendarTimes?: boolean;
 };
 
 export function CalendarEventModal({
   modal, isEditing, eventIsEditable, form, setForm,
   editableCalendars, otherMembers,
-  onClose, onSubmit, onDelete, onSetField, onToggleAttendee,
+  onClose, onSubmit, onDelete, onSetField, onToggleAttendee, fixedCalendarTimes = false,
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
@@ -51,7 +52,7 @@ export function CalendarEventModal({
             <p className="cal-event-row-meta">
               {modal.event.isAllDay
                 ? `${fmtFullDate(modal.event.startsAt.slice(0, 10))} · Heldag`
-                : `${fmtFullDate(modal.event.startsAt)} · ${fmtTime(modal.event.startsAt)}–${fmtTime(modal.event.endsAt)}`}
+                : `${fmtFullDate(modal.event.startsAt)} · ${fmtTime(modal.event.startsAt, fixedCalendarTimes)}–${fmtTime(modal.event.endsAt, fixedCalendarTimes)}`}
             </p>
             {modal.event.location && <p className="cal-event-row-meta"><MapPin size={13} /> {modal.event.location}</p>}
             {modal.event.notes && (

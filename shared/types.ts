@@ -20,9 +20,13 @@ export type Account = {
   // Klockslag på todos/rutiner (2026-07-16, Zaidas önskemål efter en resa
   // till Finland). false (standard): tolkas i ENHETENS aktuella tidszon —
   // reser man ändras det visade klockslaget. true: tolkas alltid mot
-  // familjens hemtidszon (Europe/Stockholm, se utils/todoTimeZone.ts) — ett
+  // familjens hemtidszon (Europe/Stockholm, se utils/fixedTimeZone.ts) — ett
   // satt klockslag förblir detsamma oavsett var enheten fysiskt befinner sig.
   fixedTodoTimes?: boolean;
+  // Samma koncept, fast för KALENDERHÄNDELSER — en HELT EGEN, oberoende
+  // inställning (2026-07-30, Zaidas ord: "för dessa kan du vilja ha olika
+  // inställningar för"), inte samma flagga som fixedTodoTimes ovan.
+  fixedCalendarTimes?: boolean;
   // Standard-inköpslista för receptingredienser (2026-07-27, Zaidas önskemål:
   // "en ny lista som heter 'ingredienser från recept'... så det kan fyllas på
   // med text 5 recept om man skickar den till inköpslistan") — väljs i

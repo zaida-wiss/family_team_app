@@ -18,9 +18,10 @@ type Props = {
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
+  fixedCalendarTimes?: boolean;
 };
 
-export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent, onLoadEventsForMonth }: Props) {
+export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent, onLoadEventsForMonth, fixedCalendarTimes }: Props) {
   return (
     <MemberOverview
       currentMember={currentMember}
@@ -38,6 +39,7 @@ export function HomePage({ currentMember, accountName, roles, activeMembers, sel
       onUpdateEvent={onUpdateEvent}
       onDeleteEvent={onDeleteEvent}
       onLoadEventsForMonth={onLoadEventsForMonth}
+      fixedCalendarTimes={fixedCalendarTimes}
     />
   );
 }
