@@ -1,6 +1,8 @@
 import { CalendarModel } from "../db/models/Calendar.js";
 import { MemberModel } from "../db/models/Member.js";
+import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
+import type { CalendarEvent } from "../../../shared/types.js";
 import { CalendarEventPatchSchema, CalendarEventSchema, ImportedCalendarSourceSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { getAllRoles } from "./rolesService.js";
@@ -97,14 +99,60 @@ export async function updateCalendar(calendarId: string, accountId: string, patc
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
-  const { color, name, ownerId, keepAllHistory } = patch as {
-    color?: string; name?: string; ownerId?: string; keepAllHistory?: boolean;
+  const { color, name, ownerId, keepAllHistory, shareAcrossMyAccounts } = patch as {
+    color?: string; name?: string; ownerId?: string; keepAllHistory?: boolean; shareAcrossMyAccounts?: boolean;
   };
   if (color) calendar.color = color;
   if (name) calendar.name = name;
   if (ownerId) calendar.ownerId = ownerId;
   if (keepAllHistory !== undefined) (calendar as any).keepAllHistory = keepAllHistory;
+  if (shareAcrossMyAccounts !== undefined) (calendar as any).shareAcrossMyAccounts = shareAcrossMyAccounts;
   await calendar.save();
+}
+
+// "Mina familjekonton" (2026-07-30, Zaidas önskemål: "alla privata
+// kalendrar som jag skapat skall jag kunna dela med samtliga familjer jag
+// är medlem i") — samma mönster som getCrossAccountFamilyTodos
+// (todosService.ts): mina EGNA, riktiga medlemskap i andra konton (flera
+// Member-poster med samma userId), ingen ny behörighetsmodell. MEDVETET
+// LÄSBART bara (Zaidas val: "bara jag själv" ser den, ingen redigering
+// cross-account i denna omgång) — nästa 30 dagars händelser, samma
+// tidsfönster som redan används för Dela-barn-funktionens kalenderyta
+// (ADR-0024-uppföljningen 2026-07-27).
+export async function getCrossAccountCalendars(callerUserId: string, currentAccountId: string, currentMemberId: string) {
+  const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
+  const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
+
+  const now = new Date();
+  const untilStr = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const fromStr = now.toISOString().slice(0, 10);
+
+  const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
+  const results = [];
+  for (const m of memberDocs) {
+    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    const account = await AccountModel.findOne({ id: m.accountId });
+    if (!account) continue;
+
+    const shared = await CalendarModel.find({
+      accountId: m.accountId,
+      ownerId: m.id,
+      deletedAt: null,
+      shareAcrossMyAccounts: true
+    });
+    if (shared.length === 0) continue;
+
+    const calendarsOut = shared.map((cal) => ({
+      id: cal.id,
+      name: cal.name,
+      color: cal.color,
+      events: (cal.events as unknown as CalendarEvent[])
+        .filter((ev) => !ev.deletedAt && ev.startsAt.slice(0, 10) >= fromStr && ev.startsAt.slice(0, 10) <= untilStr)
+        .map((ev) => decryptEvent(m.accountId as string, ev as unknown as { title: string; notes: string | null }))
+    }));
+    results.push({ accountId: m.accountId, accountName: account.name, calendars: calendarsOut });
+  }
+  return results;
 }
 
 export async function deleteCalendar(calendarId: string, accountId: string, memberId: string | null) {

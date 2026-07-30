@@ -16,6 +16,15 @@ calendarsRouter.post("/", requireAuth, attachAccountId, async (req, res) => {
   res.status(201).json(await calendars.createCalendar({ ...req.body, accountId: req.accountId! }));
 });
 
+// "Mina familjekonton" (2026-07-30) — mina egna kalendrar (shareAcrossMyAccounts)
+// från mina ANDRA konton, läsbara här oavsett vilket konto jag råkar vara
+// inloggad i just nu. Måste registreras FÖRE POST /:id/... nedan gör ingen
+// skillnad (annan HTTP-metod/segmentantal), men följer samma "specifika
+// literal-routes nära toppen"-princip som redan etablerad i filen.
+calendarsRouter.get("/cross-account", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await calendars.getCrossAccountCalendars(req.userId!, req.accountId!, req.memberId!));
+});
+
 calendarsRouter.post("/:id/events", requireAuth, attachAccountId, async (req, res) => {
   await calendars.addEvent(req.params.id, req.accountId!, req.memberId!, req.body);
   res.status(201).json({ ok: true });

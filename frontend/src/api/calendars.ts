@@ -1,4 +1,4 @@
-import type { Calendar, CalDavConnection, IcsSubscription } from "@shared/types";
+import type { Calendar, CalDavConnection, CrossAccountCalendar, IcsSubscription } from "@shared/types";
 import { api, request } from "./client";
 
 // Maskerad API-representation av ett AppleCalDavAccount (2026-07-30) —
@@ -53,11 +53,15 @@ export const calendarsApi = {
       method: "PATCH",
       body: JSON.stringify({ memberId, status })
     }),
-  update: (id: string, patch: { color?: string; name?: string; ownerId?: string; keepAllHistory?: boolean }) =>
+  update: (id: string, patch: { color?: string; name?: string; ownerId?: string; keepAllHistory?: boolean; shareAcrossMyAccounts?: boolean }) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), {
       method: "PATCH",
       body: JSON.stringify(patch)
     }),
+  // "Mina familjekonton" (2026-07-30) — mina egna, shareAcrossMyAccounts-
+  // markerade kalendrar från mina ANDRA konton, läsbara oavsett vilket
+  // konto jag är inloggad i just nu.
+  getCrossAccount: () => request<CrossAccountCalendar[]>(api("calendars/cross-account")),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), { method: "DELETE" }),
   restore: (id: string) =>

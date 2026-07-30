@@ -11,6 +11,7 @@ import { CalendarShareSection } from "./CalendarShareSection";
 import { CalendarCreateCard } from "./CalendarCreateCard";
 import { CalendarManagementCard } from "./CalendarManagementCard";
 import { AppleCalDavAccountsSection } from "./AppleCalDavAccountsSection";
+import { CrossAccountCalendars } from "./CrossAccountCalendars";
 import { CalendarEventForm } from "./CalendarEventForm";
 
 type CalendarPanelProps = {
@@ -33,6 +34,7 @@ type CalendarPanelProps = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
+  onUpdateCalendarShareAcrossMyAccounts: (calendarId: Id, shareAcrossMyAccounts: boolean) => void;
   appleAccounts: AppleCalDavAccountSummary[];
   onRefreshAppleAccounts: () => Promise<AppleCalDavAccountSummary[]>;
   onAddAppleAccount: (accountEmail: string, appSpecificPassword: string) => Promise<AppleCalDavAccountSummary>;
@@ -64,6 +66,7 @@ export function CalendarPanel({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
+  onUpdateCalendarShareAcrossMyAccounts,
   appleAccounts,
   onRefreshAppleAccounts,
   onAddAppleAccount,
@@ -113,6 +116,8 @@ export function CalendarPanel({
         onRemoveAppleAccount={onRemoveAppleAccount}
       />
 
+      <CrossAccountCalendars />
+
       {selectedCalendar && (
         <CalendarManagementCard
           calendars={calendars}
@@ -136,6 +141,7 @@ export function CalendarPanel({
           onRemoveSubscription={onRemoveSubscription}
           onSyncSubscription={onSyncSubscription}
           onUpdateCalendarKeepAllHistory={onUpdateCalendarKeepAllHistory}
+          onUpdateCalendarShareAcrossMyAccounts={onUpdateCalendarShareAcrossMyAccounts}
           appleAccounts={appleAccounts}
           onListCalendarsForAppleAccount={onListCalendarsForAppleAccount}
           onConnectAppleCalDav={onConnectAppleCalDav}

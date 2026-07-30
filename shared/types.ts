@@ -549,10 +549,23 @@ export type Calendar = OwnedSharedResource & {
   name: string;
   color: string;
   keepAllHistory?: boolean;
+  // "Mina familjekonton" (2026-07-30, Zaidas önskemål: "alla privata
+  // kalendrar som jag skapat skall jag kunna dela med samtliga familjer jag
+  // är medlem i") — synlig ENDAST för mig själv i mina ANDRA konton (flera
+  // Member-poster med samma userId), aldrig för andra medlemmar där. Läsbar
+  // (nästa 30 dagar), inte redigerbar cross-account. Rör aldrig delning
+  // inom SAMMA konto (sharedWith ovan, oförändrat).
+  shareAcrossMyAccounts?: boolean;
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
   subscriptions: IcsSubscription[];
   calDavConnections: CalDavConnection[];
+};
+
+export type CrossAccountCalendar = {
+  accountId: Id;
+  accountName: string;
+  calendars: Array<{ id: Id; name: string; color: string; events: CalendarEvent[] }>;
 };
 
 export type EventRecurrence = {

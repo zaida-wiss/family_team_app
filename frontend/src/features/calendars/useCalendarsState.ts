@@ -130,6 +130,13 @@ export function useCalendarsState() {
     );
   }
 
+  function updateCalendarShareAcrossMyAccounts(calendarId: Id, shareAcrossMyAccounts: boolean) {
+    calendarsApi.update(calendarId, { shareAcrossMyAccounts }).catch(console.error);
+    setCalendars((current) =>
+      current.map((cal) => (cal.id !== calendarId ? cal : { ...cal, shareAcrossMyAccounts }))
+    );
+  }
+
   function addCalendarEvent(calendarId: Id, event: AddEventInput, memberId: Id) {
     const newEvent: Calendar["events"][number] = {
       id: `event-${generateId()}`,
@@ -438,6 +445,7 @@ export function useCalendarsState() {
     renameCalendar,
     transferCalendar,
     updateCalendarKeepAllHistory,
+    updateCalendarShareAcrossMyAccounts,
     addCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,

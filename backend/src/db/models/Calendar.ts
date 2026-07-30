@@ -46,6 +46,9 @@ const calendarSchema = new Schema<Calendar>(
     deletedAt: { type: String, default: null },
     deletedBy: { type: String, default: null },
     keepAllHistory: { type: Boolean, default: false },
+    // "Mina familjekonton" (2026-07-30) — synlig bara för samma person i
+    // deras andra konton, se shared/types.ts:s kommentar.
+    shareAcrossMyAccounts: { type: Boolean, default: false },
     events: [
       {
         id: { type: String, required: true },

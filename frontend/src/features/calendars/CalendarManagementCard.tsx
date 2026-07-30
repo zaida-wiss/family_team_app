@@ -32,6 +32,7 @@ type Props = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
+  onUpdateCalendarShareAcrossMyAccounts: (calendarId: Id, shareAcrossMyAccounts: boolean) => void;
   appleAccounts: AppleCalDavAccountSummary[];
   onListCalendarsForAppleAccount: (appleAccountId: Id) => Promise<{ url: string; name: string }[]>;
   onConnectAppleCalDav: (calendarId: Id, appleAccountId: Id, calendarUrl: string) => Promise<void>;
@@ -62,6 +63,7 @@ export function CalendarManagementCard({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
+  onUpdateCalendarShareAcrossMyAccounts,
   appleAccounts,
   onListCalendarsForAppleAccount,
   onConnectAppleCalDav,
@@ -268,6 +270,27 @@ export function CalendarManagementCard({
               {selectedCalendar.keepAllHistory
                 ? "Händelser sparas för alltid — inget raderas automatiskt."
                 : "Händelser äldre än 1 månad raderas automatiskt. Bra för prenumerationer med många händelser."}
+            </small>
+          </span>
+        </label>
+      )}
+
+      {/* "Mina familjekonton" (2026-07-30, Zaidas önskemål: "alla privata
+          kalendrar som jag skapat skall jag kunna dela med samtliga
+          familjer jag är medlem i") — bara kalendrar JAG äger, synligt
+          bara för mig i mina ANDRA konton, aldrig andra medlemmar där. */}
+      {canEdit && (selectedCalendar as Calendar & { ownerId?: string }).ownerId === currentMember.id && (
+        <label className={styles.keepHistoryRow}>
+          <input
+            type="checkbox"
+            checked={selectedCalendar.shareAcrossMyAccounts ?? false}
+            onChange={(e) => onUpdateCalendarShareAcrossMyAccounts(selectedCalendar.id, e.target.checked)}
+          />
+          <span className={styles.keepHistoryText}>
+            <strong>Dela med mina andra familjer</strong>
+            <small>
+              Synlig bara för DIG (samma person), i alla dina andra familjekonton — under "Mina kalendrar i andra
+              familjer". Ingen annan medlem i de familjerna ser den.
             </small>
           </span>
         </label>
