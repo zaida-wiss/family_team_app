@@ -158,7 +158,10 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
     expect(resB.body.exposedToMe[0].access).toBe("view");
   });
 
-  it("skapar en todo tilldelad A:s förälder — B (edit-åtkomst) ser den i getConnectionTodos", async () => {
+  // A skickade inbjudan med access:"view" (A→B, se ovan) — B har alltså bara
+  // VISNINGSÅTKOMST till A:s exponerade medlem. B accepterade med
+  // access:"edit" (B→A) — A har alltså REDIGERINGSÅTKOMST till B:s.
+  it("skapar en todo tilldelad A:s förälder — B (view-åtkomst) ser den i getConnectionTodos", async () => {
     exposedTodoId = `todo-famconn-${crypto.randomUUID()}`;
     await request(app)
       .post("/api/todos")
@@ -181,42 +184,27 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
       (t) => t.accountId === familyA.accountId
     );
     expect(thread).toBeTruthy();
-    expect(thread!.access).toBe("edit");
+    expect(thread!.access).toBe("view");
     expect(thread!.todos.some((t) => t.id === exposedTodoId)).toBe(true);
   });
 
-  it("A (view-åtkomst till B) ser INGA av B:s todos (B har inte skapat/tilldelat något ännu, men även om B hade — A:s access är view och B exponerar bara sig själv oavsett)", async () => {
+  it("A (edit-åtkomst till B) ser B:s tråd med edit-access, även innan B skapat några todos", async () => {
     const res = await request(app)
       .get("/api/todos/connections")
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId);
     const thread = (res.body as Array<{ accountId: string; access: string }>).find((t) => t.accountId === familyB.accountId);
-    expect(thread?.access).toBe("view");
+    expect(thread?.access).toBe("edit");
   });
 
-  it("B (edit) kan slutföra, godkänna todon i A:s konto via connection-vägen", async () => {
-    const complete = await request(app)
-      .patch(`/api/todos/connections/${familyA.accountId}/${exposedTodoId}/complete`)
-      .set("Authorization", `Bearer ${familyB.accessToken}`)
-      .set("x-member-id", familyB.parentMemberId)
-      .send({ elapsedMs: null });
-    expect(complete.status).toBe(200);
-
-    const approve = await request(app)
-      .patch(`/api/todos/connections/${familyA.accountId}/${exposedTodoId}/approve`)
-      .set("Authorization", `Bearer ${familyB.accessToken}`)
-      .set("x-member-id", familyB.parentMemberId);
-    expect(approve.status).toBe(200);
-  });
-
-  it("A (bara view-åtkomst till B) nekas att slutföra en todo i B:s konto", async () => {
-    const otherTodoId = `todo-famconn-b-${crypto.randomUUID()}`;
+  it("A (edit) kan slutföra, godkänna en todo i B:s konto via connection-vägen", async () => {
+    const todoInB = `todo-famconn-b-${crypto.randomUUID()}`;
     await request(app)
       .post("/api/todos")
       .set("Authorization", `Bearer ${familyB.accessToken}`)
       .set("x-member-id", familyB.parentMemberId)
       .send({
-        id: otherTodoId,
+        id: todoInB,
         title: "Diska",
         createdBy: familyB.parentMemberId,
         assignedTo: familyB.parentMemberId,
@@ -224,9 +212,24 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
       });
 
     const complete = await request(app)
-      .patch(`/api/todos/connections/${familyB.accountId}/${otherTodoId}/complete`)
+      .patch(`/api/todos/connections/${familyB.accountId}/${todoInB}/complete`)
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId)
+      .send({ elapsedMs: null });
+    expect(complete.status).toBe(200);
+
+    const approve = await request(app)
+      .patch(`/api/todos/connections/${familyB.accountId}/${todoInB}/approve`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    expect(approve.status).toBe(200);
+  });
+
+  it("B (bara view-åtkomst till A) nekas att slutföra den tidigare skapade todon i A:s konto", async () => {
+    const complete = await request(app)
+      .patch(`/api/todos/connections/${familyA.accountId}/${exposedTodoId}/complete`)
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId)
       .send({ elapsedMs: null });
     expect(complete.status).toBe(403);
   });
@@ -242,7 +245,7 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
       .post("/api/shopping")
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId)
-      .send({ id: `shop-famconn-${crypto.randomUUID()}`, name: "Veckohandling", icon: null, items: [] });
+      .send({ id: `shop-famconn-${crypto.randomUUID()}`, name: "Veckohandling", color: "#ffffff", icon: null, items: [] });
 
     const recipesRes = await request(app)
       .get("/api/recipes/connections")
@@ -273,6 +276,7 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId)
       .send({
+        id: `role-${crypto.randomUUID()}`,
         name: "Utan behörighet",
         isChildRole: false,
         permissions: Object.fromEntries(
