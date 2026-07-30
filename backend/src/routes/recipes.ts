@@ -2,12 +2,20 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as recipes from "../services/recipesService.js";
+import * as familyConnections from "../services/familyConnectionsService.js";
 
 export const recipesRouter = Router();
 recipesRouter.use(requireAuth, attachAccountId);
 
 recipesRouter.get("/", async (req, res) => {
   res.json(await recipes.getAllRecipes(req.accountId!));
+});
+
+// Familjeanslutningar (ADR-0030, 2026-07-29) — läsning av anslutna familjers
+// receptbok. Måste registreras FÖRE PATCH/DELETE-rutterna med /:id nedan,
+// annars matchar Express "connections" literalt som ett recept-id.
+recipesRouter.get("/connections", async (req, res) => {
+  res.json(await familyConnections.getConnectionRecipes(req.accountId!, req.memberId ?? null));
 });
 
 recipesRouter.post("/", async (req, res) => {

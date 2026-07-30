@@ -3,12 +3,20 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as shopping from "../services/shoppingService.js";
 import * as shoppingShares from "../services/shoppingSharesService.js";
+import * as familyConnections from "../services/familyConnectionsService.js";
 
 export const shoppingRouter = Router();
 shoppingRouter.use(requireAuth, attachAccountId);
 
 shoppingRouter.get("/", async (req, res) => {
   res.json(await shopping.getAllLists(req.accountId!));
+});
+
+// Familjeanslutningar (ADR-0030, 2026-07-29) — läsning av anslutna
+// familjers inköpslistor. Måste registreras FÖRE PATCH/DELETE-rutterna med
+// /:id nedan, av samma skäl som /shared-lists ovan.
+shoppingRouter.get("/connections", async (req, res) => {
+  res.json(await familyConnections.getConnectionShoppingLists(req.accountId!, req.memberId ?? null));
 });
 
 // Delning mellan FAMILJER (ADR-0026) — rör INTE den vanliga kontoscopade

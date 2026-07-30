@@ -6,6 +6,7 @@ import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { SharedChildrenThreads } from "./SharedChildrenThreads";
 import { CrossAccountFamilyThreads } from "./CrossAccountFamilyThreads";
+import { ConnectionTodosThreads } from "./ConnectionTodosThreads";
 import { getAssigneeName, getVisibleTodos, isDueWithinRange, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
@@ -262,6 +263,11 @@ export function TodosView({
             radad tråd-rad, visas bara om jag faktiskt har fler konton och
             inte dolt dem alla i Inställningar. */}
         {todoViewMode === "thread" && <CrossAccountFamilyThreads />}
+
+        {/* Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen
+            ("bara familjemedlemmar"), inte ett riktigt medlemskap. Egen
+            radad tråd-rad, visas bara om en accepterad anslutning finns. */}
+        {todoViewMode === "thread" && <ConnectionTodosThreads />}
 
         {todoViewMode === "list" && rangeFilteredTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>

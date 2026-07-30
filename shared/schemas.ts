@@ -473,6 +473,11 @@ export const ApproveRewardBodySchema = z.object({
 
 // Medaljer/Rekord (Sprint 4 S1)
 
+// Överlåt familjekontots ägarskap (2026-07-29) — se accountsService.ts.
+export const TransferAccountOwnershipBodySchema = z.object({
+  newOwnerMemberId: IdSchema
+});
+
 export const CreateTimedTaskBodySchema = z.object({
   title: z.string().min(1, "Titel krävs"),
   symbol: z.string().nullable().optional(),

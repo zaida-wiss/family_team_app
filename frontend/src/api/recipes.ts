@@ -12,8 +12,17 @@ type RecipeBody = {
   steps: { text: string; timedMinutes: number | null }[];
 };
 
+// Familjeanslutningar (ADR-0030, 2026-07-29) — anslutna familjers receptbok,
+// läsning oavsett access-nivå (recept är kontobrett, inte medlems-scopat).
+export type ConnectionRecipes = {
+  accountId: string;
+  accountName: string;
+  recipes: Recipe[];
+};
+
 export const recipesApi = {
   getAll: () => request<Recipe[]>(api("recipes")),
+  getConnectionRecipes: () => request<ConnectionRecipes[]>(api("recipes/connections")),
   create: (body: RecipeBody) =>
     request<Recipe>(api("recipes"), { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: RecipeBody) =>

@@ -21,6 +21,9 @@ import { decryptEvent } from "./calendarsService.js";
 import { decryptField, decryptNullable } from "../utils/fieldEncryption.js";
 import { logger } from "../utils/logger.js";
 import type { PermissionKey } from "../../../shared/types.js";
+import { getAllRoles } from "./rolesService.js";
+import { hasPermission } from "../../../shared/permissions.js";
+import { TransferAccountOwnershipBodySchema } from "../../../shared/schemas.js";
 
 const setupSchema = z.object({
   name: z.string().min(1, "Kontonamn krävs").max(80)
@@ -276,6 +279,61 @@ export async function deleteAccount(accountId: string, memberId: string | null |
   await account.save();
 
   logger.info({ accountId, initiatedBy: memberId }, "Konto markerat för radering (GDPR artikel 17)");
+}
+
+// Överlåt ägarskapet (Account.createdBy) till en annan familjemedlem
+// (2026-07-29, Zaidas önskemål: "välja att överlåta den till någon annan
+// familjemedlem") — krävs INNAN en skapare kan gå ur familjen
+// (membersService.leaveAccount). Kräver canManageMembers (samma
+// admin-mönster som requireManager i membersService.ts), inte striktare
+// creator-only — en admin ska kunna städa upp ägarskapet även om den
+// ursprungliga skaparen redan är borta/otillgänglig. Kan inte överlåtas till
+// ett barn (ett barnkonto kan inte administrera familjen).
+export async function transferAccountOwnership(userId: string, accountId: string, body: unknown) {
+  const { newOwnerMemberId } = validate(TransferAccountOwnershipBodySchema, body);
+  const caller = await MemberModel.findOne({ userId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Du är inte medlem i det kontot");
+  }
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(caller, roles, "canManageMembers")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const newOwner = await MemberModel.findOne({ id: newOwnerMemberId, accountId, deletedAt: null });
+  if (!newOwner) {
+    throw new AppError(404, "Medlemmen hittades inte i det här kontot");
+  }
+  if (newOwner.isChild) {
+    throw new AppError(400, "Ett barn kan inte äga familjekontot");
+  }
+  const account = await AccountModel.findOne({ id: accountId });
+  if (!account) {
+    throw new AppError(404, "Konto hittades inte");
+  }
+  account.createdBy = newOwner.id;
+  await account.save();
+  logger.info({ accountId, from: caller.id, to: newOwner.id }, "Familjekontots ägarskap överlåtet");
+}
+
+// Radera en familj JAG SKAPAT (2026-07-29, Zaidas önskemål: "radera familjer
+// som jag skapat"), oavsett vilket konto som är AKTIVT just nu — gated
+// striktare än transferAccountOwnership ovan (bara den nuvarande skaparen,
+// inte vilken admin som helst) eftersom radering är oåterkallelig.
+// Återanvänder den befintliga två-stegs GDPR-raderingen (deleteAccount
+// nedan, ADR-0007) oförändrad.
+export async function deleteMyCreatedAccount(userId: string, accountId: string) {
+  const caller = await MemberModel.findOne({ userId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Du är inte medlem i det kontot");
+  }
+  const account = await AccountModel.findOne({ id: accountId });
+  if (!account) {
+    throw new AppError(404, "Konto hittades inte");
+  }
+  if (account.createdBy !== caller.id) {
+    throw new AppError(403, "Bara den som skapade familjen kan radera den");
+  }
+  await deleteAccount(accountId, caller.id);
 }
 
 async function purgeAccount(accountId: string) {

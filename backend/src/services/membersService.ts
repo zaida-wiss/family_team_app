@@ -24,13 +24,73 @@ export async function getMyMemberships(userId: string) {
   const accountIds = [...new Set(memberDocs.map((m) => m.accountId).filter((id): id is string => !!id))];
   const accounts = await AccountModel.find({ id: { $in: accountIds } });
   const accountNameById = new Map(accounts.map((a) => [a.id, a.name]));
+  const createdByAccountId = new Map(accounts.map((a) => [a.id, a.createdBy]));
+  // memberCount tillagd 2026-07-29 (radera/överlåt/gå ur familj) — behövs
+  // för att avgöra om jag är den SISTA medlemmen (får då inte gå ur, se
+  // leaveAccount nedan).
+  const memberCounts = await MemberModel.aggregate<{ _id: string; count: number }>([
+    { $match: { accountId: { $in: accountIds }, deletedAt: null } },
+    { $group: { _id: "$accountId", count: { $sum: 1 } } }
+  ]);
+  const memberCountByAccountId = new Map(memberCounts.map((row) => [row._id, row.count]));
   return memberDocs
     .filter((m) => m.accountId)
     .map((m) => ({
       accountId: m.accountId as string,
       accountName: accountNameById.get(m.accountId as string) ?? "Okänt konto",
-      memberId: m.id
+      memberId: m.id,
+      isCreator: createdByAccountId.get(m.accountId as string) === m.id,
+      memberCount: memberCountByAccountId.get(m.accountId as string) ?? 1
     }));
+}
+
+// Se vilka som ingår i ett av mina egna konton (2026-07-29, Zaidas önskemål:
+// "se vilka som ingår i den") — gated på att anroparen faktiskt HAR ett eget,
+// levande medlemskap i det kontot (userId-uppslag, samma mönster som
+// childTransferService.ts/getCrossAccountFamilyTodos — inte via req.accountId/
+// x-member-id, eftersom det här kontot inte nödvändigtvis är det just nu
+// AKTIVA kontot).
+export async function getMembersOfMyAccount(userId: string, accountId: string) {
+  const caller = await MemberModel.findOne({ userId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Du är inte medlem i det kontot");
+  }
+  const members = await MemberModel.find({ accountId, deletedAt: null });
+  return members.map((m) => ({
+    id: m.id,
+    name: m.name,
+    avatarUrl: m.avatarUrl ?? null,
+    color: m.color ?? null,
+    isChild: !!m.isChild
+  }));
+}
+
+// Gå ur en familj jag är medlem i, men inte har skapat (2026-07-29, Zaidas
+// önskemål: "gå ur familjen"). Mjuk radering av MIN EGEN Member-post —
+// self-service, kräver ingen canManageMembers-behörighet (jag rör bara min
+// egen post). Två spärrar: den som SKAPADE kontot måste överlåta det först
+// (annars blir kontot ägarlöst), och den SISTA kvarvarande medlemmen får
+// inte gå ur (skulle lämna kontot helt utan medlemmar) — radera familjen
+// istället i det fallet.
+export async function leaveAccount(userId: string, accountId: string) {
+  const caller = await MemberModel.findOne({ userId, accountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Du är inte medlem i det kontot");
+  }
+  const account = await AccountModel.findOne({ id: accountId });
+  if (!account) {
+    throw new AppError(404, "Konto hittades inte");
+  }
+  if (account.createdBy === caller.id) {
+    throw new AppError(400, "Du skapade den här familjen — överlåt den till någon annan innan du kan gå ur");
+  }
+  const remainingCount = await MemberModel.countDocuments({ accountId, deletedAt: null });
+  if (remainingCount <= 1) {
+    throw new AppError(400, "Du är den sista medlemmen i familjen — radera familjen istället");
+  }
+  caller.deletedAt = new Date().toISOString();
+  caller.deletedBy = caller.id;
+  await caller.save();
 }
 
 async function requireManager(accountId: string, memberId: string | null) {

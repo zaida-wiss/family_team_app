@@ -106,6 +106,46 @@ todosRouter.patch(
   }
 );
 
+// Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
+// familjemedlemmar", inte kontoåtkomst) — måste registreras FÖRE
+// PATCH-rutterna med /:id nedan, av samma skäl som /shared-children och
+// /family-across-accounts ovan.
+todosRouter.get("/connections", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await todos.getConnectionTodos(req.accountId!, req.memberId ?? null));
+});
+
+todosRouter.patch(
+  "/connections/:targetAccountId/:id/complete",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
+    await todos.completeConnectionTodo(req.params.targetAccountId, req.params.id, req.accountId!, req.memberId!, elapsedMs ?? null);
+    res.json({ ok: true });
+  }
+);
+
+todosRouter.patch(
+  "/connections/:targetAccountId/:id/approve",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    await todos.approveConnectionTodo(req.params.targetAccountId, req.params.id, req.accountId!, req.memberId!);
+    res.json({ ok: true });
+  }
+);
+
+todosRouter.patch(
+  "/connections/:targetAccountId/:id/reject",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    const { reason } = RejectTodoBodySchema.parse(req.body ?? {});
+    await todos.rejectConnectionTodo(req.params.targetAccountId, req.params.id, req.accountId!, req.memberId!, reason ?? null);
+    res.json({ ok: true });
+  }
+);
+
 todosRouter.get("/events", requireAuth, async (_req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",

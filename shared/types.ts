@@ -29,6 +29,59 @@ export type Account = {
   // Inställningar → Recept, null = använd/skapa den namngivna standardlistan
   // istället (se AddToShoppingListModal.tsx).
   defaultRecipeShoppingListId?: Id | null;
+  // Familjeanslutningar (ADR-0030, 2026-07-29, Zaidas önskemål: "jag vill
+  // kunna bjuda in andra vuxna med barn från andra familjer... den som får
+  // inbjudan skall kunna välja vilka familjemedlemmar som skall vara med").
+  // Symmetriskt, TVÅ OBEROENDE HALVOR — mitt kontos array beskriver bara MIN
+  // EGEN exponering till motparten, aldrig deras. Sida vid sida med Dela
+  // barn (ADR-0024/0029), inte en ersättning.
+  familyConnections?: FamilyConnection[];
+};
+
+// Omskopat 2026-07-29 (Zaidas rättelse: "det är endast hemvyn som skall gå
+// att växla mellan olika familjer. Din kalender, todolista, barnvy,
+// inköpslista, recept och inställningar till dessa skall vara oförändrat.
+// Däremot läggs det till uppgifter, recept, inköpslistor som tillhör de
+// familjer du valt att visa") — en FamilyConnection är den LÄTTA formen
+// ("bara familjemedlemmar"): ger INTE kontoåtkomst, syns INTE i
+// Familjemedlemmar/Hem-växlaren/Barnvyn, ändrar INTE kalendern (som redan
+// har sin egen per-kalender-delning). Den lägger BARA till separata,
+// extra sektioner i Todos/Recept/Inköpslistor-panelerna för de exponerade
+// medlemmarnas data. Den TUNGA formen ("hela familjer") är redan löst sedan
+// tidigare via det vanliga inbjudan+roll-systemet (en person blir en RIKTIG
+// Member i det andra kontot, med en roll admin själv väljer — "jag kan vara
+// syster i en familj, förälder i en annan och moster i en tredje", se Mina
+// familjekonton/getMyMemberships) — inget nytt behövs där.
+export type FamilyConnectionScope = {
+  todos: boolean;
+  recipes: boolean;
+  shoppingLists: boolean;
+};
+
+export const FULL_FAMILY_CONNECTION_SCOPE: FamilyConnectionScope = {
+  todos: true,
+  recipes: true,
+  shoppingLists: true
+};
+
+export type FamilyConnection = {
+  id: Id;
+  otherAccountId: Id;
+  status: "pending" | "accepted";
+  invitedBy: Id;
+  createdAt: string;
+  // VILKA av MINA EGNA medlemmar jag exponerar till den andra familjen —
+  // valt av mig, oberoende av vad den andra sidan väljer att exponera
+  // (Zaidas krav: "olika familjekonstellationer"). Gäller bara todos
+  // (som är person-tilldelade) — recept/inköpslistor är kontobreda och
+  // exponeras som helhet när dataScope tillåter det, oavsett
+  // exposedMemberIds.
+  exposedMemberIds: Id[];
+  access: AccessLevel;
+  // Hur mycket man vill visa (Zaidas tillägg: "hur mycket man vill visa
+  // till familjen, eller om man mest vill ha information") — standard är
+  // alla tre ikryssade.
+  dataScope: FamilyConnectionScope;
 };
 
 export type AppPanel =
@@ -49,10 +102,25 @@ export type TodoViewMode = "list" | "thread";
 export type TextSize = "normal" | "large" | "extra-large";
 
 // Mina familjekonton (2026-07-25) — se Member.hiddenCrossAccountIds.
+// isCreator/memberCount tillagda 2026-07-29 (Zaidas önskemål: radera en
+// familj jag skapat, se vilka som ingår, överlåta ägarskap, gå ur).
 export type MyMembership = {
   accountId: Id;
   accountName: string;
   memberId: Id;
+  isCreator: boolean;
+  memberCount: number;
+};
+
+// En medlem i ett av mina egna konton, för listan i "Mina familjekonton"
+// (2026-07-29) — bara det som behövs för att välja en ny ägare eller se
+// vilka som ingår, inte en fullständig Member.
+export type MembershipMemberSummary = {
+  id: Id;
+  name: string;
+  avatarUrl: string | null;
+  color: string | null;
+  isChild: boolean;
 };
 
 export type CrossAccountFamilyThread = {

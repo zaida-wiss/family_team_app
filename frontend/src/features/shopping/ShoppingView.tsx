@@ -2,6 +2,7 @@ import { Combine, GripVertical, Pencil, Plus, Share2, ShoppingCart, Trash2, X } 
 import { useRef, useState } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { SharedShoppingLists } from "./SharedShoppingLists";
+import { ConnectionShoppingListsSection } from "./ConnectionShoppingListsSection";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import { readCache, writeCache } from "../../utils/localCache";
 import {
@@ -573,6 +574,7 @@ export function ShoppingView({
       })}
 
       <SharedShoppingLists currentMember={currentMember} />
+      <ConnectionShoppingListsSection />
     </div>
   );
 }

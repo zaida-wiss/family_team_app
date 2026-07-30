@@ -23,8 +23,17 @@ export type ExternallySharedShoppingList = {
   access: AccessLevel;
 };
 
+// Familjeanslutningar (ADR-0030, 2026-07-29) — anslutna familjers
+// inköpslistor, läsning oavsett access-nivå (kontobrett, inte medlems-scopat).
+export type ConnectionShoppingLists = {
+  accountId: string;
+  accountName: string;
+  lists: ShoppingList[];
+};
+
 export const shoppingApi = {
   getAll: () => request<ShoppingList[]>(api("shopping")),
+  getConnectionLists: () => request<ConnectionShoppingLists[]>(api("shopping/connections")),
   create: (list: ShoppingList) =>
     request<{ id: string }>(api("shopping"), { method: "POST", body: JSON.stringify(list) }),
   addItem: (listId: string, item: ShoppingList["items"][number]) =>

@@ -7,6 +7,14 @@ import type {
   TimedTaskWithBest,
   Todo
 } from "@shared/types";
+
+// Familjeanslutningar (ADR-0030, 2026-07-29).
+export type ConnectionTodosThread = {
+  accountId: string;
+  accountName: string;
+  access: AccessLevel;
+  todos: Todo[];
+};
 import { api, request, subscribeToServerEvents } from "./client";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024) —
@@ -118,6 +126,25 @@ export const todosApi = {
     request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
+    }),
+  // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
+  // familjemedlemmar"), skiljer sig från getSharedChildren (ett helt barn)
+  // och getFamilyAcrossAccounts (ett riktigt medlemskap) ovan.
+  getConnectionTodos: () => request<ConnectionTodosThread[]>(api("todos/connections")),
+  completeConnectionTodo: (targetAccountId: string, id: string, elapsedMs: number | null = null) =>
+    request<{ ok: boolean }>(api(`todos/connections/${targetAccountId}/${id}/complete`), {
+      method: "PATCH",
+      body: JSON.stringify({ elapsedMs })
+    }),
+  approveConnectionTodo: (targetAccountId: string, id: string) =>
+    request<{ ok: boolean }>(api(`todos/connections/${targetAccountId}/${id}/approve`), {
+      method: "PATCH",
+      body: JSON.stringify({})
+    }),
+  rejectConnectionTodo: (targetAccountId: string, id: string, reason: string | null) =>
+    request<{ ok: boolean }>(api(`todos/connections/${targetAccountId}/${id}/reject`), {
+      method: "PATCH",
+      body: JSON.stringify({ reason })
     }),
   subscribeToChanges: (onChange: () => void) => {
     let initialConnect = true;

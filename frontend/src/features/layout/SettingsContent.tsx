@@ -16,6 +16,7 @@ import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
 import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
+import { FamilyConnectionSettings } from "../accounts/FamilyConnectionSettings";
 import { HouseholdSecretsSettings } from "../settings/HouseholdSecretsSettings";
 import { HouseholdPinGate } from "../settings/HouseholdPinGate";
 import { useHouseholdPin } from "../settings/useHouseholdPin";
@@ -273,9 +274,19 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
             <MyMembershipsSettings
               currentMember={currentMember}
               onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
+              onLogout={onLogout}
             />
           )
         },
+        ...(canManageMembers
+          ? [
+              {
+                id: "family-connections",
+                label: "Familjeanslutningar",
+                content: <FamilyConnectionSettings accountId={activeAccount.id} members={members} />
+              }
+            ]
+          : []),
         ...(canManageRoles
           ? [
               {

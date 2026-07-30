@@ -63,6 +63,12 @@ export async function mockDataAPIs(page: Page) {
   // default-stubb så ett test utan egen mock inte faller igenom till ett
   // riktigt, ej mockat nätverksanrop.
   await page.route("**/api/todos/shared-children", (route) => route.fulfill({ json: [] }));
+  // Familjeanslutningar (ADR-0030, 2026-07-29) — hämtas globalt av
+  // ConnectionTodosThreads/ConnectionRecipesSection/ConnectionShoppingListsSection,
+  // default-stubbar så ett test utan egen mock inte faller igenom till ett
+  // riktigt, ej mockat nätverksanrop.
+  await page.route("**/api/todos/connections", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/recipes/connections", (route) => route.fulfill({ json: [] }));
   // Vuxenvyns personliga kategori-trådar (2026-07-05) — hämtas globalt av
   // useShellState oavsett aktiv panel, precis som timed-tasks/reward-shop.
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
@@ -72,6 +78,11 @@ export async function mockDataAPIs(page: Page) {
   await page.route("**/api/todo-templates/categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
+  // Familjeanslutningar (ADR-0030) — registrerad EFTER **/api/shopping**
+  // ovan (Playwright kör senast registrerade matchning först), annars vinner
+  // aldrig den bredare stubben ändå eftersom bägge returnerar en tom lista —
+  // men följer samma "specifik EFTER bred"-konvention som resten av filen.
+  await page.route("**/api/shopping/connections", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
   await page.route(/\/api\/reward-shop$/, (route) =>

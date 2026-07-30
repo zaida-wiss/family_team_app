@@ -1,4 +1,4 @@
-import type { AccessLevel, Member, MyMembership } from "@shared/types";
+import type { AccessLevel, Member, MembershipMemberSummary, MyMembership } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
 // memberName/accountName läggs på server-side (2026-07-28, live uppslag,
@@ -38,8 +38,12 @@ export type ChildShareCandidate = {
 
 export const membersApi = {
   getAll: () => request<Member[]>(api("members")),
-  // Mina familjekonton (2026-07-25).
+  // Mina familjekonton (2026-07-25, utökad 2026-07-29 med se/gå ur).
   getMyMemberships: () => request<MyMembership[]>(api("members/my-memberships")),
+  getMembershipMembers: (accountId: string) =>
+    request<MembershipMemberSummary[]>(api(`members/my-memberships/${accountId}/members`)),
+  leaveMembership: (accountId: string) =>
+    request<{ ok: boolean }>(api(`members/my-memberships/${accountId}/leave`), { method: "POST" }),
   create: (member: Member) =>
     request<{ id: string }>(api("members"), { method: "POST", body: JSON.stringify(member) }),
   update: (id: string, patch: Partial<Member>) =>

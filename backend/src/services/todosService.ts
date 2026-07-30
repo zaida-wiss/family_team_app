@@ -21,6 +21,7 @@ import type { CalendarEvent, Member, Role, Todo } from "../../../shared/types.js
 import { getAllCalendars } from "./calendarsService.js";
 import { getPurchasedRewardsForMember } from "./rewardShopService.js";
 import { getAllTimedTasks } from "./timedTasksService.js";
+import { findAcceptedConnectionFrom } from "./familyConnectionsService.js";
 
 // Servern litade tidigare bara på att frontend gömde knapparna bakom
 // canCompleteTodo/hasPermission(..., "canApproveTodos") — vem som helst
@@ -393,6 +394,121 @@ export async function completeSharedChildTodo(
     }
   }
 
+  await todo.save();
+  broadcastTodosChanged();
+}
+
+// Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
+// familjemedlemmar"), inte kontoåtkomst/medlemskap. Mirror av
+// getSharedChildrenData/completeSharedChildTodo-mönstret ovan, men
+// generaliserat till VILKA exponerade medlemmar som helst (inte bara ett
+// barn) och till FLERA konton samtidigt (findAcceptedConnectionFrom, en
+// post per konto som exponerar till mig).
+export async function getConnectionTodos(callerAccountId: string, callerMemberId: string | null) {
+  await requireMember(callerMemberId, callerAccountId);
+  const accountsExposingToMe = await AccountModel.find({
+    familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
+  });
+
+  const results = [];
+  for (const account of accountsExposingToMe) {
+    const conn = findAcceptedConnectionFrom(callerAccountId, account);
+    if (!conn || !conn.dataScope.todos || conn.exposedMemberIds.length === 0) continue;
+    const accountTodos = await getAllTodos(account.id);
+    const exposedSet = new Set(conn.exposedMemberIds);
+    const todos = accountTodos.filter(
+      (t) => t.assignedTo !== null && exposedSet.has(t.assignedTo) && t.deletedAt === null && t.recurrence.type === "none"
+    );
+    results.push({ accountId: account.id, accountName: account.name, access: conn.access, todos });
+  }
+  return results;
+}
+
+async function requireEditableConnectionTodo(targetAccountId: string, callerAccountId: string, callerMemberId: string) {
+  await requireMember(callerMemberId, callerAccountId);
+  const targetAccount = await AccountModel.findOne({ id: targetAccountId });
+  if (!targetAccount) {
+    throw new AppError(404, "Kontot hittades inte");
+  }
+  const conn = findAcceptedConnectionFrom(callerAccountId, targetAccount);
+  if (!conn || !conn.dataScope.todos || conn.access !== "edit") {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return conn;
+}
+
+export async function completeConnectionTodo(
+  targetAccountId: string,
+  todoId: string,
+  callerAccountId: string,
+  callerMemberId: string,
+  elapsedMs: number | null
+) {
+  const conn = await requireEditableConnectionTodo(targetAccountId, callerAccountId, callerMemberId);
+  const todo = await TodoModel.findOne({ id: todoId, accountId: targetAccountId });
+  if (!todo || !todo.assignedTo || !conn.exposedMemberIds.includes(todo.assignedTo)) {
+    throw new AppError(404, "Todo hittades inte");
+  }
+  // Anropas i den ANDRA familjens konto, med en riktig medlem DÄR (samma
+  // väg som completeCrossAccountFamilyTodo) — hittar min egen medlemspost
+  // om jag råkar vara medlem där också, annars finns ingen sådan väg för en
+  // ren FamilyConnection (jag är inte medlem där) och completeTodo måste
+  // därför köras med den TILLDELADE medlemmens egen identitet, samma mönster
+  // som completeSharedChildTodo redan etablerat för barn.
+  await completeTodo(todoId, targetAccountId, todo.assignedTo, elapsedMs);
+}
+
+export async function approveConnectionTodo(
+  targetAccountId: string,
+  todoId: string,
+  callerAccountId: string,
+  callerMemberId: string
+) {
+  const conn = await requireEditableConnectionTodo(targetAccountId, callerAccountId, callerMemberId);
+  const todo = await TodoModel.findOne({ id: todoId, accountId: targetAccountId });
+  if (!todo || !todo.assignedTo || !conn.exposedMemberIds.includes(todo.assignedTo) || todo.status !== "done") {
+    throw new AppError(404, "Todo hittades inte eller är inte done");
+  }
+  todo.status = "approved";
+  todo.approvedBy = callerMemberId;
+  todo.approvedAt = new Date().toISOString();
+  await todo.save();
+  if (todo.starValue) {
+    await MemberModel.updateOne({ id: todo.assignedTo }, { $inc: { approvedStars: todo.starValue } });
+    broadcastMembersChanged();
+  }
+  broadcastTodosChanged();
+}
+
+export async function rejectConnectionTodo(
+  targetAccountId: string,
+  todoId: string,
+  callerAccountId: string,
+  callerMemberId: string,
+  reason: string | null
+) {
+  const conn = await requireEditableConnectionTodo(targetAccountId, callerAccountId, callerMemberId);
+  const todo = await TodoModel.findOne({ id: todoId, accountId: targetAccountId });
+  if (!todo || !todo.assignedTo || !conn.exposedMemberIds.includes(todo.assignedTo) || todo.status !== "done") {
+    throw new AppError(404, "Todo hittades inte eller är inte done");
+  }
+  const encryptedReason = encryptNullable(targetAccountId, reason) ?? null;
+  if (canRetryRejectedTodo({ expiresAt: todo.expiresAt })) {
+    todo.status = "pending";
+    todo.completedAt = null;
+    todo.approvedBy = null;
+    todo.approvedAt = null;
+    todo.rejectedBy = null;
+    todo.rejectedAt = null;
+    todo.rejectedReason = encryptedReason;
+    await todo.save();
+    broadcastTodosChanged();
+    return;
+  }
+  todo.status = "rejected";
+  todo.rejectedBy = callerMemberId;
+  todo.rejectedAt = new Date().toISOString();
+  todo.rejectedReason = encryptedReason;
   await todo.save();
   broadcastTodosChanged();
 }

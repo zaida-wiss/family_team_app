@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { membersApi, todosApi } from "../../api";
-import type { CrossAccountFamilyThread, Id, MyMembership } from "@shared/types";
+import { accountsApi, membersApi, todosApi } from "../../api";
+import type { CrossAccountFamilyThread, Id, MembershipMemberSummary, MyMembership } from "@shared/types";
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
 // familjer du är med i... kunna avmarkera dessa när de inte används...
@@ -46,10 +46,17 @@ export function useCrossAccountFamilyTodos() {
 
 export function useMyMemberships(currentMemberId: Id, hiddenCrossAccountIds: Id[], onUpdateHidden: (memberId: Id, hiddenCrossAccountIds: Id[]) => void) {
   const [memberships, setMemberships] = useState<MyMembership[]>([]);
+  // Radera/överlåt/gå ur (2026-07-29) — medlemslistan per konto hämtas bara
+  // on-demand (när raden fälls ut i UI:t), cachas här per accountId.
+  const [membersByAccount, setMembersByAccount] = useState<Record<Id, MembershipMemberSummary[]>>({});
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     membersApi.getMyMemberships().then(setMemberships).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   function toggleAccountVisible(accountId: Id, visible: boolean) {
     const hidden = new Set(hiddenCrossAccountIds);
@@ -61,5 +68,34 @@ export function useMyMemberships(currentMemberId: Id, hiddenCrossAccountIds: Id[
     onUpdateHidden(currentMemberId, [...hidden]);
   }
 
-  return { memberships, toggleAccountVisible };
+  async function loadMembers(accountId: Id) {
+    const list = await membersApi.getMembershipMembers(accountId);
+    setMembersByAccount((current) => ({ ...current, [accountId]: list }));
+    return list;
+  }
+
+  async function leaveAccount(accountId: Id) {
+    await membersApi.leaveMembership(accountId);
+    refresh();
+  }
+
+  async function transferOwnership(accountId: Id, newOwnerMemberId: Id) {
+    await accountsApi.transferOwnership(accountId, newOwnerMemberId);
+    refresh();
+  }
+
+  async function deleteCreatedAccount(accountId: Id) {
+    await accountsApi.deleteAsCreator(accountId);
+    refresh();
+  }
+
+  return {
+    memberships,
+    toggleAccountVisible,
+    membersByAccount,
+    loadMembers,
+    leaveAccount,
+    transferOwnership,
+    deleteCreatedAccount
+  };
 }
