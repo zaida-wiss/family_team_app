@@ -12,7 +12,14 @@ const calendarSettingsSchema = new Schema({
 const familyConnectionScopeSchema = new Schema({
   todos: { type: Boolean, default: true },
   recipes: { type: Boolean, default: true },
-  shoppingLists: { type: Boolean, default: true }
+  shoppingLists: { type: Boolean, default: true },
+  // Tillagd 2026-07-30 (ADR-0030-tillägg) — MISSADES här första gången
+  // trots kommentaren ovan om att undvika exakt det (todoThreadGap-
+  // incidenten, 2026-07-28): dataScope.calendars sparades tyst som
+  // undefined (Mongoose strict-läge stripper okända subdokument-fält),
+  // vilket gjorde `!conn.dataScope.calendars` alltid sant och dolde varje
+  // delad kalender. Fångades av familyConnectionCalendars.integration.test.ts i CI.
+  calendars: { type: Boolean, default: true }
 }, { _id: false });
 
 // Familjeanslutningar (ADR-0030, 2026-07-29) — tillagd i Mongoose-schemat
