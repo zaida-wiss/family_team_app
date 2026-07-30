@@ -129,6 +129,16 @@ describe.skipIf(!RUN)("Mina familjekonton — dela en egen kalender över flera 
     expect(res.body[0].calendars[0].name).toBe("Jobbschema");
     expect(res.body[0].calendars[0].events).toHaveLength(1);
     expect(res.body[0].calendars[0].events[0].title).toBe("Möte med chefen");
+    // 2026-07-30-fyndet ("RangeError: Invalid time value" i produktion) —
+    // events lästes tidigare via ett vanligt Mongoose-dokument (inte
+    // .lean()), så startsAt/endsAt kom tillbaka som undefined efter
+    // decryptEvent:s {...event}-spread av ett subdokument. Kontrollerar
+    // uttryckligen att det är en RIKTIG, giltig datumsträng, inte bara att
+    // fältet råkar finnas.
+    expect(res.body[0].calendars[0].events[0].startsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].startsAt).getTime())).toBe(false);
+    expect(res.body[0].calendars[0].events[0].endsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].endsAt).getTime())).toBe(false);
   });
 
   it("en helt orelaterad utomstående ser ingenting", async () => {

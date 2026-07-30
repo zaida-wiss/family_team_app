@@ -120,6 +120,12 @@ describe.skipIf(!RUN)("ADR-0030-tillägg: Familjeanslutningar delar kalendrar", 
     expect(res.body[0].calendars[0].name).toBe("Moa jobb");
     expect(res.body[0].calendars[0].events).toHaveLength(1);
     expect(res.body[0].calendars[0].events[0].title).toBe("Kundmöte");
+    // 2026-07-30-fyndet ("RangeError: Invalid time value" i produktion) —
+    // se samma kommentar i crossAccountCalendars.integration.test.ts.
+    expect(res.body[0].calendars[0].events[0].startsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].startsAt).getTime())).toBe(false);
+    expect(res.body[0].calendars[0].events[0].endsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].endsAt).getTime())).toBe(false);
   });
 
   it("A ser INGET av B:s kalendrar (B accepterade med dataScope.calendars: false)", async () => {

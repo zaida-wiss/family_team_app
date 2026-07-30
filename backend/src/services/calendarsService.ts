@@ -135,12 +135,20 @@ export async function getCrossAccountCalendars(callerUserId: string, currentAcco
     const account = await AccountModel.findOne({ id: m.accountId });
     if (!account) continue;
 
+    // .lean() (2026-07-30-fyndet, Zaidas rapport: "RangeError: Invalid time
+    // value") — utan den är cal.events Mongoose-SUBDOKUMENT, och decryptEvent
+    // nedans {...event}-spread fångar bara egna enumerable properties (inte
+    // fälten, som ligger bakom getters) — startsAt/endsAt kom tillbaka som
+    // undefined, och formatTimeRange (frontend) kraschade på new Date(undefined).
+    // Samma bugklass som redan dokumenterats flera gånger i den här
+    // kodbasen (calendarsService.ts:s updateEvent, appleCalDavService.ts:s
+    // pushEventUpsert) — bara aldrig tillämpad här förrän nu.
     const shared = await CalendarModel.find({
       accountId: m.accountId,
       ownerId: m.id,
       deletedAt: null,
       shareAcrossMyAccounts: true
-    });
+    }).lean();
     if (shared.length === 0) continue;
 
     const calendarsOut = shared.map((cal) => ({
@@ -187,11 +195,12 @@ export async function getConnectionCalendars(callerAccountId: string, callerMemb
     if (!conn || !conn.dataScope.calendars || conn.exposedMemberIds.length === 0) continue;
     const exposedSet = new Set(conn.exposedMemberIds);
 
+    // .lean() — se samma fynd/kommentar i getCrossAccountCalendars ovan.
     const exposedCalendars = await CalendarModel.find({
       accountId: account.id,
       ownerId: { $in: [...exposedSet] },
       deletedAt: null
-    });
+    }).lean();
     if (exposedCalendars.length === 0) continue;
 
     const calendarsOut = exposedCalendars.map((cal) => ({
