@@ -10,6 +10,7 @@ import { hasPermission } from "../../../shared/permissions.js";
 import { logger } from "../utils/logger.js";
 import { pushEventDelete, pushEventUpsert } from "./appleCalDavService.js";
 import { AppleCalDavAccountModel } from "../db/models/AppleCalDavAccount.js";
+import { findAcceptedConnectionFrom } from "./familyConnectionsService.js";
 
 // Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
 // title/notes krypteras precis innan de sparas och dekrypteras precis innan de
@@ -151,6 +152,57 @@ export async function getCrossAccountCalendars(callerUserId: string, currentAcco
         .map((ev) => decryptEvent(m.accountId as string, ev as unknown as { title: string; notes: string | null }))
     }));
     results.push({ accountId: m.accountId, accountName: account.name, calendars: calendarsOut });
+  }
+  return results;
+}
+
+// Familjeanslutningar (ADR-0030, tillägg 2026-07-30, Zaidas rättelse: "det
+// räcker att man delat familjeanslutningen... det räcker att man är med i
+// den") — skiljer sig från getCrossAccountCalendars ovan (samma PERSON, flera
+// EGNA medlemskap, synligt bara för den personen): här är det två OLIKA
+// familjekonton som ömsesidigt anslutit sig, synligt för HELA den anslutna
+// familjen. Samma exposedMemberIds-mönster som getConnectionTodos
+// (todosService.ts) — en kalender blir synlig när dess ÄGARE är en
+// exponerad medlem i en accepterad anslutning med dataScope.calendars på.
+// Medvetet LÄSBART bara (samma nästa-30-dagars-fönster som ovan), oavsett
+// anslutningens access-nivå — att bygga en fullt redigerbar cross-account-
+// kalender är en väsentligt större integration, inte efterfrågad denna gång.
+export async function getConnectionCalendars(callerAccountId: string, callerMemberId: string | null) {
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+
+  const now = new Date();
+  const untilStr = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const fromStr = now.toISOString().slice(0, 10);
+
+  const accountsExposingToMe = await AccountModel.find({
+    familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
+  });
+
+  const results = [];
+  for (const account of accountsExposingToMe) {
+    const conn = findAcceptedConnectionFrom(callerAccountId, account);
+    if (!conn || !conn.dataScope.calendars || conn.exposedMemberIds.length === 0) continue;
+    const exposedSet = new Set(conn.exposedMemberIds);
+
+    const exposedCalendars = await CalendarModel.find({
+      accountId: account.id,
+      ownerId: { $in: [...exposedSet] },
+      deletedAt: null
+    });
+    if (exposedCalendars.length === 0) continue;
+
+    const calendarsOut = exposedCalendars.map((cal) => ({
+      id: cal.id,
+      name: cal.name,
+      color: cal.color,
+      events: (cal.events as unknown as CalendarEvent[])
+        .filter((ev) => !ev.deletedAt && ev.startsAt.slice(0, 10) >= fromStr && ev.startsAt.slice(0, 10) <= untilStr)
+        .map((ev) => decryptEvent(account.id, ev as unknown as { title: string; notes: string | null }))
+    }));
+    results.push({ accountId: account.id, accountName: account.name, calendars: calendarsOut });
   }
   return results;
 }

@@ -60,12 +60,23 @@ export type FamilyConnectionScope = {
   todos: boolean;
   recipes: boolean;
   shoppingLists: boolean;
+  // Tillägg 2026-07-30 (Zaidas rättelse: "det räcker att man delat
+  // familjeanslutningen... det räcker att man är med i den") — kalendrar
+  // togs uttryckligen INTE med i ADR-0030:s ursprungliga scope ("Din
+  // kalender... skall vara oförändrat"), men Zaida bad senare specifikt om
+  // att kunna dela en egen kalender med en ansluten familj utan att
+  // behöva vara en riktig medlem där (se "Mina familjekonton"/
+  // shareAcrossMyAccounts för den ANDRA, snävare formen: samma person,
+  // flera egna medlemskap). Samma exposedMemberIds-mönster som todos —
+  // en kalender blir synlig när dess ÄGARE är en exponerad medlem.
+  calendars: boolean;
 };
 
 export const FULL_FAMILY_CONNECTION_SCOPE: FamilyConnectionScope = {
   todos: true,
   recipes: true,
-  shoppingLists: true
+  shoppingLists: true,
+  calendars: true
 };
 
 export type FamilyConnection = {

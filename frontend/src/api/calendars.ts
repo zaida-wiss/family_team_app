@@ -62,6 +62,10 @@ export const calendarsApi = {
   // markerade kalendrar från mina ANDRA konton, läsbara oavsett vilket
   // konto jag är inloggad i just nu.
   getCrossAccount: () => request<CrossAccountCalendar[]>(api("calendars/cross-account")),
+  // Familjeanslutningar (ADR-0030-tillägg, 2026-07-30) — en ANSLUTEN
+  // familjs exponerade medlemmars kalendrar. Samma svarsform som ovan
+  // (CrossAccountCalendar), återanvänd rakt av.
+  getConnectionCalendars: () => request<CrossAccountCalendar[]>(api("calendars/connections")),
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), { method: "DELETE" }),
   restore: (id: string) =>

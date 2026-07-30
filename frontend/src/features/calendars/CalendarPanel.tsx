@@ -12,6 +12,7 @@ import { CalendarCreateCard } from "./CalendarCreateCard";
 import { CalendarManagementCard } from "./CalendarManagementCard";
 import { AppleCalDavAccountsSection } from "./AppleCalDavAccountsSection";
 import { CrossAccountCalendars } from "./CrossAccountCalendars";
+import { ConnectionCalendars } from "./ConnectionCalendars";
 import { CalendarEventForm } from "./CalendarEventForm";
 
 type CalendarPanelProps = {
@@ -117,6 +118,7 @@ export function CalendarPanel({
       />
 
       <CrossAccountCalendars />
+      <ConnectionCalendars />
 
       {selectedCalendar && (
         <CalendarManagementCard

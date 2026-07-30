@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { accountsApi, recipesApi, shoppingApi, todosApi } from "../../api";
+import { accountsApi, calendarsApi, recipesApi, shoppingApi, todosApi } from "../../api";
 import type { ConnectionRecipes } from "../../api/recipes";
 import type { ConnectionShoppingLists } from "../../api/shopping";
 import type { ConnectionTodosThread } from "../../api/todos";
@@ -8,7 +8,7 @@ import type {
   MyFamilyConnections,
   PendingFamilyConnection
 } from "../../api/accounts";
-import type { AccessLevel, FamilyConnectionScope } from "@shared/types";
+import type { AccessLevel, CrossAccountCalendar, FamilyConnectionScope } from "@shared/types";
 
 // Familjeanslutningar (ADR-0030, 2026-07-29, Zaidas rättelse: "det är
 // endast hemvyn som skall gå att växla mellan olika familjer... Däremot
@@ -121,6 +121,14 @@ export function useConnectionShoppingLists() {
   const [groups, setGroups] = useState<ConnectionShoppingLists[]>([]);
   useEffect(() => {
     shoppingApi.getConnectionLists().then(setGroups).catch(console.error);
+  }, []);
+  return groups;
+}
+
+export function useConnectionCalendars() {
+  const [groups, setGroups] = useState<CrossAccountCalendar[]>([]);
+  useEffect(() => {
+    calendarsApi.getConnectionCalendars().then(setGroups).catch(console.error);
   }, []);
   return groups;
 }

@@ -25,6 +25,14 @@ calendarsRouter.get("/cross-account", requireAuth, attachAccountId, async (req, 
   res.json(await calendars.getCrossAccountCalendars(req.userId!, req.accountId!, req.memberId!));
 });
 
+// Familjeanslutningar (ADR-0030-tillägg, 2026-07-30) — läsning av en
+// ansluten familjs exponerade medlemmars kalendrar. Skiljer sig från
+// /cross-account ovan (samma person, egna konton) — här är det en helt
+// annan familj som valt att exponera sina medlemmar.
+calendarsRouter.get("/connections", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await calendars.getConnectionCalendars(req.accountId!, req.memberId ?? null));
+});
+
 calendarsRouter.post("/:id/events", requireAuth, attachAccountId, async (req, res) => {
   await calendars.addEvent(req.params.id, req.accountId!, req.memberId!, req.body);
   res.status(201).json({ ok: true });

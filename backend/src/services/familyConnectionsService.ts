@@ -19,12 +19,13 @@ import type { AccessLevel, FamilyConnectionScope } from "../../../shared/types.j
 // pending/accept/decline-mönster (ADR-0024/0029), men på KONTONIVÅ istället
 // för per barn.
 
-const DEFAULT_SCOPE: FamilyConnectionScope = { todos: true, recipes: true, shoppingLists: true };
+const DEFAULT_SCOPE: FamilyConnectionScope = { todos: true, recipes: true, shoppingLists: true, calendars: true };
 
 const ScopeSchema = z.object({
   todos: z.boolean(),
   recipes: z.boolean(),
-  shoppingLists: z.boolean()
+  shoppingLists: z.boolean(),
+  calendars: z.boolean()
 }).partial();
 
 const InviteConnectionBodySchema = z.object({
