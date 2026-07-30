@@ -97,6 +97,12 @@ async function mockCommon(page: import("@playwright/test").Page) {
 test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar min VANLIGA kalendervy, inte filtrerad till den valda personen", async ({ page }) => {
   await mockCommon(page);
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [PARENT_CALENDAR, LARS_CALENDAR] }));
+  // Registrerad EFTER den breda mocken ovan (Playwright: senast registrerad
+  // matchning vinner) — annars skulle /cross-account och /connections
+  // (2026-07-30, sammanslagna kalendrar) av misstag också få samma lista,
+  // vilket dubblerar varje händelse i kalendervyn.
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
 
   await page.goto("/");
 

@@ -76,6 +76,8 @@ async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [PARENT_CALENDAR] }));
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
 }
 
 test("Ny händelse-modalen: 'Hela familjen' kryssar i/ur alla deltagare på en gång", async ({ page }) => {

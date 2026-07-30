@@ -95,15 +95,30 @@ export function useCalendarView(
   // den valda medlemmen som inte delats med mig visas alltså fortfarande
   // inte. editableCalendars nedan är redan en delmängd av visible, så
   // redigeringsrätten smalnas av på samma gång, automatiskt.
+  // readOnly (2026-07-30, "kalender man valt att dela med respektive
+  // familj skall komma upp i familjens tillgängliga kalendrar") — en
+  // cross-account/Familjeanslutning-kalender är redan explicit delad in i
+  // detta konto av sin ägare i ett HELT ANNAT konto (se calendarsService.ts:s
+  // getCrossAccountCalendars/getConnectionCalendars) — kontots egen
+  // sharedWith/ownerId-baserade behörighetsmodell gäller inte den, den är
+  // ALLTID synlig (utom när ett specifikt annat konto-medlems focusMemberId
+  // är valt, eftersom en delad kalender aldrig ägs av en LOKAL medlem).
   const visible = calendars.filter((cal) => {
     if (cal.deletedAt !== null) return false;
     if (focusMemberId && cal.ownerId !== focusMemberId) return false;
+    // (focusMemberId-grenen ovan har redan filtrerat bort readOnly-kalendrar
+    // när ett specifikt medlems-fokus är valt, eftersom ownerId="" aldrig
+    // matchar — når vi hit är focusMemberId alltså redan falsy.)
+    if (cal.readOnly) return true;
     if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
     return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, cal);
   });
 
+  // readOnly utesluts ALLTID från editableCalendars, oavsett övriga
+  // behörigheter — det är den enda spärren mot redigering av en
+  // cross-account-kalender (se ovan).
   const editableCalendars = visible.filter(
-    (cal) => hasPermission(currentMember, roles, "canEditCalendar") && canEditSharedResource(currentMember, cal)
+    (cal) => !cal.readOnly && hasPermission(currentMember, roles, "canEditCalendar") && canEditSharedResource(currentMember, cal)
   );
 
   const canEditEvent = (ev: CalendarEvent) =>

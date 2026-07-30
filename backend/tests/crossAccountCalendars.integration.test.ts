@@ -117,33 +117,42 @@ describe.skipIf(!RUN)("Mina familjekonton — dela en egen kalender över flera 
     expect(addEvent.status).toBe(201);
   });
 
-  it("GET /api/calendars/cross-account (från konto A) visar bara DEN DELADE kalenderns händelse, dekrypterad, med kontots namn", async () => {
+  // Ett brett, explicit from/until-fönster (inte det förvalda "innevarande
+  // månad") — undviker flakighet kring månadsskiften, samma tidsberoende
+  // testfälla som redan dokumenterats flera gånger i den här kodbasen.
+  const wideFrom = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
+  const wideUntil = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
+
+  it("GET /api/calendars/cross-account (från konto A) visar bara DEN DELADE kalendern som en RIKTIG, readOnly Calendar, namnet suffigerat med källfamiljen", async () => {
     const res = await request(app)
-      .get("/api/calendars/cross-account")
+      .get(`/api/calendars/cross-account?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0].accountName).toBe("Familj B");
-    expect(res.body[0].calendars).toHaveLength(1);
-    expect(res.body[0].calendars[0].name).toBe("Jobbschema");
-    expect(res.body[0].calendars[0].events).toHaveLength(1);
-    expect(res.body[0].calendars[0].events[0].title).toBe("Möte med chefen");
+    const cal = res.body[0];
+    // "kalender man valt att dela med respektive familj skall komma upp i
+    // familjens tillgängliga kalendrar" — en RIKTIG Calendar-form (samma
+    // fält som GET /api/calendars), inte längre en separat sammanfattning.
+    expect(cal.name).toBe("Jobbschema (Familj B)");
+    expect(cal.readOnly).toBe(true);
+    expect(cal.events).toHaveLength(1);
+    expect(cal.events[0].title).toBe("Möte med chefen");
     // 2026-07-30-fyndet ("RangeError: Invalid time value" i produktion) —
     // events lästes tidigare via ett vanligt Mongoose-dokument (inte
     // .lean()), så startsAt/endsAt kom tillbaka som undefined efter
     // decryptEvent:s {...event}-spread av ett subdokument. Kontrollerar
     // uttryckligen att det är en RIKTIG, giltig datumsträng, inte bara att
     // fältet råkar finnas.
-    expect(res.body[0].calendars[0].events[0].startsAt).toBeTruthy();
-    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].startsAt).getTime())).toBe(false);
-    expect(res.body[0].calendars[0].events[0].endsAt).toBeTruthy();
-    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].endsAt).getTime())).toBe(false);
+    expect(cal.events[0].startsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(cal.events[0].startsAt).getTime())).toBe(false);
+    expect(cal.events[0].endsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(cal.events[0].endsAt).getTime())).toBe(false);
   });
 
   it("en helt orelaterad utomstående ser ingenting", async () => {
     const res = await request(app)
-      .get("/api/calendars/cross-account")
+      .get(`/api/calendars/cross-account?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${outsiderToken}`)
       .set("x-member-id", outsiderMemberId);
     expect(res.status).toBe(200);
@@ -159,7 +168,7 @@ describe.skipIf(!RUN)("Mina familjekonton — dela en egen kalender över flera 
     expect(hide.status).toBe(200);
 
     const hidden = await request(app)
-      .get("/api/calendars/cross-account")
+      .get(`/api/calendars/cross-account?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
     expect(hidden.body).toEqual([]);
@@ -180,7 +189,7 @@ describe.skipIf(!RUN)("Mina familjekonton — dela en egen kalender över flera 
     expect(off.status).toBe(200);
 
     const res = await request(app)
-      .get("/api/calendars/cross-account")
+      .get(`/api/calendars/cross-account?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
     expect(res.body).toEqual([]);

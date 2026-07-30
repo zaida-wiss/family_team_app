@@ -108,29 +108,36 @@ describe.skipIf(!RUN)("ADR-0030-tillägg: Familjeanslutningar delar kalendrar", 
     expect(accept.status).toBe(200);
   });
 
-  it("B ser A:s delade kalender (dekrypterad) via GET /api/calendars/connections", async () => {
+  // Ett brett, explicit from/until-fönster — se samma resonemang i
+  // crossAccountCalendars.integration.test.ts.
+  const wideFrom = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
+  const wideUntil = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
+
+  it("B ser A:s delade kalender (dekrypterad) som en RIKTIG, readOnly Calendar via GET /api/calendars/connections", async () => {
     const res = await request(app)
-      .get("/api/calendars/connections")
+      .get(`/api/calendars/connections?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${familyB.accessToken}`)
       .set("x-member-id", familyB.parentMemberId);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0].accountName).toBe("Familj A");
-    expect(res.body[0].calendars).toHaveLength(1);
-    expect(res.body[0].calendars[0].name).toBe("Moa jobb");
-    expect(res.body[0].calendars[0].events).toHaveLength(1);
-    expect(res.body[0].calendars[0].events[0].title).toBe("Kundmöte");
+    const cal = res.body[0];
+    // "kalender man valt att dela med respektive familj skall komma upp i
+    // familjens tillgängliga kalendrar" — en RIKTIG Calendar-form.
+    expect(cal.name).toBe("Moa jobb (Familj A)");
+    expect(cal.readOnly).toBe(true);
+    expect(cal.events).toHaveLength(1);
+    expect(cal.events[0].title).toBe("Kundmöte");
     // 2026-07-30-fyndet ("RangeError: Invalid time value" i produktion) —
     // se samma kommentar i crossAccountCalendars.integration.test.ts.
-    expect(res.body[0].calendars[0].events[0].startsAt).toBeTruthy();
-    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].startsAt).getTime())).toBe(false);
-    expect(res.body[0].calendars[0].events[0].endsAt).toBeTruthy();
-    expect(Number.isNaN(new Date(res.body[0].calendars[0].events[0].endsAt).getTime())).toBe(false);
+    expect(cal.events[0].startsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(cal.events[0].startsAt).getTime())).toBe(false);
+    expect(cal.events[0].endsAt).toBeTruthy();
+    expect(Number.isNaN(new Date(cal.events[0].endsAt).getTime())).toBe(false);
   });
 
   it("A ser INGET av B:s kalendrar (B accepterade med dataScope.calendars: false)", async () => {
     const res = await request(app)
-      .get("/api/calendars/connections")
+      .get(`/api/calendars/connections?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId);
     expect(res.status).toBe(200);
@@ -139,7 +146,7 @@ describe.skipIf(!RUN)("ADR-0030-tillägg: Familjeanslutningar delar kalendrar", 
 
   it("en helt orelaterad tredje familj ser ingenting", async () => {
     const res = await request(app)
-      .get("/api/calendars/connections")
+      .get(`/api/calendars/connections?from=${wideFrom}&until=${wideUntil}`)
       .set("Authorization", `Bearer ${familyC.accessToken}`)
       .set("x-member-id", familyC.parentMemberId);
     expect(res.status).toBe(200);

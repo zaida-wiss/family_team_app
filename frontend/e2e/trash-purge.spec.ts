@@ -85,6 +85,11 @@ test("Töm papperskorgen permanent: dubbel bekräftelse, anropar alla fyra endpo
     if (route.request().method() === "GET") return route.fulfill({ json: [DELETED_CALENDAR] });
     route.fulfill({ json: { ok: true } });
   });
+  // Registrerade EFTER den breda mocken ovan — se samma kommentar i
+  // calendar-event-symbol.spec.ts (annars dubbleras DELETED_CALENDAR via
+  // /cross-account och /connections, 2026-07-30).
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars/purge-trash", (route) => {
     purgeCalls.push("calendars");
     route.fulfill({ json: { ok: true } });

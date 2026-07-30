@@ -567,16 +567,22 @@ export type Calendar = OwnedSharedResource & {
   // (nästa 30 dagar), inte redigerbar cross-account. Rör aldrig delning
   // inom SAMMA konto (sharedWith ovan, oförändrat).
   shareAcrossMyAccounts?: boolean;
+  // Uppföljning 2026-07-30 (Zaidas önskemål: "kalender man valt att dela
+  // med respektive familj skall komma upp i familjens tillgängliga
+  // kalendrar") — en kalender delad via shareAcrossMyAccounts ELLER en
+  // Familjeanslutnings dataScope.calendars kommer nu tillbaka som en RIKTIG
+  // Calendar i /api/calendars/cross-account respektive /connections,
+  // sammanslagen med kontots egna i useCalendarsState.ts, synlig/filtrerbar
+  // precis som vilken kalender som helst i månads-/vecko-/list-/tidslinjevyn.
+  // readOnly är den ENDA spärren mot redigering — satt BARA av backend på
+  // dessa syntetiska, cross-account-sammanslagna kalenderobjekt, ALDRIG på
+  // en riktig, sparad kalender. useCalendarView.ts:s editableCalendars
+  // utesluter den explicit, oavsett övriga behörigheter.
+  readOnly?: boolean;
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
   subscriptions: IcsSubscription[];
   calDavConnections: CalDavConnection[];
-};
-
-export type CrossAccountCalendar = {
-  accountId: Id;
-  accountName: string;
-  calendars: Array<{ id: Id; name: string; color: string; events: CalendarEvent[] }>;
 };
 
 export type EventRecurrence = {

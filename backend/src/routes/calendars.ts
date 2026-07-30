@@ -22,7 +22,8 @@ calendarsRouter.post("/", requireAuth, attachAccountId, async (req, res) => {
 // skillnad (annan HTTP-metod/segmentantal), men följer samma "specifika
 // literal-routes nära toppen"-princip som redan etablerad i filen.
 calendarsRouter.get("/cross-account", requireAuth, attachAccountId, async (req, res) => {
-  res.json(await calendars.getCrossAccountCalendars(req.userId!, req.accountId!, req.memberId!));
+  const { from, until } = req.query as { from?: string; until?: string };
+  res.json(await calendars.getCrossAccountCalendars(req.userId!, req.accountId!, req.memberId!, from, until));
 });
 
 // Familjeanslutningar (ADR-0030-tillägg, 2026-07-30) — läsning av en
@@ -30,7 +31,8 @@ calendarsRouter.get("/cross-account", requireAuth, attachAccountId, async (req, 
 // /cross-account ovan (samma person, egna konton) — här är det en helt
 // annan familj som valt att exponera sina medlemmar.
 calendarsRouter.get("/connections", requireAuth, attachAccountId, async (req, res) => {
-  res.json(await calendars.getConnectionCalendars(req.accountId!, req.memberId ?? null));
+  const { from, until } = req.query as { from?: string; until?: string };
+  res.json(await calendars.getConnectionCalendars(req.accountId!, req.memberId ?? null, from, until));
 });
 
 calendarsRouter.post("/:id/events", requireAuth, attachAccountId, async (req, res) => {

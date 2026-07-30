@@ -11,8 +11,6 @@ import { CalendarShareSection } from "./CalendarShareSection";
 import { CalendarCreateCard } from "./CalendarCreateCard";
 import { CalendarManagementCard } from "./CalendarManagementCard";
 import { AppleCalDavAccountsSection } from "./AppleCalDavAccountsSection";
-import { CrossAccountCalendars } from "./CrossAccountCalendars";
-import { ConnectionCalendars } from "./ConnectionCalendars";
 import { CalendarEventForm } from "./CalendarEventForm";
 
 type CalendarPanelProps = {
@@ -82,6 +80,11 @@ export function CalendarPanel({
   const canImport = hasPermission(currentMember, roles, "canImportCalendar");
 
   const visibleCalendars = calendars.filter((cal) => {
+    // Cross-account/Familjeanslutning-kalendrar (readOnly, 2026-07-30) hör
+    // inte hemma i den här hanteringslistan — de går inte att byta namn på,
+    // dela, koppla CalDAV mot eller radera härifrån, bara att SE i själva
+    // Kalender-panelen (CalendarView.tsx).
+    if (cal.readOnly) return false;
     if (cal.deletedAt !== null) return false;
     if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
     return hasPermission(currentMember, roles, "canSeeOwnCalendar") &&
@@ -116,9 +119,6 @@ export function CalendarPanel({
         onAddAppleAccount={onAddAppleAccount}
         onRemoveAppleAccount={onRemoveAppleAccount}
       />
-
-      <CrossAccountCalendars />
-      <ConnectionCalendars />
 
       {selectedCalendar && (
         <CalendarManagementCard

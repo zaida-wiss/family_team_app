@@ -9,6 +9,8 @@ import { deferToIdle } from "../../utils/deferToIdle";
 import type { AccessLevel, Calendar, EventAttendee, EventRecurrence, Id } from "@shared/types";
 
 const CALS_CACHE_KEY = "cals_v1";
+const CROSS_ACCOUNT_CACHE_KEY = "cals_cross_account_v1";
+const CONNECTION_CACHE_KEY = "cals_connections_v1";
 
 export type AddEventInput = {
   title: string;
@@ -46,7 +48,16 @@ export function useCalendarsState() {
   // `calendars`) täcker ALLA ändringar (ny hämtning, loadEventsForMonth,
   // samt varje create/update/delete-funktion i denna fil) istället för att
   // varje mutation manuellt behöver komma ihåg att skriva till cachen.
-  const [calendars, setCalendars] = useState<Calendar[]>(() => readCache(CALS_CACHE_KEY, []));
+  const [ownCalendars, setCalendars] = useState<Calendar[]>(() => readCache(CALS_CACHE_KEY, []));
+  // Cross-account/Familjeanslutning-kalendrar (2026-07-30, uppföljning:
+  // "kalender man valt att dela med respektive familj skall komma upp i
+  // familjens tillgängliga kalendrar") — hålls i EGNA, separata state-
+  // arrayer (inte inbakade i ownCalendars) så ingen av mutationsfunktionerna
+  // nedan (update/delete/share/etc, alla nyckelade på calendarId) av misstag
+  // kan träffa en syntetisk, readOnly-kalender som råkar ha ett matchande
+  // id. Slås ihop till EN calendars-array bara vid retur, längst ner.
+  const [crossAccountCalendars, setCrossAccountCalendars] = useState<Calendar[]>(() => readCache(CROSS_ACCOUNT_CACHE_KEY, []));
+  const [connectionCalendars, setConnectionCalendars] = useState<Calendar[]>(() => readCache(CONNECTION_CACHE_KEY, []));
   const loadedFrom = useRef<string>("");
   const loadedUntil = useRef<string>("");
 
@@ -57,12 +68,22 @@ export function useCalendarsState() {
     const { from, until } = monthWindow(now.getFullYear(), now.getMonth());
     loadedFrom.current = from;
     loadedUntil.current = until;
-    deferToIdle(() => { calendarsApi.getAll(from, until).then(setCalendars).catch(console.error); });
+    deferToIdle(() => {
+      calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
+      calendarsApi.getCrossAccount(from, until).then(setCrossAccountCalendars).catch(console.error);
+      calendarsApi.getConnectionCalendars(from, until).then(setConnectionCalendars).catch(console.error);
+    });
   }, []);
 
   useEffect(() => {
-    writeCache(CALS_CACHE_KEY, calendars);
-  }, [calendars]);
+    writeCache(CALS_CACHE_KEY, ownCalendars);
+  }, [ownCalendars]);
+  useEffect(() => {
+    writeCache(CROSS_ACCOUNT_CACHE_KEY, crossAccountCalendars);
+  }, [crossAccountCalendars]);
+  useEffect(() => {
+    writeCache(CONNECTION_CACHE_KEY, connectionCalendars);
+  }, [connectionCalendars]);
 
   async function loadEventsForMonth(year: number, month: number) {
     const { from, until } = monthWindow(year, month);
@@ -81,6 +102,12 @@ export function useCalendarsState() {
         return toAdd.length ? { ...cal, events: [...cal.events, ...toAdd] } : cal;
       }));
     } catch { /* keep existing state */ }
+    // Cross-account/Familjeanslutning-kalendrarna är alltid read-only och
+    // hela svaret täcker redan exakt [expandFrom, expandUntil] — enklare
+    // (och lika korrekt) att bara ERSÄTTA hela arrayen än att sam-slå
+    // händelse-för-händelse som ownCalendars ovan.
+    calendarsApi.getCrossAccount(expandFrom, expandUntil).then(setCrossAccountCalendars).catch(() => {});
+    calendarsApi.getConnectionCalendars(expandFrom, expandUntil).then(setConnectionCalendars).catch(() => {});
   }
 
   function createCalendar(name: string, memberId: Id, color: string) {
@@ -422,6 +449,13 @@ export function useCalendarsState() {
       })
     );
   }
+
+  // Slår ihop mina egna kalendrar med de två cross-account-källorna till EN
+  // array — allt nedströms (CalendarView.tsx:s filter/vyer, Hem-översikten,
+  // Inställningars kalenderväljare) konsumerar bara "calendars", oförändrat
+  // kontrakt. readOnly-flaggan (satt av backend) är den enda spärren mot
+  // redigering, se useCalendarView.ts.
+  const calendars = [...ownCalendars, ...crossAccountCalendars, ...connectionCalendars];
 
   const { addSubscription, updateSubscription, removeSubscription, syncSubscription } =
     useCalendarSubscriptions(setCalendars);

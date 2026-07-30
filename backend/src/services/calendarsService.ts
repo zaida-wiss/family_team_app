@@ -111,22 +111,70 @@ export async function updateCalendar(calendarId: string, accountId: string, patc
   await calendar.save();
 }
 
+function defaultMonthRange(from?: string, until?: string) {
+  const now = new Date();
+  const defaultFrom = new Date(now); defaultFrom.setDate(1);
+  const defaultUntil = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return {
+    fromStr: from ?? defaultFrom.toISOString().slice(0, 10),
+    untilStr: until ?? defaultUntil.toISOString().slice(0, 10)
+  };
+}
+
+// En delad kalender byggs om till ett RIKTIGT Calendar-format (samma form
+// som getAllCalendars redan returnerar) — 2026-07-30, Zaidas uppföljning:
+// "kalender man valt att dela med respektive familj skall komma upp i
+// familjens tillgängliga kalendrar" (inte en separat, avskild lista). Namnet
+// suffigeras med källfamiljens namn ("Moa jobb (Familj B)") så den syns
+// tydligt vem den kommer från i alla kalendervyer, utan att någon
+// visningskomponent behöver särskiljas. `readOnly: true` är den ENDA
+// spärren mot redigering — useCalendarView.ts:s editableCalendars utesluter
+// den explicit, oavsett andra behörigheter.
+function toReadOnlyCalendar(
+  cal: { id: string; name: string; color: string; events: unknown[] },
+  sourceAccountId: string,
+  sourceAccountName: string,
+  fromStr: string,
+  untilStr: string
+) {
+  return {
+    id: cal.id,
+    accountId: sourceAccountId,
+    name: `${cal.name} (${sourceAccountName})`,
+    color: cal.color,
+    ownerId: "",
+    sharedWith: [],
+    deletedAt: null,
+    deletedBy: null,
+    importedSources: [],
+    subscriptions: [],
+    calDavConnections: [],
+    readOnly: true,
+    events: (cal.events as unknown as CalendarEvent[])
+      .filter((ev) => !ev.deletedAt && ev.startsAt.slice(0, 10) >= fromStr && ev.startsAt.slice(0, 10) <= untilStr)
+      .map((ev) => decryptEvent(sourceAccountId, ev as unknown as { title: string; notes: string | null }))
+  };
+}
+
 // "Mina familjekonton" (2026-07-30, Zaidas önskemål: "alla privata
 // kalendrar som jag skapat skall jag kunna dela med samtliga familjer jag
 // är medlem i") — samma mönster som getCrossAccountFamilyTodos
 // (todosService.ts): mina EGNA, riktiga medlemskap i andra konton (flera
 // Member-poster med samma userId), ingen ny behörighetsmodell. MEDVETET
 // LÄSBART bara (Zaidas val: "bara jag själv" ser den, ingen redigering
-// cross-account i denna omgång) — nästa 30 dagars händelser, samma
-// tidsfönster som redan används för Dela-barn-funktionens kalenderyta
-// (ADR-0024-uppföljningen 2026-07-27).
-export async function getCrossAccountCalendars(callerUserId: string, currentAccountId: string, currentMemberId: string) {
+// cross-account i denna omgång) — men numera en RIKTIG, filtrerbar kalender
+// i den vanliga Kalender-panelen (se toReadOnlyCalendar ovan), inte en
+// separat sammanfattningslista.
+export async function getCrossAccountCalendars(
+  callerUserId: string,
+  currentAccountId: string,
+  currentMemberId: string,
+  from?: string,
+  until?: string
+) {
   const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
   const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
-
-  const now = new Date();
-  const untilStr = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const fromStr = now.toISOString().slice(0, 10);
+  const { fromStr, untilStr } = defaultMonthRange(from, until);
 
   const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
   const results = [];
@@ -149,17 +197,9 @@ export async function getCrossAccountCalendars(callerUserId: string, currentAcco
       deletedAt: null,
       shareAcrossMyAccounts: true
     }).lean();
-    if (shared.length === 0) continue;
-
-    const calendarsOut = shared.map((cal) => ({
-      id: cal.id,
-      name: cal.name,
-      color: cal.color,
-      events: (cal.events as unknown as CalendarEvent[])
-        .filter((ev) => !ev.deletedAt && ev.startsAt.slice(0, 10) >= fromStr && ev.startsAt.slice(0, 10) <= untilStr)
-        .map((ev) => decryptEvent(m.accountId as string, ev as unknown as { title: string; notes: string | null }))
-    }));
-    results.push({ accountId: m.accountId, accountName: account.name, calendars: calendarsOut });
+    for (const cal of shared) {
+      results.push(toReadOnlyCalendar(cal, m.accountId, account.name, fromStr, untilStr));
+    }
   }
   return results;
 }
@@ -172,18 +212,20 @@ export async function getCrossAccountCalendars(callerUserId: string, currentAcco
 // familjen. Samma exposedMemberIds-mönster som getConnectionTodos
 // (todosService.ts) — en kalender blir synlig när dess ÄGARE är en
 // exponerad medlem i en accepterad anslutning med dataScope.calendars på.
-// Medvetet LÄSBART bara (samma nästa-30-dagars-fönster som ovan), oavsett
-// anslutningens access-nivå — att bygga en fullt redigerbar cross-account-
-// kalender är en väsentligt större integration, inte efterfrågad denna gång.
-export async function getConnectionCalendars(callerAccountId: string, callerMemberId: string | null) {
+// Medvetet LÄSBART bara, oavsett anslutningens access-nivå — att bygga en
+// fullt redigerbar cross-account-kalender är en väsentligt större
+// integration, inte efterfrågad denna gång.
+export async function getConnectionCalendars(
+  callerAccountId: string,
+  callerMemberId: string | null,
+  from?: string,
+  until?: string
+) {
   const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
   if (!caller) {
     throw new AppError(403, "Åtkomst nekad");
   }
-
-  const now = new Date();
-  const untilStr = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const fromStr = now.toISOString().slice(0, 10);
+  const { fromStr, untilStr } = defaultMonthRange(from, until);
 
   const accountsExposingToMe = await AccountModel.find({
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
@@ -201,17 +243,9 @@ export async function getConnectionCalendars(callerAccountId: string, callerMemb
       ownerId: { $in: [...exposedSet] },
       deletedAt: null
     }).lean();
-    if (exposedCalendars.length === 0) continue;
-
-    const calendarsOut = exposedCalendars.map((cal) => ({
-      id: cal.id,
-      name: cal.name,
-      color: cal.color,
-      events: (cal.events as unknown as CalendarEvent[])
-        .filter((ev) => !ev.deletedAt && ev.startsAt.slice(0, 10) >= fromStr && ev.startsAt.slice(0, 10) <= untilStr)
-        .map((ev) => decryptEvent(account.id, ev as unknown as { title: string; notes: string | null }))
-    }));
-    results.push({ accountId: account.id, accountName: account.name, calendars: calendarsOut });
+    for (const cal of exposedCalendars) {
+      results.push(toReadOnlyCalendar(cal, account.id, account.name, fromStr, untilStr));
+    }
   }
   return results;
 }

@@ -1,4 +1,4 @@
-import type { Calendar, CalDavConnection, CrossAccountCalendar, IcsSubscription } from "@shared/types";
+import type { Calendar, CalDavConnection, IcsSubscription } from "@shared/types";
 import { api, request } from "./client";
 
 // Maskerad API-representation av ett AppleCalDavAccount (2026-07-30) —
@@ -58,14 +58,27 @@ export const calendarsApi = {
       method: "PATCH",
       body: JSON.stringify(patch)
     }),
-  // "Mina familjekonton" (2026-07-30) — mina egna, shareAcrossMyAccounts-
-  // markerade kalendrar från mina ANDRA konton, läsbara oavsett vilket
-  // konto jag är inloggad i just nu.
-  getCrossAccount: () => request<CrossAccountCalendar[]>(api("calendars/cross-account")),
+  // "Mina familjekonton" (2026-07-30, uppföljning: "kalender man valt att
+  // dela med respektive familj skall komma upp i familjens tillgängliga
+  // kalendrar") — mina egna, shareAcrossMyAccounts-markerade kalendrar från
+  // mina ANDRA konton, som RIKTIGA Calendar-objekt (readOnly:true), samma
+  // from/until-kontrakt som getAll ovan — slås ihop i useCalendarsState.ts.
+  getCrossAccount: (from?: string, until?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (until) params.set("until", until);
+    const qs = params.size ? `?${params}` : "";
+    return request<Calendar[]>(api(`calendars/cross-account${qs}`));
+  },
   // Familjeanslutningar (ADR-0030-tillägg, 2026-07-30) — en ANSLUTEN
-  // familjs exponerade medlemmars kalendrar. Samma svarsform som ovan
-  // (CrossAccountCalendar), återanvänd rakt av.
-  getConnectionCalendars: () => request<CrossAccountCalendar[]>(api("calendars/connections")),
+  // familjs exponerade medlemmars kalendrar. Samma svarsform som ovan.
+  getConnectionCalendars: (from?: string, until?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (until) params.set("until", until);
+    const qs = params.size ? `?${params}` : "";
+    return request<Calendar[]>(api(`calendars/connections${qs}`));
+  },
   remove: (id: string) =>
     request<{ ok: boolean }>(api(`calendars/${id}`), { method: "DELETE" }),
   restore: (id: string) =>

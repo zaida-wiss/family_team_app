@@ -42,6 +42,10 @@ test("Exporterar alla mina kalendrar som en enda .ics-fil, exkluderar delade kal
   await page.route("**/api/calendars**", (route) =>
     route.fulfill({ json: [OWNED_CALENDAR_A, OWNED_CALENDAR_B, SHARED_CALENDAR] })
   );
+  // Registrerad EFTER den breda mocken ovan — se samma kommentar i
+  // calendar-event-symbol.spec.ts.
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
   await openCalendarSettings(page);
 
   const [download] = await Promise.all([
@@ -65,6 +69,8 @@ test("Exporterar alla mina kalendrar som en enda .ics-fil, exkluderar delade kal
 test("Exportera alla mina kalendrar-knappen är avstängd om jag inte äger någon kalender", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [SHARED_CALENDAR] }));
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
   await openCalendarSettings(page);
 
   await expect(page.getByRole("button", { name: "Exportera alla mina kalendrar" })).toBeDisabled();

@@ -98,6 +98,12 @@ async function mockCommon(page: import("@playwright/test").Page) {
 test("Kalender-panelen (månadsvy): en importerad händelses egen symbol visas, inte prenumerationens standard", async ({ page }) => {
   await mockCommon(page);
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [CALENDAR] }));
+  // Registrerad EFTER den breda mocken ovan (Playwright: senast registrerad
+  // matchning vinner) — annars skulle /cross-account och /connections
+  // (2026-07-30, sammanslagna kalendrar) av misstag också få [CALENDAR],
+  // vilket dubblerar varje händelse i kalendervyn.
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
 
   await page.goto("/");
   await page.getByRole("button", { name: "Kalender" }).click();
@@ -141,6 +147,8 @@ test("Barnets tidslinje: samma importerade händelses egen symbol visas när bar
   await page.route("**/api/roles", (route) => route.fulfill({ json: [CHILD_ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [SHARED_CALENDAR] }));
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
