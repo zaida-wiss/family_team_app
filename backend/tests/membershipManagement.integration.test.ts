@@ -82,7 +82,7 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
 
     // user1 bjuds in till konto B (blir INTE skapare där).
     const inviteToB = await request(app)
-      .post(`/api/invitations/accounts/${accountBId}/invite`)
+      .post(`/api/accounts/${accountBId}/invite`)
       .set("Authorization", `Bearer ${user2Token}`)
       .set("x-member-id", setupB.body.membership.member.id)
       .send({ invitedEmail: "membership-mgmt-user1@bmad.test", memberName: "Ägare Ett", roleId: parentRoleB });
@@ -95,7 +95,7 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
 
     // En tredje vuxen bjuds in till konto A (mottagare av överlåtelsen).
     const inviteToA = await request(app)
-      .post(`/api/invitations/accounts/${accountAId}/invite`)
+      .post(`/api/accounts/${accountAId}/invite`)
       .set("Authorization", `Bearer ${user1Token}`)
       .set("x-member-id", user1MemberInA)
       .send({ invitedEmail: "membership-mgmt-user3@bmad.test", memberName: "Vuxen Tre", roleId: parentRoleA });
