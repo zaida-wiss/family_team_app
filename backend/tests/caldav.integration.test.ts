@@ -1,8 +1,9 @@
 /**
- * Integrationstester för Apple CalDAV-anslutningen (ADR-0027, 2026-07-24)
- * mot riktig MongoDB. tsdav mockas — testerna verifierar appens EGEN logik
- * (kryptering, maskering, GDPR-uteslutning, push/pull-inbindning), inte
- * ett riktigt Apple-konto.
+ * Integrationstester för Apple CalDAV-anslutningen (ADR-0027, 2026-07-24,
+ * uppdaterad 2026-07-30 — Apple-inloggningen ligger nu på KONTONIVÅ, se
+ * AppleCalDavAccount) mot riktig MongoDB. tsdav mockas — testerna verifierar
+ * appens EGEN logik (kryptering, maskering, GDPR-uteslutning, push/pull-
+ * inbindning), inte ett riktigt Apple-konto.
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI.
  */
@@ -35,7 +36,7 @@ vi.mock("tsdav", () => ({
 const uri = process.env.MONGODB_URI ?? "";
 const RUN = uri.startsWith("mongodb://");
 
-describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", () => {
+describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027, kontonivå 2026-07-30) mot riktig MongoDB", () => {
   let app: typeof import("../src/app.js").app;
 
   beforeAll(async () => {
@@ -54,6 +55,7 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
   let memberId: string;
   let accountId: string;
   let calendarId: string;
+  let appleAccountId: string;
 
   it("registrerar konto och skapar en kalender", async () => {
     const registerRes = await request(app)
@@ -79,11 +81,26 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
     calendarId = calRes.body.id as string;
   });
 
-  it("listar Apple-kontots kalendrar utan att ansluta någon (kalenderväljaren, 2026-07-30)", async () => {
+  it("lägger till ett Apple-konto på KONTONIVÅ — svaret innehåller aldrig lösenordet i klartext", async () => {
     const res = await request(app)
-      .post("/api/calendars/caldav/apple/list")
+      .post("/api/calendars/caldav/apple-accounts")
       .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
       .send({ accountEmail: "zaida@icloud.com", appSpecificPassword: "abcd-efgh-ijkl-mnop" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.accountEmail).toBe("zaida@icloud.com");
+    expect(JSON.stringify(res.body)).not.toContain("abcd-efgh-ijkl-mnop");
+    expect(fetchCalendars).toHaveBeenCalled();
+    appleAccountId = res.body.id as string;
+  });
+
+  it("listar Apple-kontots kalendrar UTAN att skriva in lösenordet igen", async () => {
+    const res = await request(app)
+      .post(`/api/calendars/caldav/apple-accounts/${appleAccountId}/calendars`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
@@ -92,23 +109,27 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
     ]);
   });
 
-  it("ansluter en Apple-kalender — den VALDA kalendern (inte bara den första), svaret innehåller aldrig lösenordet i klartext", async () => {
+  it("GET /api/calendars/caldav/apple-accounts listar det tillagda kontot", async () => {
+    const res = await request(app)
+      .get("/api/calendars/caldav/apple-accounts")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].accountEmail).toBe("zaida@icloud.com");
+  });
+
+  it("kopplar en BMAD-kalender till det redan tillagda Apple-kontots VALDA kalender", async () => {
     const res = await request(app)
       .post(`/api/calendars/${calendarId}/caldav/apple`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
-      .send({
-        accountEmail: "zaida@icloud.com",
-        appSpecificPassword: "abcd-efgh-ijkl-mnop",
-        calendarUrl: "https://caldav.icloud.com/123/calendars/work/",
-      });
+      .send({ appleAccountId, calendarUrl: "https://caldav.icloud.com/123/calendars/work/" });
 
     expect(res.status).toBe(201);
-    expect(res.body.accountEmailEnc).toBe("zaida@icloud.com");
-    expect(res.body.appSpecificPasswordEnc).toBe("••••••••");
+    expect(res.body.appleAccountId).toBe(appleAccountId);
     expect(res.body.externalCalendarHref).toBe("https://caldav.icloud.com/123/calendars/work/");
-    expect(JSON.stringify(res.body)).not.toContain("abcd-efgh-ijkl-mnop");
-    expect(fetchCalendars).toHaveBeenCalled();
+    expect(res.body.accountEmail).toBe("zaida@icloud.com");
   });
 
   it("nekar en andra anslutning på samma kalender (409)", async () => {
@@ -116,11 +137,11 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
       .post(`/api/calendars/${calendarId}/caldav/apple`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
-      .send({ accountEmail: "annan@icloud.com", appSpecificPassword: "xxxx" });
+      .send({ appleAccountId, calendarUrl: "https://caldav.icloud.com/123/calendars/home/" });
     expect(res.status).toBe(409);
   });
 
-  it("GET /api/calendars maskerar lösenordet men visar e-posten dekrypterad", async () => {
+  it("GET /api/calendars visar den kopplade kalenderns Apple-e-post, aldrig ett lösenord", async () => {
     const res = await request(app)
       .get("/api/calendars")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -128,8 +149,9 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
     expect(res.status).toBe(200);
     const cal = res.body.find((c: { id: string }) => c.id === calendarId);
     expect(cal.calDavConnections).toHaveLength(1);
-    expect(cal.calDavConnections[0].accountEmailEnc).toBe("zaida@icloud.com");
-    expect(cal.calDavConnections[0].appSpecificPasswordEnc).toBe("••••••••");
+    expect(cal.calDavConnections[0].accountEmail).toBe("zaida@icloud.com");
+    expect(JSON.stringify(cal.calDavConnections[0])).not.toContain("abcd-efgh-ijkl-mnop");
+    expect(JSON.stringify(cal.calDavConnections[0])).not.toContain("appSpecificPassword");
   });
 
   it("GDPR-exporten innehåller aldrig lösenordet, varken krypterat eller i klartext", async () => {
@@ -169,7 +191,7 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
     await vi.waitFor(() => expect(createCalendarObject).toHaveBeenCalled());
   });
 
-  it("koppla bort tar bort anslutningen och mjuk-raderar dess händelser", async () => {
+  it("koppla bort tar bort anslutningen och mjuk-raderar dess händelser — Apple-kontot lever kvar", async () => {
     const listRes = await request(app)
       .get("/api/calendars")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -187,5 +209,40 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
     expect(after.body.find((c: { id: string }) => c.id === calendarId).calDavConnections).toHaveLength(0);
+
+    // Apple-kontot självt är oberört — kan återanvändas för en annan kalender.
+    const accountsRes = await request(app)
+      .get("/api/calendars/caldav/apple-accounts")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(accountsRes.body).toHaveLength(1);
+  });
+
+  it("tar bort Apple-kontot helt — kopplar automatiskt bort alla kalendrar som använde det", async () => {
+    // Koppla en NY anslutning igen så vi har något att koppla bort.
+    const connectRes = await request(app)
+      .post(`/api/calendars/${calendarId}/caldav/apple`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ appleAccountId, calendarUrl: "https://caldav.icloud.com/123/calendars/home/" });
+    expect(connectRes.status).toBe(201);
+
+    const delRes = await request(app)
+      .delete(`/api/calendars/caldav/apple-accounts/${appleAccountId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(delRes.status).toBe(200);
+
+    const after = await request(app)
+      .get("/api/calendars")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(after.body.find((c: { id: string }) => c.id === calendarId).calDavConnections).toHaveLength(0);
+
+    const accountsRes = await request(app)
+      .get("/api/calendars/caldav/apple-accounts")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(accountsRes.body).toHaveLength(0);
   });
 });

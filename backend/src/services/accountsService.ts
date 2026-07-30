@@ -24,6 +24,7 @@ import type { PermissionKey } from "../../../shared/types.js";
 import { getAllRoles } from "./rolesService.js";
 import { hasPermission } from "../../../shared/permissions.js";
 import { TransferAccountOwnershipBodySchema } from "../../../shared/schemas.js";
+import { AppleCalDavAccountModel } from "../db/models/AppleCalDavAccount.js";
 
 const setupSchema = z.object({
   name: z.string().min(1, "Kontonamn krävs").max(80)
@@ -190,12 +191,28 @@ export async function exportAccount(accountId: string, memberId: string | null |
       notes: decryptNullable(accountId, todo.notes) ?? null
     })
   );
+  // 2026-07-30 — Apple-inloggningen ligger på kontonivå (AppleCalDavAccount),
+  // inte längre inbäddad i varje calDavConnection. appSpecificPasswordEnc
+  // finns därför inte ens på connection-objektet längre; den EGNA
+  // AppleCalDavAccount-collectionen (som BÄR lösenordet) frågas MEDVETET
+  // ALDRIG här alls — samma "ALDRIG med i GDPR-exporten, varken krypterat
+  // eller i klartext"-regel som ADR-0027 redan slog fast, bara en nivå
+  // högre upp nu. Bara e-posten (för läsbarhet) slås upp via en separat,
+  // begränsad projektion.
+  const appleAccounts = await AppleCalDavAccountModel.find(
+    { accountId },
+    { _id: 0, id: 1, accountEmailEnc: 1 }
+  ).lean();
+  const appleEmailById = new Map(
+    (appleAccounts as Array<{ id: string; accountEmailEnc: string }>).map((a) => [a.id, decryptField(accountId, a.accountEmailEnc)])
+  );
+
   const decryptedCalendars = (
     calendars as Array<{
       events: Array<{ title: string; notes: string | null }>;
       subscriptions: Array<{ url: string }>;
       calDavConnections?: Array<{
-        id: string; provider: string; accountEmailEnc: string; appSpecificPasswordEnc: string;
+        id: string; provider: string; appleAccountId: string;
         externalCalendarHref: string; syncIntervalMinutes: number; lastSyncedAt: string | null;
         lastSyncError: string | null; connectedAt: string;
       }>;
@@ -207,17 +224,10 @@ export async function exportAccount(accountId: string, memberId: string | null |
       ...sub,
       url: decryptField(accountId, sub.url)
     })),
-    // ADR-0027 (2026-07-24) — appSpecificPasswordEnc UTELÄMNAS HELT, varken
-    // krypterat eller i klartext. En GDPR-export är en nedladdningsbar fil;
-    // att skicka ut en fungerande nyckel till någon annans Apple-konto i den
-    // filen vore ett allvarligt läckage, till skillnad från övriga
-    // krypterade fält (title/notes/url) som dekrypteras här för att exporten
-    // ska vara läsbar/portabel — de skyddar INNEHÅLL vi själva äger, inte
-    // nycklar till en tredje parts konto.
     calDavConnections: (calendar.calDavConnections ?? []).map((conn) => ({
       id: conn.id,
       provider: conn.provider,
-      accountEmail: decryptField(accountId, conn.accountEmailEnc),
+      accountEmail: appleEmailById.get(conn.appleAccountId) ?? null,
       externalCalendarHref: conn.externalCalendarHref,
       syncIntervalMinutes: conn.syncIntervalMinutes,
       lastSyncedAt: conn.lastSyncedAt,
@@ -349,7 +359,10 @@ async function purgeAccount(accountId: string) {
     RewardShopModel.deleteMany({ accountId }),
     PurchasedRewardModel.deleteMany({ accountId }),
     InvitationModel.deleteMany({ accountId }),
-    AnalyticsEventModel.deleteMany({ accountId })
+    AnalyticsEventModel.deleteMany({ accountId }),
+    // 2026-07-30 — bär riktiga tredjepartsuppgifter (Apple-ID/app-specifikt
+    // lösenord, ADR-0027), får inte bli kvarlämnad efter en hard delete.
+    AppleCalDavAccountModel.deleteMany({ accountId })
   ]);
 
   for (const userId of candidateUserIds) {

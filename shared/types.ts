@@ -505,18 +505,37 @@ export type IcsSubscription = {
   syncIntervalMinutes: number;
 };
 
-// Tvåvägs CalDAV-anslutning (ADR-0027, 2026-07-24) — till skillnad från
-// IcsSubscription (läs-bara, ingen autentisering) skriver appen HÄR aktivt
-// till en extern kalender också. accountEmail/appSpecificPasswordEnc är
-// riktiga tredjepartsuppgifter, krypterade (fieldEncryption) — ALDRIG med
-// i GDPR-exporten (se exportAccount), till skillnad från övriga krypterade
-// fält som dekrypteras där för dataportabilitet.
+// Ett inloggat Apple-ID, på KONTONIVÅ (2026-07-30, Zaidas beslut: "tvåvägssynken
+// med apple kontot skall inte fyllas i inuti någon kalender utan på en högre
+// nivå så att sedan kalendrar kan använda sig av tvåvägssynkens olika
+// kalendrar") — inloggningen görs EN gång per Apple-konto, inte en gång per
+// BMAD-kalender som i den ursprungliga ADR-0027 Fas 1-versionen. En egen,
+// fristående, kontobred collection (`AppleCalDavAccountModel`, inte inbäddad
+// i `Calendar` — flera BMAD-kalendrar kan referera samma Apple-konto).
+// accountEmail/appSpecificPasswordEnc är riktiga tredjepartsuppgifter,
+// krypterade (fieldEncryption) — ALDRIG med i GDPR-exporten (se
+// exportAccount), till skillnad från övriga krypterade fält som dekrypteras
+// där för dataportabilitet.
+export type AppleCalDavAccount = {
+  id: Id;
+  accountId: Id;
+  accountEmailEnc: string;
+  appSpecificPasswordEnc: string;
+  createdBy: Id;
+  connectedAt: string;
+};
+
+// Tvåvägs CalDAV-anslutning (ADR-0027, 2026-07-24, uppdaterad 2026-07-30) —
+// till skillnad från IcsSubscription (läs-bara, ingen autentisering) skriver
+// appen HÄR aktivt till en extern kalender också. Refererar ett redan
+// tillagt `AppleCalDavAccount` istället för att bära egna inloggnings-
+// uppgifter (se ovan) — flera BMAD-kalendrar kan peka på SAMMA Apple-konto,
+// var och en mot sin egen valda Apple-kalender (`externalCalendarHref`).
 export type CalDavConnection = {
   id: Id;
   calendarId: Id;
   provider: "apple";
-  accountEmailEnc: string;
-  appSpecificPasswordEnc: string;
+  appleAccountId: Id;
   externalCalendarHref: string;
   syncIntervalMinutes: number;
   lastSyncedAt: string | null;

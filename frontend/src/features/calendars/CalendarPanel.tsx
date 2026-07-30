@@ -3,12 +3,14 @@ import { useState } from "react";
 import { hasPermission } from "../../utils/permissions";
 import type { AddEventInput } from "./useCalendarsState";
 import type { AccessLevel, Calendar, Id, IcsSubscription, Member, Role } from "@shared/types";
+import type { AppleCalDavAccountSummary } from "../../api/calendars";
 import type { ImportedCalendarEvent } from "./calendarIcs";
 import { canEditCalendar, formatTimeRange } from "./calendarPanelHelpers";
 import { WordTagInput } from "./WordTagInput";
 import { CalendarShareSection } from "./CalendarShareSection";
 import { CalendarCreateCard } from "./CalendarCreateCard";
 import { CalendarManagementCard } from "./CalendarManagementCard";
+import { AppleCalDavAccountsSection } from "./AppleCalDavAccountsSection";
 import { CalendarEventForm } from "./CalendarEventForm";
 
 type CalendarPanelProps = {
@@ -31,8 +33,12 @@ type CalendarPanelProps = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
-  onListAppleCalendars: (accountEmail: string, appSpecificPassword: string) => Promise<{ url: string; name: string }[]>;
-  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string, calendarUrl: string) => Promise<void>;
+  appleAccounts: AppleCalDavAccountSummary[];
+  onRefreshAppleAccounts: () => Promise<AppleCalDavAccountSummary[]>;
+  onAddAppleAccount: (accountEmail: string, appSpecificPassword: string) => Promise<AppleCalDavAccountSummary>;
+  onRemoveAppleAccount: (appleAccountId: Id) => Promise<void>;
+  onListCalendarsForAppleAccount: (appleAccountId: Id) => Promise<{ url: string; name: string }[]>;
+  onConnectAppleCalDav: (calendarId: Id, appleAccountId: Id, calendarUrl: string) => Promise<void>;
   onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
   onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
   onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
@@ -58,7 +64,11 @@ export function CalendarPanel({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
-  onListAppleCalendars,
+  appleAccounts,
+  onRefreshAppleAccounts,
+  onAddAppleAccount,
+  onRemoveAppleAccount,
+  onListCalendarsForAppleAccount,
   onConnectAppleCalDav,
   onDisconnectCalDav,
   onUpdateCalDavInterval,
@@ -95,6 +105,14 @@ export function CalendarPanel({
         onCreateCalendar={onCreateCalendar}
       />
 
+      <AppleCalDavAccountsSection
+        canManage={canCreateCalendar}
+        appleAccounts={appleAccounts}
+        onRefreshAppleAccounts={onRefreshAppleAccounts}
+        onAddAppleAccount={onAddAppleAccount}
+        onRemoveAppleAccount={onRemoveAppleAccount}
+      />
+
       {selectedCalendar && (
         <CalendarManagementCard
           calendars={calendars}
@@ -118,7 +136,8 @@ export function CalendarPanel({
           onRemoveSubscription={onRemoveSubscription}
           onSyncSubscription={onSyncSubscription}
           onUpdateCalendarKeepAllHistory={onUpdateCalendarKeepAllHistory}
-          onListAppleCalendars={onListAppleCalendars}
+          appleAccounts={appleAccounts}
+          onListCalendarsForAppleAccount={onListCalendarsForAppleAccount}
           onConnectAppleCalDav={onConnectAppleCalDav}
           onDisconnectCalDav={onDisconnectCalDav}
           onUpdateCalDavInterval={onUpdateCalDavInterval}

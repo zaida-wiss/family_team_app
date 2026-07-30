@@ -44,7 +44,8 @@ export function useShellState(
     shareCalendar, removeCalendarShare, restoreCalendar, purgeCalendarsTrash,
     softDeleteCalendarsForMember,
     addSubscription, updateSubscription, removeSubscription, syncSubscription,
-    listAppleCalendars, connectAppleCalDav, disconnectCalDav, updateCalDavInterval, syncCalDavNow } = calendarsState;
+    appleAccounts, refreshAppleAccounts, addAppleAccount, removeAppleAccount, listCalendarsForAppleAccount,
+    connectAppleCalDav, disconnectCalDav, updateCalDavInterval, syncCalDavNow } = calendarsState;
 
   const { shoppingLists, createShoppingList, addShoppingItem, importShoppingItems, shareShoppingList,
     removeShoppingListShare, softDeleteShoppingList, renameShoppingList, restoreShoppingList, purgeShoppingTrash,
@@ -255,7 +256,11 @@ export function useShellState(
     onUpdateSubscription: updateSubscription,
     onRemoveSubscription: removeSubscription,
     onSyncSubscription: syncSubscription,
-    onListAppleCalendars: listAppleCalendars,
+    appleAccounts,
+    onRefreshAppleAccounts: refreshAppleAccounts,
+    onAddAppleAccount: addAppleAccount,
+    onRemoveAppleAccount: removeAppleAccount,
+    onListCalendarsForAppleAccount: listCalendarsForAppleAccount,
     onConnectAppleCalDav: connectAppleCalDav,
     onDisconnectCalDav: disconnectCalDav,
     onUpdateCalDavInterval: updateCalDavInterval,

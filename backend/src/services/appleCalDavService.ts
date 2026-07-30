@@ -1,5 +1,6 @@
 import { createDAVClient } from "tsdav";
 import { CalendarModel } from "../db/models/Calendar.js";
+import { AppleCalDavAccountModel } from "../db/models/AppleCalDavAccount.js";
 import type { CalDavConnection, CalendarEvent } from "../../../shared/types.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
@@ -11,9 +12,19 @@ import {
   subscriptionCutoffs,
 } from "./calendarSubscriptionsService.js";
 
-// ADR-0027 (2026-07-24) — tvåvägs CalDAV-anslutning mot iCloud. Till skillnad
-// från IcsSubscription (calendarSubscriptionsService.ts, läs-bar, ingen
-// autentisering) skriver appen HÄR aktivt till Apples server också.
+// ADR-0027 (2026-07-24, uppdaterad 2026-07-30) — tvåvägs CalDAV-anslutning
+// mot iCloud. Till skillnad från IcsSubscription (calendarSubscriptionsService.ts,
+// läs-bar, ingen autentisering) skriver appen HÄR aktivt till Apples server
+// också.
+//
+// 2026-07-30, Zaidas beslut: "tvåvägssynken med apple kontot skall inte
+// fyllas i inuti någon kalender utan på en högre nivå så att sedan kalendrar
+// kan använda sig av tvåvägssynkens olika kalendrar" — Apple-ID/lösenordet
+// loggas nu in EN gång per Apple-konto (AppleCalDavAccount, kontobred
+// collection), inte en gång per BMAD-kalender. En CalDavConnection
+// REFERERAR ett sådant konto (`appleAccountId`) istället för att äga egna
+// creds — flera BMAD-kalendrar kan alltså dela samma inloggning, var och en
+// mot sin egen valda Apple-kalender.
 //
 // Fas 1-begränsningar, medvetna (inte glömda):
 // - En kalender stöder bara EN aktiv CalDAV-anslutning åt gången (enklare
@@ -103,13 +114,9 @@ function displayNameOf(value: string | Record<string, unknown> | undefined, fall
   return fallback;
 }
 
-// 2026-07-30, Zaidas fråga: "gäller [tvåvägssynken] samtliga kalendrar jag
-// har i icloud? kan jag få en enkel lista där jag väljer vilka jag vill
-// använda?" — connectAppleCalendar (nedan) tog tidigare bara den FÖRSTA
-// kalendern `client.fetchCalendars()` råkade returnera, utan att fråga.
-// Detta slår bara upp listan (sparar/ansluter ingenting) — samma
-// "reveal nothing about accepted destructive action, bara ett uppslag"-
-// mönster som lookupConnectionCandidate/lookupShareCandidate.
+// Slår bara upp listan (sparar/ansluter ingenting) — återanvänds av
+// addAppleAccount (verifiera inloggning innan den sparas) och av
+// listCalendarsForAppleAccount (samma sak, med redan lagrade creds).
 export async function listAppleCalendars(body: unknown) {
   const b = body as { accountEmail?: unknown; appSpecificPassword?: unknown };
   const accountEmail = typeof b.accountEmail === "string" ? b.accountEmail.trim() : "";
@@ -133,7 +140,102 @@ export async function listAppleCalendars(body: unknown) {
   }));
 }
 
-// ── Anslut/koppla bort ──────────────────────────────────────────────────────────
+function maskAccount(accountId: string, acc: { id: string; accountEmailEnc: string; connectedAt: string }) {
+  return {
+    id: acc.id,
+    accountEmail: decryptField(accountId, acc.accountEmailEnc),
+    connectedAt: acc.connectedAt,
+  };
+}
+
+// ── Apple-konton (kontonivå, 2026-07-30) ────────────────────────────────────────
+
+export async function addAppleAccount(accountId: string, memberId: string, body: unknown) {
+  const b = body as { accountEmail?: unknown; appSpecificPassword?: unknown };
+  const accountEmail = typeof b.accountEmail === "string" ? b.accountEmail.trim() : "";
+  const appSpecificPassword = typeof b.appSpecificPassword === "string" ? b.appSpecificPassword.trim() : "";
+  if (!accountEmail || !appSpecificPassword) {
+    throw new AppError(400, "Apple-ID och app-specifikt lösenord krävs");
+  }
+
+  // Verifiera inloggningen INNAN den sparas — samma princip som förut, bara
+  // flyttad hit (till engångstillfället man lägger till kontot) istället för
+  // att köras om varje gång en enskild kalender ansluts.
+  await listAppleCalendars({ accountEmail, appSpecificPassword });
+
+  const now = new Date().toISOString();
+  const acc = new AppleCalDavAccountModel({
+    id: `apple-acct-${crypto.randomUUID()}`,
+    accountId,
+    accountEmailEnc: encryptField(accountId, accountEmail),
+    appSpecificPasswordEnc: encryptField(accountId, appSpecificPassword),
+    createdBy: memberId,
+    connectedAt: now,
+  });
+  await acc.save();
+  return maskAccount(accountId, acc);
+}
+
+export async function listAppleAccounts(accountId: string) {
+  const accounts = await AppleCalDavAccountModel.find({ accountId });
+  return accounts.map((a) => maskAccount(accountId, a));
+}
+
+// Listar kalendrarna på ett REDAN tillagt Apple-konto — använder de lagrade
+// creds:en, ingen ny inloggningsruta behövs när man kopplar ihop en ENSKILD
+// BMAD-kalender med kontot.
+export async function listCalendarsForAppleAccount(accountId: string, appleAccountId: string) {
+  const acc = await AppleCalDavAccountModel.findOne({ id: appleAccountId, accountId });
+  if (!acc) throw new AppError(404, "Apple-konto hittades inte");
+  return listAppleCalendars({
+    accountEmail: decryptField(accountId, acc.accountEmailEnc),
+    appSpecificPassword: decryptField(accountId, acc.appSpecificPasswordEnc),
+  });
+}
+
+export async function removeAppleAccount(accountId: string, appleAccountId: string) {
+  const acc = await AppleCalDavAccountModel.findOne({ id: appleAccountId, accountId });
+  if (!acc) throw new AppError(404, "Apple-konto hittades inte");
+
+  // Koppla bort alla BMAD-kalendrar som använder detta konto — samma
+  // mjuk-radera-pullade-händelser-logik som en enskild frånkoppling
+  // (disconnectAppleCalendar nedan), bara applicerad på flera kalendrar.
+  const calendars = await CalendarModel.find({
+    accountId,
+    "calDavConnections.appleAccountId": appleAccountId,
+  });
+  const now = new Date().toISOString();
+  for (const calendar of calendars) {
+    const connIds = (calendar.calDavConnections as unknown as CalDavConnection[])
+      .filter((c) => c.appleAccountId === appleAccountId)
+      .map((c) => c.id);
+    for (const ev of calendar.events as unknown as CalendarEvent[]) {
+      if (ev.subscriptionId && connIds.includes(ev.subscriptionId) && !ev.deletedAt) ev.deletedAt = now;
+    }
+    calendar.calDavConnections = (calendar.calDavConnections as unknown as CalDavConnection[]).filter(
+      (c) => c.appleAccountId !== appleAccountId
+    ) as never;
+    calendar.markModified("events");
+    calendar.markModified("calDavConnections");
+    await calendar.save();
+  }
+
+  await AppleCalDavAccountModel.deleteOne({ id: appleAccountId, accountId });
+}
+
+// Bygger en tsdav-klient utifrån ett REDAN lagrat Apple-konto (via
+// connectionens appleAccountId) — återanvänds av pull/push nedan, som bara
+// bär en REFERENS till kontot, inte längre egna creds.
+async function buildClientForConnection(accountId: string, conn: CalDavConnection) {
+  const acc = await AppleCalDavAccountModel.findOne({ id: conn.appleAccountId, accountId });
+  if (!acc) return null;
+  return buildClient(
+    decryptField(accountId, acc.accountEmailEnc),
+    decryptField(accountId, acc.appSpecificPasswordEnc)
+  ).catch(() => null);
+}
+
+// ── Anslut/koppla bort en enskild BMAD-kalender ─────────────────────────────────
 
 export async function connectAppleCalendar(calendarId: string, accountId: string, memberId: string, body: unknown) {
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
@@ -142,28 +244,28 @@ export async function connectAppleCalendar(calendarId: string, accountId: string
     throw new AppError(409, "Kalendern har redan en aktiv CalDAV-anslutning — koppla bort den först");
   }
 
-  const b = body as { accountEmail?: unknown; appSpecificPassword?: unknown; calendarUrl?: unknown };
-  const accountEmail = typeof b.accountEmail === "string" ? b.accountEmail.trim() : "";
-  const appSpecificPassword = typeof b.appSpecificPassword === "string" ? b.appSpecificPassword.trim() : "";
+  const b = body as { appleAccountId?: unknown; calendarUrl?: unknown };
+  const appleAccountId = typeof b.appleAccountId === "string" ? b.appleAccountId.trim() : "";
   const chosenCalendarUrl = typeof b.calendarUrl === "string" ? b.calendarUrl.trim() : "";
-  if (!accountEmail || !appSpecificPassword) {
-    throw new AppError(400, "Apple-ID och app-specifikt lösenord krävs");
+  if (!appleAccountId || !chosenCalendarUrl) {
+    throw new AppError(400, "Ett Apple-konto och en vald kalender krävs");
   }
 
-  const client = await buildClient(accountEmail, appSpecificPassword).catch(() => {
-    throw new AppError(502, "Kunde inte logga in mot Apple — kontrollera Apple-ID och app-specifikt lösenord");
+  const acc = await AppleCalDavAccountModel.findOne({ id: appleAccountId, accountId });
+  if (!acc) throw new AppError(404, "Apple-konto hittades inte");
+
+  // Verifierar att den valda kalendern fortfarande finns på Apple-kontot
+  // (kan ha tagits bort där sedan listningen gjordes).
+  const client = await buildClient(
+    decryptField(accountId, acc.accountEmailEnc),
+    decryptField(accountId, acc.appSpecificPasswordEnc)
+  ).catch(() => {
+    throw new AppError(502, "Kunde inte logga in mot Apple");
   });
   const calendars = await client.fetchCalendars().catch(() => {
     throw new AppError(502, "Kunde inte hämta kalendrar från Apple");
   });
-  // Väljaren i UI:t (2026-07-30) skickar alltid med calendarUrl — man väljer
-  // VILKEN av Apple-kontots kalendrar som ska anslutas, istället för att
-  // (som tidigare) tyst få den första `fetchCalendars()` råkade returnera.
-  // Faller tillbaka på "första hittade" bara om anropet av någon anledning
-  // saknar valet (bakåtkompatibelt, borde inte hända via UI:t längre).
-  const target = chosenCalendarUrl
-    ? calendars.find((c) => c.url && String(c.url) === chosenCalendarUrl)
-    : calendars.find((c) => c.url);
+  const target = calendars.find((c) => c.url && String(c.url) === chosenCalendarUrl);
   if (!target?.url) throw new AppError(502, "Den valda kalendern hittades inte längre på Apple-kontot");
 
   const now = new Date().toISOString();
@@ -171,8 +273,7 @@ export async function connectAppleCalendar(calendarId: string, accountId: string
     id: `caldav-${crypto.randomUUID()}`,
     calendarId,
     provider: "apple",
-    accountEmailEnc: encryptField(accountId, accountEmail),
-    appSpecificPasswordEnc: encryptField(accountId, appSpecificPassword),
+    appleAccountId,
     externalCalendarHref: String(target.url),
     syncIntervalMinutes: 15,
     lastSyncedAt: null,
@@ -186,7 +287,7 @@ export async function connectAppleCalendar(calendarId: string, accountId: string
 
   pullConnection(calendarId, accountId, connection).catch((e) => logger.error(e));
 
-  return { ...connection, accountEmailEnc: accountEmail, appSpecificPasswordEnc: "••••••••" };
+  return { ...connection, accountEmail: decryptField(accountId, acc.accountEmailEnc) };
 }
 
 export async function disconnectAppleCalendar(calendarId: string, accountId: string, connectionId: string) {
@@ -231,10 +332,7 @@ export async function pullConnectionById(calendarId: string, accountId: string, 
 }
 
 export async function pullConnection(calendarId: string, accountId: string, conn: CalDavConnection) {
-  const client = await buildClient(
-    decryptField(accountId, conn.accountEmailEnc),
-    decryptField(accountId, conn.appSpecificPasswordEnc)
-  ).catch(() => null);
+  const client = await buildClientForConnection(accountId, conn);
   if (!client) {
     await recordSyncError(calendarId, conn.id, "Kunde inte logga in mot Apple");
     return;
@@ -297,10 +395,7 @@ export async function pushEventUpsert(calendarId: string, accountId: string, eve
     await calendar.save();
   }
 
-  const client = await buildClient(
-    decryptField(accountId, conn.accountEmailEnc),
-    decryptField(accountId, conn.appSpecificPasswordEnc)
-  ).catch(() => null);
+  const client = await buildClientForConnection(accountId, conn);
   if (!client) {
     await recordSyncError(calendarId, conn.id, "Kunde inte logga in mot Apple vid skrivning");
     return;
@@ -378,10 +473,7 @@ export async function pushEventDelete(calendarId: string, accountId: string, eve
   const conn = (calendar.calDavConnections as unknown as CalDavConnection[]).find((c) => c.id === event.subscriptionId);
   if (!conn) return;
 
-  const client = await buildClient(
-    decryptField(accountId, conn.accountEmailEnc),
-    decryptField(accountId, conn.appSpecificPasswordEnc)
-  ).catch(() => null);
+  const client = await buildClientForConnection(accountId, conn);
   if (!client) {
     await recordSyncError(calendarId, conn.id, "Kunde inte logga in mot Apple vid radering");
     return;

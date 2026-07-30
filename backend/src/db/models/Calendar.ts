@@ -22,8 +22,9 @@ const calDavConnectionSchema = new Schema(
     id: { type: String, required: true },
     calendarId: { type: String, required: true },
     provider: { type: String, required: true },
-    accountEmailEnc: { type: String, required: true },
-    appSpecificPasswordEnc: { type: String, required: true },
+    // 2026-07-30: refererar ett AppleCalDavAccount istället för att bära
+    // egna inloggningsuppgifter — se AppleCalDavAccount.ts.
+    appleAccountId: { type: String, required: true },
     externalCalendarHref: { type: String, required: true },
     syncIntervalMinutes: { type: Number, default: 15 },
     lastSyncedAt: { type: String, default: null },

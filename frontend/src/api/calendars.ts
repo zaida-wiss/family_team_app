@@ -1,6 +1,10 @@
 import type { Calendar, CalDavConnection, IcsSubscription } from "@shared/types";
 import { api, request } from "./client";
 
+// Maskerad API-representation av ett AppleCalDavAccount (2026-07-30) —
+// aldrig lösenordet, bara den dekrypterade e-posten + anslutningsdatum.
+export type AppleCalDavAccountSummary = { id: string; accountEmail: string; connectedAt: string };
+
 export const calendarsApi = {
   getAll: (from?: string, until?: string) => {
     const params = new URLSearchParams();
@@ -81,19 +85,30 @@ export const calendarsApi = {
       method: "POST",
       body: JSON.stringify({})
     }),
-  // ADR-0027 (2026-07-24) — tvåvägs CalDAV-anslutning (Apple, Fas 1).
-  // Kalenderväljaren (2026-07-30, Zaidas fråga: "kan jag få en enkel lista
-  // där jag väljer vilka kalendrar jag vill använda?") — loggar in och
-  // listar Apple-kontots kalendrar UTAN att ansluta något än.
-  listAppleCalendars: (accountEmail: string, appSpecificPassword: string) =>
-    request<{ url: string; name: string }[]>(api("calendars/caldav/apple/list"), {
+  // ADR-0027 (2026-07-24, uppdaterad 2026-07-30) — tvåvägs CalDAV-anslutning
+  // (Apple, Fas 1). Apple-inloggningen görs på KONTONIVÅ (Zaidas beslut
+  // 2026-07-30: "inte fyllas i inuti någon kalender utan på en högre nivå
+  // så att sedan kalendrar kan använda sig av tvåvägssynkens olika
+  // kalendrar") — logga in EN gång, koppla sedan flera BMAD-kalendrar mot
+  // samma konto utan att skriva in e-post/lösenord igen.
+  addAppleAccount: (accountEmail: string, appSpecificPassword: string) =>
+    request<AppleCalDavAccountSummary>(api("calendars/caldav/apple-accounts"), {
       method: "POST",
       body: JSON.stringify({ accountEmail, appSpecificPassword })
     }),
-  connectAppleCalDav: (calendarId: string, accountEmail: string, appSpecificPassword: string, calendarUrl: string) =>
-    request<CalDavConnection>(api(`calendars/${calendarId}/caldav/apple`), {
+  listAppleAccounts: () =>
+    request<AppleCalDavAccountSummary[]>(api("calendars/caldav/apple-accounts")),
+  removeAppleAccount: (appleAccountId: string) =>
+    request<{ ok: boolean }>(api(`calendars/caldav/apple-accounts/${appleAccountId}`), { method: "DELETE" }),
+  listCalendarsForAppleAccount: (appleAccountId: string) =>
+    request<{ url: string; name: string }[]>(api(`calendars/caldav/apple-accounts/${appleAccountId}/calendars`), {
       method: "POST",
-      body: JSON.stringify({ accountEmail, appSpecificPassword, calendarUrl })
+      body: JSON.stringify({})
+    }),
+  connectAppleCalDav: (calendarId: string, appleAccountId: string, calendarUrl: string) =>
+    request<CalDavConnection & { accountEmail: string }>(api(`calendars/${calendarId}/caldav/apple`), {
+      method: "POST",
+      body: JSON.stringify({ appleAccountId, calendarUrl })
     }),
   disconnectCalDav: (calendarId: string, connectionId: string) =>
     request<{ ok: boolean }>(api(`calendars/${calendarId}/caldav/${connectionId}`), { method: "DELETE" }),

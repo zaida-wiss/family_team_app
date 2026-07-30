@@ -7,6 +7,7 @@ import { getAllRoles } from "./rolesService.js";
 import { hasPermission } from "../../../shared/permissions.js";
 import { logger } from "../utils/logger.js";
 import { pushEventDelete, pushEventUpsert } from "./appleCalDavService.js";
+import { AppleCalDavAccountModel } from "../db/models/AppleCalDavAccount.js";
 
 // Krypteringen är transparent för anroparen (routes, delade typer, frontend) —
 // title/notes krypteras precis innan de sparas och dekrypteras precis innan de
@@ -58,6 +59,18 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
     { $project: { _id: 0, __v: 0 } },
   ]);
 
+  // ADR-0027-tillägg (2026-07-30) — Apple-inloggningen ligger nu på
+  // KONTONIVÅ (AppleCalDavAccount), inte längre inbäddad i varje
+  // CalDavConnection. Slå upp de berörda kontona en gång (inte per
+  // kalender/anslutning) och dekryptera bara e-posten för visning
+  // ("Ansluten som: x@icloud.com") — lösenordet lämnar ALDRIG backend i
+  // klartext eller krypterad form, samma princip som GDPR-exportens
+  // uteslutning.
+  const appleAccounts = await AppleCalDavAccountModel.find({ accountId });
+  const appleEmailById = new Map(
+    appleAccounts.map((a) => [a.id, decryptField(accountId, a.accountEmailEnc)])
+  );
+
   return calendars.map((calendar) => ({
     ...calendar,
     events: calendar.events.map((event: { title: string; notes: string | null }) =>
@@ -67,14 +80,9 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
       ...sub,
       url: decryptField(accountId, sub.url)
     })),
-    // ADR-0027 — accountEmailEnc dekrypteras för visning ("Ansluten som:
-    // x@icloud.com"), men appSpecificPasswordEnc lämnar ALDRIG backend i
-    // klartext eller krypterad form efter denna punkt — bara en fast
-    // maskeringssträng, samma princip som GDPR-exportens uteslutning.
-    calDavConnections: (calendar.calDavConnections ?? []).map((conn: { accountEmailEnc: string }) => ({
+    calDavConnections: (calendar.calDavConnections ?? []).map((conn: { appleAccountId: string }) => ({
       ...conn,
-      accountEmailEnc: decryptField(accountId, conn.accountEmailEnc),
-      appSpecificPasswordEnc: "••••••••"
+      accountEmail: appleEmailById.get(conn.appleAccountId) ?? null
     }))
   }));
 }

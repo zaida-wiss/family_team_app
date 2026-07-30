@@ -405,7 +405,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onRemoveSubscription={memberContentProps.onRemoveSubscription}
               onSyncSubscription={memberContentProps.onSyncSubscription}
               onUpdateCalendarKeepAllHistory={memberContentProps.onUpdateCalendarKeepAllHistory}
-              onListAppleCalendars={memberContentProps.onListAppleCalendars}
+              appleAccounts={memberContentProps.appleAccounts}
+              onRefreshAppleAccounts={memberContentProps.onRefreshAppleAccounts}
+              onAddAppleAccount={memberContentProps.onAddAppleAccount}
+              onRemoveAppleAccount={memberContentProps.onRemoveAppleAccount}
+              onListCalendarsForAppleAccount={memberContentProps.onListCalendarsForAppleAccount}
               onConnectAppleCalDav={memberContentProps.onConnectAppleCalDav}
               onDisconnectCalDav={memberContentProps.onDisconnectCalDav}
               onUpdateCalDavInterval={memberContentProps.onUpdateCalDavInterval}

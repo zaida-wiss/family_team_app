@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Apple, RefreshCw, X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import type { Calendar, Id } from "@shared/types";
+import type { AppleCalDavAccountSummary } from "../../api/calendars";
 import styles from "./CalendarPanel.module.css";
 
 type AppleCalendarCandidate = { url: string; name: string };
@@ -8,15 +9,14 @@ type AppleCalendarCandidate = { url: string; name: string };
 type Props = {
   selectedCalendar: Calendar;
   canEdit: boolean;
-  onListAppleCalendars: (accountEmail: string, appSpecificPassword: string) => Promise<AppleCalendarCandidate[]>;
-  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string, calendarUrl: string) => Promise<void>;
+  appleAccounts: AppleCalDavAccountSummary[];
+  onListCalendarsForAppleAccount: (appleAccountId: Id) => Promise<AppleCalendarCandidate[]>;
+  onConnectAppleCalDav: (calendarId: Id, appleAccountId: Id, calendarUrl: string) => Promise<void>;
   onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
   onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
   onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
 };
 
-// ADR-0027 (2026-07-24) — Fas 1: Apple CalDAV, tvåvägssynk. Google (Fas 2)
-// väntar på att Zaida sätter upp ett Google Cloud-projekt, se ADR:n.
 const SYNC_INTERVAL_OPTIONS: { value: number; label: string }[] = [
   { value: 5, label: "Var 5:e minut" },
   { value: 15, label: "Var 15:e minut (standard)" },
@@ -25,23 +25,24 @@ const SYNC_INTERVAL_OPTIONS: { value: number; label: string }[] = [
   { value: 240, label: "Var 4:e timme" },
 ];
 
+// 2026-07-30, Zaidas beslut: "tvåvägssynken med apple kontot skall inte
+// fyllas i inuti någon kalender utan på en högre nivå så att sedan
+// kalendrar kan använda sig av tvåvägssynkens olika kalendrar" — Apple-ID
+// och lösenord skrivs numera in EN gång i AppleCalDavAccountsSection.tsx
+// (Inställningar → Kalendrar, oberoende av vald kalender). Den HÄR
+// komponenten väljer bara BLAND redan tillagda konton + vilken av kontots
+// Apple-kalendrar just DEN valda BMAD-kalendern ska kopplas till.
 export function CalendarCalDavSection({
   selectedCalendar,
   canEdit,
-  onListAppleCalendars,
+  appleAccounts,
+  onListCalendarsForAppleAccount,
   onConnectAppleCalDav,
   onDisconnectCalDav,
   onUpdateCalDavInterval,
   onSyncCalDavNow,
 }: Props) {
-  const [accountEmail, setAccountEmail] = useState("");
-  const [appSpecificPassword, setAppSpecificPassword] = useState("");
-  // Kalenderväljaren (2026-07-30, Zaidas fråga: "gäller det samtliga
-  // kalendrar jag har i icloud? kan jag få en enkel lista där jag väljer
-  // vilka jag vill använda?") — tidigare anslöts alltid den FÖRSTA Apple-
-  // kalendern som råkade komma tillbaka, utan att fråga. Nu ett mellansteg:
-  // hämta listan, visa den, låt användaren välja EN (fortsatt bara en åt
-  // gången per BMAD-kalender, ADR-0027s Fas 1-begränsning) innan anslutning.
+  const [selectedAppleAccountId, setSelectedAppleAccountId] = useState(appleAccounts[0]?.id ?? "");
   const [listing, setListing] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<AppleCalendarCandidate[] | null>(null);
@@ -55,14 +56,15 @@ export function CalendarCalDavSection({
   const connection = (selectedCalendar.calDavConnections ?? [])[0] ?? null;
 
   async function listCalendars() {
+    if (!selectedAppleAccountId) return;
     setListError(null);
     setListing(true);
     try {
-      const found = await onListAppleCalendars(accountEmail.trim(), appSpecificPassword.trim());
+      const found = await onListCalendarsForAppleAccount(selectedAppleAccountId);
       setCandidates(found);
       setSelectedUrl(found[0]?.url ?? "");
     } catch {
-      setListError("Kunde inte hämta kalendrar — kontrollera Apple-ID och app-specifikt lösenord.");
+      setListError("Kunde inte hämta kalendrar från Apple-kontot.");
       setCandidates(null);
     } finally {
       setListing(false);
@@ -70,13 +72,11 @@ export function CalendarCalDavSection({
   }
 
   async function connect() {
-    if (!selectedUrl) return;
+    if (!selectedUrl || !selectedAppleAccountId) return;
     setConnectError(null);
     setConnecting(true);
     try {
-      await onConnectAppleCalDav(selectedCalendar.id, accountEmail.trim(), appSpecificPassword.trim(), selectedUrl);
-      setAccountEmail("");
-      setAppSpecificPassword("");
+      await onConnectAppleCalDav(selectedCalendar.id, selectedAppleAccountId, selectedUrl);
       setCandidates(null);
       setSelectedUrl("");
     } catch {
@@ -93,45 +93,44 @@ export function CalendarCalDavSection({
   }
 
   if (!connection) {
+    if (appleAccounts.length === 0) {
+      return (
+        <div className={styles.importBlock}>
+          <p className="eyebrow">Apple-kalender (tvåvägssynk)</p>
+          <small className={styles.subIntervalHint}>
+            Lägg till ett Apple-konto ovan innan du kan koppla den här kalendern till iCloud.
+          </small>
+        </div>
+      );
+    }
+
     return (
       <div className={styles.importBlock}>
         <p className="eyebrow">Apple-kalender (tvåvägssynk)</p>
-        <p className={styles.subIntervalHint}>
-          Ändringar du gör i appen skrivs ut till din iCloud-kalender, och ändringar du gör där (t.ex. i iPhonens
-          Kalender-app) hämtas hit igen. Du behöver ett app-specifikt lösenord — inte ditt vanliga Apple-ID-lösenord.{" "}
-          <a href="https://support.apple.com/en-us/102654" rel="noreferrer" target="_blank">
-            Så skapar du ett
-          </a>
-          .
-        </p>
         <div className={styles.subForm}>
-          <input
-            className="text-input"
-            disabled={candidates !== null}
-            onChange={(e) => setAccountEmail(e.target.value)}
-            placeholder="Apple-ID (e-post)"
-            type="email"
-            value={accountEmail}
-          />
-          <input
-            className="text-input"
-            disabled={candidates !== null}
-            onChange={(e) => setAppSpecificPassword(e.target.value)}
-            placeholder="App-specifikt lösenord"
-            type="password"
-            value={appSpecificPassword}
-          />
+          <label className={styles.subIntervalLabel}>
+            Apple-konto
+            <select
+              className="text-input"
+              disabled={candidates !== null}
+              onChange={(e) => { setSelectedAppleAccountId(e.target.value); resetChoice(); }}
+              value={selectedAppleAccountId}
+            >
+              {appleAccounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.accountEmail}</option>
+              ))}
+            </select>
+          </label>
           {listError && <small className={styles.subIntervalHint}>{listError}</small>}
 
           {candidates === null ? (
             <button
               className={`secondary-button ${styles.fullButton}`}
-              disabled={!accountEmail.trim() || !appSpecificPassword.trim() || listing}
+              disabled={!selectedAppleAccountId || listing}
               onClick={() => void listCalendars()}
               type="button"
             >
-              <Apple size={16} />
-              {listing ? "Hämtar kalendrar…" : "Hämta mina kalendrar"}
+              {listing ? "Hämtar kalendrar…" : "Hämta kalendrar från kontot"}
             </button>
           ) : (
             <>
@@ -161,7 +160,6 @@ export function CalendarCalDavSection({
                   onClick={() => void connect()}
                   type="button"
                 >
-                  <Apple size={16} />
                   {connecting ? "Ansluter…" : "Anslut vald kalender"}
                 </button>
               </div>
@@ -177,7 +175,9 @@ export function CalendarCalDavSection({
       <p className="eyebrow">Apple-kalender (tvåvägssynk)</p>
       <div className={styles.subRow}>
         <div className={styles.subInfo}>
-          <span className={styles.subUrl}>{connection.accountEmailEnc}</span>
+          <span className={styles.subUrl}>
+            {appleAccounts.find((a) => a.id === connection.appleAccountId)?.accountEmail ?? "Okänt Apple-konto"}
+          </span>
           {connection.lastSyncedAt && (
             <small>Senast synkad: {new Date(connection.lastSyncedAt).toLocaleString("sv-SE")}</small>
           )}

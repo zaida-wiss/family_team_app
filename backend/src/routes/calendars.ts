@@ -56,13 +56,33 @@ calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, attachAccoun
 
 // ── CalDAV-anslutning, tvåvägssynk (ADR-0027) ───────────────────────────────────
 
-// Lista Apple-kontots kalendrar (2026-07-30) — måste registreras FÖRE
-// POST /:id/caldav/apple nedan (annars matchar den generella :id-parametern
-// "apple" om denna route låg efter — samma ordningsprincip som redan
-// dokumenterad flerstädes i den här filen). Kontobrett/accountId-oberoende
-// slås INTE upp här — man loggar in direkt mot Apple, sparar inget.
-calendarsRouter.post("/caldav/apple/list", requireAuth, async (req, res) => {
-  res.json(await appleCalDav.listAppleCalendars(req.body));
+// Apple-konton på KONTONIVÅ (2026-07-30, Zaidas beslut: "tvåvägssynken med
+// apple kontot skall inte fyllas i inuti någon kalender utan på en högre
+// nivå så att sedan kalendrar kan använda sig av tvåvägssynkens olika
+// kalendrar") — Apple-ID/lösenordet loggas in EN gång här, sedan väljer
+// varje enskild BMAD-kalender (routes nedan) bland de redan tillagda
+// kontona istället för att skriva in creds på nytt. Måste registreras FÖRE
+// /:id/caldav/apple nedan (samma ordningsprincip som redan dokumenterad
+// flerstädes i den här filen, även om de i praktiken inte kolliderar —
+// olika antal path-segment).
+calendarsRouter.post("/caldav/apple-accounts", requireAuth, attachAccountId, async (req, res) => {
+  const acc = await appleCalDav.addAppleAccount(req.accountId!, req.memberId!, req.body);
+  res.status(201).json(acc);
+});
+
+calendarsRouter.get("/caldav/apple-accounts", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await appleCalDav.listAppleAccounts(req.accountId!));
+});
+
+calendarsRouter.delete("/caldav/apple-accounts/:appleAccountId", requireAuth, attachAccountId, async (req, res) => {
+  await appleCalDav.removeAppleAccount(req.accountId!, req.params.appleAccountId);
+  res.json({ ok: true });
+});
+
+// Listar kalendrarna på ett redan tillagt Apple-konto (ingen ny inloggning
+// behövs) — anropas när man kopplar en ENSKILD BMAD-kalender till kontot.
+calendarsRouter.post("/caldav/apple-accounts/:appleAccountId/calendars", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await appleCalDav.listCalendarsForAppleAccount(req.accountId!, req.params.appleAccountId));
 });
 
 calendarsRouter.post("/:id/caldav/apple", requireAuth, attachAccountId, async (req, res) => {

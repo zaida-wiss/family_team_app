@@ -3,6 +3,7 @@ import { Check, Download, Pencil, Upload, X } from "lucide-react";
 import { canExportCalendar } from "../../utils/permissions";
 import styles from "./CalendarPanel.module.css";
 import type { AccessLevel, Calendar, Id, IcsSubscription, Member, Role } from "@shared/types";
+import type { AppleCalDavAccountSummary } from "../../api/calendars";
 import { filterByDateRange, parseIcsEvents, toIcs, toIcsMerged } from "./calendarIcs";
 import type { ImportedCalendarEvent } from "./calendarIcs";
 import { PreviewSelector } from "./PreviewSelector";
@@ -31,8 +32,9 @@ type Props = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
-  onListAppleCalendars: (accountEmail: string, appSpecificPassword: string) => Promise<{ url: string; name: string }[]>;
-  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string, calendarUrl: string) => Promise<void>;
+  appleAccounts: AppleCalDavAccountSummary[];
+  onListCalendarsForAppleAccount: (appleAccountId: Id) => Promise<{ url: string; name: string }[]>;
+  onConnectAppleCalDav: (calendarId: Id, appleAccountId: Id, calendarUrl: string) => Promise<void>;
   onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
   onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
   onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
@@ -60,7 +62,8 @@ export function CalendarManagementCard({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
-  onListAppleCalendars,
+  appleAccounts,
+  onListCalendarsForAppleAccount,
   onConnectAppleCalDav,
   onDisconnectCalDav,
   onUpdateCalDavInterval,
@@ -353,7 +356,8 @@ export function CalendarManagementCard({
       <CalendarCalDavSection
         selectedCalendar={selectedCalendar}
         canEdit={canEdit}
-        onListAppleCalendars={onListAppleCalendars}
+        appleAccounts={appleAccounts}
+        onListCalendarsForAppleAccount={onListCalendarsForAppleAccount}
         onConnectAppleCalDav={onConnectAppleCalDav}
         onDisconnectCalDav={onDisconnectCalDav}
         onUpdateCalDavInterval={onUpdateCalDavInterval}
