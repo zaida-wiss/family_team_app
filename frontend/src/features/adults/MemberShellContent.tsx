@@ -26,7 +26,8 @@ const RecipesView = lazy(() =>
   import("../recipes/RecipesView").then((m) => ({ default: m.RecipesView }))
 );
 import { HomePage } from "../../pages/HomePage";
-import { canViewResource, hasPermission } from "../../utils/permissions";
+import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
+import { getVisibleTodos } from "../todos/selectors";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Membership, Recipe, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
@@ -170,6 +171,15 @@ export function MemberShellContent({
 
   const canSeeAllCalendars = hasPermission(currentMember, roles, "canSeeAllCalendar");
   const canSeeOwnCalendars = hasPermission(currentMember, roles, "canSeeOwnCalendar");
+
+  // Hemvyns familjeöversikt (2026-07-30) — samma synlighetsfilter som
+  // TodosView.tsx redan använder, så Hem-sammanfattningen aldrig visar en
+  // uppgift den inloggade medlemmen normalt inte skulle se i Todos-panelen.
+  const homeVisibleTodos = useMemo(
+    () => (canSeeTodos ? getVisibleTodos(currentMember, roles, todos) : []),
+    [canSeeTodos, currentMember, roles, todos]
+  );
+  const canSeeMembers = canSeeMembersPanel(currentMember, roles);
 
   const accessibleCalendarIds = useMemo(
     () =>
@@ -565,6 +575,13 @@ export function MemberShellContent({
         onDeleteEvent={onDeleteCalendarEvent}
         onLoadEventsForMonth={onLoadEventsForMonth}
         fixedCalendarTimes={fixedCalendarTimes}
+        todos={homeVisibleTodos}
+        canSeeTodos={canSeeTodos}
+        onOpenTodos={() => onNavigate("todos")}
+        shoppingLists={canSeeShopping ? shoppingLists : []}
+        canSeeShopping={canSeeShopping}
+        onOpenShopping={() => onNavigate("shopping")}
+        canSeeMembers={canSeeMembers}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

@@ -1,6 +1,6 @@
 import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
-import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role, ShoppingList, Todo } from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -19,9 +19,21 @@ type Props = {
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   fixedCalendarTimes?: boolean;
+  todos?: Todo[];
+  canSeeTodos?: boolean;
+  onOpenTodos?: () => void;
+  shoppingLists?: ShoppingList[];
+  canSeeShopping?: boolean;
+  onOpenShopping?: () => void;
+  canSeeMembers?: boolean;
 };
 
-export function HomePage({ currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar, calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent, onLoadEventsForMonth, fixedCalendarTimes }: Props) {
+export function HomePage({
+  currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
+  calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
+  onLoadEventsForMonth, fixedCalendarTimes, todos, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
+  onOpenShopping, canSeeMembers
+}: Props) {
   return (
     <MemberOverview
       currentMember={currentMember}
@@ -40,6 +52,13 @@ export function HomePage({ currentMember, accountName, roles, activeMembers, sel
       onDeleteEvent={onDeleteEvent}
       onLoadEventsForMonth={onLoadEventsForMonth}
       fixedCalendarTimes={fixedCalendarTimes}
+      todos={todos}
+      canSeeTodos={canSeeTodos}
+      onOpenTodos={onOpenTodos}
+      shoppingLists={shoppingLists}
+      canSeeShopping={canSeeShopping}
+      onOpenShopping={onOpenShopping}
+      canSeeMembers={canSeeMembers}
     />
   );
 }

@@ -76,3 +76,75 @@ test("Familjeväxlaren i hemvyn: kan växla till en annan familj och sedan tillb
   await expect(familySelect).toHaveValue("mem-a");
   await expect(page.getByRole("option", { name: "Familjen B" })).toHaveCount(1);
 });
+
+// 2026-07-30, Zaidas önskemål: "i hemmet skall du kunna växla mellan olika
+// familjer och där skall gemensamma inköpslistor, todos, kalendrar,
+// medlemmar visas" — Hem-panelen fick tre nya sammanfattningskort
+// (Medlemmar/Uppgifter/Inköp) bredvid den redan befintliga kalendern. Testar
+// samtidigt den relaterade cache-scopningsfixen (localCache.ts:s
+// setCacheNamespace) — utan den skulle Familjen B:s Hem-vy kort visa
+// Familjen A:s cachade uppgift/lista innan den färska hämtningen hann landa.
+const TODO_A = {
+  id: "todo-a", accountId: "acc-a", title: "Handla mjölk", createdBy: "mem-a",
+  assignedTo: "mem-a", isShared: false, status: "pending", starValue: 0,
+  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+  personalCategoryId: null, notes: null
+};
+const TODO_B = { ...TODO_A, id: "todo-b", accountId: "acc-b", title: "Klippa gräset", createdBy: "mem-b", assignedTo: "mem-b" };
+
+const LIST_A = {
+  id: "shop-a", accountId: "acc-a", name: "Veckohandling A", ownerId: "mem-a", color: "#2f7d6d", icon: null,
+  sharedWith: [], deletedAt: null, deletedBy: null,
+  items: [{ id: "item-a", title: "Mjölk", createdBy: "mem-a", done: false, deletedAt: null, deletedBy: null }]
+};
+const LIST_B = {
+  id: "shop-b", accountId: "acc-b", name: "Veckohandling B", ownerId: "mem-b", color: "#2f7d6d", icon: null,
+  sharedWith: [], deletedAt: null, deletedBy: null,
+  items: [{ id: "item-b", title: "Bröd", createdBy: "mem-b", done: false, deletedAt: null, deletedBy: null }]
+};
+
+test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett familjebyte, ingen kvarbliven cache från föregående familj", async ({ page }) => {
+  await page.route("**/api/auth/refresh", (route) =>
+    route.fulfill({
+      json: {
+        accessToken: "fake-access-token",
+        user: USER,
+        memberships: [{ member: MEMBER_A, account: ACCOUNT_A }, { member: MEMBER_B, account: ACCOUNT_B }]
+      }
+    })
+  );
+  await page.route("**/api/auth/preferences", (route) => route.fulfill({ json: { user: USER } }));
+  await mockDataAPIs(page);
+  await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
+  await page.route("**/api/members", (route) => {
+    const memberId = route.request().headers()["x-member-id"];
+    return route.fulfill({ json: memberId === "mem-b" ? [MEMBER_B] : [MEMBER_A] });
+  });
+  await page.route("**/api/todos", (route) => {
+    const memberId = route.request().headers()["x-member-id"];
+    return route.fulfill({ json: memberId === "mem-b" ? [TODO_B] : [TODO_A] });
+  });
+  await page.route("**/api/shopping", (route) => {
+    const memberId = route.request().headers()["x-member-id"];
+    return route.fulfill({ json: memberId === "mem-b" ? [LIST_B] : [LIST_A] });
+  });
+
+  await page.goto("/");
+
+  await expect(page.getByText("Handla mjölk")).toBeVisible();
+  await expect(page.getByText("Veckohandling A")).toBeVisible();
+  await expect(page.getByText("Klippa gräset")).not.toBeVisible();
+
+  const familySelect = page.getByLabel("Familj");
+  await familySelect.selectOption({ label: "Familjen B" });
+
+  await expect(page.getByText("Klippa gräset")).toBeVisible();
+  await expect(page.getByText("Veckohandling B")).toBeVisible();
+  // Ingen kvarbliven cache från Familjen A — den gamla uppgiften/listan
+  // ska inte synas efter bytet, ens innan den färska hämtningen landar.
+  await expect(page.getByText("Handla mjölk")).not.toBeVisible();
+  await expect(page.getByText("Veckohandling A")).not.toBeVisible();
+});

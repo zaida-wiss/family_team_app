@@ -3,6 +3,7 @@ import { AccountPicker } from "./features/auth/AccountPicker";
 import { AcceptInvitePage } from "./features/invitations/AcceptInvitePage";
 import { Shell } from "./features/layout/Shell";
 import { useAppNavigation } from "./hooks/useAppNavigation";
+import { setCacheNamespace } from "./utils/localCache";
 
 export function AppRouter() {
   const nav = useAppNavigation();
@@ -43,6 +44,12 @@ export function AppRouter() {
       />
     );
   }
+  // Kontoscopad local-storage-cache (2026-07-30) — måste sättas SYNKRONT
+  // här, i render-funktionen (inte en effekt), så namnrymden hinner bytas
+  // INNAN Shell-trädets barn nedan monteras och läser sin egen cache. Se
+  // localCache.ts:s kommentar för hela resonemanget.
+  setCacheNamespace(nav.activeMembership.member.accountId ?? "");
+
   return (
     <Shell
       // 2026-07-29, Zaidas fynd: "när jag växlar i hemvyn till en annan
