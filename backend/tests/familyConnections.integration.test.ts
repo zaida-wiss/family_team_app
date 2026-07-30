@@ -197,7 +197,12 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
     expect(thread?.access).toBe("edit");
   });
 
-  it("A (edit) kan slutföra, godkänna en todo i B:s konto via connection-vägen", async () => {
+  // familyB.parentMemberId är en VUXEN — assignedMemberNeedsApproval (todosService.ts)
+  // kräver bara godkännande för barn, så en vuxens egen todo går direkt till
+  // "approved" vid complete, inget separat approve-steg behövs (eller är
+  // möjligt: todon är redan "approved", inte "done", så ett andra
+  // anrop mot .../approve hade korrekt gett 404 "inte done").
+  it("A (edit) kan slutföra en todo i B:s konto via connection-vägen (auto-godkänns direkt, vuxen mottagare)", async () => {
     const todoInB = `todo-famconn-b-${crypto.randomUUID()}`;
     await request(app)
       .post("/api/todos")
@@ -218,11 +223,12 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
       .send({ elapsedMs: null });
     expect(complete.status).toBe(200);
 
-    const approve = await request(app)
-      .patch(`/api/todos/connections/${familyB.accountId}/${todoInB}/approve`)
-      .set("Authorization", `Bearer ${familyA.accessToken}`)
-      .set("x-member-id", familyA.parentMemberId);
-    expect(approve.status).toBe(200);
+    const todosInB = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId);
+    const updated = (todosInB.body as Array<{ id: string; status: string }>).find((t) => t.id === todoInB);
+    expect(updated?.status).toBe("approved");
   });
 
   it("B (bara view-åtkomst till A) nekas att slutföra den tidigare skapade todon i A:s konto", async () => {
