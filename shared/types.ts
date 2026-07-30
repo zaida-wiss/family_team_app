@@ -450,7 +450,16 @@ export type PermissionKey =
   | "canViewTrash"
   | "canRestoreFromTrash"
   | "canCreateChildAccounts"
-  | "canManageChildTodos";
+  | "canManageChildTodos"
+  // Se Medlemmar-panelen (listan + klicka in på en annan medlems dashboard,
+  // 2026-07-30, Zaidas önskemål: "alla familjemedlemmar skall kunna se den,
+  // och möjlighet att välja bort det alternativet på en egen roll"). Till
+  // skillnad från övriga 23 behörigheter (default AV, aktiveras explicit)
+  // är denna DEFAULT PÅ — se canSeeMembersPanel i permissions.ts, som
+  // tolkar en SAKNAD nyckel (alla roller skapade innan detta fält fanns)
+  // som "får se", inte "får inte se". Bara ett uttryckligt `false` stänger
+  // av den för en specifik roll.
+  | "canSeeMembers";
 
 export type Role = {
   id: Id;

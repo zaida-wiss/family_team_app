@@ -118,6 +118,20 @@ export function Shell({
     setFontId,
   } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated);
 
+  // Medlemsvyn (2026-07-30) — om en roll får canSeeMembers avstängd EFTER
+  // att activePanel/lastActivePanel redan pekade på "members" (t.ex. en
+  // admin ändrar rollen medan personen är kvar på panelen, eller en
+  // persisterad lastActivePanel från innan ändringen), måste vyn hoppa
+  // bort DIREKT — HeroBar.tsx:s nav-ikon döljs redan, men det räcker inte
+  // ensamt (activePanel kan nås utan att klicka ikonen). En enda korrigering
+  // här, istället för att varje konsument av activePanel (PanelRouter,
+  // visibleThemeMember nedan) behöver sin egen dubblerade kontroll.
+  useEffect(() => {
+    if (activePanel === "members" && !settingsProps.canSeeMembers) {
+      setActivePanel("home");
+    }
+  }, [activePanel, settingsProps.canSeeMembers, setActivePanel]);
+
   // 2026-07-23 (Zaidas beslut): ett medlemsval visas numera bara på
   // Medlemmar-panelen, inte Hem (se useAppState.ts:s setActivePanel) — den
   // här kontrollen följer samma villkor, annars skulle app-skalets tema
@@ -163,7 +177,7 @@ export function Shell({
         accountName={activeAccount.name}
         currentMember={currentMember}
         activeMembers={memberContentProps.activeMembers}
-        canManageMembers={settingsProps.canManageMembers}
+        canSeeMembers={settingsProps.canSeeMembers}
         onNavigate={setActivePanel}
         onSwitchAccount={onSwitchAccount}
         onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}

@@ -10,5 +10,6 @@ export {
   isSameAccount,
   canManageChildAccount,
   canCreateChildAccount,
-  canExportCalendar
+  canExportCalendar,
+  canSeeMembersPanel
 } from "@shared/permissions";

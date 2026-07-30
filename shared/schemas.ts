@@ -151,7 +151,8 @@ export const PermissionsSchema = z.object({
   canViewTrash: z.boolean(),
   canRestoreFromTrash: z.boolean(),
   canCreateChildAccounts: z.boolean(),
-  canManageChildTodos: z.boolean()
+  canManageChildTodos: z.boolean(),
+  canSeeMembers: z.boolean()
 });
 
 export const RoleSchema = z.object({

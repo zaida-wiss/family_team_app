@@ -252,5 +252,14 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
 
     const account = await request(app).get(`/api/accounts/${accountAId}`);
     expect(account.body.deletedAt).not.toBeNull();
+
+    // 2026-07-30, Zaidas fynd: "jag trycker på Bekräfta radering, men den
+    // försvinner inte" — getMyMemberships filtrerade tidigare inte bort
+    // redan raderade konton (deleteAccount rör aldrig Member-dokumenten,
+    // bara Account.deletedAt), så en precis raderad familj låg kvar synlig.
+    const memberships = await request(app)
+      .get("/api/members/my-memberships")
+      .set("Authorization", `Bearer ${user3Token}`);
+    expect((memberships.body as Array<{ accountId: string }>).some((m) => m.accountId === accountAId)).toBe(false);
   });
 });

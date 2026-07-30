@@ -41,7 +41,7 @@ const ALL_PERMISSION_KEYS: PermissionKey[] = [
   "canImportCalendar", "canExportCalendar",
   "canSeeShoppingLists", "canCreateShoppingLists", "canEditShoppingLists",
   "canViewTrash", "canRestoreFromTrash",
-  "canCreateChildAccounts", "canManageChildTodos"
+  "canCreateChildAccounts", "canManageChildTodos", "canSeeMembers"
 ];
 
 function makePermissions(enabled: PermissionKey[]) {

@@ -173,6 +173,21 @@ export function canManageChildShares(
   return isSameAccount(caller, child) && hasPermission(caller, roles, "canManageMembers");
 }
 
+// Se Medlemmar-panelen (2026-07-30, Zaidas önskemål: "alla familjemedlemmar
+// skall kunna se den, och möjlighet att välja bort det alternativet på en
+// egen roll" — tidigare var HELA panelen felaktigt gated bakom
+// canManageMembers, så bara admins kunde ens öppna listan). Medvetet INTE
+// hasPermission(...)==="true" (strikt, default AV) som alla andra 23
+// behörigheter — den här är default PÅ, opt-OUT: en roll skapad INNAN
+// canSeeMembers fanns saknar nyckeln helt (undefined), vilket ska tolkas
+// som "får se", inte "får inte se" — annars hade denna ändring tyst stängt
+// av panelen för alla befintliga roller i produktion. Bara ett uttryckligt
+// `false` (satt via RoleEditor) stänger av den för en specifik roll.
+export function canSeeMembersPanel(member: Member, roles: Role[]): boolean {
+  const role = roles.find((r) => r.id === member.roleId);
+  return role?.permissions.canSeeMembers !== false;
+}
+
 // Familjeanslutningar (ADR-0030, 2026-07-29) — koppla ihop HELA konton,
 // sida vid sida med Dela barn ovan (inte en ersättning). Bara en admin
 // (canManageMembers) i MITT EGET konto får skicka/hantera MIN EGEN halva av

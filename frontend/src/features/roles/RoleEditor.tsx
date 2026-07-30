@@ -25,7 +25,11 @@ export function RoleEditor({
   onAssignRole
 }: RoleEditorProps) {
   const [roleName, setRoleName] = useState("");
-  const [draftPermissions, setDraftPermissions] = useState<PermissionKey[]>([]);
+  // canSeeMembers är default PÅ för alla roller (se canSeeMembersPanel,
+  // shared/permissions.ts) — förvald redan här så en ny roll matchar samma
+  // "syns tills man aktivt väljer bort det"-princip, istället för att av
+  // misstag skapas med den avstängd bara för att inget annat kryssats i än.
+  const [draftPermissions, setDraftPermissions] = useState<PermissionKey[]>(["canSeeMembers"]);
   const [showDraftPerms, setShowDraftPerms] = useState(false);
   const [openRoleId, setOpenRoleId] = useState<string | null>(null);
   // Soft-deletade medlemmar ska inte gå att tilldela en roll (2026-07-23,
@@ -51,7 +55,7 @@ export function RoleEditor({
       permissions: createPermissionMap(draftPermissions)
     });
     setRoleName("");
-    setDraftPermissions([]);
+    setDraftPermissions(["canSeeMembers"]);
     setShowDraftPerms(false);
   }
 

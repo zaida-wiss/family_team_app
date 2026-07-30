@@ -6,6 +6,9 @@ export const availablePermissions: Array<{
   group: string;
 }> = [
   { key: "canManageMembers", label: "Hantera medlemmar", group: "Admin" },
+  // Default PÅ för alla roller (se canSeeMembersPanel, shared/permissions.ts)
+  // — kryssrutan här styr bara ett explicit AVSTÄNGT undantag.
+  { key: "canSeeMembers", label: "Se medlemsvyn (andras dashboard)", group: "Admin" },
   { key: "canManageRoles", label: "Hantera roller", group: "Admin" },
   { key: "canCreateChildAccounts", label: "Skapa barnkonton", group: "Familj" },
   { key: "canManageChildTodos", label: "Hantera barns uppgifter", group: "Familj" },

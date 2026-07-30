@@ -22,7 +22,14 @@ export async function getAllMembers(accountId: string) {
 export async function getMyMemberships(userId: string) {
   const memberDocs = await MemberModel.find({ userId, deletedAt: null });
   const accountIds = [...new Set(memberDocs.map((m) => m.accountId).filter((id): id is string => !!id))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds } });
+  // deletedAt:null tillagt 2026-07-30 (Zaidas fynd: "jag trycker på Bekräfta
+  // radering, men den försvinner inte") — deleteAccount/deleteMyCreatedAccount
+  // (ADR-0007, den redan befintliga två-stegs GDPR-raderingen) rör ALDRIG
+  // Member-dokumenten, bara sätter Account.deletedAt — så min egen
+  // medlemspost i det raderade kontot ligger kvar (helt avsiktligt, det är
+  // så mjuk radering fungerar). Utan detta filter fortsatte ett precis
+  // raderat konto synas i "Mina familjekonton" som om ingenting hänt.
+  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null });
   const accountNameById = new Map(accounts.map((a) => [a.id, a.name]));
   const createdByAccountId = new Map(accounts.map((a) => [a.id, a.createdBy]));
   // memberCount tillagd 2026-07-29 (radera/överlåt/gå ur familj) — behövs
@@ -34,7 +41,7 @@ export async function getMyMemberships(userId: string) {
   ]);
   const memberCountByAccountId = new Map(memberCounts.map((row) => [row._id, row.count]));
   return memberDocs
-    .filter((m) => m.accountId)
+    .filter((m) => m.accountId && accountNameById.has(m.accountId))
     .map((m) => ({
       accountId: m.accountId as string,
       accountName: accountNameById.get(m.accountId as string) ?? "Okänt konto",

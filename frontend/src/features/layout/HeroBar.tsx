@@ -22,7 +22,7 @@ type Props = {
   accountName: string;
   currentMember: Member;
   activeMembers: Member[];
-  canManageMembers: boolean;
+  canSeeMembers: boolean;
   onNavigate: (panel: ShellPanel) => void;
   onSwitchAccount: () => void;
   onOpenThemePicker: () => void;
@@ -34,7 +34,7 @@ export function HeroBar({
   accountName,
   currentMember,
   activeMembers,
-  canManageMembers,
+  canSeeMembers,
   onNavigate,
   onSwitchAccount,
   onOpenThemePicker,
@@ -96,7 +96,7 @@ export function HeroBar({
         <NavBtn icon={<ShoppingCart size={20} />} label="Inköp" panel="shopping" active={activePanel === "shopping"} onNavigate={onNavigate} />
         <NavBtn icon={<ListTodo size={20} />} label="Todos" panel="todos" active={activePanel === "todos"} onNavigate={onNavigate} />
         <NavBtn icon={<ChefHat size={20} />} label="Recept" panel="recipes" active={activePanel === "recipes"} onNavigate={onNavigate} />
-        {canManageMembers && (
+        {canSeeMembers && (
           <button
             ref={membersRef}
             className={`${styles.navBtn}${activePanel === "members" ? ` ${styles.active}` : ""}`}

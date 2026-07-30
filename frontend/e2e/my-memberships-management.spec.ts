@@ -80,3 +80,29 @@ test("Mina familjekonton: överlåter ägarskap i en familj man skapat", async (
   await expect.poll(() => transferBody).not.toBeNull();
   expect((transferBody as unknown as { newOwnerMemberId: string }).newOwnerMemberId).toBe("mem-4");
 });
+
+// 2026-07-30, Zaidas fynd: "jag trycker på Bekräfta radering, men den
+// försvinner inte" — getMyMemberships filtrerade tidigare inte bort ett
+// precis raderat konto (backend-fixen är separat testad i
+// membershipManagement.integration.test.ts) — det här testet verifierar
+// att RADEN faktiskt försvinner ur listan efter en lyckad radering, den
+// synliga bekräftelsen användaren efterfrågade.
+test("Mina familjekonton: raden försvinner ur listan efter en lyckad radering", async ({ page }) => {
+  let deleted = false;
+  await mockAuthAndData(page);
+  await page.route("**/api/members/my-memberships", (route) =>
+    route.fulfill({ json: deleted ? MEMBERSHIPS.filter((m) => m.accountId !== "acc-3") : MEMBERSHIPS })
+  );
+  await page.route("**/api/accounts/acc-3/as-creator", (route) => {
+    deleted = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await openMyMemberships(page);
+  const row = page.locator("li", { hasText: "Familjen Bergström" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Radera familjen" }).click();
+  await row.getByRole("button", { name: "Bekräfta radering" }).click();
+
+  await expect(page.locator("li", { hasText: "Familjen Bergström" })).toHaveCount(0);
+});

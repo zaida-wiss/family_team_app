@@ -306,6 +306,7 @@ export function useShellState(
     onImportRecipes: importRecipes,
     wishStars,
     canManageMembers: permissions.canManageMembers,
+    canSeeMembers: permissions.canSeeMembers,
     canManageRoles: permissions.canManageRoles,
     canViewTrash: permissions.canViewTrash,
     onUpdateAccount: setActiveAccount,
