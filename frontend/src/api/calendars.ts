@@ -82,10 +82,18 @@ export const calendarsApi = {
       body: JSON.stringify({})
     }),
   // ADR-0027 (2026-07-24) — tvåvägs CalDAV-anslutning (Apple, Fas 1).
-  connectAppleCalDav: (calendarId: string, accountEmail: string, appSpecificPassword: string) =>
-    request<CalDavConnection>(api(`calendars/${calendarId}/caldav/apple`), {
+  // Kalenderväljaren (2026-07-30, Zaidas fråga: "kan jag få en enkel lista
+  // där jag väljer vilka kalendrar jag vill använda?") — loggar in och
+  // listar Apple-kontots kalendrar UTAN att ansluta något än.
+  listAppleCalendars: (accountEmail: string, appSpecificPassword: string) =>
+    request<{ url: string; name: string }[]>(api("calendars/caldav/apple/list"), {
       method: "POST",
       body: JSON.stringify({ accountEmail, appSpecificPassword })
+    }),
+  connectAppleCalDav: (calendarId: string, accountEmail: string, appSpecificPassword: string, calendarUrl: string) =>
+    request<CalDavConnection>(api(`calendars/${calendarId}/caldav/apple`), {
+      method: "POST",
+      body: JSON.stringify({ accountEmail, appSpecificPassword, calendarUrl })
     }),
   disconnectCalDav: (calendarId: string, connectionId: string) =>
     request<{ ok: boolean }>(api(`calendars/${calendarId}/caldav/${connectionId}`), { method: "DELETE" }),

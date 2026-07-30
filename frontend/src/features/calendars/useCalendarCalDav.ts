@@ -5,8 +5,14 @@ import type { Calendar, Id } from "@shared/types";
 // ADR-0027 (2026-07-24) — samma "egen hook, delar setCalendars" mönster som
 // useCalendarSubscriptions.ts, men för den nya tvåvägs CalDAV-anslutningen.
 export function useCalendarCalDav(setCalendars: Dispatch<SetStateAction<Calendar[]>>) {
-  async function connectApple(calendarId: Id, accountEmail: string, appSpecificPassword: string) {
-    const created = await calendarsApi.connectAppleCalDav(calendarId, accountEmail, appSpecificPassword);
+  // Kalenderväljaren (2026-07-30) — bara ett uppslag mot Apple, sparar/
+  // ansluter ingenting. Anropas innan connectApple, med samma inloggning.
+  async function listApple(accountEmail: string, appSpecificPassword: string) {
+    return calendarsApi.listAppleCalendars(accountEmail, appSpecificPassword);
+  }
+
+  async function connectApple(calendarId: Id, accountEmail: string, appSpecificPassword: string, calendarUrl: string) {
+    const created = await calendarsApi.connectAppleCalDav(calendarId, accountEmail, appSpecificPassword, calendarUrl);
     setCalendars((current) =>
       current.map((cal) =>
         cal.id !== calendarId ? cal : { ...cal, calDavConnections: [...(cal.calDavConnections ?? []), created] }
@@ -47,5 +53,5 @@ export function useCalendarCalDav(setCalendars: Dispatch<SetStateAction<Calendar
     setCalendars(updated);
   }
 
-  return { connectApple, disconnect, updateInterval, syncNow };
+  return { listApple, connectApple, disconnect, updateInterval, syncNow };
 }

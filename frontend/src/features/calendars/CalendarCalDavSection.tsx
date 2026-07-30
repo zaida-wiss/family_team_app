@@ -3,10 +3,13 @@ import { Apple, RefreshCw, X } from "lucide-react";
 import type { Calendar, Id } from "@shared/types";
 import styles from "./CalendarPanel.module.css";
 
+type AppleCalendarCandidate = { url: string; name: string };
+
 type Props = {
   selectedCalendar: Calendar;
   canEdit: boolean;
-  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string) => Promise<void>;
+  onListAppleCalendars: (accountEmail: string, appSpecificPassword: string) => Promise<AppleCalendarCandidate[]>;
+  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string, calendarUrl: string) => Promise<void>;
   onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
   onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
   onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
@@ -25,6 +28,7 @@ const SYNC_INTERVAL_OPTIONS: { value: number; label: string }[] = [
 export function CalendarCalDavSection({
   selectedCalendar,
   canEdit,
+  onListAppleCalendars,
   onConnectAppleCalDav,
   onDisconnectCalDav,
   onUpdateCalDavInterval,
@@ -32,6 +36,16 @@ export function CalendarCalDavSection({
 }: Props) {
   const [accountEmail, setAccountEmail] = useState("");
   const [appSpecificPassword, setAppSpecificPassword] = useState("");
+  // Kalenderväljaren (2026-07-30, Zaidas fråga: "gäller det samtliga
+  // kalendrar jag har i icloud? kan jag få en enkel lista där jag väljer
+  // vilka jag vill använda?") — tidigare anslöts alltid den FÖRSTA Apple-
+  // kalendern som råkade komma tillbaka, utan att fråga. Nu ett mellansteg:
+  // hämta listan, visa den, låt användaren välja EN (fortsatt bara en åt
+  // gången per BMAD-kalender, ADR-0027s Fas 1-begränsning) innan anslutning.
+  const [listing, setListing] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<AppleCalendarCandidate[] | null>(null);
+  const [selectedUrl, setSelectedUrl] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -40,18 +54,42 @@ export function CalendarCalDavSection({
 
   const connection = (selectedCalendar.calDavConnections ?? [])[0] ?? null;
 
+  async function listCalendars() {
+    setListError(null);
+    setListing(true);
+    try {
+      const found = await onListAppleCalendars(accountEmail.trim(), appSpecificPassword.trim());
+      setCandidates(found);
+      setSelectedUrl(found[0]?.url ?? "");
+    } catch {
+      setListError("Kunde inte hämta kalendrar — kontrollera Apple-ID och app-specifikt lösenord.");
+      setCandidates(null);
+    } finally {
+      setListing(false);
+    }
+  }
+
   async function connect() {
+    if (!selectedUrl) return;
     setConnectError(null);
     setConnecting(true);
     try {
-      await onConnectAppleCalDav(selectedCalendar.id, accountEmail.trim(), appSpecificPassword.trim());
+      await onConnectAppleCalDav(selectedCalendar.id, accountEmail.trim(), appSpecificPassword.trim(), selectedUrl);
       setAccountEmail("");
       setAppSpecificPassword("");
+      setCandidates(null);
+      setSelectedUrl("");
     } catch {
-      setConnectError("Kunde inte ansluta — kontrollera Apple-ID och app-specifikt lösenord.");
+      setConnectError("Kunde inte ansluta — kalendern kanske inte längre finns på Apple-kontot.");
     } finally {
       setConnecting(false);
     }
+  }
+
+  function resetChoice() {
+    setCandidates(null);
+    setSelectedUrl("");
+    setListError(null);
   }
 
   if (!connection) {
@@ -69,6 +107,7 @@ export function CalendarCalDavSection({
         <div className={styles.subForm}>
           <input
             className="text-input"
+            disabled={candidates !== null}
             onChange={(e) => setAccountEmail(e.target.value)}
             placeholder="Apple-ID (e-post)"
             type="email"
@@ -76,21 +115,58 @@ export function CalendarCalDavSection({
           />
           <input
             className="text-input"
+            disabled={candidates !== null}
             onChange={(e) => setAppSpecificPassword(e.target.value)}
             placeholder="App-specifikt lösenord"
             type="password"
             value={appSpecificPassword}
           />
-          {connectError && <small className={styles.subIntervalHint}>{connectError}</small>}
-          <button
-            className={`secondary-button ${styles.fullButton}`}
-            disabled={!accountEmail.trim() || !appSpecificPassword.trim() || connecting}
-            onClick={() => void connect()}
-            type="button"
-          >
-            <Apple size={16} />
-            {connecting ? "Ansluter…" : "Anslut Apple-kalender"}
-          </button>
+          {listError && <small className={styles.subIntervalHint}>{listError}</small>}
+
+          {candidates === null ? (
+            <button
+              className={`secondary-button ${styles.fullButton}`}
+              disabled={!accountEmail.trim() || !appSpecificPassword.trim() || listing}
+              onClick={() => void listCalendars()}
+              type="button"
+            >
+              <Apple size={16} />
+              {listing ? "Hämtar kalendrar…" : "Hämta mina kalendrar"}
+            </button>
+          ) : (
+            <>
+              <label className={styles.subIntervalLabel}>
+                Vilken kalender vill du ansluta?
+                <select
+                  className="text-input"
+                  onChange={(e) => setSelectedUrl(e.target.value)}
+                  value={selectedUrl}
+                >
+                  {candidates.map((c) => (
+                    <option key={c.url} value={c.url}>{c.name}</option>
+                  ))}
+                </select>
+              </label>
+              <small className={styles.subIntervalHint}>
+                Bara denna ena kalender ansluts — dina övriga iCloud-kalendrar påverkas inte.
+              </small>
+              {connectError && <small className={styles.subIntervalHint}>{connectError}</small>}
+              <div className={styles.subActions}>
+                <button className="ghost-button" onClick={resetChoice} type="button">
+                  Avbryt
+                </button>
+                <button
+                  className={`secondary-button ${styles.fullButton}`}
+                  disabled={!selectedUrl || connecting}
+                  onClick={() => void connect()}
+                  type="button"
+                >
+                  <Apple size={16} />
+                  {connecting ? "Ansluter…" : "Anslut vald kalender"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

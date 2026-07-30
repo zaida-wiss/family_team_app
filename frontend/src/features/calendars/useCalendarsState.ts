@@ -418,7 +418,7 @@ export function useCalendarsState() {
 
   const { addSubscription, updateSubscription, removeSubscription, syncSubscription } =
     useCalendarSubscriptions(setCalendars);
-  const { connectApple: connectAppleCalDav, disconnect: disconnectCalDav, updateInterval: updateCalDavInterval, syncNow: syncCalDavNow } =
+  const { listApple: listAppleCalendars, connectApple: connectAppleCalDav, disconnect: disconnectCalDav, updateInterval: updateCalDavInterval, syncNow: syncCalDavNow } =
     useCalendarCalDav(setCalendars);
 
   return {
@@ -444,6 +444,7 @@ export function useCalendarsState() {
     updateSubscription,
     removeSubscription,
     syncSubscription,
+    listAppleCalendars,
     connectAppleCalDav,
     disconnectCalDav,
     updateCalDavInterval,

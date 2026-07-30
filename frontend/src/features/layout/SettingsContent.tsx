@@ -405,6 +405,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onRemoveSubscription={memberContentProps.onRemoveSubscription}
               onSyncSubscription={memberContentProps.onSyncSubscription}
               onUpdateCalendarKeepAllHistory={memberContentProps.onUpdateCalendarKeepAllHistory}
+              onListAppleCalendars={memberContentProps.onListAppleCalendars}
               onConnectAppleCalDav={memberContentProps.onConnectAppleCalDav}
               onDisconnectCalDav={memberContentProps.onDisconnectCalDav}
               onUpdateCalDavInterval={memberContentProps.onUpdateCalDavInterval}

@@ -56,6 +56,15 @@ calendarsRouter.post("/:id/subscriptions/:subId/sync", requireAuth, attachAccoun
 
 // ── CalDAV-anslutning, tvåvägssynk (ADR-0027) ───────────────────────────────────
 
+// Lista Apple-kontots kalendrar (2026-07-30) — måste registreras FÖRE
+// POST /:id/caldav/apple nedan (annars matchar den generella :id-parametern
+// "apple" om denna route låg efter — samma ordningsprincip som redan
+// dokumenterad flerstädes i den här filen). Kontobrett/accountId-oberoende
+// slås INTE upp här — man loggar in direkt mot Apple, sparar inget.
+calendarsRouter.post("/caldav/apple/list", requireAuth, async (req, res) => {
+  res.json(await appleCalDav.listAppleCalendars(req.body));
+});
+
 calendarsRouter.post("/:id/caldav/apple", requireAuth, attachAccountId, async (req, res) => {
   const conn = await appleCalDav.connectAppleCalendar(req.params.id, req.accountId!, req.memberId!, req.body);
   res.status(201).json(conn);

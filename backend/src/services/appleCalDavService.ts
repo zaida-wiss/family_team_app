@@ -93,15 +93,24 @@ function buildVeventIcs(event: {
   return lines.join("\r\n");
 }
 
-// ── Anslut/koppla bort ──────────────────────────────────────────────────────────
+// ── Lista Apple-kalendrar (för väljaren i UI:t) ─────────────────────────────────
 
-export async function connectAppleCalendar(calendarId: string, accountId: string, memberId: string, body: unknown) {
-  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
-  if (!calendar) throw new AppError(404, "Kalender hittades inte");
-  if ((calendar.calDavConnections as unknown as CalDavConnection[]).length > 0) {
-    throw new AppError(409, "Kalendern har redan en aktiv CalDAV-anslutning — koppla bort den först");
-  }
+// Normaliserar displayName — tsdav/XML-parsern kan ge en sträng ELLER ett
+// objekt (t.ex. om Apple skickar ett namespace-kvalificerat värde) beroende
+// på hur elementet var strukturerat i CalDAV-svaret.
+function displayNameOf(value: string | Record<string, unknown> | undefined, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value;
+  return fallback;
+}
 
+// 2026-07-30, Zaidas fråga: "gäller [tvåvägssynken] samtliga kalendrar jag
+// har i icloud? kan jag få en enkel lista där jag väljer vilka jag vill
+// använda?" — connectAppleCalendar (nedan) tog tidigare bara den FÖRSTA
+// kalendern `client.fetchCalendars()` råkade returnera, utan att fråga.
+// Detta slår bara upp listan (sparar/ansluter ingenting) — samma
+// "reveal nothing about accepted destructive action, bara ett uppslag"-
+// mönster som lookupConnectionCandidate/lookupShareCandidate.
+export async function listAppleCalendars(body: unknown) {
   const b = body as { accountEmail?: unknown; appSpecificPassword?: unknown };
   const accountEmail = typeof b.accountEmail === "string" ? b.accountEmail.trim() : "";
   const appSpecificPassword = typeof b.appSpecificPassword === "string" ? b.appSpecificPassword.trim() : "";
@@ -115,8 +124,47 @@ export async function connectAppleCalendar(calendarId: string, accountId: string
   const calendars = await client.fetchCalendars().catch(() => {
     throw new AppError(502, "Kunde inte hämta kalendrar från Apple");
   });
-  const target = calendars.find((c) => c.url);
-  if (!target?.url) throw new AppError(502, "Inga kalendrar hittades på Apple-kontot");
+  const withUrl = calendars.filter((c) => c.url);
+  if (withUrl.length === 0) throw new AppError(502, "Inga kalendrar hittades på Apple-kontot");
+
+  return withUrl.map((c, i) => ({
+    url: String(c.url),
+    name: displayNameOf(c.displayName, `Kalender ${i + 1}`),
+  }));
+}
+
+// ── Anslut/koppla bort ──────────────────────────────────────────────────────────
+
+export async function connectAppleCalendar(calendarId: string, accountId: string, memberId: string, body: unknown) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
+  if (!calendar) throw new AppError(404, "Kalender hittades inte");
+  if ((calendar.calDavConnections as unknown as CalDavConnection[]).length > 0) {
+    throw new AppError(409, "Kalendern har redan en aktiv CalDAV-anslutning — koppla bort den först");
+  }
+
+  const b = body as { accountEmail?: unknown; appSpecificPassword?: unknown; calendarUrl?: unknown };
+  const accountEmail = typeof b.accountEmail === "string" ? b.accountEmail.trim() : "";
+  const appSpecificPassword = typeof b.appSpecificPassword === "string" ? b.appSpecificPassword.trim() : "";
+  const chosenCalendarUrl = typeof b.calendarUrl === "string" ? b.calendarUrl.trim() : "";
+  if (!accountEmail || !appSpecificPassword) {
+    throw new AppError(400, "Apple-ID och app-specifikt lösenord krävs");
+  }
+
+  const client = await buildClient(accountEmail, appSpecificPassword).catch(() => {
+    throw new AppError(502, "Kunde inte logga in mot Apple — kontrollera Apple-ID och app-specifikt lösenord");
+  });
+  const calendars = await client.fetchCalendars().catch(() => {
+    throw new AppError(502, "Kunde inte hämta kalendrar från Apple");
+  });
+  // Väljaren i UI:t (2026-07-30) skickar alltid med calendarUrl — man väljer
+  // VILKEN av Apple-kontots kalendrar som ska anslutas, istället för att
+  // (som tidigare) tyst få den första `fetchCalendars()` råkade returnera.
+  // Faller tillbaka på "första hittade" bara om anropet av någon anledning
+  // saknar valet (bakåtkompatibelt, borde inte hända via UI:t längre).
+  const target = chosenCalendarUrl
+    ? calendars.find((c) => c.url && String(c.url) === chosenCalendarUrl)
+    : calendars.find((c) => c.url);
+  if (!target?.url) throw new AppError(502, "Den valda kalendern hittades inte längre på Apple-kontot");
 
   const now = new Date().toISOString();
   const connection: CalDavConnection = {

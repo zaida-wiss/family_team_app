@@ -31,7 +31,8 @@ type Props = {
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
   onSyncSubscription: (calendarId: Id, subId: Id) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: (calendarId: Id, keepAllHistory: boolean) => void;
-  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string) => Promise<void>;
+  onListAppleCalendars: (accountEmail: string, appSpecificPassword: string) => Promise<{ url: string; name: string }[]>;
+  onConnectAppleCalDav: (calendarId: Id, accountEmail: string, appSpecificPassword: string, calendarUrl: string) => Promise<void>;
   onDisconnectCalDav: (calendarId: Id, connectionId: Id) => Promise<void>;
   onUpdateCalDavInterval: (calendarId: Id, connectionId: Id, syncIntervalMinutes: number) => Promise<void>;
   onSyncCalDavNow: (calendarId: Id, connectionId: Id) => Promise<void>;
@@ -59,6 +60,7 @@ export function CalendarManagementCard({
   onRemoveSubscription,
   onSyncSubscription,
   onUpdateCalendarKeepAllHistory,
+  onListAppleCalendars,
   onConnectAppleCalDav,
   onDisconnectCalDav,
   onUpdateCalDavInterval,
@@ -351,6 +353,7 @@ export function CalendarManagementCard({
       <CalendarCalDavSection
         selectedCalendar={selectedCalendar}
         canEdit={canEdit}
+        onListAppleCalendars={onListAppleCalendars}
         onConnectAppleCalDav={onConnectAppleCalDav}
         onDisconnectCalDav={onDisconnectCalDav}
         onUpdateCalDavInterval={onUpdateCalDavInterval}

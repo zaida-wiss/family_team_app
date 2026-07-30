@@ -11,7 +11,10 @@ import { beforeAll, afterAll, describe, it, expect, vi } from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 
-const fetchCalendars = vi.fn(async () => [{ url: "https://caldav.icloud.com/123/calendars/home/" }]);
+const fetchCalendars = vi.fn(async () => [
+  { url: "https://caldav.icloud.com/123/calendars/home/", displayName: "Hem" },
+  { url: "https://caldav.icloud.com/123/calendars/work/", displayName: "Jobb" },
+]);
 const fetchCalendarObjects = vi.fn(async () => [] as { data: string; url: string; etag: string }[]);
 const createCalendarObject = vi.fn(
   async () => new Response(null, { status: 201, headers: { etag: "\"etag-1\"" } })
@@ -76,16 +79,34 @@ describe.skipIf(!RUN)("Apple CalDAV-anslutning (ADR-0027) mot riktig MongoDB", (
     calendarId = calRes.body.id as string;
   });
 
-  it("ansluter en Apple-kalender — svaret innehåller aldrig lösenordet i klartext", async () => {
+  it("listar Apple-kontots kalendrar utan att ansluta någon (kalenderväljaren, 2026-07-30)", async () => {
+    const res = await request(app)
+      .post("/api/calendars/caldav/apple/list")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ accountEmail: "zaida@icloud.com", appSpecificPassword: "abcd-efgh-ijkl-mnop" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      { url: "https://caldav.icloud.com/123/calendars/home/", name: "Hem" },
+      { url: "https://caldav.icloud.com/123/calendars/work/", name: "Jobb" },
+    ]);
+  });
+
+  it("ansluter en Apple-kalender — den VALDA kalendern (inte bara den första), svaret innehåller aldrig lösenordet i klartext", async () => {
     const res = await request(app)
       .post(`/api/calendars/${calendarId}/caldav/apple`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
-      .send({ accountEmail: "zaida@icloud.com", appSpecificPassword: "abcd-efgh-ijkl-mnop" });
+      .send({
+        accountEmail: "zaida@icloud.com",
+        appSpecificPassword: "abcd-efgh-ijkl-mnop",
+        calendarUrl: "https://caldav.icloud.com/123/calendars/work/",
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.accountEmailEnc).toBe("zaida@icloud.com");
     expect(res.body.appSpecificPasswordEnc).toBe("••••••••");
+    expect(res.body.externalCalendarHref).toBe("https://caldav.icloud.com/123/calendars/work/");
     expect(JSON.stringify(res.body)).not.toContain("abcd-efgh-ijkl-mnop");
     expect(fetchCalendars).toHaveBeenCalled();
   });
