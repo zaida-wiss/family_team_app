@@ -68,7 +68,7 @@ describe.skipIf(!RUN)("purge-trash: server-side behörighetskontroll + faktisk h
       canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
       canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
       canEditShoppingLists: false, canViewTrash: true, canRestoreFromTrash: false,
-      canCreateChildAccounts: false, canManageChildTodos: false
+      canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
     };
     const restrictedRole = await request(app)
       .post("/api/roles")

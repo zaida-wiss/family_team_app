@@ -83,7 +83,7 @@ describe.skipIf(!RUN)("Barn-inloggning: PUT /api/members/:id/credentials och POS
           canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
           canExportCalendar: false, canSeeShoppingLists: false, canCreateShoppingLists: false,
           canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
-          canCreateChildAccounts: false, canManageChildTodos: false
+          canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
         }
       });
     const restricted = await request(app)

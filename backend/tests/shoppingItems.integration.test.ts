@@ -77,7 +77,7 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
           canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
           canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
           canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
-          canCreateChildAccounts: false, canManageChildTodos: false
+          canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
         }
       });
     expect(restrictedRole.status).toBe(201);
@@ -236,7 +236,7 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll + ordning p
           canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
           canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
           canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
-          canCreateChildAccounts: false, canManageChildTodos: false
+          canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
         }
       });
     expect(restrictedRole.status).toBe(201);
@@ -344,7 +344,7 @@ describe.skipIf(!RUN)("shoppingService: server-side behörighetskontroll (create
           canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
           canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
           canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
-          canCreateChildAccounts: false, canManageChildTodos: false
+          canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
         }
       });
     expect(restrictedRole.status).toBe(201);

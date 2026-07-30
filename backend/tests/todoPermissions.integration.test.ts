@@ -30,7 +30,7 @@ const NO_PERMISSIONS = {
   canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
   canExportCalendar: false, canSeeShoppingLists: false, canCreateShoppingLists: false,
   canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
-  canCreateChildAccounts: false, canManageChildTodos: false
+  canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
 };
 
 const uri = process.env.MONGODB_URI ?? "";

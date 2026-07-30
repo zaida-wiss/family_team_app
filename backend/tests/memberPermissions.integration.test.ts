@@ -72,7 +72,7 @@ describe.skipIf(!RUN)("membersService: server-side behörighetskontroll", () => 
       canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
       canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
       canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
-      canCreateChildAccounts: false, canManageChildTodos: false
+      canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
     };
 
     const restrictedRole = await request(app)
