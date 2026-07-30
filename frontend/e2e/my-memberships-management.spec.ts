@@ -22,7 +22,7 @@ const MEMBERSHIPS = [
 test("Mina familjekonton: kan se vilka som ingår i en familj", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members/my-memberships", (route) => route.fulfill({ json: MEMBERSHIPS }));
-  await page.route("**/api/members/my-memberships/acc-2/members", (route) =>
+  await page.route("**/api/accounts/acc-2/members", (route) =>
     route.fulfill({ json: [{ id: "mem-2", name: "Erik", avatarUrl: null, color: null, isChild: false }] })
   );
 
@@ -38,7 +38,7 @@ test("Mina familjekonton: går ur en familj man inte skapat", async ({ page }) =
   let leaveCalled = false;
   await mockAuthAndData(page);
   await page.route("**/api/members/my-memberships", (route) => route.fulfill({ json: MEMBERSHIPS }));
-  await page.route("**/api/members/my-memberships/acc-2/leave", (route) => {
+  await page.route("**/api/accounts/acc-2/leave", (route) => {
     leaveCalled = true;
     return route.fulfill({ json: { ok: true } });
   });
@@ -55,7 +55,7 @@ test("Mina familjekonton: överlåter ägarskap i en familj man skapat", async (
   let transferBody: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/members/my-memberships", (route) => route.fulfill({ json: MEMBERSHIPS }));
-  await page.route("**/api/members/my-memberships/acc-3/members", (route) =>
+  await page.route("**/api/accounts/acc-3/members", (route) =>
     route.fulfill({
       json: [
         { id: "mem-3", name: MEMBER.name, avatarUrl: null, color: null, isChild: false },

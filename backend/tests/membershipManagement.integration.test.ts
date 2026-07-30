@@ -124,7 +124,7 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
 
   it("ser vilka som ingår i konto A", async () => {
     const res = await request(app)
-      .get(`/api/members/my-memberships/${accountAId}/members`)
+      .get(`/api/accounts/${accountAId}/members`)
       .set("Authorization", `Bearer ${user1Token}`);
     expect(res.status).toBe(200);
     const names = (res.body as Array<{ name: string }>).map((m) => m.name).sort();
@@ -138,12 +138,12 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
     const outsiderToken = outsiderReg.body.accessToken as string;
 
     const membersRes = await request(app)
-      .get(`/api/members/my-memberships/${accountAId}/members`)
+      .get(`/api/accounts/${accountAId}/members`)
       .set("Authorization", `Bearer ${outsiderToken}`);
     expect(membersRes.status).toBe(403);
 
     const leaveRes = await request(app)
-      .post(`/api/members/my-memberships/${accountAId}/leave`)
+      .post(`/api/accounts/${accountAId}/leave`)
       .set("Authorization", `Bearer ${outsiderToken}`);
     expect(leaveRes.status).toBe(403);
 
@@ -155,9 +155,9 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
 
   it("user1 (inte skapare av B) kan gå ur konto B direkt", async () => {
     const res = await request(app)
-      .post(`/api/members/my-memberships/${accountBId}/leave`)
+      .post(`/api/accounts/${accountBId}/leave`)
       .set("Authorization", `Bearer ${user1Token}`);
-    expect(res.status).toBe(200);
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
 
     const memberships = await request(app)
       .get("/api/members/my-memberships")
@@ -167,7 +167,7 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
 
   it("user1 (skapare av A) nekas att gå ur A utan att först överlåta", async () => {
     const res = await request(app)
-      .post(`/api/members/my-memberships/${accountAId}/leave`)
+      .post(`/api/accounts/${accountAId}/leave`)
       .set("Authorization", `Bearer ${user1Token}`);
     expect(res.status).toBe(400);
   });
@@ -188,7 +188,9 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
         name: "Barnet",
         roleId: childRoleId,
         isChild: true,
-        avatarUrl: null
+        avatarUrl: null,
+        color: null,
+        dashboardTheme: null
       });
     expect(childMember.status).toBe(201);
 
@@ -200,11 +202,18 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
   });
 
   it("user1 överlåter konto A till user3, kan sedan gå ur", async () => {
+    const membersOfA = await request(app)
+      .get(`/api/accounts/${accountAId}/members`)
+      .set("Authorization", `Bearer ${user1Token}`);
+    const user3Row = (membersOfA.body as Array<{ id: string; isChild: boolean }>).find((m) => m.id === user3MemberInA);
+    expect(user3Row, `user3MemberInA (${user3MemberInA}) hittades inte bland A:s medlemmar: ${JSON.stringify(membersOfA.body)}`).toBeTruthy();
+    expect(user3Row!.isChild).toBe(false);
+
     const transfer = await request(app)
       .post(`/api/accounts/${accountAId}/transfer-ownership`)
       .set("Authorization", `Bearer ${user1Token}`)
       .send({ newOwnerMemberId: user3MemberInA });
-    expect(transfer.status).toBe(200);
+    expect(transfer.status, JSON.stringify(transfer.body)).toBe(200);
 
     const memberships = await request(app)
       .get("/api/members/my-memberships")
@@ -215,7 +224,7 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
     expect(rowA.isCreator).toBe(false);
 
     const leave = await request(app)
-      .post(`/api/members/my-memberships/${accountAId}/leave`)
+      .post(`/api/accounts/${accountAId}/leave`)
       .set("Authorization", `Bearer ${user1Token}`);
     expect(leave.status).toBe(200);
   });
@@ -227,9 +236,9 @@ describe.skipIf(!RUN)("Mina familjekonton: radera/överlåt/gå ur", () => {
     const user3Token = user3Login.body.accessToken as string;
 
     const leaveAttempt = await request(app)
-      .post(`/api/members/my-memberships/${accountAId}/leave`)
+      .post(`/api/accounts/${accountAId}/leave`)
       .set("Authorization", `Bearer ${user3Token}`);
-    expect(leaveAttempt.status).toBe(400);
+    expect(leaveAttempt.status, JSON.stringify(leaveAttempt.body)).toBe(400);
 
     const deleteAttemptByOutsider = await request(app)
       .delete(`/api/accounts/${accountAId}/as-creator`)

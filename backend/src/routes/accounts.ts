@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import * as accountsService from "../services/accountsService.js";
 import * as familyConnections from "../services/familyConnectionsService.js";
+import * as members from "../services/membersService.js";
 
 export const accountsRouter = Router();
 
@@ -42,6 +43,20 @@ accountsRouter.post("/:id/transfer-ownership", requireAuth, async (req, res) => 
 
 accountsRouter.delete("/:id/as-creator", requireAuth, async (req, res) => {
   await accountsService.deleteMyCreatedAccount(req.userId!, req.params.id);
+  res.json({ ok: true });
+});
+
+// Se vilka som ingår i / gå ur ett av mina egna konton (2026-07-29). Flyttade
+// hit från membersRouter (som applicerar attachAccountId globalt på ALLA
+// sina rutter) — de här handlarna slår upp anroparens medlemskap via
+// userId + req.params.id direkt, precis som transfer-ownership/as-creator
+// ovan, och behöver aldrig req.accountId/x-member-id.
+accountsRouter.get("/:id/members", requireAuth, async (req, res) => {
+  res.json(await members.getMembersOfMyAccount(req.userId!, req.params.id));
+});
+
+accountsRouter.post("/:id/leave", requireAuth, async (req, res) => {
+  await members.leaveAccount(req.userId!, req.params.id);
   res.json({ ok: true });
 });
 

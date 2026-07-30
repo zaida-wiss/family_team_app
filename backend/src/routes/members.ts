@@ -20,20 +20,6 @@ membersRouter.get("/my-memberships", async (req, res) => {
   res.json(await members.getMyMemberships(req.userId!));
 });
 
-// Se vilka som ingår i / gå ur ett av mina egna konton (2026-07-29, Zaidas
-// önskemål) — slår upp anroparens medlemskap via userId (samma mönster som
-// getMyMemberships ovan), inte via req.accountId/x-member-id, eftersom
-// kontot i fråga inte behöver vara det just nu AKTIVA. Måste registreras
-// FÖRE "/:id"-rutterna nedan, av samma skäl som "/my-memberships" ovan.
-membersRouter.get("/my-memberships/:accountId/members", async (req, res) => {
-  res.json(await members.getMembersOfMyAccount(req.userId!, req.params.accountId));
-});
-
-membersRouter.post("/my-memberships/:accountId/leave", async (req, res) => {
-  await members.leaveAccount(req.userId!, req.params.accountId);
-  res.json({ ok: true });
-});
-
 // Realtidssynk (2026-07-17) — samma SSE-mönster som todos/reward-shop redan
 // använder. Måste registreras FÖRE "/:id"-rutterna nedan, annars matchar
 // Express "events" som ett :id-värde.

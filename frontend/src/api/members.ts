@@ -38,12 +38,15 @@ export type ChildShareCandidate = {
 
 export const membersApi = {
   getAll: () => request<Member[]>(api("members")),
-  // Mina familjekonton (2026-07-25, utökad 2026-07-29 med se/gå ur).
+  // Mina familjekonton (2026-07-25, utökad 2026-07-29 med se/gå ur). De två
+  // senare ligger på accounts/-rutten (inte members/) eftersom de slår upp
+  // anroparens medlemskap via userId direkt och inte ska gå via
+  // membersRouterns blanketta attachAccountId-mellanlager.
   getMyMemberships: () => request<MyMembership[]>(api("members/my-memberships")),
   getMembershipMembers: (accountId: string) =>
-    request<MembershipMemberSummary[]>(api(`members/my-memberships/${accountId}/members`)),
+    request<MembershipMemberSummary[]>(api(`accounts/${accountId}/members`)),
   leaveMembership: (accountId: string) =>
-    request<{ ok: boolean }>(api(`members/my-memberships/${accountId}/leave`), { method: "POST" }),
+    request<{ ok: boolean }>(api(`accounts/${accountId}/leave`), { method: "POST" }),
   create: (member: Member) =>
     request<{ id: string }>(api("members"), { method: "POST", body: JSON.stringify(member) }),
   update: (id: string, patch: Partial<Member>) =>
