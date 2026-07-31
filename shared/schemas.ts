@@ -67,6 +67,7 @@ export const MemberSchema = z.object({
   darkMode: z.boolean().optional(),
   textSize: TextSizeSchema.optional(),
   hiddenCrossAccountIds: z.array(z.string()).optional(),
+  homeSelectedFamilyId: IdSchema.nullable().optional(),
   calendarFilterSettings: CalendarFilterSettingsSchema.optional(),
   childTimelineSettings: ChildTimelineSettingsSchema.optional(),
   lastActivePanel: AppPanelSchema.optional(),

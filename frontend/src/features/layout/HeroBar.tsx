@@ -128,7 +128,13 @@ export function HeroBar({
 
       <div className={styles.bottom}>
         <div className={styles.bottomRow}>
-          <button className={styles.memberBtn} onClick={onSwitchAccount} type="button">
+          <button
+            aria-label="Byt vy"
+            className={styles.memberBtn}
+            onClick={onSwitchAccount}
+            title="Byt vy"
+            type="button"
+          >
             <MemberAvatar member={currentMember} size="xs" />
             <div className={styles.memberInfo}>
               <span className={styles.memberName}>{currentMember.name}</span>

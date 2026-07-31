@@ -27,3 +27,4 @@ export { todoTemplatesApi } from "./todoTemplates";
 export { recipesApi } from "./recipes";
 export { householdSecretsApi } from "./householdSecrets";
 export { householdPinApi } from "./householdPin";
+export { mealPlanApi } from "./mealPlan";

@@ -29,21 +29,34 @@ type Screen =
 export function useAppNavigation(): Screen {
   const { state: authState, login, childLogin, register, logout, updateMemberships, updateUser, applySession } = useAuth();
   const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
+  // Bugg fixad (2026-07-31, upptäckt när "Byt vy"-knappen blev den ENDA
+  // vägen att byta mellan "Mina familjekonton" — se HeroBar.tsx/onSwitchAccount
+  // — efter att Hem-vyns gamla, casuala sessionsväxlande dropdown togs bort):
+  // auto-återställningseffekten nedan körde om varje gång activeMembership
+  // blev null, inklusive ett MEDVETET onSwitchAccount-klick — och hittade
+  // omedelbart samma konto igen via lastActiveMemberId (som fortfarande
+  // pekade på den man just klickade bort från), vilket gjorde att
+  // kontoväljaren aldrig faktiskt visades. switchingAccount skiljer ett
+  // AVSIKTLIGT byte (kontoväljaren ska visas och STANNA kvar tills ett
+  // aktivt val görs) från den vanliga sessions-återställningen vid en
+  // sidomladdning/första inloggning.
+  const [switchingAccount, setSwitchingAccount] = useState(false);
 
   const inviteToken = window.location.pathname.match(/^\/invite\/([^/]+)/)?.[1] ?? null;
   const resetToken = window.location.pathname.match(/^\/reset-password\/([^/]+)/)?.[1] ?? null;
 
   useEffect(() => {
-    if (authState.status !== "authenticated" || activeMembership) return;
+    if (authState.status !== "authenticated" || activeMembership || switchingAccount) return;
     const m =
       authState.memberships.find((membership) => membership.member.id === authState.user.lastActiveMemberId) ??
       (authState.memberships.length === 1 ? authState.memberships[0] : null);
     if (!m) return;
     setActiveMembership(m);
     setApiMemberId(m.member.id);
-  }, [authState, activeMembership]);
+  }, [authState, activeMembership, switchingAccount]);
 
   function selectMembership(m: Membership) {
+    setSwitchingAccount(false);
     setActiveMembership(m);
     setApiMemberId(m.member.id);
     authApi
@@ -103,7 +116,10 @@ export function useAppNavigation(): Screen {
     activeMembership,
     memberships,
     onLogout: handleLogout,
-    onSwitchAccount: () => setActiveMembership(null),
+    onSwitchAccount: () => {
+      setSwitchingAccount(true);
+      setActiveMembership(null);
+    },
     onSelectMembership: selectMembership,
     onMembershipsUpdated: updateMemberships
   };

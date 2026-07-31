@@ -252,6 +252,13 @@ export type Member = {
   // här är kontons EGNA, riktiga medlemskap). Standard: alla synliga
   // (tomt/osatt) om fältet saknas.
   hiddenCrossAccountIds?: Id[];
+  // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "jag vill att den
+  // sparar det jag senast valde") — vilken familjs data "Visa familj"-
+  // väljaren (MemberOverview.tsx) senast var inställd på. null/osatt = "Alla
+  // familjer" (standard, oförändrat beteende). Ett accountId som inte
+  // längre finns bland de tillgängliga familjeoptionerna faller tyst
+  // tillbaka på "Alla familjer" i frontend, ingen validering behövs här.
+  homeSelectedFamilyId?: Id | null;
   calendarFilterSettings?: CalendarFilterSettings;
   childTimelineSettings?: ChildTimelineSettings;
   lastActivePanel?: AppPanel;
@@ -898,6 +905,31 @@ export type Recipe = {
   // filtrera och sortera i recepten och lägga till söktaggar").
   tags: string[];
   createdAt: string;
+  createdBy: Id;
+  deletedAt: string | null;
+  deletedBy: Id | null;
+};
+
+// Vecko-måltidsplanering (2026-07-31, Zaidas önskemål, en av fyra ikoner
+// bredvid Hem-vyns familjefilter — "en måltidsplanering") — kopplar ett
+// redan existerande recept till en specifik dag + måltid. Kontobrett (som
+// Recipe/TodoCategory), mutationer kräver en vuxen (samma requireAdultMember
+// som Recept). Medvetet EN egen, enkel modell istället för en utbyggnad av
+// Recipe eller Calendar — en måltidsplan är varken ett recept i sig
+// (recipeId pekar bara på ett) eller en kalenderhändelse (inget klockslag,
+// bara dag+måltid). **V1, medvetet avgränsat:** bara den egna familjens
+// måltidsplan (ingen delning med andra familjer/Familjeanslutningar än),
+// ingen upprepning (varje dag+måltid sätts för sig, precis som en enskild
+// todo utan recurrence).
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
+export const MEAL_SLOTS: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
+
+export type MealPlanEntry = {
+  id: Id;
+  accountId: Id;
+  date: string; // YYYY-MM-DD, samma "bara datumdel"-princip som CalendarFilterSettings/todos använder på andra ställen
+  mealSlot: MealSlot;
+  recipeId: Id;
   createdBy: Id;
   deletedAt: string | null;
   deletedBy: Id | null;

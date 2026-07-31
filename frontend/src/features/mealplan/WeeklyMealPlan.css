@@ -1,0 +1,89 @@
+.mealplan__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mealplan__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.mealplan__day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  background: var(--card);
+}
+
+.mealplan__day-header {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.mealplan__day-header span {
+  color: var(--muted-fg);
+  font-weight: 400;
+}
+
+.mealplan__slot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mealplan__slot-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted-fg);
+}
+
+.mealplan__entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+}
+
+.mealplan__entry span {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mealplan__entry button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-fg);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mealplan__add {
+  min-height: 44px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-fg);
+  cursor: pointer;
+  font-size: 1.1rem;
+}

@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import { CheckSquare, ShoppingCart } from "lucide-react";
+import { CalendarDays, CheckSquare, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import { MemberAvatar } from "../../components/MemberAvatar";
+import { WeeklyMealPlan } from "../mealplan/WeeklyMealPlan";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Role, ShoppingList, Todo
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList, Todo
 } from "@shared/types";
 import styles from "./MemberOverview.module.css";
 
@@ -16,6 +18,15 @@ import styles from "./MemberOverview.module.css";
 // fullständig Member, taggad med källfamiljens accountId.
 type ExtraMember = MembershipMemberSummary & { accountId: Id };
 type FamilyOption = { accountId: Id; accountName: string };
+
+// Fyra flikval bredvid familjeväljaren (2026-07-31, Zaidas önskemål:
+// "bredvid den väljaren på samma rad skall ikoner visas så att man kan
+// trycka på dessa och se familjens kalender, inköpslista, todos samt en
+// måltidsplanering") — ersätter det tidigare "visa allt staplat"-läget:
+// bara EN sektion visas åt gången. Medlemmar-kortet (inte en av de fyra
+// ikonerna Zaida räknade upp) förblir alltid synligt ovanför, oberoende av
+// vald flik.
+type HomeTab = "calendar" | "shopping" | "todos" | "mealplan";
 
 type Props = {
   currentMember: Member;
@@ -34,11 +45,6 @@ type Props = {
   calendarSettings?: CalendarSettings;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   fixedCalendarTimes?: boolean;
-  // Hemvyns familjeöversikt (2026-07-30, Zaidas önskemål: "i hemmet skall du
-  // kunna växla mellan olika familjer och där skall gemensamma
-  // inköpslistor, todos, kalendrar, medlemmar visas") — kompakta, läsbara
-  // sammanfattningar bredvid kalendern, samma "dashboard/section-header"-
-  // kort-mönster som redan används av "Lägg till barn"-kortet nedanför.
   todos?: Todo[];
   canSeeTodos?: boolean;
   onOpenTodos?: () => void;
@@ -50,10 +56,17 @@ type Props = {
   // konto (satt av MemberShellContent.tsx), så listan här är den KOMPLETTA
   // uppsättningen att välja mellan. extraMembers är andra familjers
   // medlemmar (cross-account + Familjeanslutningar), redan taggade med sin
-  // egen accountId. calendars/todos har redan .accountId satt av backend
-  // (både egna och delade), ingen extra taggning behövs för dem.
+  // egen accountId. calendars/todos/shoppingLists har redan .accountId satt
+  // av backend (både egna och delade), ingen extra taggning behövs.
   familyOptions?: FamilyOption[];
   extraMembers?: ExtraMember[];
+  // Måltidsplanering (2026-07-31) — bara min EGEN familjs recept/plan, se
+  // WeeklyMealPlan.tsx.
+  recipes?: Recipe[];
+  // Senast valda familj, sparad server-side (Zaidas önskemål: "jag vill att
+  // den sparar det jag senast valde"). null/osatt = "Alla familjer".
+  homeSelectedFamilyId?: Id | null;
+  onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
 };
 
 export function MemberOverview({
@@ -81,14 +94,35 @@ export function MemberOverview({
   canSeeMembers = false,
   familyOptions = [],
   extraMembers = [],
+  recipes = [],
+  homeSelectedFamilyId,
+  onUpdateHomeSelectedFamilyId,
 }: Props) {
-  const [selectedFamilyId, setSelectedFamilyId] = useState<Id | "all">("all");
   const ownAccountId = currentMember.accountId;
+  const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
+  const [activeTab, setActiveTab] = useState<HomeTab>("calendar");
+
+  function setSelectedFamilyId(id: Id | "all") {
+    setSelectedFamilyIdState(id);
+    onUpdateHomeSelectedFamilyId?.(id === "all" ? null : id);
+  }
+
+  // Medvetet INGET "återställ till Alla familjer om valet inte finns bland
+  // options"-säkerhetsnät här (ett tidigare försök togs bort igen samma
+  // dag) — familyOptions byggs upp asynkront av flera hookar (cross-account/
+  // Familjeanslutningar), så ett sådant nät triggade felaktigt på VARJE
+  // sidladdning under det korta fönstret innan de hunnit svara, och skrev
+  // därmed över en precis inläst, giltig persisterad familj (homeSelectedFamilyId)
+  // med "all" innan användaren ens hunnit se den. Väljer man en familj som
+  // sedan faktiskt tagits bort (en återkallad Familjeanslutning) visar
+  // <select> bara ett värde utan matchande <option> — ofarligt, användaren
+  // väljer om manuellt.
   const familyNameById = useMemo(
     () => new Map(familyOptions.map((f) => [f.accountId, f.accountName])),
     [familyOptions]
   );
   const showFamilyFilter = familyOptions.length > 1;
+  const isOwnFamilySelected = selectedFamilyId === "all" || selectedFamilyId === ownAccountId;
 
   const filteredCalendars = useMemo(
     () => (selectedFamilyId === "all" ? calendars : calendars.filter((c) => c.accountId === selectedFamilyId)),
@@ -100,16 +134,21 @@ export function MemberOverview({
     [todos, selectedFamilyId, ownAccountId]
   );
 
+  const filteredShoppingLists = useMemo(
+    () =>
+      selectedFamilyId === "all"
+        ? shoppingLists
+        : shoppingLists.filter((l) => (l.accountId ?? ownAccountId) === selectedFamilyId),
+    [shoppingLists, selectedFamilyId, ownAccountId]
+  );
+
   // Mallar (recurringSourceId===null && recurrence.type!=="none") är frusna
   // definitioner, inte riktiga uppgifter att göra — samma exkludering som
   // ParentTodoThreadView.tsx redan använder på flera ställen.
   const pendingTodos = filteredTodos.filter(
     (t) => t.status === "pending" && t.deletedAt === null && (t.recurrence.type === "none" || t.recurringSourceId !== null)
   );
-  // Inköpslistor slås ännu inte samman mellan familjer i Hem-vyn (bara
-  // kalender/todos/medlemmar, per Zaidas uttryckliga uppräkning) — listan är
-  // alltid mitt EGET konto, opåverkad av familjefiltret.
-  const activeLists = shoppingLists.filter((l) => l.deletedAt === null);
+  const activeLists = filteredShoppingLists.filter((l) => l.deletedAt === null);
   const activeFamilyMembers = activeMembers.filter((m) => m.deletedAt === null);
 
   const filteredMembers = useMemo(() => {
@@ -120,45 +159,52 @@ export function MemberOverview({
     return extra.filter((m) => m.accountId === selectedFamilyId);
   }, [activeFamilyMembers, extraMembers, ownAccountId, selectedFamilyId]);
 
+  // aria-label prefixad "Visa..." (2026-07-31) — huvudnavigeringen (HeroBar)
+  // har egna knappar med samma korta namn ("Kalender"/"Inköp"/"Todos"), en
+  // krock annars för både skärmläsare och tester.
+  const allTabs: { key: HomeTab; label: string; icon: LucideIcon; enabled: boolean }[] = [
+    { key: "calendar", label: "Visa kalender", icon: CalendarDays, enabled: canSeeCalendar },
+    { key: "shopping", label: "Visa inköpslista", icon: ShoppingCart, enabled: canSeeShopping },
+    { key: "todos", label: "Visa todos", icon: CheckSquare, enabled: canSeeTodos },
+    { key: "mealplan", label: "Visa måltidsplanering", icon: UtensilsCrossed, enabled: true }
+  ];
+  const tabs = allTabs.filter((t) => t.enabled);
+
   return (
     <div className={styles.home}>
-      {showFamilyFilter && (
-        <label className="field-label" style={{ maxWidth: 260, marginBottom: 4 }}>
-          Visa familj
-          <select
-            className="text-input"
-            onChange={(e) => setSelectedFamilyId(e.target.value as Id | "all")}
-            value={selectedFamilyId}
-          >
-            <option value="all">Alla familjer</option>
-            {familyOptions.map((f) => (
-              <option key={f.accountId} value={f.accountId}>{f.accountName}</option>
-            ))}
-          </select>
-        </label>
-      )}
-
-      {canSeeCalendar && (
-        <div className={styles.calendarWrap}>
-          <div className={styles.calendarToolbar}>
-            <span className={styles.calendarLabel}>Familjens kalender</span>
-          </div>
-          <CalendarView
-            displayOnly
-            calendars={filteredCalendars}
-            currentMember={currentMember}
-            activeMembers={activeMembers}
-            roles={roles}
-            calendarSettings={calendarSettings}
-            filter={calendarFilter}
-            onAddEvent={onAddEvent}
-            onUpdateEvent={onUpdateEvent}
-            onDeleteEvent={onDeleteEvent}
-            onMonthChange={onLoadEventsForMonth}
-            fixedCalendarTimes={fixedCalendarTimes}
-          />
+      <div className={styles.controlRow}>
+        {showFamilyFilter && (
+          <label className="field-label" htmlFor="home-family-select" style={{ maxWidth: 220 }}>
+            Familj
+            <select
+              className="text-input"
+              id="home-family-select"
+              onChange={(e) => setSelectedFamilyId(e.target.value as Id | "all")}
+              value={selectedFamilyId}
+            >
+              <option value="all">Alla familjer</option>
+              {familyOptions.map((f) => (
+                <option key={f.accountId} value={f.accountId}>{f.accountName}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className={styles.tabRow} role="tablist">
+          {tabs.map(({ key, label, icon: Icon }) => (
+            <button
+              aria-label={label}
+              aria-pressed={activeTab === key}
+              className={`${styles.tabButton} ${activeTab === key ? styles.tabButtonActive : ""}`}
+              key={key}
+              onClick={() => setActiveTab(key)}
+              title={label}
+              type="button"
+            >
+              <Icon size={20} />
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {canSeeMembers && filteredMembers.length > 0 && (
         <article className="dashboard">
@@ -196,7 +242,29 @@ export function MemberOverview({
         </article>
       )}
 
-      {canSeeTodos && (
+      {activeTab === "calendar" && canSeeCalendar && (
+        <div className={styles.calendarWrap}>
+          <div className={styles.calendarToolbar}>
+            <span className={styles.calendarLabel}>Familjens kalender</span>
+          </div>
+          <CalendarView
+            displayOnly
+            calendars={filteredCalendars}
+            currentMember={currentMember}
+            activeMembers={activeMembers}
+            roles={roles}
+            calendarSettings={calendarSettings}
+            filter={calendarFilter}
+            onAddEvent={onAddEvent}
+            onUpdateEvent={onUpdateEvent}
+            onDeleteEvent={onDeleteEvent}
+            onMonthChange={onLoadEventsForMonth}
+            fixedCalendarTimes={fixedCalendarTimes}
+          />
+        </div>
+      )}
+
+      {activeTab === "todos" && canSeeTodos && (
         <article className="dashboard">
           <header className="section-header">
             <div><p className="eyebrow">Uppgifter</p><h2>{pendingTodos.length} väntar</h2></div>
@@ -208,7 +276,7 @@ export function MemberOverview({
             <p className="empty-note">Inget väntar just nu.</p>
           ) : (
             <div className="dashboard-list">
-              {pendingTodos.slice(0, 5).map((t) => (
+              {pendingTodos.map((t) => (
                 <div className="dashboard-row" key={t.id}>
                   <CheckSquare size={18} />
                   <span>
@@ -224,7 +292,7 @@ export function MemberOverview({
         </article>
       )}
 
-      {canSeeShopping && (
+      {activeTab === "shopping" && canSeeShopping && (
         <article className="dashboard">
           <header className="section-header">
             <div><p className="eyebrow">Inköp</p><h2>{activeLists.length} listor</h2></div>
@@ -235,20 +303,56 @@ export function MemberOverview({
           {activeLists.length === 0 ? (
             <p className="empty-note">Inga inköpslistor ännu.</p>
           ) : (
-            <div className="dashboard-list">
+            <div className={styles.shoppingLists}>
               {activeLists.map((l) => {
-                const remaining = l.items.filter((i) => !i.done && i.deletedAt === null).length;
+                const activeItems = l.items.filter((i) => i.deletedAt === null);
+                const remaining = activeItems.filter((i) => !i.done).length;
                 return (
-                  <div className="dashboard-row" key={l.id}>
-                    <ShoppingCart size={18} />
-                    <span>{l.name}</span>
-                    <strong>{remaining} kvar</strong>
+                  <div className={styles.shoppingList} key={l.id}>
+                    <header>
+                      <strong>{l.name}</strong>
+                      <span>
+                        {remaining} kvar
+                        {selectedFamilyId === "all" && l.accountId && l.accountId !== ownAccountId && (
+                          <small> · {familyNameById.get(l.accountId) ?? "Okänd familj"}</small>
+                        )}
+                      </span>
+                    </header>
+                    {activeItems.length === 0 ? (
+                      <p className="empty-note">Tom lista.</p>
+                    ) : (
+                      <ul>
+                        {activeItems.map((item) => (
+                          <li className={item.done ? styles.shoppingItemDone : ""} key={item.id}>{item.title}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </article>
+      )}
+
+      {activeTab === "mealplan" && (
+        isOwnFamilySelected ? (
+          <article className="dashboard">
+            <header className="section-header">
+              <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
+            </header>
+            <WeeklyMealPlan recipes={recipes} />
+          </article>
+        ) : (
+          <article className="dashboard">
+            <header className="section-header">
+              <div><p className="eyebrow">Måltidsplanering</p><h2>Inte tillgängligt</h2></div>
+            </header>
+            <p className="empty-note">
+              Måltidsplanering delas ännu inte mellan familjer — bara tillgänglig för din egen familj.
+            </p>
+          </article>
+        )
       )}
     </div>
   );

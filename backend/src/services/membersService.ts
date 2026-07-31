@@ -206,7 +206,10 @@ const SELF_NAV_FIELDS = new Set([
   // Mina familjekonton (2026-07-25) — vilka av mina EGNA andra medlemskap
   // som ska döljas i cross-account-vyer, se todosService.ts:s
   // getCrossAccountFamilyTodos.
-  "hiddenCrossAccountIds"
+  "hiddenCrossAccountIds",
+  // Hem-vyns familjefilter (2026-07-31) — senast valda familj i "Visa
+  // familj"-väljaren, se MemberOverview.tsx.
+  "homeSelectedFamilyId"
 ]);
 
 // dashboardTheme/childTimelineSettings sätts antingen av medlemmen själv

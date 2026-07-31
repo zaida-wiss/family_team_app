@@ -1,13 +1,18 @@
 import { test, expect } from "@playwright/test";
 import { mockDataAPIs } from "./helpers";
 
-// 2026-07-29, Zaidas fynd: "när jag växlar i hemvyn till en annan familj så
-// kommer jag inte tillbaka till min primära familj" — Shell (AppRouter.tsx)
-// saknade en key på familjebyte, så activeAccount (useAccountState.ts) fröts
-// permanent på den familj som var aktiv vid FÖRSTA mount. otherFamilies-
-// filtret (useShellState.ts) jämförde mot detta frusna id, vilket gjorde att
-// den ursprungliga familjen aldrig visades som en väljbar "annan familj" i
-// dropdownen igen — man kunde alltså aldrig växla tillbaka.
+// 2026-07-31, Zaidas fynd: "nu kom jag in på min dotter Moas inställningar
+// när jag loggade in på mitt konto. Så får det inte vara. Endast mina egna
+// inställningar ska jag kunna nå, ingen annan skall heller kunna nå mina."
+// — Hem-vyns tidigare, lättillgängliga "Familj"-dropdown (som BYTTE HELA
+// INLOGGNINGSSESSIONEN till ett annat av dina egna konton, inklusive
+// åtkomst till DESS Inställningar) togs bort helt. Att byta session till
+// ett annat av dina egna konton kräver nu ett MEDVETET steg — headerns
+// "Byt vy"-knapp (HeroBar.tsx, onSwitchAccount) som går till en egen
+// kontoväljar-sida (AccountPicker.tsx), inte en casual dropdown mitt i
+// Hem-vyn. Hem-vyns NYA "Visa familj"-filter (MemberOverview.tsx) är rent
+// visningsmässigt — byter ALDRIG session/Inställningar, bara vad
+// sammanfattningskorten visar.
 
 const ROLE = {
   id: "role-1", name: "Förälder", isChildRole: false,
@@ -33,7 +38,7 @@ const MEMBER_B = {
 };
 const USER = { id: "user-1", email: "test@exempel.se", name: "Förälder A", createdAt: "2024-01-01T00:00:00.000Z", lastActiveMemberId: "mem-a" };
 
-test("Familjeväxlaren i hemvyn: kan växla till en annan familj och sedan tillbaka igen", async ({ page }) => {
+test("Familj B syns inte längre som ett val i Hem-vyn — byte av session kräver 'Byt vy' i headern (kontoväljaren), inte en dropdown i Hem", async ({ page }) => {
   let currentUser = { ...USER };
 
   await page.route("**/api/auth/refresh", (route) =>
@@ -60,21 +65,24 @@ test("Familjeväxlaren i hemvyn: kan växla till en annan familj och sedan tillb
 
   await page.goto("/");
 
-  const familySelect = page.getByLabel("Familj");
-  await expect(familySelect).toBeVisible();
-  await expect(familySelect).toHaveValue("mem-a");
-  await expect(page.getByRole("option", { name: "Familjen B" })).toHaveCount(1);
+  // Ingen mid-session-dropdown i Hem-vyn längre — den gamla, lättillgängliga
+  // "Familj"-väljaren som direkt bytte session/Inställningar är borttagen.
+  await expect(page.getByLabel("Familj", { exact: true })).toHaveCount(0);
 
-  await familySelect.selectOption({ label: "Familjen B" });
-  await expect(familySelect).toHaveValue("mem-b");
+  // "Byt vy" i headern → kontoväljaren, ett MEDVETET steg.
+  await page.getByRole("button", { name: /Byt vy/ }).click();
+  await expect(page.getByRole("heading", { name: "Välj konto" })).toBeVisible();
 
-  // Kärnan i buggen: Familjen A måste fortfarande gå att välja i dropdownen
-  // efter att man lämnat den — innan fixen försvann den permanent.
-  await expect(page.getByRole("option", { name: "Familjen A" })).toHaveCount(1);
+  await page.getByRole("button", { name: /Familjen B/ }).click();
+  await expect(page.getByRole("button", { name: /Byt vy/ })).toBeVisible();
 
-  await familySelect.selectOption({ label: "Familjen A" });
-  await expect(familySelect).toHaveValue("mem-a");
-  await expect(page.getByRole("option", { name: "Familjen B" })).toHaveCount(1);
+  // Tillbaka igen — kärnan i den ursprungliga buggen (2026-07-29) var att
+  // Familjen A slutade gå att välja efter ett byte. Fortsatt sant här,
+  // fast via kontoväljaren istället för en Hem-dropdown.
+  await page.getByRole("button", { name: /Byt vy/ }).click();
+  await expect(page.getByRole("button", { name: /Familjen A/ })).toBeVisible();
+  await page.getByRole("button", { name: /Familjen A/ }).click();
+  await expect(page.getByRole("button", { name: /Byt vy/ })).toBeVisible();
 });
 
 // 2026-07-30, Zaidas önskemål: "i hemmet skall du kunna växla mellan olika
@@ -84,6 +92,8 @@ test("Familjeväxlaren i hemvyn: kan växla till en annan familj och sedan tillb
 // samtidigt den relaterade cache-scopningsfixen (localCache.ts:s
 // setCacheNamespace) — utan den skulle Familjen B:s Hem-vy kort visa
 // Familjen A:s cachade uppgift/lista innan den färska hämtningen hann landa.
+// Bytet sker nu via headerns "Byt vy" → kontoväljaren (se testet ovan för
+// varför), inte längre via en dropdown i Hem.
 const TODO_A = {
   id: "todo-a", accountId: "acc-a", title: "Handla mjölk", createdBy: "mem-a",
   assignedTo: "mem-a", isShared: false, status: "pending", starValue: 0,
@@ -106,7 +116,7 @@ const LIST_B = {
   items: [{ id: "item-b", title: "Bröd", createdBy: "mem-b", done: false, deletedAt: null, deletedBy: null }]
 };
 
-test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett familjebyte, ingen kvarbliven cache från föregående familj", async ({ page }) => {
+test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett kontobyte, ingen kvarbliven cache från föregående familj", async ({ page }) => {
   await page.route("**/api/auth/refresh", (route) =>
     route.fulfill({
       json: {
@@ -134,17 +144,28 @@ test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett familj
 
   await page.goto("/");
 
+  // Todos/Inköp ligger var sin flik (2026-07-31) — inte synliga samtidigt.
+  await page.getByRole("button", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(page.getByText("Veckohandling A")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).not.toBeVisible();
 
-  const familySelect = page.getByLabel("Familj");
-  await familySelect.selectOption({ label: "Familjen B" });
+  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+  await expect(page.getByText("Veckohandling A")).toBeVisible();
 
-  await expect(page.getByText("Klippa gräset")).toBeVisible();
+  await page.getByRole("button", { name: /Byt vy/ }).click();
+  await page.getByRole("button", { name: /Familjen B/ }).click();
+
+  // Hela Shell remountas vid ett kontobyte (key={member.id}) — Hem-vyns
+  // fliksval är lokal state och återgår till standard (kalender), måste
+  // väljas igen.
+  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+
+  // Ingen kvarbliven cache från Familjen A — den gamla listan ska inte
+  // synas efter bytet, ens innan den färska hämtningen landar.
   await expect(page.getByText("Veckohandling B")).toBeVisible();
-  // Ingen kvarbliven cache från Familjen A — den gamla uppgiften/listan
-  // ska inte synas efter bytet, ens innan den färska hämtningen landar.
-  await expect(page.getByText("Handla mjölk")).not.toBeVisible();
   await expect(page.getByText("Veckohandling A")).not.toBeVisible();
+
+  await page.getByRole("button", { name: "Visa todos" }).click();
+  await expect(page.getByText("Klippa gräset")).toBeVisible();
+  await expect(page.getByText("Handla mjölk")).not.toBeVisible();
 });

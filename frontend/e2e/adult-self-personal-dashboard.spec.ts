@@ -79,7 +79,10 @@ test("vuxen som klickar sin egen profil ser sina uppgifter+kalender, inte Familj
   await page.goto("/");
 
   await page.getByRole("button", { name: "Medlemmar" }).click();
-  await page.getByRole("button", { name: /Testförälder/ }).click();
+  // Skopat till innehållsytan (2026-07-31) — headerns "Byt vy"-knapp fick
+  // samma dag en aria-label som råkar innehålla medlemmens namn också
+  // ("Testförälder, Byt vy"), en strict-mode-krock mot ett bart sidövergripande sök annars.
+  await page.locator(".app-shell-content").getByRole("button", { name: /Testförälder/ }).click();
 
   await expect(page.getByText("Hej Testförälder!")).toBeVisible();
   await expect(page.getByText("Handla mat")).toBeVisible();

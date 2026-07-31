@@ -102,14 +102,6 @@ export function useShellState(
 
   const permissions = useShellPermissions(currentMember, roles);
 
-  // Andra familjer man är medlem i (2026-07-23, Zaidas önskemål: kunna vara
-  // med i flera familjer och växla mellan dem i hemvyn) — memberships kommer
-  // från inloggnings-/refresh-svaret (useAuth.ts), inte från denna sessions
-  // egen activeAccount-state, så ett kontonamn ändrat i Inställningar syns
-  // här först efter nästa inloggning/refresh. Den AKTIVA familjen visas
-  // därför alltid via activeAccount.name, aldrig via denna lista.
-  const otherFamilies = memberships.filter((m) => m.account?.id !== activeAccount.id);
-
   async function createFamily(name: string) {
     const { membership } = await accountsApi.setup(name);
     onMembershipsUpdated([...memberships, membership]);
@@ -172,8 +164,6 @@ export function useShellState(
     members,
     selectedDashboardMemberId,
     roles,
-    otherFamilies,
-    onSwitchFamily: onSelectMembership,
     todos,
     rewards,
     calendars,
@@ -291,6 +281,12 @@ export function useShellState(
     // Standardläge för "Visa avklarade" (2026-07-27, Zaidas önskemål) — väljs
     // i Inställningar, se settingsProps nedan.
     shoppingShowCompletedDefault: currentMember.shoppingShowCompletedDefault,
+    // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "jag vill att den
+    // sparar det jag senast valde") — samma updateMemberNavigation-mönster
+    // som todoThreadGap/todoBubbleSize ovan.
+    homeSelectedFamilyId: currentMember.homeSelectedFamilyId ?? null,
+    onUpdateHomeSelectedFamilyId: (id: Id | null) =>
+      updateMemberNavigation(currentMember.id, { homeSelectedFamilyId: id }),
     ...sharedChildProps
   };
 

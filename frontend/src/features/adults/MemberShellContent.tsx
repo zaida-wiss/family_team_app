@@ -29,9 +29,9 @@ import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
 import { getVisibleTodos } from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers } from "../todos/useCrossAccountFamilyState";
-import { useConnectionTodos, useConnectionMembers } from "../accounts/useFamilyConnectionsState";
+import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
 import type { ShellPanel } from "../../hooks/useAppState";
-import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Membership, Recipe, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
+import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Recipe, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 import type { RecipeFormInput } from "../recipes/RecipeFormModal";
 
@@ -74,6 +74,10 @@ type Props = {
   todoThreadRange: TodoThreadRange;
   todoThreadGap?: number;
   todoBubbleSize?: number;
+  // Hem-vyns familjefilter (2026-07-31) — senast valda familj, sparad
+  // server-side (samma updateMemberNavigation-mönster som ovan).
+  homeSelectedFamilyId?: Id | null;
+  onUpdateHomeSelectedFamilyId: (id: Id | null) => void;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
   onCreateTodo: (todo: Todo) => void;
@@ -123,8 +127,6 @@ type Props = {
   onClearCompletedShoppingItems: (listId: string) => void;
   shoppingShowCompletedDefault?: boolean;
   calendarSettings?: CalendarSettings;
-  otherFamilies: Membership[];
-  onSwitchFamily: (m: Membership) => void;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
@@ -152,6 +154,7 @@ export function MemberShellContent({
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange, todoThreadGap, todoBubbleSize,
+  homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate, onUpdateCategoryTemplate,
@@ -163,7 +166,6 @@ export function MemberShellContent({
   onCreateShoppingList, onDeleteShoppingList, onRenameShoppingList, onShareShoppingList, onRemoveShoppingListShare,
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
-  otherFamilies, onSwitchFamily,
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
@@ -197,6 +199,13 @@ export function MemberShellContent({
   const { threads: connectionTodoThreads } = useConnectionTodos();
   const crossAccountMemberGroups = useCrossAccountMembers();
   const connectionMemberGroups = useConnectionMembers();
+  // Inköp-fliken (2026-07-31) — bara Familjeanslutningar bidrar med delade
+  // listor här (samma redan befintliga hook som Inköp-panelens egen
+  // ConnectionShoppingLists-sektion använder). "Mina familjekonton" har
+  // medvetet INGEN egen cross-account-inköpslista-endpoint än (till
+  // skillnad från todos/kalender/medlemmar) — väljer man ett SÅDANT konto
+  // i familjefiltret är Inköp-fliken tom där, se CLAUDE.md.
+  const connectionShoppingGroups = useConnectionShoppingLists();
 
   const homeFamilyOptions = useMemo(() => {
     const map = new Map<Id, string>();
@@ -205,11 +214,12 @@ export function MemberShellContent({
     for (const t of connectionTodoThreads) map.set(t.accountId, t.accountName);
     for (const g of crossAccountMemberGroups) map.set(g.accountId, g.accountName);
     for (const g of connectionMemberGroups) map.set(g.accountId, g.accountName);
+    for (const g of connectionShoppingGroups) map.set(g.accountId, g.accountName);
     for (const cal of calendars) {
       if (cal.readOnly && cal.accountId && cal.sourceAccountName) map.set(cal.accountId, cal.sourceAccountName);
     }
     return [...map.entries()].map(([accountId, name]) => ({ accountId, accountName: name }));
-  }, [currentMember.accountId, accountName, crossAccountFamilyThreads, connectionTodoThreads, crossAccountMemberGroups, connectionMemberGroups, calendars]);
+  }, [currentMember.accountId, accountName, crossAccountFamilyThreads, connectionTodoThreads, crossAccountMemberGroups, connectionMemberGroups, connectionShoppingGroups, calendars]);
 
   const homeAllTodos = useMemo(
     () =>
@@ -232,6 +242,14 @@ export function MemberShellContent({
           ]
         : [],
     [canSeeMembers, crossAccountMemberGroups, connectionMemberGroups]
+  );
+
+  const homeAllShoppingLists = useMemo(
+    () =>
+      canSeeShopping
+        ? [...shoppingLists, ...connectionShoppingGroups.flatMap((g) => g.lists)]
+        : [],
+    [canSeeShopping, shoppingLists, connectionShoppingGroups]
   );
 
   const accessibleCalendarIds = useMemo(
@@ -593,24 +611,6 @@ export function MemberShellContent({
   // Ingen vald → översikten
   return (
     <>
-      {otherFamilies.length > 0 && (
-        <label className="field-label" style={{ maxWidth: 260, marginBottom: 12 }}>
-          Familj
-          <select
-            className="text-input"
-            onChange={(e) => {
-              const target = otherFamilies.find((f) => f.member.id === e.target.value);
-              if (target) onSwitchFamily(target);
-            }}
-            value={currentMember.id}
-          >
-            <option value={currentMember.id}>{accountName}</option>
-            {otherFamilies.map((f) => (
-              <option key={f.member.id} value={f.member.id}>{f.account?.name ?? "Okänt konto"}</option>
-            ))}
-          </select>
-        </label>
-      )}
       <HomePage
         currentMember={currentMember}
         accountName={accountName}
@@ -631,12 +631,15 @@ export function MemberShellContent({
         todos={homeAllTodos}
         canSeeTodos={canSeeTodos}
         onOpenTodos={() => onNavigate("todos")}
-        shoppingLists={canSeeShopping ? shoppingLists : []}
+        shoppingLists={homeAllShoppingLists}
         canSeeShopping={canSeeShopping}
         onOpenShopping={() => onNavigate("shopping")}
         canSeeMembers={canSeeMembers}
         familyOptions={homeFamilyOptions}
         extraMembers={homeExtraMembers}
+        recipes={recipes}
+        homeSelectedFamilyId={homeSelectedFamilyId}
+        onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

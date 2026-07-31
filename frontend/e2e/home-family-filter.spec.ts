@@ -66,12 +66,16 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
   // visar också "Förälder A" (med "Byt vy"), en strict-mode-krock annars.
   const membersCard = page.locator("article.dashboard").filter({ hasText: "Medlemmar" });
 
+  // Todos ligger bakom en flik (2026-07-31) — inte synligt förrän man
+  // klickar ikonen bredvid familjeväljaren.
+  await page.getByRole("button", { name: "Visa todos" }).click();
+
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expect(membersCard.getByText("Förälder A")).toBeVisible();
   await expect(membersCard.getByText("Nova")).toBeVisible();
 
-  const familyFilter = page.getByLabel("Visa familj");
+  const familyFilter = page.getByLabel("Familj");
   await expect(familyFilter).toBeVisible();
   await expect(page.getByRole("option", { name: "Alla familjer" })).toHaveCount(1);
   await expect(page.getByRole("option", { name: "Familjen A" })).toHaveCount(1);
@@ -109,6 +113,7 @@ test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", a
 
   await page.goto("/");
 
+  await page.getByRole("button", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(page.getByLabel("Visa familj")).toHaveCount(0);
+  await expect(page.getByLabel("Familj")).toHaveCount(0);
 });

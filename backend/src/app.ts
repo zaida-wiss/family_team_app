@@ -27,6 +27,7 @@ import { todoTemplatesRouter } from "./routes/todoTemplates.js";
 import { recipesRouter } from "./routes/recipes.js";
 import { householdSecretsRouter } from "./routes/householdSecrets.js";
 import { householdPinRouter } from "./routes/householdPin.js";
+import { mealPlanRouter } from "./routes/mealPlan.js";
 import { compressionFilter } from "./utils/compressionFilter.js";
 
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
@@ -138,6 +139,7 @@ app.use("/api/todo-templates", todoTemplatesRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/household-secrets", householdSecretsRouter);
 app.use("/api/household-pin", householdPinRouter);
+app.use("/api/meal-plan", mealPlanRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);

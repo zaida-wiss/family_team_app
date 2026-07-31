@@ -268,6 +268,7 @@ export function useMembersState() {
       todoThreadGap?: number;
       todoBubbleSize?: number;
       shoppingShowCompletedDefault?: boolean;
+      homeSelectedFamilyId?: Id | null;
     }
   ) {
     setMembers((current) =>

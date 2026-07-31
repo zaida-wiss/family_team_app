@@ -60,10 +60,9 @@ export function AppRouter() {
       // bara sitt initial-värde vid FÖRSTA mount — activeAccount frös
       // därför permanent på den familj som var aktiv när Shell först
       // monterades (oftast den primära), oavsett hur många gånger man bytte
-      // familj efteråt. Eftersom otherFamilies-filtret (useShellState.ts)
-      // jämför mot detta frusna activeAccount.id, exkluderades den
-      // ursprungliga familjen permanent ur "andra familjer"-listan i
-      // dropdownen — man kunde alltså aldrig växla TILLBAKA. En key tvingar
+      // familj efteråt (då fanns fortfarande en session-växlande dropdown i
+      // Hem-vyn, sedan borttagen 2026-07-31, se nedan) — man kunde alltså
+      // aldrig växla TILLBAKA. En key tvingar
       // fram en full remount vid varje familjebyte (samma "behöver
       // nollställas helt"-mönster som ErrorBoundary key={activePanel} redan
       // använder), så alla per-konto-hookar startar om med rätt initialvärde.

@@ -1,7 +1,7 @@
 import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Role, ShoppingList, Todo
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList, Todo
 } from "@shared/types";
 
 type Props = {
@@ -31,13 +31,16 @@ type Props = {
   // Familjefilter (2026-07-31) — se MemberOverview.tsx.
   familyOptions?: { accountId: Id; accountName: string }[];
   extraMembers?: (MembershipMemberSummary & { accountId: Id })[];
+  recipes?: Recipe[];
+  homeSelectedFamilyId?: Id | null;
+  onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
 };
 
 export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, todos, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
-  onOpenShopping, canSeeMembers, familyOptions, extraMembers
+  onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, homeSelectedFamilyId, onUpdateHomeSelectedFamilyId
 }: Props) {
   return (
     <MemberOverview
@@ -66,6 +69,9 @@ export function HomePage({
       canSeeMembers={canSeeMembers}
       familyOptions={familyOptions}
       extraMembers={extraMembers}
+      recipes={recipes}
+      homeSelectedFamilyId={homeSelectedFamilyId}
+      onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
     />
   );
 }

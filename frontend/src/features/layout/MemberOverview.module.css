@@ -4,6 +4,83 @@
   gap: 12px;
 }
 
+/* Familjefilter + flikikoner på samma rad (2026-07-31, Zaidas önskemål:
+   "bredvid den väljaren på samma rad skall ikoner visas"). */
+.controlRow {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tabRow {
+  display: flex;
+  gap: 6px;
+}
+
+.tabButton {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--muted-fg);
+  cursor: pointer;
+}
+
+.tabButtonActive {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+
+.shoppingLists {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shoppingList {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--card);
+}
+
+.shoppingList header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.shoppingList header span {
+  font-size: 0.82rem;
+  color: var(--muted-fg);
+}
+
+.shoppingList ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shoppingList li {
+  font-size: 0.88rem;
+  padding: 4px 0;
+}
+
+.shoppingItemDone {
+  color: var(--muted-fg);
+  text-decoration: line-through;
+}
+
 .calendarWrap {
   display: flex;
   flex-direction: column;
