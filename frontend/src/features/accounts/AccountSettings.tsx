@@ -173,21 +173,10 @@ export function AccountSettings({
                 <MemberAvatar
                   member={{
                     id: shared.child.id,
-                    accountId: shared.child.accountId,
-                    userId: null,
                     name: shared.child.name,
-                    roleId: "",
                     isChild: true,
                     avatarUrl: shared.child.avatarUrl,
-                    color: shared.child.color,
-                    // MemberAvatar läser aldrig dashboardTheme — null räcker,
-                    // undviker en onödig typkonvertering av den råa strängen
-                    // SharedChildData bär på.
-                    dashboardTheme: null,
-                    spentStars: shared.stars.spent,
-                    approvedStars: shared.stars.approved,
-                    deletedAt: null,
-                    deletedBy: null
+                    color: shared.child.color
                   }}
                   size="small"
                 />

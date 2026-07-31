@@ -125,6 +125,7 @@ describe.skipIf(!RUN)("ADR-0030-tillägg: Familjeanslutningar delar kalendrar", 
     // familjens tillgängliga kalendrar" — en RIKTIG Calendar-form.
     expect(cal.name).toBe("Moa jobb (Familj A)");
     expect(cal.readOnly).toBe(true);
+    expect(cal.sourceAccountName).toBe("Familj A");
     expect(cal.events).toHaveLength(1);
     expect(cal.events[0].title).toBe("Kundmöte");
     // 2026-07-30-fyndet ("RangeError: Invalid time value" i produktion) —

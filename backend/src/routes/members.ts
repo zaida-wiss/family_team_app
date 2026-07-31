@@ -54,6 +54,21 @@ membersRouter.post("/pending-child-shares/:childAccountId/:childId/decline", att
   res.json({ ok: true });
 });
 
+// Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
+// familj, då vill jag att endast den familjens... medlemmar visas") —
+// grupperat per källfamilj (samma form som getFamilyAcrossAccounts/
+// getConnectionTodos), inte en flat sammanslagning som kalendern — Hem
+// behöver familjens NAMN för filtrets etikett, inte bara medlemmarna själva.
+// Måste registreras FÖRE "/:id"-rutterna nedan, av samma skäl som
+// "/my-memberships"/"/events" ovan.
+membersRouter.get("/cross-account", attachAccountId, async (req, res) => {
+  res.json(await members.getCrossAccountMembers(req.userId!, req.accountId!, req.memberId!));
+});
+
+membersRouter.get("/connections", attachAccountId, async (req, res) => {
+  res.json(await members.getConnectionMembers(req.accountId!, req.memberId ?? null));
+});
+
 membersRouter.post("/", attachAccountId, async (req, res) => {
   res.status(201).json(await members.createMember(req.accountId!, req.memberId ?? null, req.body));
 });

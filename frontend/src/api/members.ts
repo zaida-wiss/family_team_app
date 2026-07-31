@@ -1,4 +1,4 @@
-import type { AccessLevel, Member, MembershipMemberSummary, MyMembership } from "@shared/types";
+import type { AccessLevel, FamilyMembersGroup, Member, MembershipMemberSummary, MyMembership } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
 // memberName/accountName läggs på server-side (2026-07-28, live uppslag,
@@ -47,6 +47,10 @@ export const membersApi = {
     request<MembershipMemberSummary[]>(api(`accounts/${accountId}/members`)),
   leaveMembership: (accountId: string) =>
     request<{ ok: boolean }>(api(`accounts/${accountId}/leave`), { method: "POST" }),
+  // Hem-vyns familjefilter (2026-07-31) — grupperat per källfamilj, samma
+  // form som getFamilyAcrossAccounts/getConnectionTodos.
+  getCrossAccountMembers: () => request<FamilyMembersGroup[]>(api("members/cross-account")),
+  getConnectionMembers: () => request<FamilyMembersGroup[]>(api("members/connections")),
   create: (member: Member) =>
     request<{ id: string }>(api("members"), { method: "POST", body: JSON.stringify(member) }),
   update: (id: string, patch: Partial<Member>) =>

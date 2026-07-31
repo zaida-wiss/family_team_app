@@ -28,6 +28,8 @@ const RecipesView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
 import { getVisibleTodos } from "../todos/selectors";
+import { useCrossAccountFamilyTodos, useCrossAccountMembers } from "../todos/useCrossAccountFamilyState";
+import { useConnectionTodos, useConnectionMembers } from "../accounts/useFamilyConnectionsState";
 import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Membership, Recipe, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
@@ -180,6 +182,57 @@ export function MemberShellContent({
     [canSeeTodos, currentMember, roles, todos]
   );
   const canSeeMembers = canSeeMembersPanel(currentMember, roles);
+
+  // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
+  // familj, då vill jag att endast den familjens kalenderhändelser, todos
+  // och medlemmar visas, men möjlighet att välja samtliga familjer") — de
+  // två redan befintliga grupperade "andra familjer"-todos-hookarna
+  // (Todos-panelens egna trådar, oförändrade där) återanvänds här BARA för
+  // att bygga Hem-sammanfattningens utökade dataset. Panelerna är aldrig
+  // monterade samtidigt (activePanel växlar, ErrorBoundary key={activePanel}
+  // remountar), så två separata hook-instanser (en här, en i
+  // CrossAccountFamilyThreads.tsx/ConnectionTodosThreads.tsx) kostar ingen
+  // dubbel nätverkstrafik i praktiken.
+  const { threads: crossAccountFamilyThreads } = useCrossAccountFamilyTodos();
+  const { threads: connectionTodoThreads } = useConnectionTodos();
+  const crossAccountMemberGroups = useCrossAccountMembers();
+  const connectionMemberGroups = useConnectionMembers();
+
+  const homeFamilyOptions = useMemo(() => {
+    const map = new Map<Id, string>();
+    map.set(currentMember.accountId, accountName);
+    for (const t of crossAccountFamilyThreads) map.set(t.accountId, t.accountName);
+    for (const t of connectionTodoThreads) map.set(t.accountId, t.accountName);
+    for (const g of crossAccountMemberGroups) map.set(g.accountId, g.accountName);
+    for (const g of connectionMemberGroups) map.set(g.accountId, g.accountName);
+    for (const cal of calendars) {
+      if (cal.readOnly && cal.accountId && cal.sourceAccountName) map.set(cal.accountId, cal.sourceAccountName);
+    }
+    return [...map.entries()].map(([accountId, name]) => ({ accountId, accountName: name }));
+  }, [currentMember.accountId, accountName, crossAccountFamilyThreads, connectionTodoThreads, crossAccountMemberGroups, connectionMemberGroups, calendars]);
+
+  const homeAllTodos = useMemo(
+    () =>
+      canSeeTodos
+        ? [
+            ...homeVisibleTodos,
+            ...crossAccountFamilyThreads.flatMap((t) => t.todos),
+            ...connectionTodoThreads.flatMap((t) => t.todos)
+          ]
+        : [],
+    [canSeeTodos, homeVisibleTodos, crossAccountFamilyThreads, connectionTodoThreads]
+  );
+
+  const homeExtraMembers = useMemo(
+    () =>
+      canSeeMembers
+        ? [
+            ...crossAccountMemberGroups.flatMap((g) => g.members.map((m) => ({ ...m, accountId: g.accountId }))),
+            ...connectionMemberGroups.flatMap((g) => g.members.map((m) => ({ ...m, accountId: g.accountId })))
+          ]
+        : [],
+    [canSeeMembers, crossAccountMemberGroups, connectionMemberGroups]
+  );
 
   const accessibleCalendarIds = useMemo(
     () =>
@@ -575,13 +628,15 @@ export function MemberShellContent({
         onDeleteEvent={onDeleteCalendarEvent}
         onLoadEventsForMonth={onLoadEventsForMonth}
         fixedCalendarTimes={fixedCalendarTimes}
-        todos={homeVisibleTodos}
+        todos={homeAllTodos}
         canSeeTodos={canSeeTodos}
         onOpenTodos={() => onNavigate("todos")}
         shoppingLists={canSeeShopping ? shoppingLists : []}
         canSeeShopping={canSeeShopping}
         onOpenShopping={() => onNavigate("shopping")}
         canSeeMembers={canSeeMembers}
+        familyOptions={homeFamilyOptions}
+        extraMembers={homeExtraMembers}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

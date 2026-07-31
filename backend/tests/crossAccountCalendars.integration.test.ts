@@ -136,6 +136,7 @@ describe.skipIf(!RUN)("Mina familjekonton — dela en egen kalender över flera 
     // fält som GET /api/calendars), inte längre en separat sammanfattning.
     expect(cal.name).toBe("Jobbschema (Familj B)");
     expect(cal.readOnly).toBe(true);
+    expect(cal.sourceAccountName).toBe("Familj B");
     expect(cal.events).toHaveLength(1);
     expect(cal.events[0].title).toBe("Möte med chefen");
     // 2026-07-30-fyndet ("RangeError: Invalid time value" i produktion) —

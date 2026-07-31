@@ -5,7 +5,11 @@ import type { Member } from "@shared/types";
 import { cloudinaryUrl } from "../utils/uploadImage";
 
 type MemberAvatarProps = {
-  member: Member;
+  // Hem-vyns familjefilter (2026-07-31) — bara ett Pick av Member (inte hela
+  // typen), eftersom cross-account-/anslutna familjemedlemmar bara kommer
+  // som en MembershipMemberSummary (id/name/avatarUrl/color/isChild), aldrig
+  // en fullständig Member. Komponenten läser aldrig fler fält än dessa.
+  member: Pick<Member, "id" | "name" | "avatarUrl" | "color" | "isChild">;
   showArchedName?: boolean;
   size?: "large" | "small" | "xs";
 };

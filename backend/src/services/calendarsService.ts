@@ -150,6 +150,7 @@ function toReadOnlyCalendar(
     subscriptions: [],
     calDavConnections: [],
     readOnly: true,
+    sourceAccountName,
     events: (cal.events as unknown as CalendarEvent[])
       .filter((ev) => !ev.deletedAt && ev.startsAt.slice(0, 10) >= fromStr && ev.startsAt.slice(0, 10) <= untilStr)
       .map((ev) => decryptEvent(sourceAccountId, ev as unknown as { title: string; notes: string | null }))

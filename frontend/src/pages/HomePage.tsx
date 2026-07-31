@@ -1,6 +1,8 @@
 import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
-import type { Calendar, CalendarEvent, CalendarSettings, Id, Member, Role, ShoppingList, Todo } from "@shared/types";
+import type {
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Role, ShoppingList, Todo
+} from "@shared/types";
 
 type Props = {
   currentMember: Member;
@@ -26,13 +28,16 @@ type Props = {
   canSeeShopping?: boolean;
   onOpenShopping?: () => void;
   canSeeMembers?: boolean;
+  // Familjefilter (2026-07-31) — se MemberOverview.tsx.
+  familyOptions?: { accountId: Id; accountName: string }[];
+  extraMembers?: (MembershipMemberSummary & { accountId: Id })[];
 };
 
 export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, todos, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
-  onOpenShopping, canSeeMembers
+  onOpenShopping, canSeeMembers, familyOptions, extraMembers
 }: Props) {
   return (
     <MemberOverview
@@ -59,6 +64,8 @@ export function HomePage({
       canSeeShopping={canSeeShopping}
       onOpenShopping={onOpenShopping}
       canSeeMembers={canSeeMembers}
+      familyOptions={familyOptions}
+      extraMembers={extraMembers}
     />
   );
 }

@@ -138,6 +138,15 @@ export type MembershipMemberSummary = {
   isChild: boolean;
 };
 
+// Hem-vyns familjefilter (2026-07-31) — samma gruppering per källfamilj som
+// CrossAccountFamilyThread nedan, fast för medlemmar (getCrossAccountMembers/
+// getConnectionMembers, membersService.ts).
+export type FamilyMembersGroup = {
+  accountId: Id;
+  accountName: string;
+  members: MembershipMemberSummary[];
+};
+
 export type CrossAccountFamilyThread = {
   accountId: Id;
   accountName: string;
@@ -579,6 +588,12 @@ export type Calendar = OwnedSharedResource & {
   // en riktig, sparad kalender. useCalendarView.ts:s editableCalendars
   // utesluter den explicit, oavsett övriga behörigheter.
   readOnly?: boolean;
+  // Hem-vyns familjefilter (2026-07-31) — bara satt tillsammans med readOnly
+  // ovan, på samma syntetiska sammanslagna kalenderobjekt. name (ovan) är
+  // redan suffigerad med källfamiljens namn för visning i kalendervyn, men
+  // en sträng är opålitlig att PARSA tillbaka till ett rent namn — det här
+  // fältet ger MemberOverview.tsx familjenamnet direkt, utan regex.
+  sourceAccountName?: string;
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
   subscriptions: IcsSubscription[];

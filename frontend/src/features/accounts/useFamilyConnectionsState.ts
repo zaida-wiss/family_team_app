@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { accountsApi, recipesApi, shoppingApi, todosApi } from "../../api";
+import { accountsApi, membersApi, recipesApi, shoppingApi, todosApi } from "../../api";
 import type { ConnectionRecipes } from "../../api/recipes";
 import type { ConnectionShoppingLists } from "../../api/shopping";
 import type { ConnectionTodosThread } from "../../api/todos";
@@ -8,7 +8,7 @@ import type {
   MyFamilyConnections,
   PendingFamilyConnection
 } from "../../api/accounts";
-import type { AccessLevel, FamilyConnectionScope } from "@shared/types";
+import type { AccessLevel, FamilyConnectionScope, FamilyMembersGroup } from "@shared/types";
 
 // Familjeanslutningar (ADR-0030, 2026-07-29, Zaidas rättelse: "det är
 // endast hemvyn som skall gå att växla mellan olika familjer... Däremot
@@ -82,7 +82,10 @@ export function useConnectionTodos() {
   const [threads, setThreads] = useState<ConnectionTodosThread[]>([]);
 
   const refresh = useCallback(() => {
-    todosApi.getConnectionTodos().then(setThreads).catch(console.error);
+    // Defensiv Array.isArray-kontroll (samma mönster som redan etablerats
+    // för cross-account-kalendrar) — nu även hämtat GLOBALT av
+    // MemberShellContent.tsx (Hem-vyns familjefilter, 2026-07-31).
+    todosApi.getConnectionTodos().then((data) => setThreads(Array.isArray(data) ? data : [])).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -121,6 +124,16 @@ export function useConnectionShoppingLists() {
   const [groups, setGroups] = useState<ConnectionShoppingLists[]>([]);
   useEffect(() => {
     shoppingApi.getConnectionLists().then(setGroups).catch(console.error);
+  }, []);
+  return groups;
+}
+
+// Hem-vyns familjefilter (2026-07-31) — samma "bara läsbar sammanfattning"-
+// princip som useConnectionRecipes/useConnectionShoppingLists ovan.
+export function useConnectionMembers() {
+  const [groups, setGroups] = useState<FamilyMembersGroup[]>([]);
+  useEffect(() => {
+    membersApi.getConnectionMembers().then((data) => setGroups(Array.isArray(data) ? data : [])).catch(console.error);
   }, []);
   return groups;
 }

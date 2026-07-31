@@ -54,6 +54,22 @@
   white-space: nowrap;
 }
 
+/* Hem-vyns familjefilter (2026-07-31) — en annan familjs medlem går inte
+   att klicka på (ingen dashboard att växla till), samma layout men utan
+   pekar-affordance. */
+.memberButton--static {
+  cursor: default;
+}
+
+.memberButton--static small {
+  font-size: 0.62rem;
+  color: var(--muted-fg);
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 759px) {
   .home {
     gap: 10px;

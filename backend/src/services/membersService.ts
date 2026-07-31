@@ -7,6 +7,11 @@ import { AppError } from "../utils/errors.js";
 import { CreateMemberBodySchema, MemberPatchSchema } from "../../../shared/schemas.js";
 import { getAllRoles } from "./rolesService.js";
 import { canManageChildAccount, hasPermission } from "../../../shared/permissions.js";
+import { findAcceptedConnectionFrom } from "./familyConnectionsService.js";
+
+function toMemberSummary(m: { id: string; name: string; avatarUrl?: string | null; color?: string | null; isChild?: boolean }) {
+  return { id: m.id, name: m.name, avatarUrl: m.avatarUrl ?? null, color: m.color ?? null, isChild: !!m.isChild };
+}
 
 export async function getAllMembers(accountId: string) {
   return MemberModel.find({ accountId }, { _id: 0, __v: 0 });
@@ -63,13 +68,54 @@ export async function getMembersOfMyAccount(userId: string, accountId: string) {
     throw new AppError(403, "Du är inte medlem i det kontot");
   }
   const members = await MemberModel.find({ accountId, deletedAt: null });
-  return members.map((m) => ({
-    id: m.id,
-    name: m.name,
-    avatarUrl: m.avatarUrl ?? null,
-    color: m.color ?? null,
-    isChild: !!m.isChild
-  }));
+  return members.map(toMemberSummary);
+}
+
+// Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
+// familj, då vill jag att endast den familjens kalenderhändelser, todos och
+// medlemmar visas, men möjlighet att välja samtliga familjer") — samma
+// hidden-loop som getCrossAccountCalendars/getCrossAccountFamilyTodos, men
+// GRUPPERAT per källfamilj (inte en flat sammanslagning som kalendern) —
+// Hem behöver familjens NAMN för filtrets etikett.
+export async function getCrossAccountMembers(callerUserId: string, currentAccountId: string, currentMemberId: string) {
+  const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
+  const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
+  const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
+  const results = [];
+  for (const m of memberDocs) {
+    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    const account = await AccountModel.findOne({ id: m.accountId });
+    if (!account) continue;
+    const members = await MemberModel.find({ accountId: m.accountId, deletedAt: null });
+    results.push({ accountId: m.accountId, accountName: account.name, members: members.map(toMemberSummary) });
+  }
+  return results;
+}
+
+// Samma familjefilter, fast för Familjeanslutningar (mirror av
+// getConnectionTodos/getConnectionCalendars) — bara de SPECIFIKT exponerade
+// medlemmarna, oavsett vilka av dataScope.todos/recipes/shoppingLists/
+// calendars som är på (exposedMemberIds ÄR redan den avsedda avgränsningen
+// för vem som syns, samma resonemang som ConnectionTodosThreads.tsx redan
+// visar accountName utan en egen "members"-scope-flagga).
+export async function getConnectionMembers(callerAccountId: string, callerMemberId: string | null) {
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
+  if (!caller) throw new AppError(403, "Åtkomst nekad");
+  const accountsExposingToMe = await AccountModel.find({
+    familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
+  });
+  const results = [];
+  for (const account of accountsExposingToMe) {
+    const conn = findAcceptedConnectionFrom(callerAccountId, account);
+    if (!conn || conn.exposedMemberIds.length === 0) continue;
+    const members = await MemberModel.find({
+      accountId: account.id,
+      id: { $in: conn.exposedMemberIds },
+      deletedAt: null
+    });
+    results.push({ accountId: account.id, accountName: account.name, members: members.map(toMemberSummary) });
+  }
+  return results;
 }
 
 // Gå ur en familj jag är medlem i, men inte har skapat (2026-07-29, Zaidas

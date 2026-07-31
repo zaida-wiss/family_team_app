@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { accountsApi, membersApi, todosApi } from "../../api";
-import type { CrossAccountFamilyThread, Id, MembershipMemberSummary, MyMembership } from "@shared/types";
+import type { CrossAccountFamilyThread, FamilyMembersGroup, Id, MembershipMemberSummary, MyMembership } from "@shared/types";
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
 // familjer du är med i... kunna avmarkera dessa när de inte används...
@@ -15,7 +15,11 @@ export function useCrossAccountFamilyTodos() {
   const [threads, setThreads] = useState<CrossAccountFamilyThread[]>([]);
 
   const refresh = useCallback(() => {
-    todosApi.getFamilyAcrossAccounts().then(setThreads).catch(console.error);
+    // Defensiv Array.isArray-kontroll (samma mönster som redan etablerats
+    // för cross-account-kalendrar) — nu även hämtat GLOBALT av
+    // MemberShellContent.tsx (Hem-vyns familjefilter, 2026-07-31), inte
+    // längre bara medan Todos-panelens tråd-vy visas.
+    todosApi.getFamilyAcrossAccounts().then((data) => setThreads(Array.isArray(data) ? data : [])).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -42,6 +46,18 @@ export function useCrossAccountFamilyTodos() {
   }
 
   return { threads, completeCrossAccountTodo };
+}
+
+// Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
+// familj, då vill jag att endast den familjens... medlemmar visas") — bara
+// en läsbar sammanfattning (samma grupperade form som threads ovan), ingen
+// mutation behövs härifrån.
+export function useCrossAccountMembers() {
+  const [groups, setGroups] = useState<FamilyMembersGroup[]>([]);
+  useEffect(() => {
+    membersApi.getCrossAccountMembers().then((data) => setGroups(Array.isArray(data) ? data : [])).catch(console.error);
+  }, []);
+  return groups;
 }
 
 export function useMyMemberships(currentMemberId: Id, hiddenCrossAccountIds: Id[], onUpdateHidden: (memberId: Id, hiddenCrossAccountIds: Id[]) => void) {

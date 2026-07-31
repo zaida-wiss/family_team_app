@@ -47,6 +47,12 @@ export async function mockDataAPIs(page: Page) {
   // fångas den av den generiska {ok:true}-stubben (fel form, en array
   // förväntas), vilket kraschar renderingen tyst i en ErrorBoundary.
   await page.route("**/api/members/pending-child-shares", (route) => route.fulfill({ json: [] }));
+  // Hem-vyns familjefilter (2026-07-31) — hämtas globalt av
+  // MemberShellContent.tsx (var med i Home-sammanslagningen), samma
+  // "MÅSTE registreras EFTER den bredare mockningen ovan"-skäl som
+  // pending-child-shares.
+  await page.route("**/api/members/cross-account", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/members/connections", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
   // Todo-historik/Papperskorg, paginerad (2026-07-26) — default-stubb så
@@ -68,6 +74,11 @@ export async function mockDataAPIs(page: Page) {
   // default-stubbar så ett test utan egen mock inte faller igenom till ett
   // riktigt, ej mockat nätverksanrop.
   await page.route("**/api/todos/connections", (route) => route.fulfill({ json: [] }));
+  // Mina familjekonton (2026-07-25) — hämtades tidigare bara medan Todos-
+  // panelens tråd-vy visades (CrossAccountFamilyThreads.tsx). Hem-vyns
+  // familjefilter (2026-07-31) gör att MemberShellContent.tsx nu hämtar
+  // detta GLOBALT (varje gång Hem renderas), samma skäl som connections ovan.
+  await page.route("**/api/todos/family-across-accounts", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/recipes/connections", (route) => route.fulfill({ json: [] }));
   // Vuxenvyns personliga kategori-trådar (2026-07-05) — hämtas globalt av
   // useShellState oavsett aktiv panel, precis som timed-tasks/reward-shop.
