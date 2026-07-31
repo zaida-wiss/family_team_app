@@ -34,13 +34,17 @@ type Props = {
   recipes?: Recipe[];
   homeSelectedFamilyId?: Id | null;
   onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
+  onClaimTodo?: (todoId: Id, claim: boolean) => void;
+  // "vald vuxen"-vyn (Medlemmar-panelen) sätter false — se MemberOverview.tsx.
+  enableTabs?: boolean;
 };
 
 export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, todos, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
-  onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, homeSelectedFamilyId, onUpdateHomeSelectedFamilyId
+  onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
+  onClaimTodo, enableTabs
 }: Props) {
   return (
     <MemberOverview
@@ -72,6 +76,8 @@ export function HomePage({
       recipes={recipes}
       homeSelectedFamilyId={homeSelectedFamilyId}
       onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
+      onClaimTodo={onClaimTodo}
+      enableTabs={enableTabs}
     />
   );
 }

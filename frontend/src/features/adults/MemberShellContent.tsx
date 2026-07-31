@@ -27,7 +27,7 @@ const RecipesView = lazy(() =>
 );
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
-import { getVisibleTodos } from "../todos/selectors";
+import { getFamilyViewTodos } from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers } from "../todos/useCrossAccountFamilyState";
 import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
 import type { ShellPanel } from "../../hooks/useAppState";
@@ -176,12 +176,14 @@ export function MemberShellContent({
   const canSeeAllCalendars = hasPermission(currentMember, roles, "canSeeAllCalendar");
   const canSeeOwnCalendars = hasPermission(currentMember, roles, "canSeeOwnCalendar");
 
-  // Hemvyns familjeöversikt (2026-07-30) — samma synlighetsfilter som
-  // TodosView.tsx redan använder, så Hem-sammanfattningen aldrig visar en
-  // uppgift den inloggade medlemmen normalt inte skulle se i Todos-panelen.
+  // Hemvyns familjeöversikt (2026-07-30, omdefinierad 2026-07-31 — Zaidas
+  // önskemål: "Todos som tillhör familjen eller alla (vuxna) skall visas i
+  // familjevyn. Mina privata todos... skall inte visas i familjevyns todo.")
+  // — getFamilyViewTodos (inte längre getVisibleTodos, som en canSeeAllTodos-
+  // medlem såg ALLT igenom, inklusive andras privata personliga kategorier).
   const homeVisibleTodos = useMemo(
-    () => (canSeeTodos ? getVisibleTodos(currentMember, roles, todos) : []),
-    [canSeeTodos, currentMember, roles, todos]
+    () => (canSeeTodos ? getFamilyViewTodos(todos, roles, members) : []),
+    [canSeeTodos, todos, roles, members]
   );
   const canSeeMembers = canSeeMembersPanel(currentMember, roles);
 
@@ -519,6 +521,7 @@ export function MemberShellContent({
           todoThreadRange={todoThreadRange}
           todoThreadGap={todoThreadGap}
           todoBubbleSize={todoBubbleSize}
+          showChildTodosInOwnView={currentMember.showChildTodosInOwnView ?? false}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onToggleTodoInProgress={onToggleTodoInProgress}
@@ -604,6 +607,7 @@ export function MemberShellContent({
         onDeleteEvent={onDeleteCalendarEvent}
         onLoadEventsForMonth={onLoadEventsForMonth}
         fixedCalendarTimes={fixedCalendarTimes}
+        enableTabs={false}
       />
     );
   }
@@ -640,6 +644,7 @@ export function MemberShellContent({
         recipes={recipes}
         homeSelectedFamilyId={homeSelectedFamilyId}
         onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
+        onClaimTodo={(todoId, claim) => onUpdateTodo(todoId, { assignedTo: claim ? currentMember.id : null })}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

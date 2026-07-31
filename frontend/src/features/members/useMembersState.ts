@@ -269,6 +269,7 @@ export function useMembersState() {
       todoBubbleSize?: number;
       shoppingShowCompletedDefault?: boolean;
       homeSelectedFamilyId?: Id | null;
+      showChildTodosInOwnView?: boolean;
     }
   ) {
     setMembers((current) =>

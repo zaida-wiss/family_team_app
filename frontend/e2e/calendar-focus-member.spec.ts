@@ -46,10 +46,17 @@ const LOGIN_RESPONSE = {
   memberships: [{ member: PARENT, account: ACCOUNT }],
 };
 
+// Dagens datum, inte ett hårdkodat datum (samma tidsberoende testfälla som
+// redan dokumenterats flera gånger i CLAUDE.md) — kalendern visar som
+// standard INNEVARANDE månad, ett hårdkodat datum slutar tomt så fort
+// systemklockan passerat den månaden.
+const today = new Date();
+const eventDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-15`;
+
 function calendarEvent(overrides: Record<string, unknown>) {
   return {
     id: overrides.id, calendarId: overrides.calendarId, title: overrides.title,
-    startsAt: "2026-07-15T09:00:00.000Z", endsAt: "2026-07-15T10:00:00.000Z",
+    startsAt: `${eventDateStr}T09:00:00.000Z`, endsAt: `${eventDateStr}T10:00:00.000Z`,
     isAllDay: false, color: null, uid: null, subscriptionId: null,
     location: null, notes: null, recurrence: { type: "none" }, attendees: [],
     symbol: null, createdBy: "mem-1", deletedAt: null, deletedBy: null,
@@ -92,6 +99,14 @@ async function mockCommon(page: import("@playwright/test").Page) {
   await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
+  // Nyare, orelaterade endpoints som Hem-vyn/Todos-panelen nu hämtar
+  // ovillkorligt (recept, Familjeanslutningar, Mina familjekonton) — utan
+  // dessa mockar 500:ar de mot dev-serverns proxy (ingen riktig backend
+  // körs), vilket bara syns som en brusig global felbanner men inte
+  // påverkar testets assertions. Mockade ändå för renlighet.
+  await page.route("**/api/recipes", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos/connections", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos/family-across-accounts", (route) => route.fulfill({ json: [] }));
 }
 
 test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar min VANLIGA kalendervy, inte filtrerad till den valda personen", async ({ page }) => {
@@ -119,6 +134,10 @@ test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar mi
   // försvinner helt.
   await page.getByRole("button", { name: "Kalender" }).click();
 
-  await expect(page.getByText("Förälderns möte")).toBeVisible();
-  await expect(page.getByText("Lars tandläkarbesök")).toBeVisible();
+  // .first() — månadsvyn visar varje händelse BÅDE som en pill i minirutnätet
+  // och som en rad i den bredvidliggande agenda-listan (CalendarMonthLayout),
+  // en legitim dubbelrendering, inte ett fel — testet bryr sig bara om att
+  // händelsen syns NÅGONSTANS.
+  await expect(page.getByText("Förälderns möte").first()).toBeVisible();
+  await expect(page.getByText("Lars tandläkarbesök").first()).toBeVisible();
 });

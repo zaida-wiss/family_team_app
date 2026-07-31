@@ -107,6 +107,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     onUpdateTodoThreadGap,
     todoBubbleSize,
     onUpdateTodoBubbleSize,
+    showChildTodosInOwnView,
+    onUpdateShowChildTodosInOwnView,
     shoppingShowCompletedDefault,
     onUpdateShoppingShowCompletedDefault,
     personalCategories,
@@ -226,6 +228,18 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                   />
                 </label>
               )}
+              {/* Barn-tråden döljs som standard i Todos-panelen (2026-07-31,
+                  Zaidas önskemål: "i min egen todo vy skall endast mina egna
+                  todos finnas... möjlighet att i mina inställningar välja
+                  att visa barnens todon... som en liten toggle knapp"). */}
+              <label className="field-label toggle-label">
+                <span>Visa barnens uppgifter i Todos-panelen</span>
+                <input
+                  checked={showChildTodosInOwnView}
+                  onChange={(e) => onUpdateShowChildTodosInOwnView(e.target.checked)}
+                  type="checkbox"
+                />
+              </label>
             </>
           )
         }

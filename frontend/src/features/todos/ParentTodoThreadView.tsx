@@ -18,10 +18,11 @@ const HOLD_DURATION_MS = 2000;
 // faktiskt tas bort ur listan.
 const DISSOLVE_DURATION_MS = 500;
 const CHILDREN_THREAD_ID = "__children__";
-// Familjen (2026-07-23, Zaidas önskemål) — en delad tråd för todos utan
-// tilldelad mottagare (assignedTo: null), synlig/klarmarkeringsbar av vem
-// som helst i kontot (shared/permissions.ts:s canCompleteTodo).
-const FAMILY_THREAD_ID = "__family__";
+// Mina uppgifter (2026-07-31, Zaidas önskemål) — en alltid-synlig, icke-
+// döpbar/raderbar tråd för todos tilldelade mig direkt men utanför en av
+// mina egna personliga kategorier. Familjen-tråden (assignedTo: null)
+// flyttade samma dag helt till Hem-vyn, se selectors.ts:s getFamilyViewTodos.
+const MY_TASKS_THREAD_ID = "__mine__";
 
 function formatElapsed(ms: number) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -86,6 +87,10 @@ type Props = {
   // clamp()-formel gäller.
   bubbleSize?: number;
   fixedTodoTimes: boolean;
+  // Barn-tråden döljs som standard (2026-07-31, Zaidas önskemål: "i min
+  // egen todo vy skall endast mina egna todos finnas") — en toggle i
+  // Inställningar → Utseende visar den igen.
+  showChildTodos?: boolean;
 };
 
 type Thread = {
@@ -246,7 +251,8 @@ export function ParentTodoThreadView({
   range,
   threadGap,
   bubbleSize,
-  fixedTodoTimes
+  fixedTodoTimes,
+  showChildTodos = false
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -568,29 +574,6 @@ export function ParentTodoThreadView({
       completedPercent: computeCompletedPercent(childAllTodos)
     };
 
-    // Familjen (2026-07-23) — todos utan tilldelad mottagare (assignedTo:
-    // null), synliga för alla vuxna oavsett vem som skapade dem. Samma
-    // icke-döpbara/raderbara mönster som Barn-tråden.
-    const showFamilyExpired = showExpiredThreadIds.has(FAMILY_THREAD_ID);
-    const familyBaseTodos = visibleTodos.filter(
-      (t) => t.assignedTo === null && (t.status !== "expired" || showFamilyExpired)
-    );
-    const familyAllTodos = applyAssigneeFilter(
-      FAMILY_THREAD_ID,
-      allDueTodos.filter((t) => t.assignedTo === null)
-    );
-    const familyThread: Thread = {
-      id: FAMILY_THREAD_ID,
-      label: "Familjen",
-      deletable: false,
-      assignees: uniqueAssignees(familyBaseTodos, members),
-      todos: applyBubbleOrder(
-        sortByEndThenStartTime(applyAssigneeFilter(FAMILY_THREAD_ID, familyBaseTodos)),
-        todoBubbleOrder[FAMILY_THREAD_ID]
-      ),
-      completedPercent: computeCompletedPercent(familyAllTodos)
-    };
-
     // Kategorier är kontobreda sedan 2026-07-07 (Zaidas beslut — alla vuxna ser
     // och kan redigera varandras kategorier i skapa-/redigera-modalen), men
     // tråd-vyns KOLUMNER visar fortsatt bara MINA egna — annars skulle varje
@@ -636,9 +619,36 @@ export function ParentTodoThreadView({
       };
     });
 
-    return [childThread, familyThread, ...categoryThreads];
+    // Mina uppgifter (2026-07-31, Zaidas önskemål: "de todos som är
+    // assignade på mig skall visas i todovyn") — en uppgift tilldelad mig
+    // direkt men UTANFÖR en av mina egna kategorier (ingen kategori alls,
+    // eller en ANNAN vuxens kategori — tidigare osynlig här, tråd-vyns
+    // kolumner visar bara ägarens egna kategorier). Familjen (assignedTo:
+    // null) hör numera bara hemma i Hem-vyn (se selectors.ts:s
+    // getFamilyViewTodos), även de jag själv skapat.
+    const myCategoryIds = new Set(myCategories.map((c) => c.id));
+    const isMyTask = (t: Todo) =>
+      t.assignedTo === currentMember.id && !(t.personalCategoryId && myCategoryIds.has(t.personalCategoryId));
+    const showMyTasksExpired = showExpiredThreadIds.has(MY_TASKS_THREAD_ID);
+    const myTasksBaseTodos = visibleTodos.filter(
+      (t) => isMyTask(t) && (t.status !== "expired" || showMyTasksExpired)
+    );
+    const myTasksAllTodos = applyAssigneeFilter(MY_TASKS_THREAD_ID, allDueTodos.filter(isMyTask));
+    const myTasksThread: Thread = {
+      id: MY_TASKS_THREAD_ID,
+      label: "Mina uppgifter",
+      deletable: false,
+      assignees: uniqueAssignees(myTasksBaseTodos, members),
+      todos: applyBubbleOrder(
+        sortByEndThenStartTime(applyAssigneeFilter(MY_TASKS_THREAD_ID, myTasksBaseTodos)),
+        todoBubbleOrder[MY_TASKS_THREAD_ID]
+      ),
+      completedPercent: computeCompletedPercent(myTasksAllTodos)
+    };
+
+    return [...(showChildTodos ? [childThread] : []), myTasksThread, ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters, todoBubbleOrder]);
+  }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters, todoBubbleOrder, showChildTodos]);
 
   // Egen sparad ordning (drag-and-drop, 2026-07-06) — trådar som saknas i
   // listan (t.ex. en nyskapad kategori) hamnar sist, i sin vanliga ordning.

@@ -7,7 +7,7 @@ import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { SharedChildrenThreads } from "./SharedChildrenThreads";
 import { CrossAccountFamilyThreads } from "./CrossAccountFamilyThreads";
 import { ConnectionTodosThreads } from "./ConnectionTodosThreads";
-import { getAssigneeName, getVisibleTodos, isDueWithinRange, isTodoHistory } from "./selectors";
+import { getAssigneeName, getMyTodosViewTodos, isDueWithinRange, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
 
@@ -38,6 +38,9 @@ type Props = {
   // Bubblornas storlek (2026-07-27, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoThreadGap.
   todoBubbleSize?: number;
+  // Barn-tråden i Todos-panelen (2026-07-31, Zaidas önskemål) — av som
+  // standard, en toggle i Inställningar → Utseende.
+  showChildTodosInOwnView?: boolean;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
@@ -89,6 +92,7 @@ export function TodosView({
   todoThreadRange,
   todoThreadGap,
   todoBubbleSize,
+  showChildTodosInOwnView = false,
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
@@ -115,7 +119,9 @@ export function TodosView({
   // se ChildShellContent.tsx). Utan detta syntes mallen som en till synes
   // duplicerad todo bredvid sin egen occurrence (Zaida, 2026-07-06).
   const visibleTodos = canSeeTodos
-    ? getVisibleTodos(currentMember, roles, todos).filter((t) => !isTodoHistory(t) && !isRecurringTemplate(t))
+    ? getMyTodosViewTodos(currentMember, roles, allMembers, todos, showChildTodosInOwnView).filter(
+        (t) => !isTodoHistory(t) && !isRecurringTemplate(t)
+      )
     : [];
   // Tidsspannet (idag/vecka/månad/allt, Inställningar → Utseende) gäller nu
   // även listläget (2026-07-27, Zaidas önskemål) — tidigare visade listläget
@@ -224,6 +230,7 @@ export function TodosView({
             roles={roles}
             currentMember={currentMember}
             categories={personalCategories}
+            showChildTodos={showChildTodosInOwnView}
             onToggleSubtask={onToggleSubtask}
             onToggleTodoInProgress={onToggleTodoInProgress}
             onUpdateTodo={onUpdateTodo}

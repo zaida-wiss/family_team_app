@@ -209,7 +209,10 @@ const SELF_NAV_FIELDS = new Set([
   "hiddenCrossAccountIds",
   // Hem-vyns familjefilter (2026-07-31) — senast valda familj i "Visa
   // familj"-väljaren, se MemberOverview.tsx.
-  "homeSelectedFamilyId"
+  "homeSelectedFamilyId",
+  // Todos-panelens Barn-tråd, av som standard (2026-07-31) — se
+  // ParentTodoThreadView.tsx.
+  "showChildTodosInOwnView"
 ]);
 
 // dashboardTheme/childTimelineSettings sätts antingen av medlemmen själv

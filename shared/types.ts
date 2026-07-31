@@ -259,6 +259,12 @@ export type Member = {
   // längre finns bland de tillgängliga familjeoptionerna faller tyst
   // tillbaka på "Alla familjer" i frontend, ingen validering behövs här.
   homeSelectedFamilyId?: Id | null;
+  // Todos-panelen omdefinierad (2026-07-31, Zaidas önskemål: "i min egen
+  // todo vy skall endast mina egna todos finnas... Barnens todon" ska bara
+  // synas där om jag uttryckligen vill det) — Barn-tråden döljs som
+  // standard i Todos-panelen (ParentTodoThreadView.tsx), en liten toggle i
+  // Inställningar → Utseende visar den igen. Standard av/osatt.
+  showChildTodosInOwnView?: boolean;
   calendarFilterSettings?: CalendarFilterSettings;
   childTimelineSettings?: ChildTimelineSettings;
   lastActivePanel?: AppPanel;

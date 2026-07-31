@@ -18,6 +18,15 @@ const CHILD_MEMBER = {
   spentStars: 0, approvedStars: 0, deletedAt: null, deletedBy: null
 };
 
+// Barn-tråden döljs som standard i Todos-panelen (2026-07-31, Zaidas
+// önskemål: "i min egen todo vy skall endast mina egna todos finnas") — en
+// toggle i Inställningar → Utseende visar den igen. Tester som specifikt
+// verifierar Barn-tråden slår på den här via ett eget /api/members-svar
+// (måste inkludera BÅDA mem-1 OCH barnet — currentMember faller annars
+// tillbaka på inloggningssvarets ursprungliga MEMBER om mem-1 saknas i
+// listan, se helpers.ts:s mockAuthAndData).
+const MEMBER_WITH_CHILD_TOGGLE = { ...MEMBER, showChildTodosInOwnView: true };
+
 // En annan VUXEN familjemedlem (t.ex. en medförälder) — 2026-07-08-fixet:
 // "Åt vem?"-väljaren visade tidigare bara barn (assignableChildren), vilket
 // gjorde det omöjligt att tilldela en uppgift åt en annan vuxen.
@@ -84,10 +93,11 @@ async function switchToListViewInSettings(page: import("@playwright/test").Page)
 
 // Den fristående +-knappen togs bort 2026-07-06 (Zaidas beslut) — nya
 // uppgifter skapas nu enbart via en trådens egen "Lägg till uppgift"-
-// menyval. Barn-tråden (alltid närvarande, även utan personliga kategorier)
-// är fallbacket när inga kategorier finns än.
-async function openCreateModalFromBarnThread(page: import("@playwright/test").Page) {
-  await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Barn/ }).click();
+// menyval. "Mina uppgifter" (alltid närvarande, även utan personliga
+// kategorier — ersatte Barn-tråden i denna roll 2026-07-31 när Barn-tråden
+// gjordes dold som standard) är fallbacket när inga kategorier finns än.
+async function openCreateModalFromMyTasksThread(page: import("@playwright/test").Page) {
+  await page.getByRole("region", { name: "Tråd: Mina uppgifter" }).getByRole("button", { name: /Mina uppgifter/ }).click();
   await page.getByRole("button", { name: "Lägg till uppgift" }).click();
 }
 
@@ -99,7 +109,7 @@ async function openCreateModalFromCategoryThread(page: import("@playwright/test"
 
 test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-tråd visar bara mina egna", async ({ page }) => {
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) =>
     route.fulfill({ json: [CHILD_TODO, PERSONAL_TODO_WITH_SUBTASKS] })
@@ -123,7 +133,7 @@ test("Bollar i tråd: Barn-tråden samlar alla barns todos, personlig kategori-t
 test("Bollar i tråd: en uppgift tilldelad ett barn syns bara i Barn-tråden, aldrig i en personlig kategori-tråd", async ({ page }) => {
   const CHILD_TODO_WITH_MY_CATEGORY = { ...CHILD_TODO, personalCategoryId: "cat-1" };
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [CHILD_TODO_WITH_MY_CATEGORY] }));
 
@@ -139,7 +149,7 @@ test("Bollar i tråd: 'Filtrera efter person' i Barn-tråden visar bara ett valt
   const CHILD_MEMBER_2 = { ...CHILD_MEMBER, id: "mem-child-2", name: "Andra Barnet" };
   const CHILD_TODO_2 = { ...CHILD_TODO, id: "todo-child-2", title: "Diska", assignedTo: "mem-child-2" };
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER, CHILD_MEMBER_2] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER, CHILD_MEMBER_2] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [CHILD_TODO, CHILD_TODO_2] }));
 
@@ -169,7 +179,7 @@ test("Bollar i tråd: 'Filtrera efter person' i Barn-tråden visar bara ett valt
 // upphävt här).
 test("Bollar i tråd: både en boll tilldelad ett barn och en personlig boll visar ikonen", async ({ page }) => {
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) =>
     route.fulfill({ json: [CHILD_TODO, PERSONAL_TODO_NO_SUBTASKS] })
@@ -544,7 +554,7 @@ test("Ny uppgift-modalen: Tidta-kryssrutan finns bara för barn-mottagare, och s
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   await expect(dialog.getByLabel("Använd en timer för uppgiften")).toHaveCount(0);
@@ -567,7 +577,7 @@ test("Ny uppgift-modalen: Tidta-kryssrutan finns bara för barn-mottagare, och s
 test("Redigera uppgift: Tidta-kryssrutan finns för en barn-tilldelad uppgift och sparas", async ({ page }) => {
   let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [CHILD_TODO] });
@@ -596,7 +606,7 @@ test("Redigera uppgift: Tidta-kryssrutan finns för en barn-tilldelad uppgift oc
 test("Redigera uppgift: Stjärnor-fältet finns för en barn-tilldelad uppgift, och går att tömma och skriva om", async ({ page }) => {
   let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD_MEMBER] }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [CHILD_TODO] });
@@ -856,9 +866,12 @@ test("Ny uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när inga 
   });
 
   await openThreadView(page);
-  await expect(page.getByRole("region", { name: "Tråd: Barn" })).toBeVisible();
+  // "Mina uppgifter" (alltid närvarande) ersatte Barn-tråden i rollen som
+  // fallback-ingång när inga kategorier finns än (2026-07-31, Barn-tråden
+  // döljs numera som standard).
+  await expect(page.getByRole("region", { name: "Tråd: Mina uppgifter" })).toBeVisible();
 
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   // Ingen kategori finns än — väljaren visar ändå "Ingen kategori" som förval
@@ -1078,7 +1091,10 @@ test("Ny uppgift-modalen: en återkommande uppgift kan få flera tidsintervall s
 test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för mig själv", async ({ page }) => {
   let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
+  // Barn-tråden döljs som standard (2026-07-31) — påslagen här specifikt
+  // för att kunna verifiera att den nyskapade barn-uppgiften faktiskt syns
+  // där efteråt.
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [] });
@@ -1090,7 +1106,7 @@ test("Ny uppgift-modalen: tilldelar en ny uppgift till ett barn istället för m
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   // Åt vem? är sedan 2026-07-06 en flerval-knappgrupp (går att välja flera
@@ -1129,7 +1145,7 @@ test("Ny uppgift-modalen: väljer flera mottagare samtidigt, alla får varsin ko
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   // "Mig själv" är förvalt som default — lämnas ikryssat och lägger till
@@ -1613,8 +1629,7 @@ test("Ny uppgift-modalen: 'Från mall' vid Ny kategori skapar kategorin och alla
   });
 
   await openThreadView(page);
-  await page.getByRole("region", { name: "Tråd: Barn" }).getByRole("button", { name: /Barn/ }).click();
-  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
+  await openCreateModalFromMyTasksThread(page);
 
   const dialog = page.getByRole("dialog", { name: "Ny uppgift" });
   await dialog.getByRole("combobox", { name: "Kategori" }).selectOption({ label: "+ Ny kategori…" });
@@ -1670,13 +1685,16 @@ test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ p
 
   await openThreadView(page);
 
-  const childBox = await page.getByRole("region", { name: "Tråd: Barn" }).boundingBox();
+  // "Mina uppgifter" (alltid närvarande) istället för Barn-tråden (dold som
+  // standard sedan 2026-07-31) — layout-kontrollen bryr sig bara om att
+  // TVÅ trådar ligger sida vid sida, oavsett vilka.
+  const mineBox = await page.getByRole("region", { name: "Tråd: Mina uppgifter" }).boundingBox();
   const categoryBox = await page.getByRole("region", { name: "Tråd: Träning" }).boundingBox();
-  expect(childBox).not.toBeNull();
+  expect(mineBox).not.toBeNull();
   expect(categoryBox).not.toBeNull();
   // Sida vid sida: ungefär samma Y-position (topp), men olika X-position.
-  expect(Math.abs(childBox!.y - categoryBox!.y)).toBeLessThan(5);
-  expect(categoryBox!.x).toBeGreaterThan(childBox!.x + childBox!.width - 5);
+  expect(Math.abs(mineBox!.y - categoryBox!.y)).toBeLessThan(5);
+  expect(categoryBox!.x).toBeGreaterThan(mineBox!.x + mineBox!.width - 5);
 });
 
 // Listläget väljs i Inställningar (2026-07-05, Zaidas beslut) — panelen har
@@ -1733,7 +1751,7 @@ test("Ny uppgift-modalen: väljer en emoji som sparas på uppgiften", async ({ p
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   await dialog.locator(".todo-emoji-btn").click();
@@ -1764,7 +1782,7 @@ test("Ny uppgift-modalen: kan lägga till delmoment redan vid skapande", async (
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   await dialog.getByLabel("Titel").fill("Städa rummet");
@@ -1796,7 +1814,7 @@ test("Ny uppgift-modalen: Enter i delmomentets titelfält lägger till nästa de
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   await dialog.getByLabel("Titel").fill("Packa väskan");
@@ -1841,7 +1859,7 @@ test("Ny uppgift-modalen: flyttar ett delmoment ner i checklistan med pilknappen
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   await dialog.getByLabel("Titel").fill("Städa rummet");
@@ -2241,6 +2259,10 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   };
 
   await mockAuthAndData(page);
+  // Barn-tråden döljs som standard (2026-07-31) — påslagen här specifikt
+  // för att kunna verifiera att den fortfarande går att dra, se
+  // MEMBER_WITH_CHILD_TOGGLE-kommentaren ovan.
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY, CATEGORY_2] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/members/mem-1", (route) => {
@@ -2256,12 +2278,14 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await expect(traningBtn).toBeVisible();
   await expect(hushallBtn).toBeVisible();
 
-  // Utgångsordning (ingen sparad ordning ännu): Barn, Familjen, Träning, Hushåll.
+  // Utgångsordning (ingen sparad ordning ännu): Barn, Mina uppgifter,
+  // Träning, Hushåll — Familjen-tråden flyttade helt till Hem-vyn
+  // (2026-07-31), ersatt här av den alltid-närvarande "Mina uppgifter".
   await expect(page.locator(".todo-thread")).toHaveCount(4);
   const idsBefore = await page.locator(".todo-thread").evaluateAll((els) =>
     els.map((el) => el.getAttribute("data-thread-id"))
   );
-  expect(idsBefore).toEqual(["__children__", "__family__", "cat-1", "cat-2"]);
+  expect(idsBefore).toEqual(["__children__", "__mine__", "cat-1", "cat-2"]);
 
   const traningBox = (await traningBtn.boundingBox())!;
   const hushallBox = (await hushallBtn.boundingBox())!;
@@ -2274,12 +2298,12 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await page.mouse.up();
 
   await expect.poll(() => savedOrder).not.toBeNull();
-  expect(savedOrder).toEqual(["__children__", "__family__", "cat-2", "cat-1"]);
+  expect(savedOrder).toEqual(["__children__", "__mine__", "cat-2", "cat-1"]);
 
   const idsAfter = await page.locator(".todo-thread").evaluateAll((els) =>
     els.map((el) => el.getAttribute("data-thread-id"))
   );
-  expect(idsAfter).toEqual(["__children__", "__family__", "cat-2", "cat-1"]);
+  expect(idsAfter).toEqual(["__children__", "__mine__", "cat-2", "cat-1"]);
 
   // Kategorimenyn ska INTE ha öppnats av draget (bara ett vanligt klick ska
   // göra det).
@@ -2468,7 +2492,7 @@ test("Ny uppgift-modalen: väljer Familjen skickar assignedTo:null, ingen person
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
@@ -2483,7 +2507,13 @@ test("Ny uppgift-modalen: väljer Familjen skickar assignedTo:null, ingen person
   expect(createdTodo?.personalCategoryId).toBeNull();
 });
 
-test("Bollar i tråd: Familjen-tråden visar todos utan tilldelad mottagare, avklarbar av vem som helst", async ({ page }) => {
+// Familjen-tråden flyttade helt till Hem-vyn (2026-07-31, Zaidas önskemål:
+// "samtliga todo som tillhör familjen skall vara på familjevyn") — den
+// gamla "Bollar i tråd: Familjen-tråden visar todos..."-testet som verifierade
+// detta i Todos-panelen ersatt av ett test som verifierar att en Familjen-
+// todo INTE syns i Todos-panelen (se home-family-todos.spec.ts för
+// motsvarande, positiva test i Hem-vyn).
+test("Bollar i tråd: en Familjen-todo (assignedTo: null) syns INTE i Todos-panelen längre", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [OTHER_ADULT_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
@@ -2491,9 +2521,8 @@ test("Bollar i tråd: Familjen-tråden visar todos utan tilldelad mottagare, avk
 
   await openThreadView(page);
 
-  const familyThread = page.getByRole("region", { name: "Tråd: Familjen" });
-  await expect(familyThread).toBeVisible();
-  await expect(familyThread.getByText("Handla mat")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Tråd: Familjen" })).toHaveCount(0);
+  await expect(page.getByText("Handla mat")).toHaveCount(0);
 });
 
 // Delmoment-tilldelning (2026-07-23, Zaidas önskemål: "deluppgifter skall
@@ -2515,7 +2544,7 @@ test("Ny uppgift-modalen: tilldelar ett delmoment en familjemedlem via cirkel-kn
   });
 
   await openThreadView(page);
-  await openCreateModalFromBarnThread(page);
+  await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
   await dialog.getByLabel("Titel").fill("Handla mat");

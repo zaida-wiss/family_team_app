@@ -12,6 +12,10 @@ const PARENT = {
   name: "Testförälder", roleId: "role-1", isChild: false,
   avatarUrl: null, color: null, dashboardTheme: null,
   spentStars: 0, deletedAt: null, deletedBy: null,
+  // Barn-todos syns bara i Todos-panelen när toggeln är på (2026-07-31,
+  // Zaidas önskemål) — testet gäller namnuppslaget, inte synlighetsregeln,
+  // så toggeln sätts på direkt i fixturen istället för att klicka igenom UI.
+  showChildTodosInOwnView: true,
 };
 
 const REMOVED_CHILD = {

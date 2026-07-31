@@ -65,6 +65,54 @@ export function getVisibleTodos(
   return activeTodos.filter((todo) => isOwnCreation(todo) || isFamilyTodo(todo));
 }
 
+// Todos-panelen omdefinierad (2026-07-31, Zaidas önskemål: "i min egen
+// todo vy skall endast mina egna todos finnas... De todos som är
+// assignade på mig skall visas i todovyn") — till skillnad från
+// getVisibleTodos (som en canSeeAllTodos-medlem ser ALLT igenom, inklusive
+// andras privata personliga kategorier och familje-/barn-uppgifter) visar
+// Todos-panelen numera BARA det som är tilldelat mig direkt (oavsett vems
+// personliga kategori uppgiften råkar ligga i — täcker både mina egna
+// personliga uppgifter, som alltid tilldelas en själv vid skapande, OCH en
+// uppgift en ANNAN vuxen tilldelat mig i EN AV DERAS kategorier, tidigare
+// osynlig här). Familjen-todos (assignedTo: null) hör numera ENDAST hemma
+// i Hem-vyn (se getFamilyViewTodos) — även om jag själv skapade dem.
+// includeChildren styrs av den nya inställnings-togglen
+// (Member.showChildTodosInOwnView), av som standard.
+export function getMyTodosViewTodos(
+  currentMember: Member,
+  roles: Role[],
+  members: Member[],
+  todos: Todo[],
+  includeChildren: boolean
+): Todo[] {
+  return todos.filter((todo) => {
+    if (todo.deletedAt !== null) return false;
+    if (todo.assignedTo === currentMember.id) return true;
+    if (includeChildren && todo.assignedTo !== null) {
+      return isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
+    }
+    return false;
+  });
+}
+
+// Hem-vyns familjevy (2026-07-31, samma önskemål: "Todos som tillhör
+// familjen eller alla (vuxna) skall visas i familjevyn. Mina privata
+// todos... skall inte visas i familjevyns todo.") — familjen (assignedTo:
+// null) ELLER tilldelad en VUXEN (vem som helst, inte bara jag), men ALDRIG
+// en todo med en personlig kategori satt (personalCategoryId) — en
+// personlig kategori är per definition ett privat organiseringsverktyg i
+// den här appen (tråd-vyns kolumner visar redan bara ägarens EGNA
+// kategorier, aldrig andras), oavsett vem uppgiften råkar vara tilldelad.
+// Barnens tilldelade uppgifter räknas medvetet INTE som "alla (vuxna)".
+export function getFamilyViewTodos(todos: Todo[], roles: Role[], members: Member[]): Todo[] {
+  return todos.filter((todo) => {
+    if (todo.deletedAt !== null) return false;
+    if (todo.personalCategoryId != null) return false;
+    if (todo.assignedTo === null) return true;
+    return !isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
+  });
+}
+
 // allMembers måste vara den ofiltrerade medlemslistan (inte activeMembers) — annars
 // kan en todo som tillhör ett borttaget barn inte slå upp namnet längre och visas
 // permanent som "Okänt barn" i historiken, trots att medlemmen bara är dold, inte raderad.

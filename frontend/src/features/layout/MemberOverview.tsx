@@ -67,6 +67,15 @@ type Props = {
   // den sparar det jag senast valde"). null/osatt = "Alla familjer".
   homeSelectedFamilyId?: Id | null;
   onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
+  // Ta/Släpp en familje-uppgift (2026-07-31) — se render-koden nedan.
+  onClaimTodo?: (todoId: Id, claim: boolean) => void;
+  // Flik-/familjeväljaren gäller bara den RIKTIGA Hem-översikten (2026-08-01,
+  // fynd vid samma dags Todos/familjevy-arbete) — "vald vuxen"-vyn
+  // (MemberShellContent.tsx, en annan medlems kalender via Medlemmar-panelen)
+  // återanvänder samma komponent men ska visa bara kalendern, precis som
+  // innan flik-ombyggnaden, utan att kollidera med huvudnavets "Kalender"-
+  // knapp (samma namn som den nya "Visa kalender"-flikknappen).
+  enableTabs?: boolean;
 };
 
 export function MemberOverview({
@@ -97,6 +106,8 @@ export function MemberOverview({
   recipes = [],
   homeSelectedFamilyId,
   onUpdateHomeSelectedFamilyId,
+  onClaimTodo,
+  enableTabs = true,
 }: Props) {
   const ownAccountId = currentMember.accountId;
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
@@ -169,9 +180,14 @@ export function MemberOverview({
     { key: "mealplan", label: "Visa måltidsplanering", icon: UtensilsCrossed, enabled: true }
   ];
   const tabs = allTabs.filter((t) => t.enabled);
+  // "vald vuxen"-vyn (enableTabs=false) visar alltid bara kalendern, oavsett
+  // vilken flik som råkar ligga i state sedan tidigare (samma instans kan
+  // återanvändas, se `key`-propen i MemberShellContent.tsx).
+  const effectiveTab = enableTabs ? activeTab : "calendar";
 
   return (
     <div className={styles.home}>
+      {enableTabs && (
       <div className={styles.controlRow}>
         {showFamilyFilter && (
           <label className="field-label" htmlFor="home-family-select" style={{ maxWidth: 220 }}>
@@ -205,6 +221,7 @@ export function MemberOverview({
           ))}
         </div>
       </div>
+      )}
 
       {canSeeMembers && filteredMembers.length > 0 && (
         <article className="dashboard">
@@ -242,7 +259,7 @@ export function MemberOverview({
         </article>
       )}
 
-      {activeTab === "calendar" && canSeeCalendar && (
+      {effectiveTab === "calendar" && canSeeCalendar && (
         <div className={styles.calendarWrap}>
           <div className={styles.calendarToolbar}>
             <span className={styles.calendarLabel}>Familjens kalender</span>
@@ -264,7 +281,7 @@ export function MemberOverview({
         </div>
       )}
 
-      {activeTab === "todos" && canSeeTodos && (
+      {effectiveTab === "todos" && canSeeTodos && (
         <article className="dashboard">
           <header className="section-header">
             <div><p className="eyebrow">Uppgifter</p><h2>{pendingTodos.length} väntar</h2></div>
@@ -285,6 +302,23 @@ export function MemberOverview({
                       <small>{familyNameById.get(t.accountId) ?? "Okänd familj"}</small>
                     )}
                   </span>
+                  {/* Ta/Släpp uppgiften (2026-07-31, Zaidas önskemål: "todos
+                      som jag signat upp mig på från familjevyn") — bara för
+                      MIN EGEN familjs todos (onClaimTodo rör bara det egna
+                      kontots data, cross-account-/anslutna todos saknar en
+                      motsvarande mutationsväg härifrån). Familjen (ingen
+                      mottagare) → "Ta uppgiften"; redan tagen av MIG →
+                      "Släpp"; tagen av någon annan vuxen → ingen knapp. */}
+                  {onClaimTodo && t.accountId === ownAccountId && t.assignedTo === null && (
+                    <button className="secondary-button" onClick={() => onClaimTodo(t.id, true)} type="button">
+                      Ta uppgiften
+                    </button>
+                  )}
+                  {onClaimTodo && t.accountId === ownAccountId && t.assignedTo === currentMember.id && (
+                    <button className="ghost-button" onClick={() => onClaimTodo(t.id, false)} type="button">
+                      Släpp
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -292,7 +326,7 @@ export function MemberOverview({
         </article>
       )}
 
-      {activeTab === "shopping" && canSeeShopping && (
+      {effectiveTab === "shopping" && canSeeShopping && (
         <article className="dashboard">
           <header className="section-header">
             <div><p className="eyebrow">Inköp</p><h2>{activeLists.length} listor</h2></div>
@@ -335,7 +369,7 @@ export function MemberOverview({
         </article>
       )}
 
-      {activeTab === "mealplan" && (
+      {effectiveTab === "mealplan" && (
         isOwnFamilySelected ? (
           <article className="dashboard">
             <header className="section-header">

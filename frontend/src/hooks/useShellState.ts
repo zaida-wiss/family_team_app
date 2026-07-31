@@ -363,6 +363,11 @@ export function useShellState(
     todoBubbleSize: currentMember.todoBubbleSize,
     onUpdateTodoBubbleSize: (size: number) =>
       updateMemberNavigation(currentMember.id, { todoBubbleSize: size }),
+    // Barn-tråden i Todos-panelen, av som standard (2026-07-31, Zaidas
+    // önskemål) — en liten toggle här, samma updateMemberNavigation-mönster.
+    showChildTodosInOwnView: currentMember.showChildTodosInOwnView ?? false,
+    onUpdateShowChildTodosInOwnView: (value: boolean) =>
+      updateMemberNavigation(currentMember.id, { showChildTodosInOwnView: value }),
     shoppingShowCompletedDefault: currentMember.shoppingShowCompletedDefault,
     onUpdateShoppingShowCompletedDefault: (value: boolean) =>
       updateMemberNavigation(currentMember.id, { shoppingShowCompletedDefault: value }),

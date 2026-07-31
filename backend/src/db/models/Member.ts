@@ -17,6 +17,7 @@ const memberSchema = new Schema<Member>({
   // Hem-vyns familjefilter (2026-07-31) — tillagd i Zod OCH Mongoose
   // SAMTIDIGT, samma "todoThreadGap-lärdom" som recurringTemplateOrder ovan.
   homeSelectedFamilyId: { type: String, default: null },
+  showChildTodosInOwnView: { type: Boolean, default: undefined },
   calendarFilterSettings: { type: Schema.Types.Mixed, default: undefined },
   childTimelineSettings: { type: Schema.Types.Mixed, default: undefined },
   lastActivePanel: { type: String, default: undefined },
