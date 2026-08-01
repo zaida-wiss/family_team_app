@@ -127,6 +127,19 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),
+  // Lägg till en ny Familjen-uppgift "förinställd på familjen" (2026-08-01,
+  // Zaidas önskemål) direkt i ETT AV MINA ANDRA konton.
+  createFamilyAcrossAccounts: (targetAccountId: string, title: string, visual: string | null = null) =>
+    request<{ id: string }>(api(`todos/family-across-accounts/${targetAccountId}`), {
+      method: "POST",
+      body: JSON.stringify({ title, visual })
+    }),
+  // Ta/Släpp en Familjen-uppgift i ETT AV MINA ANDRA konton.
+  claimFamilyAcrossAccounts: (targetAccountId: string, id: string, claim: boolean) =>
+    request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/claim`), {
+      method: "PATCH",
+      body: JSON.stringify({ claim })
+    }),
   // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
   // familjemedlemmar"), skiljer sig från getSharedChildren (ett helt barn)
   // och getFamilyAcrossAccounts (ett riktigt medlemskap) ovan.
@@ -145,6 +158,13 @@ export const todosApi = {
     request<{ ok: boolean }>(api(`todos/connections/${targetAccountId}/${id}/reject`), {
       method: "PATCH",
       body: JSON.stringify({ reason })
+    }),
+  // Lägg till en ny Familjen-uppgift i en ANSLUTEN familjs konto
+  // (2026-08-01), kräver redigera-åtkomst i anslutningen.
+  createConnectionTodo: (targetAccountId: string, title: string, visual: string | null = null) =>
+    request<{ id: string }>(api(`todos/connections/${targetAccountId}`), {
+      method: "POST",
+      body: JSON.stringify({ title, visual })
     }),
   subscribeToChanges: (onChange: () => void) => {
     let initialConnect = true;

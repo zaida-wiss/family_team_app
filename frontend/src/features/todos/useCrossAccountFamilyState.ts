@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { accountsApi, membersApi, todosApi } from "../../api";
-import type { CrossAccountFamilyThread, FamilyMembersGroup, Id, MembershipMemberSummary, MyMembership } from "@shared/types";
+import { accountsApi, membersApi, recipesApi, shoppingApi, todosApi } from "../../api";
+import type { CrossAccountShoppingLists } from "../../api/shopping";
+import type { CrossAccountRecipes } from "../../api/recipes";
+import { generateId } from "../../utils/uuid";
+import type { CrossAccountFamilyThread, FamilyMembersGroup, Id, MembershipMemberSummary, MyMembership, ShoppingList } from "@shared/types";
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
 // familjer du är med i... kunna avmarkera dessa när de inte används...
@@ -45,7 +48,19 @@ export function useCrossAccountFamilyTodos() {
     });
   }
 
-  return { threads, completeCrossAccountTodo };
+  // Lägg till/Ta/Släpp en Familjen-uppgift (2026-08-01, Zaidas önskemål:
+  // "kunna lägga till nya todos som är förinställda på den aktuella
+  // familjen... precis som i min egen todo-vy") — samma "familjekonto jag
+  // faktiskt är en riktig medlem av"-princip som complete ovan.
+  function createCrossAccountTodo(accountId: Id, title: string, visual: string | null) {
+    return todosApi.createFamilyAcrossAccounts(accountId, title, visual).then(refresh);
+  }
+
+  function claimCrossAccountTodo(accountId: Id, todoId: Id, claim: boolean) {
+    return todosApi.claimFamilyAcrossAccounts(accountId, todoId, claim).then(refresh);
+  }
+
+  return { threads, completeCrossAccountTodo, createCrossAccountTodo, claimCrossAccountTodo };
 }
 
 // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
@@ -56,6 +71,55 @@ export function useCrossAccountMembers() {
   const [groups, setGroups] = useState<FamilyMembersGroup[]>([]);
   useEffect(() => {
     membersApi.getCrossAccountMembers().then((data) => setGroups(Array.isArray(data) ? data : [])).catch(console.error);
+  }, []);
+  return groups;
+}
+
+// Mina familjekonton (2026-08-01, Zaidas önskemål: "samma gäller
+// inköpslistan", rättad senare samma dag: "man ska inte kunna göra
+// inköpslistor i familjer man inte är medlem i") — MEDVETET bara mina EGNA
+// riktiga medlemskap, ingen Familjeanslutnings-variant (den stödjer bara
+// läsning, se useConnectionShoppingLists i accounts/useFamilyConnectionsState.ts).
+export function useCrossAccountShoppingLists() {
+  const [groups, setGroups] = useState<CrossAccountShoppingLists[]>([]);
+
+  const refresh = useCallback(() => {
+    shoppingApi.getCrossAccountLists().then((data) => setGroups(Array.isArray(data) ? data : [])).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // ownerId sätts alltid om server-side till min RIKTIGA medlemspost i
+  // målkontot (createCrossAccountShoppingList/createList, samma
+  // mass-assignment-skydd som ADR-0008) — värdet här är bara en platshållare
+  // för att tillfredsställa ShoppingList-typen.
+  function createCrossAccountList(accountId: Id, name: string, icon: string | null = null) {
+    const newList: ShoppingList = {
+      id: `shopping-${generateId()}`,
+      name,
+      ownerId: "",
+      color: "#2f7d6d",
+      icon,
+      sharedWith: [],
+      deletedAt: null,
+      deletedBy: null,
+      items: []
+    };
+    return shoppingApi.createCrossAccountList(accountId, newList).then(refresh);
+  }
+
+  return { groups, createCrossAccountList };
+}
+
+// Mina familjekonton — recept (2026-08-01, Zaidas önskemål, för måltids-
+// planeringens skull), samma "bara läsbar sammanfattning"-princip som
+// useCrossAccountMembers ovan.
+export function useCrossAccountRecipes() {
+  const [groups, setGroups] = useState<CrossAccountRecipes[]>([]);
+  useEffect(() => {
+    recipesApi.getCrossAccountRecipes().then((data) => setGroups(Array.isArray(data) ? data : [])).catch(console.error);
   }, []);
   return groups;
 }

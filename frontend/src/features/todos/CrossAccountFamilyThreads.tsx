@@ -20,7 +20,13 @@ export function CrossAccountFamilyThreads() {
 
   return (
     <div className="todo-thread-view">
-      {threads.map(({ accountId, accountName, todos }) => (
+      {threads.map(({ accountId, accountName, todos: allTodos }) => {
+        // Bara den OTAGNA poolen visas här (2026-08-01, Zaidas önskemål) —
+        // en redan tagen uppgift (assignedTo satt, via "Ta uppgiften" i
+        // Hem-vyns familjefilter) hör hemma i Mina uppgifter-tråden istället,
+        // annars hade den synts DUBBELT.
+        const todos = allTodos.filter((t) => t.assignedTo === null);
+        return (
         <section className="todo-thread" aria-label={`Familjekonto: ${accountName}`} key={accountId}>
           <div className="todo-thread__header">
             <h3 className="todo-thread__category">{accountName}</h3>
@@ -57,7 +63,8 @@ export function CrossAccountFamilyThreads() {
             </ul>
           )}
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }

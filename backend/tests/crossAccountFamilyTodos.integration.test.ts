@@ -191,4 +191,75 @@ describe.skipIf(!RUN)("Mina familjekonton — todo utan tilldelad mottagare öve
       .send({});
     expect(res.status).toBe(403);
   });
+
+  // 2026-08-01, Zaidas önskemål: "kunna lägga till nya todos som är
+  // förinställda på den aktuella familjen" + "Ta uppgiften"/"Släpp" på en
+  // annan av mina egna familjer.
+  it("skapar en ny Familjen-uppgift direkt i konto B från konto A, sedan Tar/Släpper den", async () => {
+    const create = await request(app)
+      .post(`/api/todos/family-across-accounts/${accountB.accountId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", accountA.memberId)
+      .send({ title: "Handla mjölk", visual: "🥛" });
+    expect(create.status).toBe(201);
+    const newTodoId = create.body.id as string;
+
+    const listed = await request(app)
+      .get("/api/todos/family-across-accounts")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", accountA.memberId);
+    const bTodos = (listed.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+      (t) => t.accountId === accountB.accountId
+    )!;
+    expect(bTodos.todos.find((t) => t.id === newTodoId)?.assignedTo).toBeNull();
+
+    const claim = await request(app)
+      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/claim`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", accountA.memberId)
+      .send({ claim: true });
+    expect(claim.status).toBe(200);
+
+    const afterClaim = await request(app)
+      .get("/api/todos/family-across-accounts")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", accountA.memberId);
+    const bTodosClaimed = (afterClaim.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+      (t) => t.accountId === accountB.accountId
+    )!;
+    expect(bTodosClaimed.todos.find((t) => t.id === newTodoId)?.assignedTo).toBe(accountA.memberId);
+
+    // En andra medlem i konto B kan inte ta över en redan tagen uppgift.
+    const doubleClaim = await request(app)
+      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/claim`)
+      .set("Authorization", `Bearer ${outsiderToken}`)
+      .set("x-member-id", outsiderMemberId)
+      .send({ claim: true });
+    expect(doubleClaim.status).toBe(403);
+
+    const release = await request(app)
+      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/claim`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", accountA.memberId)
+      .send({ claim: false });
+    expect(release.status).toBe(200);
+
+    const afterRelease = await request(app)
+      .get("/api/todos/family-across-accounts")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", accountA.memberId);
+    const bTodosReleased = (afterRelease.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+      (t) => t.accountId === accountB.accountId
+    )!;
+    expect(bTodosReleased.todos.find((t) => t.id === newTodoId)?.assignedTo).toBeNull();
+  });
+
+  it("en utomstående utan medlemskap i konto B kan INTE skapa en Familjen-uppgift där", async () => {
+    const res = await request(app)
+      .post(`/api/todos/family-across-accounts/${accountB.accountId}`)
+      .set("Authorization", `Bearer ${outsiderToken}`)
+      .set("x-member-id", outsiderMemberId)
+      .send({ title: "Otillåten uppgift" });
+    expect(res.status).toBe(403);
+  });
 });

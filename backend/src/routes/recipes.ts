@@ -18,6 +18,12 @@ recipesRouter.get("/connections", async (req, res) => {
   res.json(await familyConnections.getConnectionRecipes(req.accountId!, req.memberId ?? null));
 });
 
+// Mina familjekonton (2026-08-01, Zaidas önskemål, se getCrossAccountRecipes)
+// — mina EGNA riktiga medlemskap, används av måltidsplaneringen i Hem-vyn.
+recipesRouter.get("/cross-account", async (req, res) => {
+  res.json(await recipes.getCrossAccountRecipes(req.userId!, req.accountId!, req.memberId!));
+});
+
 recipesRouter.post("/", async (req, res) => {
   res.status(201).json(await recipes.createRecipe(req.accountId!, req.memberId ?? null, req.body));
 });

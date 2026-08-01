@@ -109,7 +109,14 @@ export function useConnectionTodos() {
     todosApi.rejectConnectionTodo(accountId, todoId, reason).then(refresh).catch(console.error);
   }
 
-  return { threads, completeConnectionTodo, approveConnectionTodo, rejectConnectionTodo };
+  // Lägg till en ny Familjen-uppgift i en ANSLUTEN familjs konto
+  // (2026-08-01, Zaidas önskemål) — kräver redigera-åtkomst, kontrollerat
+  // server-side (createConnectionTodo, todosService.ts).
+  function createConnectionTodo(accountId: string, title: string, visual: string | null) {
+    return todosApi.createConnectionTodo(accountId, title, visual).then(refresh);
+  }
+
+  return { threads, completeConnectionTodo, approveConnectionTodo, rejectConnectionTodo, createConnectionTodo };
 }
 
 export function useConnectionRecipes() {

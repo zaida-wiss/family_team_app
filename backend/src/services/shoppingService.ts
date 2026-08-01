@@ -1,5 +1,6 @@
 import { ShoppingListModel } from "../db/models/ShoppingList.js";
 import { MemberModel } from "../db/models/Member.js";
+import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
 import { ShoppingItemSchema, ShoppingListPatchSchema } from "../../../shared/schemas.js";
 import { getAllRoles } from "./rolesService.js";
@@ -48,6 +49,39 @@ export async function createList(data: unknown, accountId: string, memberId: str
   const list = new ShoppingListModel({ ...(data as object), accountId, ownerId: memberId });
   await list.save();
   return { id: list.id };
+}
+
+// Mina familjekonton (2026-08-01, Zaidas önskemål: "samma gäller
+// inköpslistan" — precis som cross-account-todos/kalendrar, mina EGNA
+// riktiga medlemskap i andra konton) — till skillnad från kalendrar (som
+// kräver ett explicit shareAcrossMyAccounts-flagg per kalender) är
+// inköpslistor redan ett "hela familjen delar"-koncept i den här appen, så
+// ALLA listor i det andra kontot visas, ingen egen opt-in behövs.
+export async function getCrossAccountShoppingLists(callerUserId: string, currentAccountId: string, currentMemberId: string) {
+  const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
+  const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
+
+  const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
+  const results = [];
+  for (const m of memberDocs) {
+    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    const account = await AccountModel.findOne({ id: m.accountId });
+    if (!account) continue;
+    const lists = await getAllLists(m.accountId);
+    results.push({ accountId: m.accountId, accountName: account.name, lists });
+  }
+  return results;
+}
+
+// Ny lista "förinställd på familjen" direkt i ETT AV MINA ANDRA konton
+// (2026-08-01) — samma createList/canCreateShoppingLists-kontroll som
+// vanligt, bara riktad mot en annan medlemspost (min egen, DÄR).
+export async function createCrossAccountShoppingList(callerUserId: string, targetAccountId: string, data: unknown) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return createList(data, targetAccountId, memberInTarget.id);
 }
 
 export async function addItem(listId: string, accountId: string, memberId: string, item: unknown) {

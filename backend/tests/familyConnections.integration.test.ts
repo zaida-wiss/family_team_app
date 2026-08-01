@@ -231,6 +231,39 @@ describe.skipIf(!RUN)("ADR-0030: Familjeanslutningar (den lätta formen)", () =>
     expect(updated?.status).toBe("approved");
   });
 
+  // 2026-08-01, Zaidas önskemål: "kunna lägga till nya todos som är
+  // förinställda på den aktuella familjen" via en Familjeanslutning också
+  // (kräver edit-åtkomst) — landar som en familje-todo (assignedTo:null) i
+  // B:s konto, synlig i A:s egen getConnectionTodos-vy direkt (utökat filter,
+  // familje-todos är inte längre begränsade till bara exponerade medlemmar).
+  it("A (edit-åtkomst till B) skapar en ny Familjen-uppgift direkt i B:s konto", async () => {
+    const create = await request(app)
+      .post(`/api/todos/connections/${familyB.accountId}`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId)
+      .send({ title: "Handla mjölk", visual: "🥛" });
+    expect(create.status).toBe(201);
+    const newTodoId = create.body.id as string;
+
+    const seenByA = await request(app)
+      .get("/api/todos/connections")
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    const bThread = (seenByA.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+      (t) => t.accountId === familyB.accountId
+    )!;
+    expect(bThread.todos.find((t) => t.id === newTodoId)?.assignedTo).toBeNull();
+  });
+
+  it("B (bara view-åtkomst till A) nekas att skapa en Familjen-uppgift i A:s konto", async () => {
+    const res = await request(app)
+      .post(`/api/todos/connections/${familyA.accountId}`)
+      .set("Authorization", `Bearer ${familyB.accessToken}`)
+      .set("x-member-id", familyB.parentMemberId)
+      .send({ title: "Otillåten uppgift" });
+    expect(res.status).toBe(403);
+  });
+
   it("B (bara view-åtkomst till A) nekas att slutföra den tidigare skapade todon i A:s konto", async () => {
     const complete = await request(app)
       .patch(`/api/todos/connections/${familyA.accountId}/${exposedTodoId}/complete`)

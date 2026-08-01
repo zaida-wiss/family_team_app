@@ -80,6 +80,12 @@ export async function mockDataAPIs(page: Page) {
   // detta GLOBALT (varje gång Hem renderas), samma skäl som connections ovan.
   await page.route("**/api/todos/family-across-accounts", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/recipes/connections", (route) => route.fulfill({ json: [] }));
+  // Mina familjekonton (2026-08-01) — recept/inköpslistor/måltidsplan i ett
+  // av mina egna andra medlemskap, hämtas globalt av Hem-vyn/måltids-
+  // planeringen, samma skäl som family-across-accounts/connections ovan.
+  await page.route("**/api/recipes/cross-account", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/shopping/cross-account", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/meal-plan/cross-account**", (route) => route.fulfill({ json: [] }));
   // Vuxenvyns personliga kategori-trådar (2026-07-05) — hämtas globalt av
   // useShellState oavsett aktiv panel, precis som timed-tasks/reward-shop.
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));

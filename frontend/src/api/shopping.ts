@@ -31,9 +31,27 @@ export type ConnectionShoppingLists = {
   lists: ShoppingList[];
 };
 
+// Mina familjekonton (2026-08-01, Zaidas önskemål) — mina EGNA andra
+// medlemskap, samma form som ConnectionShoppingLists ovan.
+export type CrossAccountShoppingLists = {
+  accountId: string;
+  accountName: string;
+  lists: ShoppingList[];
+};
+
 export const shoppingApi = {
   getAll: () => request<ShoppingList[]>(api("shopping")),
   getConnectionLists: () => request<ConnectionShoppingLists[]>(api("shopping/connections")),
+  // Mina familjekonton (2026-08-01) — mina EGNA andra medlemskap, jag är en
+  // riktig medlem där (skiljer sig från connections ovan, som bara stöder
+  // läsning — se Zaidas rättelse: "man ska inte kunna göra inköpslistor i
+  // familjer man inte är medlem i").
+  getCrossAccountLists: () => request<CrossAccountShoppingLists[]>(api("shopping/cross-account")),
+  createCrossAccountList: (targetAccountId: string, list: ShoppingList) =>
+    request<{ id: string }>(api(`shopping/cross-account/${targetAccountId}`), {
+      method: "POST",
+      body: JSON.stringify(list)
+    }),
   create: (list: ShoppingList) =>
     request<{ id: string }>(api("shopping"), { method: "POST", body: JSON.stringify(list) }),
   addItem: (listId: string, item: ShoppingList["items"][number]) =>

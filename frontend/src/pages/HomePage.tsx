@@ -1,5 +1,6 @@
 import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
+import type { CrossAccountRecipes } from "../api/recipes";
 import type {
   Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList, Todo
 } from "@shared/types";
@@ -32,9 +33,21 @@ type Props = {
   familyOptions?: { accountId: Id; accountName: string }[];
   extraMembers?: (MembershipMemberSummary & { accountId: Id })[];
   recipes?: Recipe[];
+  // Mina familjekonton (2026-08-01) — recept i en av mina andra genuina
+  // medlemskap, för måltidsplaneringen. ALDRIG Familjeanslutningar.
+  crossAccountRecipeGroups?: CrossAccountRecipes[];
   homeSelectedFamilyId?: Id | null;
   onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
-  onClaimTodo?: (todoId: Id, claim: boolean) => void;
+  // accountId + todoId — en vald familj kan vara ett HELT ANNAT konto än
+  // mitt eget (2026-08-01), se MemberOverview.tsx/MemberShellContent.tsx.
+  onClaimTodo?: (accountId: Id, todoId: Id, claim: boolean) => void;
+  onCreateFamilyTodo?: (accountId: Id, title: string, visual: string | null) => void;
+  claimableFamilyAccountIds?: Set<Id>;
+  creatableFamilyAccountIds?: Set<Id>;
+  // Ny inköpslista, förinställd på familjen (2026-08-01) — ENDAST mitt eget
+  // konto eller Mina familjekonton, se MemberShellContent.tsx.
+  onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
+  shoppingCreatableFamilyAccountIds?: Set<Id>;
   // "vald vuxen"-vyn (Medlemmar-panelen) sätter false — se MemberOverview.tsx.
   enableTabs?: boolean;
 };
@@ -43,8 +56,10 @@ export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, todos, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
-  onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
-  onClaimTodo, enableTabs
+  onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
+  homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
+  onClaimTodo, onCreateFamilyTodo, claimableFamilyAccountIds, creatableFamilyAccountIds,
+  onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds, enableTabs
 }: Props) {
   return (
     <MemberOverview
@@ -74,9 +89,15 @@ export function HomePage({
       familyOptions={familyOptions}
       extraMembers={extraMembers}
       recipes={recipes}
+      crossAccountRecipeGroups={crossAccountRecipeGroups}
       homeSelectedFamilyId={homeSelectedFamilyId}
       onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
       onClaimTodo={onClaimTodo}
+      onCreateFamilyTodo={onCreateFamilyTodo}
+      claimableFamilyAccountIds={claimableFamilyAccountIds}
+      creatableFamilyAccountIds={creatableFamilyAccountIds}
+      onCreateFamilyShoppingList={onCreateFamilyShoppingList}
+      shoppingCreatableFamilyAccountIds={shoppingCreatableFamilyAccountIds}
       enableTabs={enableTabs}
     />
   );

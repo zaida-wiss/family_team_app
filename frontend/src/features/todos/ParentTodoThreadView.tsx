@@ -91,6 +91,16 @@ type Props = {
   // egen todo vy skall endast mina egna todos finnas") — en toggle i
   // Inställningar → Utseende visar den igen.
   showChildTodos?: boolean;
+  // Todos jag TAGIT från en annan familjs Hem-vy ("Ta uppgiften", 2026-08-01,
+  // Zaidas önskemål: "Mina uppgifter skall endast innehålla todos som jag
+  // signat upp mig på från mina familjer") — en enkel, egen mini-lista
+  // längst ner i Mina uppgifter-tråden, samma håll-in-för-att-markera-klar-
+  // mönster som CrossAccountFamilyThreads.tsx (medvetet INTE inbyggd i den
+  // generella bubbel-klick/dubbelklick/detaljvy-maskinen ovan, som förutsätter
+  // ett LOKALT konto — en todo härifrån lever i ett ANNAT konto).
+  extraMyTasks?: { accountId: Id; accountName: string; todos: Todo[] }[];
+  onCompleteExtraMyTask?: (accountId: Id, todoId: Id) => void;
+  onReleaseExtraMyTask?: (accountId: Id, todoId: Id) => void;
 };
 
 type Thread = {
@@ -252,7 +262,10 @@ export function ParentTodoThreadView({
   threadGap,
   bubbleSize,
   fixedTodoTimes,
-  showChildTodos = false
+  showChildTodos = false,
+  extraMyTasks = [],
+  onCompleteExtraMyTask,
+  onReleaseExtraMyTask
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -1374,6 +1387,49 @@ export function ParentTodoThreadView({
                   </li>
                 );
               })}
+            </ul>
+          )}
+
+          {thread.id === MY_TASKS_THREAD_ID && extraMyTasks.length > 0 && (
+            <ul className="todo-thread__list">
+              {extraMyTasks.flatMap(({ accountId, accountName, todos: claimedTodos }) =>
+                claimedTodos.map((todo) => (
+                  <li className="todo-thread__item" key={todo.id}>
+                    <button
+                      type="button"
+                      className={
+                        "todo-thread__ball todo-thread__ball--small" +
+                        (heldId === todo.id ? " todo-thread__ball--holding" : "")
+                      }
+                      onPointerDown={() =>
+                        onCompleteExtraMyTask && startHold(todo.id, () => onCompleteExtraMyTask(accountId, todo.id))
+                      }
+                      onPointerUp={clearHold}
+                      onPointerLeave={clearHold}
+                      onPointerCancel={clearHold}
+                      title={`${todo.title} (${accountName})`}
+                      aria-label={`${todo.title}, tagen från ${accountName}. Håll intryckt i två sekunder för att markera klar.`}
+                    >
+                      {todo.visual.value && (
+                        <span aria-hidden="true" className="todo-thread__ball-icon">
+                          {todo.visual.value}
+                        </span>
+                      )}
+                      <span className="todo-thread__ball-title">{todo.title}</span>
+                    </button>
+                    <small>{accountName}</small>
+                    {onReleaseExtraMyTask && (
+                      <button
+                        className="ghost-button"
+                        onClick={() => onReleaseExtraMyTask(accountId, todo.id)}
+                        type="button"
+                      >
+                        Släpp
+                      </button>
+                    )}
+                  </li>
+                ))
+              )}
             </ul>
           )}
         </section>

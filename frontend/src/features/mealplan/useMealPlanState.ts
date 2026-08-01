@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { mealPlanApi } from "../../api";
-import type { MealPlanEntry, MealSlot } from "@shared/types";
+import type { Id, MealPlanEntry, MealSlot } from "@shared/types";
 
 // Vecko-måltidsplanering (2026-07-31) — ett av fyra flikval bredvid Hem-
-// vyns familjefilter ("en måltidsplanering"). V1, medvetet enkel: bara
-// MIN EGEN familjs plan (ingen delning med andra familjer/Familjeanslutningar
-// än), ingen upprepning — varje dag+måltid sätts för sig.
+// vyns familjefilter ("en måltidsplanering"). Utökad 2026-08-01 (Zaidas
+// önskemål) med ett valfritt targetAccountId — ett av Mina familjekonton
+// (genuint medlemskap), ALDRIG en Familjeanslutning ("man ska inte kunna
+// planera måltider med andra familjer, utan då måste man först göra en
+// familj med dessa familjer som medlemmar"). Ingen upprepning — varje
+// dag+måltid sätts för sig.
 
 function toDateStr(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -22,15 +25,21 @@ function startOfWeek(d: Date) {
   return copy;
 }
 
-export function useMealPlanState() {
+export function useMealPlanState(targetAccountId?: Id) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
 
   const refresh = useCallback((start: Date) => {
     const from = toDateStr(start);
     const until = toDateStr(new Date(start.getTime() + 6 * 86_400_000));
-    mealPlanApi.getRange(from, until).then(setEntries).catch(console.error);
-  }, []);
+    const request = targetAccountId
+      ? mealPlanApi.getCrossAccountRange(from, until).then((groups) => {
+          const group = groups.find((g) => g.accountId === targetAccountId);
+          return group?.entries ?? [];
+        })
+      : mealPlanApi.getRange(from, until);
+    request.then(setEntries).catch(console.error);
+  }, [targetAccountId]);
 
   useEffect(() => {
     refresh(weekStart);
@@ -47,13 +56,19 @@ export function useMealPlanState() {
   }
 
   async function createEntry(date: string, mealSlot: MealSlot, recipeId: string) {
-    const created = await mealPlanApi.create(date, mealSlot, recipeId);
+    const created = targetAccountId
+      ? await mealPlanApi.createCrossAccount(targetAccountId, date, mealSlot, recipeId)
+      : await mealPlanApi.create(date, mealSlot, recipeId);
     setEntries((current) => [...current, created]);
   }
 
   async function removeEntry(id: string) {
     setEntries((current) => current.filter((e) => e.id !== id));
-    await mealPlanApi.remove(id).catch(console.error);
+    if (targetAccountId) {
+      await mealPlanApi.removeCrossAccount(targetAccountId, id).catch(console.error);
+    } else {
+      await mealPlanApi.remove(id).catch(console.error);
+    }
   }
 
   return { weekStart, entries, goToPreviousWeek, goToNextWeek, goToToday, createEntry, removeEntry };

@@ -416,6 +416,24 @@
   -webkit-user-select: none;
 }
 
+/* Hem-vyns familjefliks bubblor (2026-08-01, Zaidas önskemål: "bollar i
+   familjevyns todo, precis som i min egen, men andra färger i temat") —
+   samma såpbubbel-mekanik som huvudbollen ovan, men blandad ur den ANDRA
+   halvan av temats åttafärgsskala (--c4…--c7 istället för --c0…--c3/--c4)
+   så familjevyns bubblor alltid går att skilja visuellt från Todos-panelens
+   egna, oavsett vilket tema man valt — fortfarande temats egna färger, inga
+   hårdkodade kulörer.  */
+.todo-thread__ball--home {
+  background:
+    radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
+    radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--c4) 92%, transparent) 0%, transparent 62%),
+    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--c5) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--c6) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--c7) 88%, transparent) 0%, transparent 66%),
+    var(--c4);
+}
+
 /* Barnens bubblor (Barn-tråden) mycket mindre än vuxnas egna kategori-trådar
    (2026-07-06, Zaidas begäran) — golvat på 44px, det minsta tillåtna
    touch-målet (CLAUDE.md), inte lägre. Växer måttligt med skärmbredden precis

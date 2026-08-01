@@ -1,5 +1,7 @@
 import crypto from "crypto";
 import { RecipeModel } from "../db/models/Recipe.js";
+import { MemberModel } from "../db/models/Member.js";
+import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
 import { requireAdultMember } from "./todoCategoriesService.js";
 import { RECIPE_UNITS } from "../../../shared/types.js";
@@ -13,6 +15,28 @@ const RECIPE_UNIT_SET: ReadonlySet<string> = new Set(RECIPE_UNITS);
 
 export async function getAllRecipes(accountId: string) {
   return RecipeModel.find({ accountId, deletedAt: null }, { _id: 0, __v: 0 }).sort({ name: 1 });
+}
+
+// Mina familjekonton (2026-08-01, Zaidas önskemål: "man ska inte heller
+// kunna planera måltider med andra familjer, utan då måste man först göra
+// en familj med dessa familjer som medlemmar") — bara mina EGNA riktiga
+// medlemskap, samma mönster som getCrossAccountFamilyTodos (todosService.ts).
+// MEDVETET INGEN Familjeanslutnings-variant här (den lättare formen ger
+// ingen genuin identitet, precis som för inköpslistor).
+export async function getCrossAccountRecipes(callerUserId: string, currentAccountId: string, currentMemberId: string) {
+  const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
+  const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
+
+  const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
+  const results = [];
+  for (const m of memberDocs) {
+    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    const account = await AccountModel.findOne({ id: m.accountId });
+    if (!account) continue;
+    const recipes = await getAllRecipes(m.accountId);
+    results.push({ accountId: m.accountId, accountName: account.name, recipes });
+  }
+  return results;
 }
 
 type RecipeInput = {

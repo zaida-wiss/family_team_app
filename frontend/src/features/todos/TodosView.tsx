@@ -41,6 +41,11 @@ type Props = {
   // Barn-tråden i Todos-panelen (2026-07-31, Zaidas önskemål) — av som
   // standard, en toggle i Inställningar → Utseende.
   showChildTodosInOwnView?: boolean;
+  // Todos jag TAGIT från en annan familjs Hem-vy (2026-08-01) — en liten
+  // mini-lista längst ner i Mina uppgifter-tråden, se ParentTodoThreadView.tsx.
+  extraMyTasks?: { accountId: Id; accountName: string; todos: Todo[] }[];
+  onCompleteExtraMyTask?: (accountId: Id, todoId: Id) => void;
+  onReleaseExtraMyTask?: (accountId: Id, todoId: Id) => void;
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
@@ -93,6 +98,9 @@ export function TodosView({
   todoThreadGap,
   todoBubbleSize,
   showChildTodosInOwnView = false,
+  extraMyTasks,
+  onCompleteExtraMyTask,
+  onReleaseExtraMyTask,
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
@@ -231,6 +239,9 @@ export function TodosView({
             currentMember={currentMember}
             categories={personalCategories}
             showChildTodos={showChildTodosInOwnView}
+            extraMyTasks={extraMyTasks}
+            onCompleteExtraMyTask={onCompleteExtraMyTask}
+            onReleaseExtraMyTask={onReleaseExtraMyTask}
             onToggleSubtask={onToggleSubtask}
             onToggleTodoInProgress={onToggleTodoInProgress}
             onUpdateTodo={onUpdateTodo}

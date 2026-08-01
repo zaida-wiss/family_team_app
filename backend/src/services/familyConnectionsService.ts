@@ -309,3 +309,10 @@ export async function getConnectionShoppingLists(callerAccountId: string, caller
   }
   return results;
 }
+
+// Medvetet INGEN createConnectionShoppingList (2026-08-01, Zaidas rättelse:
+// "man ska inte kunna göra inköpslistor i familjer man inte är medlem i")
+// — en Familjeanslutning ger ingen riktig identitet i målkontot, bara
+// LÄSNING (getConnectionShoppingLists ovan) stöds. Skapande kräver en
+// genuin identitet, se createCrossAccountShoppingList (shoppingService.ts,
+// "Mina familjekonton").

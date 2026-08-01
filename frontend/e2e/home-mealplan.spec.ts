@@ -43,13 +43,28 @@ test("Måltidsplanering: lägga till och ta bort ett recept för en dag+måltid"
   await expect(entry).toHaveCount(0);
 });
 
-test("Måltidsplanering: ingen tillgänglig för en annan familj i familjefiltret", async ({ page }) => {
+// 2026-08-01, Zaidas rättelse: "man ska inte heller kunna planera måltider
+// med andra familjer, utan då måste man först göra en familj med dessa
+// familjer som medlemmar" — måltidsplanering fungerar nu FÖR Mina
+// familjekonton (genuint medlemskap, family-across-accounts), men INTE för
+// en Familjeanslutning (todos/connections, ingen egen identitet där).
+test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Familjeanslutning", async ({ page }) => {
   const ACCOUNT_A = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
   await mockAuthAndData(page);
   await page.route("**/api/recipes", (route) => route.fulfill({ json: [RECIPE] }));
   await page.route("**/api/meal-plan**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/meal-plan/cross-account**", (route) =>
+    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", entries: [] }] })
+  );
+  await page.route("**/api/recipes/cross-account", (route) =>
+    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", recipes: [RECIPE] }] })
+  );
   await page.route("**/api/todos/family-across-accounts", (route) =>
     route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", todos: [] }] })
+  );
+  // Familjen C — bara en Familjeanslutning, ingen genuin identitet där.
+  await page.route("**/api/todos/connections", (route) =>
+    route.fulfill({ json: [{ accountId: "acc-c", accountName: "Familjen C", access: "edit", todos: [] }] })
   );
 
   await page.goto("/");
@@ -57,9 +72,16 @@ test("Måltidsplanering: ingen tillgänglig för en annan familj i familjefiltre
   const familyFilter = page.getByLabel("Familj");
   await expect(familyFilter).toBeVisible();
 
+  // Familjen B (Mina familjekonton) — riktig måltidsplan, ingen "inte
+  // tillgänglig"-text.
   await familyFilter.selectOption({ label: "Familjen B" });
-  await expect(page.getByText("Måltidsplanering delas ännu inte mellan familjer")).toBeVisible();
+  await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toHaveCount(0);
+  await expect(page.locator(".mealplan__grid")).toBeVisible();
+
+  // Familjen C (bara en Familjeanslutning) — fortsatt inte tillgänglig.
+  await familyFilter.selectOption({ label: "Familjen C" });
+  await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toBeVisible();
 
   await familyFilter.selectOption({ label: ACCOUNT_A.name });
-  await expect(page.getByText("Måltidsplanering delas ännu inte mellan familjer")).toHaveCount(0);
+  await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toHaveCount(0);
 });

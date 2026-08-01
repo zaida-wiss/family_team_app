@@ -1,5 +1,7 @@
 import crypto from "crypto";
 import { MealPlanEntryModel } from "../db/models/MealPlanEntry.js";
+import { MemberModel } from "../db/models/Member.js";
+import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
 import { requireAdultMember } from "./todoCategoriesService.js";
 import { MEAL_SLOTS } from "../../../shared/types.js";
@@ -57,4 +59,45 @@ export async function removeEntry(id: string, accountId: string, memberId: strin
   entry.deletedBy = memberId;
   await entry.save();
   return { ok: true };
+}
+
+// Mina familjekonton (2026-08-01, Zaidas önskemål — kräver genuint
+// medlemskap, se motiveringen i recipesService.ts:s getCrossAccountRecipes,
+// samma princip här) — mina EGNA riktiga medlemskap i andra konton.
+export async function getCrossAccountMealPlanEntries(
+  callerUserId: string,
+  currentAccountId: string,
+  currentMemberId: string,
+  fromStr: string,
+  untilStr: string
+) {
+  const currentMember = await MemberModel.findOne({ id: currentMemberId, accountId: currentAccountId });
+  const hidden = new Set(currentMember?.hiddenCrossAccountIds ?? []);
+
+  const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
+  const results = [];
+  for (const m of memberDocs) {
+    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    const account = await AccountModel.findOne({ id: m.accountId });
+    if (!account) continue;
+    const entries = await getEntriesForRange(m.accountId, fromStr, untilStr);
+    results.push({ accountId: m.accountId, accountName: account.name, entries });
+  }
+  return results;
+}
+
+export async function createCrossAccountEntry(callerUserId: string, targetAccountId: string, body: unknown) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return createEntry(targetAccountId, memberInTarget.id, body);
+}
+
+export async function removeCrossAccountEntry(callerUserId: string, targetAccountId: string, id: string) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return removeEntry(id, targetAccountId, memberInTarget.id);
 }

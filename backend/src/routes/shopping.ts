@@ -19,6 +19,23 @@ shoppingRouter.get("/connections", async (req, res) => {
   res.json(await familyConnections.getConnectionShoppingLists(req.accountId!, req.memberId ?? null));
 });
 
+// Medvetet INGEN POST /connections/:targetAccountId (2026-08-01, Zaidas
+// rättelse: "man ska inte kunna göra inköpslistor i familjer man inte är
+// medlem i") — en Familjeanslutning ger ingen riktig identitet i
+// målkontot, bara läsning stöds (GET ovan).
+
+// Mina familjekonton (2026-08-01, Zaidas önskemål: "samma gäller
+// inköpslistan") — mina EGNA andra medlemskap, samma mönster som
+// todos.ts:s /family-across-accounts. Måste registreras FÖRE PATCH/DELETE-
+// rutterna med /:id nedan.
+shoppingRouter.get("/cross-account", async (req, res) => {
+  res.json(await shopping.getCrossAccountShoppingLists(req.userId!, req.accountId!, req.memberId!));
+});
+
+shoppingRouter.post("/cross-account/:targetAccountId", async (req, res) => {
+  res.status(201).json(await shopping.createCrossAccountShoppingList(req.userId!, req.params.targetAccountId, req.body));
+});
+
 // Delning mellan FAMILJER (ADR-0026) — rör INTE den vanliga kontoscopade
 // GET / ovan, en helt separat, additiv väg. Måste registreras FÖRE
 // PATCH/DELETE-rutterna med /:id nedan, annars matchar Express "shared"

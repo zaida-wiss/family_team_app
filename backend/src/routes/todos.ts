@@ -3,7 +3,14 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
-import { CompleteTodoBodySchema, RejectTodoBodySchema, TodosHistoryQuerySchema, ToggleInProgressBodySchema } from "../../../shared/schemas.js";
+import {
+  ClaimFamilyTodoBodySchema,
+  CompleteTodoBodySchema,
+  CreateFamilyWideItemBodySchema,
+  RejectTodoBodySchema,
+  TodosHistoryQuerySchema,
+  ToggleInProgressBodySchema
+} from "../../../shared/schemas.js";
 
 export const todosRouter = Router();
 
@@ -106,12 +113,38 @@ todosRouter.patch(
   }
 );
 
+// Lägg till en ny Familjen-uppgift direkt i ETT AV MINA ANDRA konton
+// (2026-08-01, Zaidas önskemål: "kunna lägga till nya todos som är
+// förinställda på den aktuella familjen").
+todosRouter.post("/family-across-accounts/:targetAccountId", requireAuth, async (req, res) => {
+  const { title, visual } = CreateFamilyWideItemBodySchema.parse(req.body);
+  res.status(201).json(await todos.createCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, title, visual ?? null));
+});
+
+// Ta/Släpp en Familjen-uppgift i ETT AV MINA ANDRA konton — samma
+// "Ta uppgiften"/"Släpp"-koncept som redan finns för det egna kontot.
+todosRouter.patch("/family-across-accounts/:targetAccountId/:id/claim", requireAuth, async (req, res) => {
+  const { claim } = ClaimFamilyTodoBodySchema.parse(req.body);
+  await todos.claimCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id, claim);
+  res.json({ ok: true });
+});
+
 // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
 // familjemedlemmar", inte kontoåtkomst) — måste registreras FÖRE
 // PATCH-rutterna med /:id nedan, av samma skäl som /shared-children och
 // /family-across-accounts ovan.
 todosRouter.get("/connections", requireAuth, attachAccountId, async (req, res) => {
   res.json(await todos.getConnectionTodos(req.accountId!, req.memberId ?? null));
+});
+
+// Lägg till en ny Familjen-uppgift i en ANSLUTEN familjs konto (2026-08-01,
+// kräver redigera-åtkomst i anslutningen, samma spärr som complete/approve/
+// reject nedan).
+todosRouter.post("/connections/:targetAccountId", requireAuth, attachAccountId, async (req, res) => {
+  const { title, visual } = CreateFamilyWideItemBodySchema.parse(req.body);
+  res
+    .status(201)
+    .json(await todos.createConnectionTodo(req.params.targetAccountId, req.accountId!, req.memberId!, title, visual ?? null));
 });
 
 todosRouter.patch(

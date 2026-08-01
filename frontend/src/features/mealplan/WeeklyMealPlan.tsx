@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useMealPlanState } from "./useMealPlanState";
-import type { MealSlot, Recipe } from "@shared/types";
+import type { Id, MealSlot, Recipe } from "@shared/types";
 import "./WeeklyMealPlan.css";
 
 const DAY_NAMES = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
@@ -15,16 +15,18 @@ const MEAL_SLOT_ORDER: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
 
 type Props = {
   recipes: Recipe[];
+  // Ett av Mina familjekonton (2026-08-01, Zaidas önskemål) — genuint
+  // medlemskap, aldrig en Familjeanslutning. undefined = min egen familjs
+  // plan (ursprungsbeteendet, oförändrat).
+  targetAccountId?: Id;
 };
 
 // Vecko-måltidsplanering (2026-07-31, Zaidas önskemål: "en måltidsplanering"
 // — ett av fyra flikval bredvid Hem-vyns familjefilter). Kopplar ett
-// redan existerande recept till en dag+måltid. V1, medvetet enkel: bara min
-// egen familjs plan (visas bara när "Alla familjer"/min egen familj är
-// vald i familjefiltret, se MemberOverview.tsx).
-export function WeeklyMealPlan({ recipes }: Props) {
+// redan existerande recept till en dag+måltid.
+export function WeeklyMealPlan({ recipes, targetAccountId }: Props) {
   const { weekStart, entries, goToPreviousWeek, goToNextWeek, goToToday, createEntry, removeEntry } =
-    useMealPlanState();
+    useMealPlanState(targetAccountId);
   const [pickingCell, setPickingCell] = useState<{ date: string; slot: MealSlot } | null>(null);
 
   const days = Array.from({ length: 7 }, (_, i) => {

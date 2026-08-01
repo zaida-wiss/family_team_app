@@ -195,7 +195,13 @@ export async function getSharedChildrenData(callerMemberId: string, callerAccoun
       // hemkontots namn + relationen (om satt) är precis den informationen.
       homeAccountName: homeAccount?.name ?? "Okänt konto",
       relation: grant.relation ?? null,
-      todos: accountTodos.filter((t) => t.assignedTo === child.id),
+      // recurrence.type==="none" (2026-08-01, Zaidas fynd: "i min todo vy
+      // står fortfarande todo-mallar som tillhör olika familjer") — filtret
+      // saknade den exkludering som getCrossAccountFamilyTodos/
+      // getConnectionTodos redan har, så en återkommande MALL (inte bara
+      // dess dagliga occurrence) för ett delat barn visades som en egen,
+      // aldrig avklarbar boll i SharedChildrenThreads.tsx.
+      todos: accountTodos.filter((t) => t.assignedTo === child.id && t.recurrence.type === "none"),
       // Nästa 30 dagar, samma fönster som CalendarPanel default visar —
       // en delnings-vy är tänkt för samordning framåt, inte historik.
       calendarEvents: calendars
@@ -227,8 +233,18 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
     const account = await AccountModel.findOne({ id: m.accountId });
     if (!account) continue;
     const accountTodos = await getAllTodos(m.accountId);
+    // Inkluderar nu även todos jag redan TAGIT (assignedTo === min egen
+    // medlemspost DÄR, 2026-08-01, Zaidas önskemål: "Mina uppgifter skall
+    // endast innehålla todos som jag signat upp mig på från mina familjer")
+    // — tidigare bara det otagna poolen (assignedTo:null). assignedTo===m.id
+    // betyder här otvetydigt "tagen av MIG", eftersom filtret bara släpper
+    // igenom antingen otaget eller taget-av-just-den-här-anropande-personen.
     const familyTodos = accountTodos.filter(
-      (t) => t.assignedTo === null && t.status === "pending" && t.deletedAt === null && t.recurrence.type === "none"
+      (t) =>
+        (t.assignedTo === null || t.assignedTo === m.id) &&
+        t.status === "pending" &&
+        t.deletedAt === null &&
+        t.recurrence.type === "none"
     );
     results.push({ accountId: m.accountId, accountName: account.name, todos: familyTodos });
   }
@@ -250,6 +266,37 @@ export async function completeCrossAccountFamilyTodo(
     throw new AppError(403, "Åtkomst nekad");
   }
   await completeTodo(todoId, targetAccountId, memberInTarget.id, elapsedMs);
+}
+
+// Ta/Släpp en Familjen-uppgift i ETT AV MINA ANDRA konton (2026-08-01,
+// samma "Ta uppgiften"/"Släpp"-koncept som redan finns för det egna kontot,
+// se MemberOverview.tsx) — sätter assignedTo till min egen medlemspost DÄR
+// (claim) eller tillbaka till null (släpp). Kräver att todon just nu är
+// otagen (claim) eller redan tagen av MIG (släpp) — förhindrar att man av
+// misstag tar över någon ANNAN familjemedlems redan pågående uppgift.
+export async function claimCrossAccountFamilyTodo(
+  callerUserId: string,
+  targetAccountId: string,
+  todoId: string,
+  claim: boolean
+) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const todo = await TodoModel.findOne({ id: todoId, accountId: targetAccountId, deletedAt: null });
+  if (!todo) {
+    throw new AppError(404, "Todo hittades inte");
+  }
+  if (claim && todo.assignedTo !== null) {
+    throw new AppError(409, "Uppgiften är redan tagen");
+  }
+  if (!claim && todo.assignedTo !== memberInTarget.id) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  todo.assignedTo = claim ? memberInTarget.id : null;
+  await todo.save();
+  broadcastTodosChanged();
 }
 
 // Mutationer på ett delat barns todos (2026-07-29, ADR-0024-uppföljning,
@@ -416,12 +463,93 @@ export async function getConnectionTodos(callerAccountId: string, callerMemberId
     if (!conn || !conn.dataScope.todos || conn.exposedMemberIds.length === 0) continue;
     const accountTodos = await getAllTodos(account.id);
     const exposedSet = new Set(conn.exposedMemberIds);
+    // Familje-todos (assignedTo:null) inkluderas nu också (2026-08-01,
+    // Zaidas önskemål om att kunna lägga till en ny uppgift "förinställd på
+    // familjen" via en Familjeanslutning) — tidigare bara todos tilldelade
+    // en EXPONERAD medlem specifikt. En familje-todo har ingen enskild
+    // mottagare att pröva mot exposedSet, den hör naturligt hemma i samma
+    // pool som cross-account-varianten (getCrossAccountFamilyTodos) redan
+    // visar utan medlemsfiltrering.
     const todos = accountTodos.filter(
-      (t) => t.assignedTo !== null && exposedSet.has(t.assignedTo) && t.deletedAt === null && t.recurrence.type === "none"
+      (t) =>
+        t.deletedAt === null &&
+        t.recurrence.type === "none" &&
+        (t.assignedTo === null || exposedSet.has(t.assignedTo))
     );
     results.push({ accountId: account.id, accountName: account.name, access: conn.access, todos });
   }
   return results;
+}
+
+// Lägg till en ny uppgift "förinställd på familjen" (2026-08-01, Zaidas
+// önskemål: "precis som i min egen todo-vy... samma gäller inköpslistan,
+// recept") — en minimal, kontobred familje-todo (assignedTo:null, samma
+// koncept som ADR 2026-07-23s "Familjen"-tilldelning), skapad direkt i
+// MÅLKONTOT istället för mitt eget. createdBy måste vara ett riktigt
+// Member.id i målkontot (schemat kräver det, se Todo.ts) — för Mina
+// familjekonton är det redan MIN egen medlemspost där; för en
+// Familjeanslutning finns ingen sådan (jag är aldrig medlem där), så den
+// första exponerade medlemmen används som en pragmatisk platshållare
+// (samma val som redan görs för connection-mutationer på andra ställen).
+function buildFamilyWideTodo(accountId: string, createdBy: string, title: string, visualValue: string | null) {
+  return createTodo({
+    id: `todo-${crypto.randomUUID()}`,
+    accountId,
+    title,
+    createdBy,
+    assignedTo: null,
+    isShared: false,
+    status: "pending",
+    starValue: 0,
+    visual: { type: "lucide-icon", value: visualValue || "⭐" },
+    recurrence: { type: "none" },
+    recurringSourceId: null,
+    occurrenceDate: null,
+    completedAt: null,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    rejectedReason: null,
+    visibleFrom: null,
+    expiresAt: null,
+    deletedAt: null,
+    deletedBy: null,
+    personalCategoryId: null,
+    notes: null
+  });
+}
+
+export async function createCrossAccountFamilyTodo(
+  callerUserId: string,
+  targetAccountId: string,
+  title: string,
+  visualValue: string | null
+) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return buildFamilyWideTodo(targetAccountId, memberInTarget.id, title, visualValue);
+}
+
+export async function createConnectionTodo(
+  targetAccountId: string,
+  callerAccountId: string,
+  callerMemberId: string,
+  title: string,
+  visualValue: string | null
+) {
+  await requireMember(callerMemberId, callerAccountId);
+  const targetAccount = await AccountModel.findOne({ id: targetAccountId });
+  if (!targetAccount) {
+    throw new AppError(404, "Kontot hittades inte");
+  }
+  const conn = findAcceptedConnectionFrom(callerAccountId, targetAccount);
+  if (!conn || !conn.dataScope.todos || conn.access !== "edit" || conn.exposedMemberIds.length === 0) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return buildFamilyWideTodo(targetAccountId, conn.exposedMemberIds[0], title, visualValue);
 }
 
 async function requireEditableConnectionTodo(targetAccountId: string, callerAccountId: string, callerMemberId: string) {

@@ -20,9 +20,18 @@ export type ConnectionRecipes = {
   recipes: Recipe[];
 };
 
+// Mina familjekonton (2026-08-01, Zaidas önskemål) — mina EGNA riktiga
+// medlemskap, används av måltidsplaneringen i Hem-vyn.
+export type CrossAccountRecipes = {
+  accountId: string;
+  accountName: string;
+  recipes: Recipe[];
+};
+
 export const recipesApi = {
   getAll: () => request<Recipe[]>(api("recipes")),
   getConnectionRecipes: () => request<ConnectionRecipes[]>(api("recipes/connections")),
+  getCrossAccountRecipes: () => request<CrossAccountRecipes[]>(api("recipes/cross-account")),
   create: (body: RecipeBody) =>
     request<Recipe>(api("recipes"), { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: RecipeBody) =>

@@ -428,6 +428,20 @@ export const ToggleInProgressBodySchema = z.object({
   targetMemberId: z.string().min(1, "targetMemberId krävs")
 });
 
+// Lägg till en ny uppgift/lista "förinställd på familjen" i en ANNAN
+// familjs konto (2026-08-01, Zaidas önskemål) — minimal, bara titel + en
+// valfri emoji, samma minimalistiska "snabb-lägg-till"-princip som redan
+// gäller Hem-vyns övriga knappar.
+export const CreateFamilyWideItemBodySchema = z.object({
+  title: z.string().min(1, "Titel krävs"),
+  visual: z.string().nullable().optional()
+});
+
+// Ta/Släpp en Familjen-uppgift i ett av mina andra familjekonton.
+export const ClaimFamilyTodoBodySchema = z.object({
+  claim: z.boolean()
+});
+
 // Flyttade hit från route-filerna (Sprint 3 S6) — låg tidigare som tre separata
 // inline-scheman i analytics.ts/rewardShop.ts/rewards.ts.
 
