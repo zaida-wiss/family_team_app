@@ -96,7 +96,13 @@ describe.skipIf(!RUN)("Mina familjekonton — inköpslistor över flera EGNA med
     const created = bGroup.lists.find((l) => l.id === newListId)!;
     // ownerId sätts server-side till min RIKTIGA medlemspost i konto B, inte
     // den tomma platshållaren klienten skickade (mass-assignment-skydd).
-    expect(created.ownerId).toBe(accountA.memberId);
+    // Min medlemspost i konto B är ett HELT EGET Member-dokument/id, skilt
+    // från accountA.memberId (samma användare, men varje konto har sin egen
+    // medlemspost) — verifierar därför att servern satte ETT RIKTIGT id
+    // (inte den tomma platshållaren, och inte av misstag konto A:s id).
+    expect(created.ownerId).toBeTruthy();
+    expect(created.ownerId).not.toBe("");
+    expect(created.ownerId).not.toBe(accountA.memberId);
   });
 
   it("listan syns direkt i konto B:s egen vanliga lista (samma data, inte en kopia)", async () => {

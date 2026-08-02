@@ -193,9 +193,11 @@ describe.skipIf(!RUN)("Mina familjekonton — todo utan tilldelad mottagare öve
   });
 
   // 2026-08-01, Zaidas önskemål: "kunna lägga till nya todos som är
-  // förinställda på den aktuella familjen" + "Ta uppgiften"/"Släpp" på en
-  // annan av mina egna familjer.
-  it("skapar en ny Familjen-uppgift direkt i konto B från konto A, sedan Tar/Släpper den", async () => {
+  // förinställda på den aktuella familjen", rättad samma dag: "signa upp
+  // sig... samma gester som todovyn" — ersätter den ursprungliga
+  // Ta uppgiften/Släpp-mekanismen (assignedTo-claim) med samma
+  // "vem håller på med den här"-in-progress-toggle som redan finns lokalt.
+  it("skapar en ny Familjen-uppgift direkt i konto B från konto A, sedan signar/lämnar den (in-progress)", async () => {
     const create = await request(app)
       .post(`/api/todos/family-across-accounts/${accountB.accountId}`)
       .set("Authorization", `Bearer ${accessToken}`)
@@ -208,50 +210,59 @@ describe.skipIf(!RUN)("Mina familjekonton — todo utan tilldelad mottagare öve
       .get("/api/todos/family-across-accounts")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
-    const bTodos = (listed.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+    const bTodos = (listed.body as Array<{ accountId: string; myMemberId: string; todos: Array<{ id: string; inProgressBy: string[] }> }>).find(
       (t) => t.accountId === accountB.accountId
     )!;
-    expect(bTodos.todos.find((t) => t.id === newTodoId)?.assignedTo).toBeNull();
+    expect(bTodos.todos.find((t) => t.id === newTodoId)?.inProgressBy).toEqual([]);
+    // myMemberId är min RIKTIGA, egna medlemspost I KONTO B — en helt separat
+    // Member-dokument/id från accountA.memberId (samma användare, men varje
+    // konto får sin egen medlemspost med sitt eget id).
+    const myMemberIdInB = bTodos.myMemberId;
+    expect(myMemberIdInB).not.toBe(accountA.memberId);
 
-    const claim = await request(app)
-      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/claim`)
+    const signUp = await request(app)
+      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/in-progress`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId)
-      .send({ claim: true });
-    expect(claim.status).toBe(200);
+      .send({ targetMemberId: myMemberIdInB });
+    expect(signUp.status).toBe(200);
+    expect(signUp.body.inProgressBy).toEqual([myMemberIdInB]);
 
-    const afterClaim = await request(app)
+    const afterSignUp = await request(app)
       .get("/api/todos/family-across-accounts")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
-    const bTodosClaimed = (afterClaim.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+    const bTodosSignedUp = (afterSignUp.body as Array<{ accountId: string; todos: Array<{ id: string; inProgressBy: string[] }> }>).find(
       (t) => t.accountId === accountB.accountId
     )!;
-    expect(bTodosClaimed.todos.find((t) => t.id === newTodoId)?.assignedTo).toBe(accountA.memberId);
+    expect(bTodosSignedUp.todos.find((t) => t.id === newTodoId)?.inProgressBy).toEqual([myMemberIdInB]);
 
-    // En andra medlem i konto B kan inte ta över en redan tagen uppgift.
-    const doubleClaim = await request(app)
-      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/claim`)
+    // En utomstående (ingen riktig medlemspost i konto B) kan inte signa upp
+    // sig alls — nekas oavsett att in-progress i sig tillåter flera personer.
+    const outsiderSignUp = await request(app)
+      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/in-progress`)
       .set("Authorization", `Bearer ${outsiderToken}`)
       .set("x-member-id", outsiderMemberId)
-      .send({ claim: true });
-    expect(doubleClaim.status).toBe(403);
+      .send({ targetMemberId: outsiderMemberId });
+    expect(outsiderSignUp.status).toBe(403);
 
-    const release = await request(app)
-      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/claim`)
+    // Samma dubbeltryck-toggle en gång till tar bort mig igen (Släpp).
+    const leave = await request(app)
+      .patch(`/api/todos/family-across-accounts/${accountB.accountId}/${newTodoId}/in-progress`)
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId)
-      .send({ claim: false });
-    expect(release.status).toBe(200);
+      .send({ targetMemberId: myMemberIdInB });
+    expect(leave.status).toBe(200);
+    expect(leave.body.inProgressBy).toEqual([]);
 
-    const afterRelease = await request(app)
+    const afterLeave = await request(app)
       .get("/api/todos/family-across-accounts")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
-    const bTodosReleased = (afterRelease.body as Array<{ accountId: string; todos: Array<{ id: string; assignedTo: string | null }> }>).find(
+    const bTodosLeft = (afterLeave.body as Array<{ accountId: string; todos: Array<{ id: string; inProgressBy: string[] }> }>).find(
       (t) => t.accountId === accountB.accountId
     )!;
-    expect(bTodosReleased.todos.find((t) => t.id === newTodoId)?.assignedTo).toBeNull();
+    expect(bTodosLeft.todos.find((t) => t.id === newTodoId)?.inProgressBy).toEqual([]);
   });
 
   it("en utomstående utan medlemskap i konto B kan INTE skapa en Familjen-uppgift där", async () => {
