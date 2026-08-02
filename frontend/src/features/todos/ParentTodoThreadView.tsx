@@ -24,7 +24,10 @@ const CHILDREN_THREAD_ID = "__children__";
 // flyttade samma dag helt till Hem-vyn, se selectors.ts:s getFamilyViewTodos.
 const MY_TASKS_THREAD_ID = "__mine__";
 
-function formatElapsed(ms: number) {
+// Exporterad (2026-08-01) för återanvändning i FamilyTodoThreads.tsx — Hem-
+// vyns familjebubblor ska ha "samma gester och kategorimenyer som todovyn"
+// (Zaidas önskemål), samma tidsformattering för den delade in-progress-klockan.
+export function formatElapsed(ms: number) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -135,13 +138,13 @@ function accentColorForIndex(index: number): string {
   return `var(--c${index % THEME_ACCENT_COUNT})`;
 }
 
-function computeProgress(todo: Todo): number | null {
+export function computeProgress(todo: Todo): number | null {
   if (!todo.subtasks || todo.subtasks.length === 0) return null;
   const done = todo.subtasks.filter((s) => s.done).length;
   return Math.round((done / todo.subtasks.length) * 100);
 }
 
-function assigneeNameFor(todo: Todo, members: Member[]): string {
+export function assigneeNameFor(todo: Todo, members: Member[]): string {
   if (todo.assignedTo === null) return "Familjen";
   return members.find((m) => m.id === todo.assignedTo)?.name ?? "Okänt barn";
 }
@@ -149,7 +152,7 @@ function assigneeNameFor(todo: Todo, members: Member[]): string {
 // Medlemmens egen färg (satt i Inställningar, Member.color) särskiljer vems
 // uppgift det är på en blick — särskilt värdefullt i den gemensamma
 // Barn-tråden där flera barns uppgifter blandas (Zaidas beslut 2026-07-05).
-function assigneeColorFor(todo: Todo, members: Member[]): string | undefined {
+export function assigneeColorFor(todo: Todo, members: Member[]): string | undefined {
   return members.find((m) => m.id === todo.assignedTo)?.color ?? undefined;
 }
 
@@ -160,7 +163,7 @@ function timeValue(iso: string | null): number {
   return iso ? new Date(iso).getTime() : Number.POSITIVE_INFINITY;
 }
 
-function uniqueAssignees(todos: Todo[], members: Member[]): { id: Id; name: string }[] {
+export function uniqueAssignees(todos: Todo[], members: Member[]): { id: Id; name: string }[] {
   const seen = new Map<Id, string>();
   for (const t of todos) {
     if (t.assignedTo && !seen.has(t.assignedTo)) {
@@ -175,13 +178,13 @@ function uniqueAssignees(todos: Todo[], members: Member[]): { id: Id; name: stri
 // Samlad andel avklarat för en tråds kolumn (2026-07-13) — matchTodos ska
 // vara OFILTRERAT på status (till skillnad från thread.todos, som bara
 // visar pending) så done/approved-uppgifter räknas med.
-function computeCompletedPercent(matchTodos: Todo[]): number | null {
+export function computeCompletedPercent(matchTodos: Todo[]): number | null {
   if (matchTodos.length === 0) return null;
   const completed = matchTodos.filter((t) => t.status === "done" || t.status === "approved").length;
   return Math.round((completed / matchTodos.length) * 100);
 }
 
-function sortByEndThenStartTime(todos: Todo[]): Todo[] {
+export function sortByEndThenStartTime(todos: Todo[]): Todo[] {
   return [...todos].sort((a, b) => {
     const endDiff = timeValue(a.expiresAt) - timeValue(b.expiresAt);
     if (endDiff !== 0) return endDiff;
@@ -194,14 +197,14 @@ function sortByEndThenStartTime(todos: Todo[]): Todo[] {
 // occurrence får ett NYTT eget id varje dag (frusen kopia av mallen), så
 // ordningen måste bindas till något som överlever regenereringen: mallens id
 // (recurringSourceId) om det finns, annars uppgiftens eget (engångsuppgifter).
-function stableBubbleKey(todo: Todo): Id {
+export function stableBubbleKey(todo: Todo): Id {
   return todo.recurringSourceId ?? todo.id;
 }
 
 // Sparad ordning läggs OVANPÅ den automatiska sluttid/starttid-sorteringen —
 // bubblor utan en sparad plats hamnar sist, i sin vanliga inbördes ordning
 // (samma "olistade hamnar sist"-princip som trådarnas egen todoThreadOrder).
-function applyBubbleOrder(todos: Todo[], order: Id[] | undefined): Todo[] {
+export function applyBubbleOrder(todos: Todo[], order: Id[] | undefined): Todo[] {
   if (!order || order.length === 0) return todos;
   const orderIndex = new Map(order.map((key, i) => [key, i]));
   return [...todos].sort((a, b) => {
@@ -639,9 +642,16 @@ export function ParentTodoThreadView({
     // kolumner visar bara ägarens egna kategorier). Familjen (assignedTo:
     // null) hör numera bara hemma i Hem-vyn (se selectors.ts:s
     // getFamilyViewTodos), även de jag själv skapat.
+    // Utökad 2026-08-01 (Zaidas önskemål: "det som är signat på mina todos
+    // skall istället visas i todovyn") — en Familjen-uppgift jag signat upp
+    // på (inProgressBy, dubbeltryck i Hem) räknas nu också som "min", inte
+    // bara direkt tilldelade. selectors.ts:s getMyTodosViewTodos släpper
+    // redan igenom den i `todos`-propen, men den här komponentens EGEN
+    // isMyTask-check behöver samma utökning för att faktiskt visa den.
     const myCategoryIds = new Set(myCategories.map((c) => c.id));
     const isMyTask = (t: Todo) =>
-      t.assignedTo === currentMember.id && !(t.personalCategoryId && myCategoryIds.has(t.personalCategoryId));
+      (t.assignedTo === currentMember.id || (t.assignedTo === null && (t.inProgressBy?.includes(currentMember.id) ?? false))) &&
+      !(t.personalCategoryId && myCategoryIds.has(t.personalCategoryId));
     const showMyTasksExpired = showExpiredThreadIds.has(MY_TASKS_THREAD_ID);
     const myTasksBaseTodos = visibleTodos.filter(
       (t) => isMyTask(t) && (t.status !== "expired" || showMyTasksExpired)

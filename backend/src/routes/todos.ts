@@ -4,7 +4,6 @@ import { attachAccountId } from "../middleware/accountScope.js";
 import { addTodoEventsClient } from "../realtime/todoEvents.js";
 import * as todos from "../services/todosService.js";
 import {
-  ClaimFamilyTodoBodySchema,
   CompleteTodoBodySchema,
   CreateFamilyWideItemBodySchema,
   RejectTodoBodySchema,
@@ -121,12 +120,18 @@ todosRouter.post("/family-across-accounts/:targetAccountId", requireAuth, async 
   res.status(201).json(await todos.createCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, title, visual ?? null));
 });
 
-// Ta/Släpp en Familjen-uppgift i ETT AV MINA ANDRA konton — samma
-// "Ta uppgiften"/"Släpp"-koncept som redan finns för det egna kontot.
-todosRouter.patch("/family-across-accounts/:targetAccountId/:id/claim", requireAuth, async (req, res) => {
-  const { claim } = ClaimFamilyTodoBodySchema.parse(req.body);
-  await todos.claimCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id, claim);
-  res.json({ ok: true });
+// Signa upp sig / lämna en Familjen-uppgift i ETT AV MINA ANDRA konton
+// (2026-08-01) — samma "vem håller på med den här"-dubbeltryck-mekanik som
+// redan finns lokalt, se todosService.ts.
+todosRouter.patch("/family-across-accounts/:targetAccountId/:id/in-progress", requireAuth, async (req, res) => {
+  const { targetMemberId } = ToggleInProgressBodySchema.parse(req.body ?? {});
+  const result = await todos.toggleInProgressCrossAccountFamilyTodo(
+    req.userId!,
+    req.params.targetAccountId,
+    req.params.id,
+    targetMemberId
+  );
+  res.json(result);
 });
 
 // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara

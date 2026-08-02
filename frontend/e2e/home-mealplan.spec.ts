@@ -69,7 +69,7 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
 
   await page.goto("/");
   await page.getByRole("button", { name: "Visa måltidsplanering" }).click();
-  const familyFilter = page.getByLabel("Familj");
+  const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
 
   // Familjen B (Mina familjekonton) — riktig måltidsplan, ingen "inte

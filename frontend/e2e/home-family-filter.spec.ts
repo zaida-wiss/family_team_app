@@ -75,7 +75,7 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
   await expect(membersCard.getByText("Förälder A")).toBeVisible();
   await expect(membersCard.getByText("Nova")).toBeVisible();
 
-  const familyFilter = page.getByLabel("Familj");
+  const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
   await expect(page.getByRole("option", { name: "Alla familjer" })).toHaveCount(1);
   await expect(page.getByRole("option", { name: "Familjen A" })).toHaveCount(1);
@@ -115,5 +115,5 @@ test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", a
 
   await page.getByRole("button", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(page.getByLabel("Familj")).toHaveCount(0);
+  await expect(page.locator("#home-family-select")).toHaveCount(0);
 });

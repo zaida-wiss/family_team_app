@@ -56,11 +56,34 @@ export function useCrossAccountFamilyTodos() {
     return todosApi.createFamilyAcrossAccounts(accountId, title, visual).then(refresh);
   }
 
-  function claimCrossAccountTodo(accountId: Id, todoId: Id, claim: boolean) {
-    return todosApi.claimFamilyAcrossAccounts(accountId, todoId, claim).then(refresh);
+  // Signa upp sig / lämna en Familjen-uppgift (2026-08-01, ersätter samma
+  // dags tidigare claim-mekanism efter Zaidas rättelse: "samma gester...
+  // som todovyn" — dubbeltryck öppnar samma "vem håller på med den
+  // här"-väljare som lokalt, se FamilyTodoThreads.tsx).
+  function toggleCrossAccountInProgress(accountId: Id, todoId: Id, targetMemberId: Id) {
+    setThreads((current) =>
+      current.map((thread) => {
+        if (thread.accountId !== accountId) return thread;
+        return {
+          ...thread,
+          todos: thread.todos.map((t) => {
+            if (t.id !== todoId) return t;
+            const already = (t.inProgressBy ?? []).includes(targetMemberId);
+            const nextList = already
+              ? (t.inProgressBy ?? []).filter((id) => id !== targetMemberId)
+              : [...(t.inProgressBy ?? []), targetMemberId];
+            return { ...t, inProgressBy: nextList, inProgressSince: nextList.length > 0 ? t.inProgressSince ?? new Date().toISOString() : null };
+          })
+        };
+      })
+    );
+    todosApi.toggleFamilyAcrossAccountsInProgress(accountId, todoId, targetMemberId).then(refresh).catch((error) => {
+      console.error(error);
+      refresh();
+    });
   }
 
-  return { threads, completeCrossAccountTodo, createCrossAccountTodo, claimCrossAccountTodo };
+  return { threads, completeCrossAccountTodo, createCrossAccountTodo, toggleCrossAccountInProgress };
 }
 
 // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en

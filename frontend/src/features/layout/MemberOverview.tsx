@@ -5,14 +5,13 @@ import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { WeeklyMealPlan } from "../mealplan/WeeklyMealPlan";
-import "../todos/ParentTodoThreadView.css";
+import { FamilyTodoThreads } from "../todos/FamilyTodoThreads";
+import type { FamilyThreadSource } from "../todos/FamilyTodoThreads";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList, Todo
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList
 } from "@shared/types";
 import styles from "./MemberOverview.module.css";
-
-const DEFAULT_EMOJI = "⭐";
 
 // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
 // familj, då vill jag att endast den familjens kalenderhändelser, todos och
@@ -49,7 +48,6 @@ type Props = {
   calendarSettings?: CalendarSettings;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   fixedCalendarTimes?: boolean;
-  todos?: Todo[];
   canSeeTodos?: boolean;
   onOpenTodos?: () => void;
   shoppingLists?: ShoppingList[];
@@ -74,15 +72,18 @@ type Props = {
   // den sparar det jag senast valde"). null/osatt = "Alla familjer".
   homeSelectedFamilyId?: Id | null;
   onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
-  // Ta/Släpp + lägg till en familje-uppgift (2026-07-31, utökad 2026-08-01
-  // till att gälla VILKEN familj som helst, inte bara mitt eget konto) — se
-  // render-koden nedan. claimableFamilyAccountIds/creatableFamilyAccountIds
-  // avgör vilka familjer knapparna faktiskt visas för (en Familjeanslutning
-  // har t.ex. ingen egen identitet att "ta" en uppgift med).
-  onClaimTodo?: (accountId: Id, todoId: Id, claim: boolean) => void;
-  onCreateFamilyTodo?: (accountId: Id, title: string, visual: string | null) => void;
-  claimableFamilyAccountIds?: Set<Id>;
-  creatableFamilyAccountIds?: Set<Id>;
+  // Hem-vyns familjetrådar (2026-08-01, Zaidas önskemål: "hemvyn skall vara
+  // återanvändbara moduler med samma logik som i navbarens vyer... man skall
+  // signa upp sig på en uppgift på samma sätt som i todovyn med bollar i
+  // trådar. två tryck för att tilldela, tre tryck för att flytta") —
+  // FamilyTodoThreads.tsx återanvänder samma bubbel-gester/kategorimeny-
+  // delmängd som ParentTodoThreadView.tsx, en tråd per källa (redan
+  // hopkopplad med rätt mutationer, se MemberShellContent.tsx).
+  familyThreadSources?: FamilyThreadSource[];
+  todoBubbleOrder?: Record<Id, Id[]>;
+  onReorderBubbles?: (threadId: Id, order: Id[]) => void;
+  todoThreadGap?: number;
+  todoBubbleSize?: number;
   // Ny inköpslista, förinställd på familjen (2026-08-01) — ENDAST mitt eget
   // konto eller Mina familjekonton (Zaidas rättelse: "man ska inte kunna
   // göra inköpslistor i familjer man inte är medlem i").
@@ -113,7 +114,6 @@ export function MemberOverview({
   calendarSettings,
   onLoadEventsForMonth,
   fixedCalendarTimes,
-  todos = [],
   canSeeTodos = false,
   onOpenTodos,
   shoppingLists = [],
@@ -126,10 +126,11 @@ export function MemberOverview({
   crossAccountRecipeGroups = [],
   homeSelectedFamilyId,
   onUpdateHomeSelectedFamilyId,
-  onClaimTodo,
-  onCreateFamilyTodo,
-  claimableFamilyAccountIds,
-  creatableFamilyAccountIds,
+  familyThreadSources = [],
+  todoBubbleOrder = {},
+  onReorderBubbles = () => {},
+  todoThreadGap,
+  todoBubbleSize,
   onCreateFamilyShoppingList,
   shoppingCreatableFamilyAccountIds,
   enableTabs = true,
@@ -137,7 +138,6 @@ export function MemberOverview({
   const ownAccountId = currentMember.accountId;
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
   const [activeTab, setActiveTab] = useState<HomeTab>("calendar");
-  const [newTodoTitle, setNewTodoTitle] = useState("");
   const [newListName, setNewListName] = useState("");
 
   function setSelectedFamilyId(id: Id | "all") {
@@ -167,11 +167,6 @@ export function MemberOverview({
     [calendars, selectedFamilyId]
   );
 
-  const filteredTodos = useMemo(
-    () => (selectedFamilyId === "all" ? todos : todos.filter((t) => (t.accountId ?? ownAccountId) === selectedFamilyId)),
-    [todos, selectedFamilyId, ownAccountId]
-  );
-
   const filteredShoppingLists = useMemo(
     () =>
       selectedFamilyId === "all"
@@ -180,11 +175,25 @@ export function MemberOverview({
     [shoppingLists, selectedFamilyId, ownAccountId]
   );
 
-  // Mallar (recurringSourceId===null && recurrence.type!=="none") är frusna
-  // definitioner, inte riktiga uppgifter att göra — samma exkludering som
-  // ParentTodoThreadView.tsx redan använder på flera ställen.
-  const pendingTodos = filteredTodos.filter(
-    (t) => t.status === "pending" && t.deletedAt === null && (t.recurrence.type === "none" || t.recurringSourceId !== null)
+  // Familjetrådar filtrerade på vald familj (2026-08-01) — "Alla familjer"
+  // visar samtliga sida vid sida, precis som Todos-panelens egna trådar.
+  const filteredThreadSources = useMemo(
+    () =>
+      selectedFamilyId === "all"
+        ? familyThreadSources
+        : familyThreadSources.filter((s) => s.accountId === selectedFamilyId),
+    [familyThreadSources, selectedFamilyId]
+  );
+  const pendingTodoCount = filteredThreadSources.reduce(
+    (sum, s) => sum + s.todos.filter((t) => t.status === "pending").length,
+    0
+  );
+  // Mitt eget konto + Mina familjekonton (genuint medlemskap, "vem håller på
+  // med den här" tillgänglig) — en Familjeanslutning har aldrig
+  // onToggleInProgress, se homeFamilyThreadSources i MemberShellContent.tsx.
+  const identityAccountIds = useMemo(
+    () => new Set(familyThreadSources.filter((s) => s.onToggleInProgress).map((s) => s.accountId)),
+    [familyThreadSources]
   );
   const activeLists = filteredShoppingLists.filter((l) => l.deletedAt === null);
   const activeFamilyMembers = activeMembers.filter((m) => m.deletedAt === null);
@@ -311,97 +320,22 @@ export function MemberOverview({
       {effectiveTab === "todos" && canSeeTodos && (
         <article className="dashboard">
           <header className="section-header">
-            <div><p className="eyebrow">Uppgifter</p><h2>{pendingTodos.length} väntar</h2></div>
+            <div><p className="eyebrow">Uppgifter</p><h2>{pendingTodoCount} väntar</h2></div>
             {onOpenTodos && (
               <button className="secondary-button" onClick={onOpenTodos} type="button">Öppna</button>
             )}
           </header>
 
-          {/* Lägg till, förinställd på den valda familjen (2026-08-01,
-              Zaidas önskemål: "precis som i min egen todo-vy... förinställda
-              på den aktuella familjen") — kräver en specifik familj vald
-              (annars ovisst VILKET konto den ska hamna i) och att just den
-              familjen faktiskt går att skapa i (mitt eget konto, Mina
-              familjekonton, eller en Familjeanslutning med redigera-åtkomst). */}
-          {onCreateFamilyTodo && selectedFamilyId !== "all" && creatableFamilyAccountIds?.has(selectedFamilyId) && (
-            <form
-              className={styles.homeQuickAdd}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = newTodoTitle.trim();
-                if (!trimmed) return;
-                onCreateFamilyTodo(selectedFamilyId, trimmed, DEFAULT_EMOJI);
-                setNewTodoTitle("");
-              }}
-            >
-              <input
-                aria-label="Lägg till en uppgift"
-                className="text-input"
-                onChange={(e) => setNewTodoTitle(e.target.value)}
-                placeholder="Lägg till en uppgift…"
-                value={newTodoTitle}
-              />
-              <button aria-label="Lägg till uppgift" className="icon-button" type="submit">
-                <Plus size={18} />
-              </button>
-            </form>
-          )}
-
-          {pendingTodos.length === 0 ? (
+          {filteredThreadSources.length === 0 ? (
             <p className="empty-note">Inget väntar just nu.</p>
           ) : (
-            // Bollar, samma stil som Todos-panelens tråd-vy men i en egen
-            // färgton (2026-08-01, Zaidas önskemål: "det skall vara bollar i
-            // familjevyns todo, precis som i min egen, men andra färger i
-            // temat") — se .todo-thread__ball--home i ParentTodoThreadView.css.
-            <ul className={`todo-thread__list ${styles.homeTodoBubbles}`}>
-              {pendingTodos.map((t) => {
-                const todoAccountId = t.accountId ?? ownAccountId;
-                return (
-                  <li className={`todo-thread__item ${styles.homeTodoItem}`} key={t.id}>
-                    <div className="todo-thread__ball todo-thread__ball--small todo-thread__ball--home" title={t.title}>
-                      {t.visual.value && (
-                        <span aria-hidden="true" className="todo-thread__ball-icon">{t.visual.value}</span>
-                      )}
-                      <span className="todo-thread__ball-title">{t.title}</span>
-                    </div>
-                    {selectedFamilyId === "all" && todoAccountId !== ownAccountId && (
-                      <small>{familyNameById.get(todoAccountId) ?? "Okänd familj"}</small>
-                    )}
-                    {/* Ta/Släpp uppgiften (2026-07-31, utökad 2026-08-01 till
-                        VILKEN familj som helst jag har en riktig identitet i
-                        — mitt eget konto eller Mina familjekonton). Familjen
-                        (ingen mottagare) → "Ta uppgiften"; redan tagen av MIG
-                        → "Släpp"; tagen av någon annan → ingen knapp. */}
-                    {onClaimTodo && claimableFamilyAccountIds?.has(todoAccountId) && t.assignedTo === null && (
-                      <button
-                        className="secondary-button"
-                        onClick={() => onClaimTodo(todoAccountId, t.id, true)}
-                        type="button"
-                      >
-                        Ta uppgiften
-                      </button>
-                    )}
-                    {/* En cross-account-todos assignedTo är min medlemspost
-                        I DET ANDRA kontot, aldrig lika med currentMember.id
-                        — men backend-filtret (getCrossAccountFamilyTodos)
-                        släpper bara igenom otaget ELLER taget-av-just-mig,
-                        så assignedTo!==null där betyder redan otvetydigt
-                        "tagen av mig". */}
-                    {onClaimTodo && claimableFamilyAccountIds?.has(todoAccountId) && t.assignedTo !== null &&
-                      (todoAccountId === ownAccountId ? t.assignedTo === currentMember.id : true) && (
-                      <button
-                        className="ghost-button"
-                        onClick={() => onClaimTodo(todoAccountId, t.id, false)}
-                        type="button"
-                      >
-                        Släpp
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <FamilyTodoThreads
+              onReorderBubbles={onReorderBubbles}
+              sources={filteredThreadSources}
+              todoBubbleOrder={todoBubbleOrder}
+              todoBubbleSize={todoBubbleSize}
+              todoThreadGap={todoThreadGap}
+            />
           )}
         </article>
       )}
@@ -485,10 +419,10 @@ export function MemberOverview({
             </header>
             <WeeklyMealPlan recipes={recipes} />
           </article>
-        ) : claimableFamilyAccountIds?.has(selectedFamilyId) ? (
+        ) : identityAccountIds.has(selectedFamilyId) ? (
           // Ett av Mina familjekonton (2026-08-01, Zaidas önskemål) — ett
-          // genuint medlemskap, samma claimableFamilyAccountIds-princip som
-          // Todos-flikens Ta uppgiften. ALDRIG en Familjeanslutning (Zaidas
+          // genuint medlemskap, samma identityAccountIds-princip som
+          // Todos-flikens signa-upp-gest. ALDRIG en Familjeanslutning (Zaidas
           // rättelse: "man måste först göra en familj med dessa familjer
           // som medlemmar").
           <article className="dashboard">

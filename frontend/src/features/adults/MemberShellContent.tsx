@@ -202,9 +202,9 @@ export function MemberShellContent({
     threads: crossAccountFamilyThreads,
     completeCrossAccountTodo,
     createCrossAccountTodo,
-    claimCrossAccountTodo
+    toggleCrossAccountInProgress
   } = useCrossAccountFamilyTodos();
-  const { threads: connectionTodoThreads, createConnectionTodo } = useConnectionTodos();
+  const { threads: connectionTodoThreads, createConnectionTodo, completeConnectionTodo } = useConnectionTodos();
   const crossAccountMemberGroups = useCrossAccountMembers();
   const connectionMemberGroups = useConnectionMembers();
   // Inköp-fliken (2026-07-31) — bara Familjeanslutningar bidrar med delade
@@ -239,37 +239,6 @@ export function MemberShellContent({
     return [...map.entries()].map(([accountId, name]) => ({ accountId, accountName: name }));
   }, [currentMember.accountId, accountName, crossAccountFamilyThreads, connectionTodoThreads, crossAccountMemberGroups, connectionMemberGroups, connectionShoppingGroups, crossAccountShoppingGroups, crossAccountRecipeGroups, calendars]);
 
-  // Vilka familjer "Ta uppgiften"/"Lägg till uppgift" faktiskt fungerar för
-  // (2026-08-01, Zaidas önskemål) — claim kräver en riktig identitet i
-  // målkontot (mitt eget konto + Mina familjekonton), en Familjeanslutning
-  // har ingen sådan. Skapande fungerar däremot även för en Familjeanslutning
-  // MED redigera-åtkomst (createConnectionTodo, kontrollerat server-side) —
-  // UI:t döljer knappen ändå för "view"-anslutningar istället för att visa
-  // den och sedan misslyckas.
-  const homeClaimableAccountIds = useMemo(
-    () => new Set([currentMember.accountId, ...crossAccountFamilyThreads.map((t) => t.accountId)]),
-    [currentMember.accountId, crossAccountFamilyThreads]
-  );
-  const homeCreatableAccountIds = useMemo(
-    () =>
-      new Set([
-        ...homeClaimableAccountIds,
-        ...connectionTodoThreads.filter((t) => t.access === "edit").map((t) => t.accountId)
-      ]),
-    [homeClaimableAccountIds, connectionTodoThreads]
-  );
-
-  const homeAllTodos = useMemo(
-    () =>
-      canSeeTodos
-        ? [
-            ...homeVisibleTodos,
-            ...crossAccountFamilyThreads.flatMap((t) => t.todos),
-            ...connectionTodoThreads.flatMap((t) => t.todos)
-          ]
-        : [],
-    [canSeeTodos, homeVisibleTodos, crossAccountFamilyThreads, connectionTodoThreads]
-  );
 
   const homeExtraMembers = useMemo(
     () =>
@@ -282,18 +251,79 @@ export function MemberShellContent({
     [canSeeMembers, crossAccountMemberGroups, connectionMemberGroups]
   );
 
-  // Mina uppgifter-tråden (Todos-panelen) inkluderar todos jag TAGIT från
-  // Mina familjekonton (2026-08-01, Zaidas önskemål: "Mina uppgifter skall
-  // endast innehålla todos som jag signat upp mig på från mina familjer") —
-  // backend-filtret (getCrossAccountFamilyTodos) släpper bara igenom otaget
-  // ELLER taget-av-just-mig, så assignedTo!==null här betyder redan
-  // otvetydigt "tagen av mig". Familjeanslutningar har ingen egen identitet
-  // att "ta" en uppgift med (se homeClaimableAccountIds ovan) — bara Mina
-  // familjekonton kan bidra hit.
+  // Hem-vyns familjetrådar (2026-08-01, Zaidas önskemål: "hemvyn skall vara
+  // återanvändbara moduler med samma logik som i navbarens vyer... man skall
+  // signa upp sig på en uppgift på samma sätt som i todovyn med bollar i
+  // trådar") — en FamilyThreadSource per familj, redan hopkopplad med rätt
+  // mutationer (så FamilyTodoThreads.tsx aldrig behöver veta vilket konto en
+  // tråd hör till). Egen resolveringslogik för mitt eget kontos onComplete,
+  // samma som TodosView.tsx:s onCompleteTodo-closure ovan (assignee = jag
+  // själv om otilldelad, annars den faktiskt tilldelade vuxna).
+  function completeOwnFamilyTodo(todoId: Id) {
+    const todo = todos.find((t) => t.id === todoId);
+    const assignee = todo?.assignedTo === null ? currentMember : members.find((m) => m.id === todo?.assignedTo);
+    if (assignee) onCompleteTodo(assignee, todoId, roles);
+  }
+
+  const homeFamilyThreadSources = useMemo(() => {
+    if (!canSeeTodos) return [];
+    const own = {
+      id: "__familyHome__",
+      accountId: currentMember.accountId,
+      label: "Familjen",
+      todos: homeVisibleTodos,
+      members: activeMembers,
+      onComplete: completeOwnFamilyTodo,
+      onToggleInProgress: onToggleTodoInProgress,
+      onToggleSubtask,
+      onCreateTodo: (title: string, visual: string | null) => handleCreateFamilyTodo(currentMember.accountId, title, visual)
+    };
+    const cross = crossAccountFamilyThreads.map((t) => ({
+      id: `crossAccount:${t.accountId}`,
+      accountId: t.accountId,
+      label: t.accountName,
+      todos: t.todos,
+      members: crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? [],
+      onComplete: (todoId: Id) => completeCrossAccountTodo(t.accountId, todoId),
+      onToggleInProgress: (todoId: Id, targetMemberId: Id) => toggleCrossAccountInProgress(t.accountId, todoId, targetMemberId),
+      onCreateTodo: (title: string, visual: string | null) => createCrossAccountTodo(t.accountId, title, visual)
+    }));
+    // Familjeanslutningar (2026-08-01) — ingen egen identitet i målkontot,
+    // så ingen "vem håller på med den här"-väljare (onToggleInProgress
+    // utelämnad, members tom) — bara läsning + håll-in-för-att-klarmarkera
+    // (redan möjligt sedan tidigare, completeConnectionTodo). Skapande bara
+    // om anslutningen har redigera-åtkomst.
+    const connections = connectionTodoThreads.map((t) => ({
+      id: `connection:${t.accountId}`,
+      accountId: t.accountId,
+      label: t.accountName,
+      todos: t.todos,
+      members: [],
+      onComplete: (todoId: Id) => completeConnectionTodo(t.accountId, todoId),
+      onCreateTodo:
+        t.access === "edit"
+          ? (title: string, visual: string | null) => createConnectionTodo(t.accountId, title, visual)
+          : undefined
+    }));
+    return [own, ...cross, ...connections];
+  }, [
+    canSeeTodos, currentMember.accountId, currentMember.id, homeVisibleTodos, activeMembers, todos, members, roles,
+    onCompleteTodo, onToggleTodoInProgress, onToggleSubtask, crossAccountFamilyThreads, crossAccountMemberGroups,
+    completeCrossAccountTodo, toggleCrossAccountInProgress, createCrossAccountTodo, connectionTodoThreads,
+    completeConnectionTodo, createConnectionTodo
+  ]);
+
+  // Mina uppgifter-tråden (Todos-panelen) inkluderar todos jag SIGNAT UPP på
+  // från Mina familjekonton (2026-08-01, Zaidas rättelse: "signa upp sig...
+  // samma gester som todovyn" — dubbeltryck/"vem håller på med den här",
+  // inte en separat Ta uppgiften-knapp) — myMemberId (min egen medlemspost i
+  // det andra kontot, se CrossAccountFamilyThread) avgör vilka todos som är
+  // MIG i inProgressBy, utan att gissa. Familjeanslutningar har ingen egen
+  // identitet att signa upp med — bara Mina familjekonton kan bidra hit.
   const crossAccountClaimedTasks = useMemo(
     () =>
       crossAccountFamilyThreads
-        .map((t) => ({ ...t, todos: t.todos.filter((td) => td.assignedTo !== null) }))
+        .map((t) => ({ ...t, todos: t.todos.filter((td) => td.inProgressBy?.includes(t.myMemberId)) }))
         .filter((t) => t.todos.length > 0),
     [crossAccountFamilyThreads]
   );
@@ -589,7 +619,10 @@ export function MemberShellContent({
           showChildTodosInOwnView={currentMember.showChildTodosInOwnView ?? false}
           extraMyTasks={crossAccountClaimedTasks}
           onCompleteExtraMyTask={completeCrossAccountTodo}
-          onReleaseExtraMyTask={(accountId, todoId) => claimCrossAccountTodo(accountId, todoId, false)}
+          onReleaseExtraMyTask={(accountId, todoId) => {
+            const myMemberId = crossAccountFamilyThreads.find((t) => t.accountId === accountId)?.myMemberId;
+            if (myMemberId) toggleCrossAccountInProgress(accountId, todoId, myMemberId);
+          }}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onToggleTodoInProgress={onToggleTodoInProgress}
@@ -680,56 +713,39 @@ export function MemberShellContent({
     );
   }
 
-  // Ta/Släpp + Lägg till en Familjen-uppgift, "förinställd på familjen"
-  // (2026-08-01, Zaidas önskemål) — dirigerar till rätt mekanism beroende på
-  // vilken familj som faktiskt är vald: mitt eget konto (vanlig onUpdateTodo/
-  // onCreateTodo), ett av mina EGNA andra medlemskap ("Mina familjekonton",
-  // jag har en riktig identitet där) eller en Familjeanslutning (ingen egen
-  // identitet där, kräver redigera-åtkomst, se createConnectionTodo).
-  function handleClaimFamilyTodo(accountId: Id, todoId: Id, claim: boolean) {
-    if (accountId === currentMember.accountId) {
-      onUpdateTodo(todoId, { assignedTo: claim ? currentMember.id : null });
-      return;
-    }
-    claimCrossAccountTodo(accountId, todoId, claim);
-  }
-
+  // Lägg till en Familjen-uppgift i MITT EGET konto, "förinställd på
+  // familjen" (2026-08-01, Zaidas önskemål) — cross-account/Familjeanslutning
+  // har varsin egen onCreateTodo-koppling direkt i homeFamilyThreadSources
+  // nedan (createCrossAccountTodo/createConnectionTodo), ingen gemensam
+  // dirigering behövs längre.
   function handleCreateFamilyTodo(accountId: Id, title: string, visual: string | null) {
-    if (accountId === currentMember.accountId) {
-      onCreateTodo({
-        id: `todo-${generateId()}`,
-        accountId,
-        title,
-        createdBy: currentMember.id,
-        assignedTo: null,
-        isShared: false,
-        status: "pending",
-        starValue: 0,
-        visual: { type: "lucide-icon", value: visual || "⭐" },
-        recurrence: { type: "none" },
-        recurringSourceId: null,
-        occurrenceDate: null,
-        visibleFrom: null,
-        expiresAt: null,
-        completedAt: null,
-        approvedBy: null,
-        approvedAt: null,
-        rejectedBy: null,
-        rejectedAt: null,
-        rejectedReason: null,
-        deletedAt: null,
-        deletedBy: null,
-        personalCategoryId: null,
-        notes: null,
-        subtasks: []
-      });
-      return;
-    }
-    if (crossAccountFamilyThreads.some((t) => t.accountId === accountId)) {
-      createCrossAccountTodo(accountId, title, visual);
-      return;
-    }
-    createConnectionTodo(accountId, title, visual);
+    onCreateTodo({
+      id: `todo-${generateId()}`,
+      accountId,
+      title,
+      createdBy: currentMember.id,
+      assignedTo: null,
+      isShared: false,
+      status: "pending",
+      starValue: 0,
+      visual: { type: "lucide-icon", value: visual || "⭐" },
+      recurrence: { type: "none" },
+      recurringSourceId: null,
+      occurrenceDate: null,
+      visibleFrom: null,
+      expiresAt: null,
+      completedAt: null,
+      approvedBy: null,
+      approvedAt: null,
+      rejectedBy: null,
+      rejectedAt: null,
+      rejectedReason: null,
+      deletedAt: null,
+      deletedBy: null,
+      personalCategoryId: null,
+      notes: null,
+      subtasks: []
+    });
   }
 
   // Ny inköpslista, förinställd på den valda familjen (2026-08-01) — ENDAST
@@ -763,7 +779,6 @@ export function MemberShellContent({
         onDeleteEvent={onDeleteCalendarEvent}
         onLoadEventsForMonth={onLoadEventsForMonth}
         fixedCalendarTimes={fixedCalendarTimes}
-        todos={homeAllTodos}
         canSeeTodos={canSeeTodos}
         onOpenTodos={() => onNavigate("todos")}
         shoppingLists={homeAllShoppingLists}
@@ -776,10 +791,11 @@ export function MemberShellContent({
         crossAccountRecipeGroups={crossAccountRecipeGroups}
         homeSelectedFamilyId={homeSelectedFamilyId}
         onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
-        onClaimTodo={handleClaimFamilyTodo}
-        onCreateFamilyTodo={handleCreateFamilyTodo}
-        claimableFamilyAccountIds={homeClaimableAccountIds}
-        creatableFamilyAccountIds={homeCreatableAccountIds}
+        familyThreadSources={homeFamilyThreadSources}
+        todoBubbleOrder={todoBubbleOrder}
+        onReorderBubbles={onReorderBubbles}
+        todoThreadGap={todoThreadGap}
+        todoBubbleSize={todoBubbleSize}
         onCreateFamilyShoppingList={handleCreateFamilyShoppingList}
         shoppingCreatableFamilyAccountIds={homeShoppingCreatableAccountIds}
       />

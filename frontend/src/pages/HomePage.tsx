@@ -1,8 +1,9 @@
 import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
 import type { CrossAccountRecipes } from "../api/recipes";
+import type { FamilyThreadSource } from "../features/todos/FamilyTodoThreads";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList, Todo
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList
 } from "@shared/types";
 
 type Props = {
@@ -22,7 +23,6 @@ type Props = {
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   fixedCalendarTimes?: boolean;
-  todos?: Todo[];
   canSeeTodos?: boolean;
   onOpenTodos?: () => void;
   shoppingLists?: ShoppingList[];
@@ -38,12 +38,15 @@ type Props = {
   crossAccountRecipeGroups?: CrossAccountRecipes[];
   homeSelectedFamilyId?: Id | null;
   onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
-  // accountId + todoId — en vald familj kan vara ett HELT ANNAT konto än
-  // mitt eget (2026-08-01), se MemberOverview.tsx/MemberShellContent.tsx.
-  onClaimTodo?: (accountId: Id, todoId: Id, claim: boolean) => void;
-  onCreateFamilyTodo?: (accountId: Id, title: string, visual: string | null) => void;
-  claimableFamilyAccountIds?: Set<Id>;
-  creatableFamilyAccountIds?: Set<Id>;
+  // Hem-vyns familjetrådar (2026-08-01, Zaidas önskemål: "hemvyn skall vara
+  // återanvändbara moduler med samma logik som i navbarens vyer... man skall
+  // signa upp sig på en uppgift på samma sätt som i todovyn med bollar i
+  // trådar") — redan hopkopplade per familj, se FamilyTodoThreads.tsx.
+  familyThreadSources?: FamilyThreadSource[];
+  todoBubbleOrder?: Record<Id, Id[]>;
+  onReorderBubbles?: (threadId: Id, order: Id[]) => void;
+  todoThreadGap?: number;
+  todoBubbleSize?: number;
   // Ny inköpslista, förinställd på familjen (2026-08-01) — ENDAST mitt eget
   // konto eller Mina familjekonton, se MemberShellContent.tsx.
   onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
@@ -55,10 +58,10 @@ type Props = {
 export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
-  onLoadEventsForMonth, fixedCalendarTimes, todos, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
+  onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
-  onClaimTodo, onCreateFamilyTodo, claimableFamilyAccountIds, creatableFamilyAccountIds,
+  familyThreadSources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize,
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds, enableTabs
 }: Props) {
   return (
@@ -79,7 +82,6 @@ export function HomePage({
       onDeleteEvent={onDeleteEvent}
       onLoadEventsForMonth={onLoadEventsForMonth}
       fixedCalendarTimes={fixedCalendarTimes}
-      todos={todos}
       canSeeTodos={canSeeTodos}
       onOpenTodos={onOpenTodos}
       shoppingLists={shoppingLists}
@@ -92,10 +94,11 @@ export function HomePage({
       crossAccountRecipeGroups={crossAccountRecipeGroups}
       homeSelectedFamilyId={homeSelectedFamilyId}
       onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
-      onClaimTodo={onClaimTodo}
-      onCreateFamilyTodo={onCreateFamilyTodo}
-      claimableFamilyAccountIds={claimableFamilyAccountIds}
-      creatableFamilyAccountIds={creatableFamilyAccountIds}
+      familyThreadSources={familyThreadSources}
+      todoBubbleOrder={todoBubbleOrder}
+      onReorderBubbles={onReorderBubbles}
+      todoThreadGap={todoThreadGap}
+      todoBubbleSize={todoBubbleSize}
       onCreateFamilyShoppingList={onCreateFamilyShoppingList}
       shoppingCreatableFamilyAccountIds={shoppingCreatableFamilyAccountIds}
       enableTabs={enableTabs}

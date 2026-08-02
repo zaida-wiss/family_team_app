@@ -46,7 +46,7 @@ test("Hem-vyns familjefilter sparar senast valda familj och läser tillbaka den 
   );
 
   await page.goto("/");
-  const familyFilter = page.getByLabel("Familj");
+  const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
   await expect(familyFilter).toHaveValue("all");
 
@@ -62,5 +62,5 @@ test("Hem-vyns familjefilter sparar senast valda familj och läser tillbaka den 
   // (MEMBER_A.homeSelectedFamilyId sattes av PATCH-anropet ovan) istället
   // för att återgå till "Alla familjer".
   await page.reload();
-  await expect(page.getByLabel("Familj")).toHaveValue("acc-b");
+  await expect(page.locator("#home-family-select")).toHaveValue("acc-b");
 });

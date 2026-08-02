@@ -150,6 +150,10 @@ export type FamilyMembersGroup = {
 export type CrossAccountFamilyThread = {
   accountId: Id;
   accountName: string;
+  // Min egen medlemspost i DET ANDRA kontot (2026-08-01) — avgör vilka
+  // todos JAG signat upp på (inProgressBy) utan att gissa, se
+  // getMyTodosViewTodos/ParentTodoThreadView.tsx:s extraMyTasks.
+  myMemberId: Id;
   todos: Todo[];
 };
 

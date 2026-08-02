@@ -233,12 +233,13 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
     const account = await AccountModel.findOne({ id: m.accountId });
     if (!account) continue;
     const accountTodos = await getAllTodos(m.accountId);
-    // Inkluderar nu även todos jag redan TAGIT (assignedTo === min egen
-    // medlemspost DÄR, 2026-08-01, Zaidas önskemål: "Mina uppgifter skall
-    // endast innehålla todos som jag signat upp mig på från mina familjer")
-    // — tidigare bara det otagna poolen (assignedTo:null). assignedTo===m.id
-    // betyder här otvetydigt "tagen av MIG", eftersom filtret bara släpper
-    // igenom antingen otaget eller taget-av-just-den-här-anropande-personen.
+    // Inkluderar även todos jag redan är tilldelad ELLER signat upp på DÄR
+    // (assignedTo===m.id eller inProgressBy innehåller m.id) — inte bara det
+    // otagna poolen (assignedTo:null). m.id (min egen medlemspost i det
+    // andra kontot) returneras nedan som myMemberId, så frontend kan avgöra
+    // vilka todos JAG signat upp på (för "Mina uppgifter" i Todos-panelen,
+    // 2026-08-01, Zaidas önskemål: "det som är signat på mina todos skall
+    // istället visas i todovyn") utan att gissa.
     const familyTodos = accountTodos.filter(
       (t) =>
         (t.assignedTo === null || t.assignedTo === m.id) &&
@@ -246,7 +247,7 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
         t.deletedAt === null &&
         t.recurrence.type === "none"
     );
-    results.push({ accountId: m.accountId, accountName: account.name, todos: familyTodos });
+    results.push({ accountId: m.accountId, accountName: account.name, myMemberId: m.id, todos: familyTodos });
   }
   return results;
 }
@@ -268,35 +269,28 @@ export async function completeCrossAccountFamilyTodo(
   await completeTodo(todoId, targetAccountId, memberInTarget.id, elapsedMs);
 }
 
-// Ta/Släpp en Familjen-uppgift i ETT AV MINA ANDRA konton (2026-08-01,
-// samma "Ta uppgiften"/"Släpp"-koncept som redan finns för det egna kontot,
-// se MemberOverview.tsx) — sätter assignedTo till min egen medlemspost DÄR
-// (claim) eller tillbaka till null (släpp). Kräver att todon just nu är
-// otagen (claim) eller redan tagen av MIG (släpp) — förhindrar att man av
-// misstag tar över någon ANNAN familjemedlems redan pågående uppgift.
-export async function claimCrossAccountFamilyTodo(
+// "Signa upp sig" på en Familjen-uppgift i ETT AV MINA ANDRA konton
+// (2026-08-01, ersätter samma dags tidigare claim/assignedTo-mekanism —
+// Zaidas rättelse: "signa upp sig på samma sätt som i todovyn... två tryck
+// för att tilldela" syftar på den REDAN BEFINTLIGA "vem håller på med den
+// här"-dubbeltryck-mekaniken, inte en separat Ta uppgiften-knapp) — samma
+// mönster som lokala toggleInProgress, bara autentiserad via min riktiga
+// Member-post i målkontot (hittad via userId) istället för x-member-id/
+// req.accountId, som bara gäller det AKTIVA kontot. targetMemberId får vara
+// VILKEN som helst av målkontots aktiva medlemmar (samma "delat
+// hushållsdon"-princip som den lokala varianten) — jag är en riktig medlem
+// där, samma tillit som att vara inloggad på det kontot direkt.
+export async function toggleInProgressCrossAccountFamilyTodo(
   callerUserId: string,
   targetAccountId: string,
   todoId: string,
-  claim: boolean
+  targetMemberId: string
 ) {
   const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
   if (!memberInTarget) {
     throw new AppError(403, "Åtkomst nekad");
   }
-  const todo = await TodoModel.findOne({ id: todoId, accountId: targetAccountId, deletedAt: null });
-  if (!todo) {
-    throw new AppError(404, "Todo hittades inte");
-  }
-  if (claim && todo.assignedTo !== null) {
-    throw new AppError(409, "Uppgiften är redan tagen");
-  }
-  if (!claim && todo.assignedTo !== memberInTarget.id) {
-    throw new AppError(403, "Åtkomst nekad");
-  }
-  todo.assignedTo = claim ? memberInTarget.id : null;
-  await todo.save();
-  broadcastTodosChanged();
+  return toggleInProgress(todoId, targetAccountId, memberInTarget.id, targetMemberId);
 }
 
 // Mutationer på ett delat barns todos (2026-07-29, ADR-0024-uppföljning,

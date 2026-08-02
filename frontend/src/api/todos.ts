@@ -134,12 +134,14 @@ export const todosApi = {
       method: "POST",
       body: JSON.stringify({ title, visual })
     }),
-  // Ta/Släpp en Familjen-uppgift i ETT AV MINA ANDRA konton.
-  claimFamilyAcrossAccounts: (targetAccountId: string, id: string, claim: boolean) =>
-    request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/claim`), {
-      method: "PATCH",
-      body: JSON.stringify({ claim })
-    }),
+  // Signa upp sig / lämna en Familjen-uppgift i ETT AV MINA ANDRA konton
+  // (2026-08-01, ersätter samma dags tidigare claim-mekanism — Zaidas
+  // rättelse: samma "vem håller på med den här"-dubbeltryck som lokalt).
+  toggleFamilyAcrossAccountsInProgress: (targetAccountId: string, id: string, targetMemberId: string) =>
+    request<{ inProgressBy: string[]; inProgressSince: string | null }>(
+      api(`todos/family-across-accounts/${targetAccountId}/${id}/in-progress`),
+      { method: "PATCH", body: JSON.stringify({ targetMemberId }) }
+    ),
   // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
   // familjemedlemmar"), skiljer sig från getSharedChildren (ett helt barn)
   // och getFamilyAcrossAccounts (ett riktigt medlemskap) ovan.

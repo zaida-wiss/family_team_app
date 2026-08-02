@@ -8,6 +8,14 @@ import { mockDataAPIs } from "./helpers";
 // temat". Rättad samma dag: skapande (todos+inköpslistor) fungerar bara för
 // familjer jag är en RIKTIG medlem av (mitt eget konto eller Mina
 // familjekonton) — ALDRIG en Familjeanslutning.
+//
+// Vidare rättelse samma dag: "hemvyn skall vara återanvändbara moduler med
+// samma logik som i navbarens vyer... man skall signa upp sig på en
+// uppgift på samma sätt som i todovyn med bollar i trådar" — "Ta uppgiften"/
+// "Släpp"-knapparna ersatta av samma dubbeltryck-"vem håller på med den
+// här"-gest som Todos-panelen redan har (se FamilyTodoThreads.tsx), och
+// "Lägg till uppgift" flyttad in i trådens egen kategorimeny (klick på
+// trådens rubrik) istället för ett alltid synligt formulär.
 
 const ACCOUNT = { id: "acc-a", name: "Familjen A", type: "family", createdBy: "mem-a", deletedAt: null };
 const ROLE = {
@@ -27,12 +35,12 @@ const MEMBER_A = {
 };
 const USER = { id: "user-1", email: "test@exempel.se", name: "Förälder A", createdAt: "2024-01-01T00:00:00.000Z" };
 
-test("Hem-vyns Todos-flik: bollar + Lägg till uppgift, förinställd på vald familj (egen och Mina familjekonton), Ta/Släpp", async ({ page }) => {
+test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen familj och Mina familjekonton), signa upp sig via dubbeltryck", async ({ page }) => {
   let lastOwnTodoPost: Record<string, unknown> | null = null;
-  let lastClaimPatch: Record<string, unknown> | null = null;
-  // Statefull mock — skapande/claim måste synas i NÄSTA GET (hooken
+  let lastInProgressPatch: Record<string, unknown> | null = null;
+  // Statefull mock — skapande/in-progress måste synas i NÄSTA GET (hooken
   // refreshar sig själv efter varje mutation), annars renderas aldrig
-  // bollen och Ta uppgiften-knappen finns inte att klicka på.
+  // bollen/signup-väljaren.
   const crossAccountTodos: Record<string, unknown>[] = [];
 
   await page.route("**/api/auth/refresh", (route) =>
@@ -49,52 +57,66 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift, förinställd på vald f
     return route.fulfill({ json: [] });
   });
 
-  await page.route("**/api/todos/family-across-accounts/acc-b/*/claim", (route) => {
-    lastClaimPatch = route.request().postDataJSON() as Record<string, unknown>;
+  await page.route("**/api/todos/family-across-accounts/acc-b/*/in-progress", (route) => {
+    lastInProgressPatch = route.request().postDataJSON() as Record<string, unknown>;
     const todo = crossAccountTodos.find((t) => route.request().url().includes(t.id as string));
-    if (todo) todo.assignedTo = lastClaimPatch.claim ? "mem-a" : null;
-    return route.fulfill({ json: { ok: true } });
+    if (todo) todo.inProgressBy = [lastInProgressPatch.targetMemberId];
+    return route.fulfill({ json: { inProgressBy: [lastInProgressPatch.targetMemberId], inProgressSince: new Date().toISOString() } });
   });
   await page.route("**/api/todos/family-across-accounts/acc-b", (route) => {
     const body = route.request().postDataJSON() as Record<string, unknown>;
     crossAccountTodos.push({
-      id: "todo-new-b", accountId: "acc-b", title: body.title, assignedTo: null,
+      id: "todo-new-b", accountId: "acc-b", title: body.title, assignedTo: null, inProgressBy: [],
       visual: { type: "lucide-icon", value: body.visual ?? "⭐" }, status: "pending",
       deletedAt: null, recurrence: { type: "none" }, recurringSourceId: null
     });
     return route.fulfill({ status: 201, json: { id: "todo-new-b" } });
   });
   await page.route("**/api/todos/family-across-accounts", (route) =>
-    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", todos: crossAccountTodos }] })
+    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", myMemberId: "mem-b-a", todos: crossAccountTodos }] })
   );
   await page.route("**/api/members/cross-account", (route) =>
-    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", members: [] }] })
+    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", members: [{ id: "mem-b-a", name: "Förälder A", avatarUrl: null, color: null, isChild: false }] }] })
   );
 
   await page.goto("/");
   await page.getByRole("button", { name: "Visa todos" }).click();
 
-  const familyFilter = page.getByLabel("Familj");
+  const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
 
-  // Min egen familj vald (default) — Lägg till en uppgift.
+  // Min egen familj vald (default) — Lägg till uppgift via trådens
+  // kategorimeny (klick på "Familjen"-rubriken öppnar menyn efter en kort
+  // fördröjning, samma tre-tryck-disambiguering som Todos-panelens trådar).
   await familyFilter.selectOption({ label: "Familjen A" });
+  const familyThreadHeader = page.getByRole("button", { name: /^Familjen\./ });
+  await familyThreadHeader.click();
+  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
   await page.getByLabel("Lägg till en uppgift").fill("Handla mjölk");
-  await page.getByLabel("Lägg till uppgift").click();
+  await page.getByRole("button", { name: "Lägg till", exact: true }).click();
   await expect.poll(() => lastOwnTodoPost?.title).toBe("Handla mjölk");
   expect(lastOwnTodoPost?.assignedTo).toBeNull();
 
   // Familjen B (Mina familjekonton) — Lägg till en uppgift DÄR istället.
   await familyFilter.selectOption({ label: "Familjen B" });
+  const familyBThreadHeader = page.getByRole("button", { name: /^Familjen B\./ });
+  await familyBThreadHeader.click();
+  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
   await page.getByLabel("Lägg till en uppgift").fill("Handla mjölk i B");
-  await page.getByLabel("Lägg till uppgift").click();
+  await page.getByRole("button", { name: "Lägg till", exact: true }).click();
 
   // Bollen syns i familjevyn (samma stil som Todos-panelen, se
-  // .todo-thread__ball--home) med en Ta uppgiften-knapp (otagen).
+  // .todo-thread__ball--home). Dubbeltryck öppnar "vem håller på med den
+  // här"-väljaren (samma gest som lokalt) — klick på sig själv signar upp.
   const todosCard = page.locator("article.dashboard").filter({ hasText: "Uppgifter" });
-  await expect(todosCard.locator(".todo-thread__ball--home")).toBeVisible();
-  await todosCard.getByRole("button", { name: "Ta uppgiften" }).click();
-  await expect.poll(() => lastClaimPatch?.claim).toBe(true);
+  const bubble = todosCard.locator(".todo-thread__ball--home");
+  await expect(bubble).toBeVisible();
+  await bubble.dblclick();
+  // Väljaren portaleras till document.body med role="menu" (samma mönster
+  // som ParentTodoThreadView.tsx) — skopad hit eftersom Hem-vyns egen
+  // Medlemmar-kort också har en knapp med samma namn (mitt eget konto).
+  await page.getByRole("menu").getByRole("button", { name: "Förälder A" }).click();
+  await expect.poll(() => lastInProgressPatch?.targetMemberId).toBe("mem-b-a");
 });
 
 test("Hem-vyns Inköp-flik: ny lista, förinställd på vald familj — bara egen familj eller Mina familjekonton, aldrig en Familjeanslutning", async ({ page }) => {
@@ -130,7 +152,7 @@ test("Hem-vyns Inköp-flik: ny lista, förinställd på vald familj — bara ege
   await page.goto("/");
   await page.getByRole("button", { name: "Visa inköpslista" }).click();
 
-  const familyFilter = page.getByLabel("Familj");
+  const familyFilter = page.locator("#home-family-select");
   await familyFilter.selectOption({ label: "Familjen A" });
   await page.getByLabel("Lägg till en inköpslista").fill("Veckohandling");
   await page.getByLabel("Lägg till inköpslista").click();

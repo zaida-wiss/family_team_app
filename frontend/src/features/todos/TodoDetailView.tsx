@@ -18,7 +18,9 @@ type Props = {
   members: Member[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onClose: () => void;
-  onEdit: () => void;
+  // Valfri (2026-08-01) — Hem-vyns familjetrådar (FamilyTodoThreads.tsx)
+  // saknar en egen redigera-modal för todos i andra konton, döljer pennan.
+  onEdit?: () => void;
 };
 
 function formatSchedule(todo: Todo): string | null {
@@ -121,9 +123,11 @@ export function TodoDetailView({
             </small>
           </div>
           <div className="todo-detail-modal__hdr-actions">
-            <button aria-label="Redigera uppgift" className="icon-button" onClick={onEdit} type="button">
-              <Pencil size={16} />
-            </button>
+            {onEdit && (
+              <button aria-label="Redigera uppgift" className="icon-button" onClick={onEdit} type="button">
+                <Pencil size={16} />
+              </button>
+            )}
             <button aria-label="Stäng" className="icon-button" onClick={onClose} type="button">
               <X size={18} />
             </button>

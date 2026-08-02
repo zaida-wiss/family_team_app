@@ -5,8 +5,15 @@ import { mockAuthAndData, MEMBER } from "./helpers";
 // todos finnas, eller todos som jag signat upp mig på från familjevyn (hus
 // ikonen)... Mina privata todos som jag inte delar med någon annan än mig
 // själv skall inte visas i familjevyns todo." — Hem-vyns Todos-flik visar nu
-// familje-/vuxen-todos med en "Ta uppgiften"/"Släpp"-knapp (claim/unclaim,
-// sätter assignedTo), Todos-panelen visar bara det som är tilldelat mig.
+// familje-/vuxen-todos.
+//
+// 2026-08-01, Zaidas rättelse: "hemvyn skall vara återanvändbara moduler med
+// samma logik som i navbarens vyer... man skall signa upp sig på en
+// uppgift på samma sätt som i todovyn med bollar i trådar" — den ursprungliga
+// "Ta uppgiften"-knappen (satte assignedTo) ersatt av samma dubbeltryck-"vem
+// håller på med den här"-gest (inProgressBy) som Todos-panelen redan har,
+// se FamilyTodoThreads.tsx. "Det som är signat på mina todos skall visas i
+// todovyn" — en Familjen-todo jag signat upp på syns nu i "Mina uppgifter".
 
 const CATEGORY = {
   id: "cat-1", accountId: "acc-1", memberId: "mem-1", name: "Träning",
@@ -20,26 +27,24 @@ const FAMILY_TODO = {
   recurringSourceId: null, occurrenceDate: null, completedAt: null,
   approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
   rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-  personalCategoryId: null, notes: null
+  personalCategoryId: null, notes: null, inProgressBy: [], inProgressSince: null
 };
 
 const PRIVATE_TODO = {
   ...FAMILY_TODO, id: "todo-private", title: "Hemlig grej", assignedTo: "mem-1", personalCategoryId: "cat-1"
 };
 
-test("Hem-vyns Todos-flik: 'Ta uppgiften' på en Familjen-todo gör den min, syns då i Todos-panelen; privata todos syns aldrig i Hem", async ({ page }) => {
-  let patchedTodo: Record<string, unknown> | null = null;
+test("Hem-vyns Todos-flik: signar upp sig på en Familjen-todo via dubbeltryck, syns då i Todos-panelen; privata todos syns aldrig i Hem", async ({ page }) => {
+  let patchedInProgress: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) =>
     route.fulfill({ json: route.request().method() === "GET" ? [FAMILY_TODO, PRIVATE_TODO] : {} })
   );
-  await page.route(`**/api/todos/${FAMILY_TODO.id}`, (route) => {
-    if (route.request().method() === "PATCH") {
-      patchedTodo = route.request().postDataJSON() as Record<string, unknown>;
-      return route.fulfill({ json: { ok: true } });
-    }
-    return route.fulfill({ json: {} });
+  await page.route(`**/api/todos/${FAMILY_TODO.id}/in-progress`, (route) => {
+    patchedInProgress = route.request().postDataJSON() as Record<string, unknown>;
+    FAMILY_TODO.inProgressBy = [patchedInProgress.targetMemberId as string];
+    return route.fulfill({ json: { inProgressBy: FAMILY_TODO.inProgressBy, inProgressSince: new Date().toISOString() } });
   });
 
   await page.goto("/");
@@ -47,19 +52,24 @@ test("Hem-vyns Todos-flik: 'Ta uppgiften' på en Familjen-todo gör den min, syn
   // klickar ikonen bredvid familjeväljaren.
   await page.getByRole("button", { name: "Visa todos" }).click();
 
-  // Hem: Familjen-todon syns med en "Ta uppgiften"-knapp, den privata gör det inte.
+  // Hem: Familjen-todon syns som en boll, den privata gör det inte.
   const homeTodosCard = page.locator("article.dashboard").filter({ hasText: "Uppgifter" });
   await expect(homeTodosCard.getByText("Handla mat")).toBeVisible();
   await expect(homeTodosCard.getByText("Hemlig grej")).toHaveCount(0);
 
-  await homeTodosCard.getByRole("button", { name: "Ta uppgiften" }).click();
-  await expect.poll(() => patchedTodo?.assignedTo).toBe("mem-1");
+  // Dubbeltryck öppnar "vem håller på med den här" — samma gest som
+  // Todos-panelen redan har (se FamilyTodoThreads.tsx/ParentTodoThreadView.tsx).
+  await homeTodosCard.locator(".todo-thread__ball--home").dblclick();
+  await page.getByRole("menu").getByRole("button", { name: MEMBER.name }).click();
+  await expect.poll(() => patchedInProgress?.targetMemberId).toBe(MEMBER.id);
 
-  // Todos-panelen: bara det som är tilldelat mig (inklusive den precis
-  // tagna Familjen-todon), aldrig en otagen Familjen-todo. exact:true — Hem-
-  // vyns egen "Visa todos"-flikknapp innehåller annars "Todos" som substräng.
+  // Todos-panelen: "Mina uppgifter" inkluderar nu den signerade
+  // Familjen-todon (inProgressBy), aldrig en osignerad Familjen-todo.
+  // exact:true — Hem-vyns egen "Visa todos"-flikknapp innehåller annars
+  // "Todos" som substräng.
   await page.getByRole("button", { name: "Todos", exact: true }).click();
   await expect(page.getByRole("button", { name: /Hemlig grej/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Handla mat/ })).toBeVisible();
 });
 
 test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställningar visar den igen", async ({ page }) => {

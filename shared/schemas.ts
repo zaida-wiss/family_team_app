@@ -437,10 +437,6 @@ export const CreateFamilyWideItemBodySchema = z.object({
   visual: z.string().nullable().optional()
 });
 
-// Ta/Släpp en Familjen-uppgift i ett av mina andra familjekonton.
-export const ClaimFamilyTodoBodySchema = z.object({
-  claim: z.boolean()
-});
 
 // Flyttade hit från route-filerna (Sprint 3 S6) — låg tidigare som tre separata
 // inline-scheman i analytics.ts/rewardShop.ts/rewards.ts.
