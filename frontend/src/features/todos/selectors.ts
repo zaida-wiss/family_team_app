@@ -79,13 +79,12 @@ export function getVisibleTodos(
 // includeChildren styrs av den nya inställnings-togglen
 // (Member.showChildTodosInOwnView), av som standard.
 //
-// 2026-08-01, Zaidas önskemål: "Att signa upp sig skall gå att göras från
-// hemvyn, och det som är signat på mina todos skall istället visas i
-// todovyn" — en Familjen-uppgift jag SIGNAT UPP på (dubbeltryck i Hem, samma
-// inProgressBy-mekanism som redan fanns för "vem håller på med den här")
-// visas nu här också, inte bara todos direkt tilldelade mig. Speglar samma
-// mönster som redan gäller barnens dashboard (MemberShellContent.tsx/
-// ChildShellContent.tsx: "assignedTo===null && inProgressBy?.includes(id)").
+// 2026-08-01, Zaidas rättelse (samma dag som ett kort försök att lägga
+// signade Familjen-todos i "Mina uppgifter" här) — signade uppgifter ska
+// INTE blandas in i "Mina uppgifter", utan visas i en EGEN tråd per familj
+// (namngiven efter familjen), se TodosView.tsx/FamilyTodoThreads.tsx. Den
+// här funktionen rör alltså bara det som är DIREKT tilldelat mig, oförändrad
+// sedan 2026-07-31.
 export function getMyTodosViewTodos(
   currentMember: Member,
   roles: Role[],
@@ -96,7 +95,6 @@ export function getMyTodosViewTodos(
   return todos.filter((todo) => {
     if (todo.deletedAt !== null) return false;
     if (todo.assignedTo === currentMember.id) return true;
-    if (todo.inProgressBy?.includes(currentMember.id)) return true;
     if (includeChildren && todo.assignedTo !== null) {
       return isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
     }

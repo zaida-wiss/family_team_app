@@ -4,9 +4,8 @@ import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoCategoryTemplate
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
-import { SharedChildrenThreads } from "./SharedChildrenThreads";
-import { CrossAccountFamilyThreads } from "./CrossAccountFamilyThreads";
-import { ConnectionTodosThreads } from "./ConnectionTodosThreads";
+import { FamilyTodoThreads } from "./FamilyTodoThreads";
+import type { FamilyThreadSource } from "./FamilyTodoThreads";
 import { getAssigneeName, getMyTodosViewTodos, isDueWithinRange, isTodoHistory } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
@@ -41,11 +40,13 @@ type Props = {
   // Barn-tråden i Todos-panelen (2026-07-31, Zaidas önskemål) — av som
   // standard, en toggle i Inställningar → Utseende.
   showChildTodosInOwnView?: boolean;
-  // Todos jag TAGIT från en annan familjs Hem-vy (2026-08-01) — en liten
-  // mini-lista längst ner i Mina uppgifter-tråden, se ParentTodoThreadView.tsx.
-  extraMyTasks?: { accountId: Id; accountName: string; todos: Todo[] }[];
-  onCompleteExtraMyTask?: (accountId: Id, todoId: Id) => void;
-  onReleaseExtraMyTask?: (accountId: Id, todoId: Id) => void;
+  // Todos-panelens EGNA "signade familjeuppgifter"-trådar (2026-08-01,
+  // Zaidas rättelse: "andra familjers todo" hörde inte hemma i Todos-
+  // panelen alls — bara det jag faktiskt SIGNAT UPP på från Hem-vyn, en
+  // egen tråd per familj namngiven efter familjen, inte inblandat i
+  // "Mina uppgifter"). Redan hopkopplad med rätt mutationer per familj,
+  // se MemberShellContent.tsx/FamilyTodoThreads.tsx.
+  personalSignedUpThreadSources?: FamilyThreadSource[];
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
@@ -98,9 +99,7 @@ export function TodosView({
   todoThreadGap,
   todoBubbleSize,
   showChildTodosInOwnView = false,
-  extraMyTasks,
-  onCompleteExtraMyTask,
-  onReleaseExtraMyTask,
+  personalSignedUpThreadSources = [],
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
@@ -239,9 +238,6 @@ export function TodosView({
             currentMember={currentMember}
             categories={personalCategories}
             showChildTodos={showChildTodosInOwnView}
-            extraMyTasks={extraMyTasks}
-            onCompleteExtraMyTask={onCompleteExtraMyTask}
-            onReleaseExtraMyTask={onReleaseExtraMyTask}
             onToggleSubtask={onToggleSubtask}
             onToggleTodoInProgress={onToggleTodoInProgress}
             onUpdateTodo={onUpdateTodo}
@@ -269,23 +265,21 @@ export function TodosView({
           />
         )}
 
-        {/* Delade barn (ADR-0024, 2026-07-22) — barn en ANNAN vuxen (i din
-            familj eller en helt annan familj) delat med dig. Egen, separat
-            radad tråd-rad under de vanliga trådarna — visas bara om minst en
-            delning finns, annars ingenting (oförändrat för alla som inte
-            använder funktionen). */}
-        {todoViewMode === "thread" && <SharedChildrenThreads />}
-
-        {/* Mina familjekonton (2026-07-25, Zaidas önskemål) — mina EGNA
-            andra medlemskap, en tråd per konto (inte per barn). Egen
-            radad tråd-rad, visas bara om jag faktiskt har fler konton och
-            inte dolt dem alla i Inställningar. */}
-        {todoViewMode === "thread" && <CrossAccountFamilyThreads />}
-
-        {/* Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen
-            ("bara familjemedlemmar"), inte ett riktigt medlemskap. Egen
-            radad tråd-rad, visas bara om en accepterad anslutning finns. */}
-        {todoViewMode === "thread" && <ConnectionTodosThreads />}
+        {/* Signade familjeuppgifter (2026-08-01, Zaidas rättelse: "andra
+            familjers todo" hörde inte hemma i Todos-panelen — bara det jag
+            faktiskt SIGNAT UPP på från Hem-vyn, en egen tråd per familj
+            namngiven efter familjen. Att BLÄDDRA i en familjs hela pool
+            (Delade barn/Mina familjekonton/Familjeanslutningar) hör bara
+            hemma i Hem-vyn nu, se MemberOverview.tsx. */}
+        {todoViewMode === "thread" && personalSignedUpThreadSources.length > 0 && (
+          <FamilyTodoThreads
+            onReorderBubbles={onReorderBubbles}
+            sources={personalSignedUpThreadSources}
+            todoBubbleOrder={todoBubbleOrder}
+            todoBubbleSize={todoBubbleSize}
+            todoThreadGap={todoThreadGap}
+          />
+        )}
 
         {todoViewMode === "list" && rangeFilteredTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>

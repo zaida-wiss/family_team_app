@@ -94,16 +94,6 @@ type Props = {
   // egen todo vy skall endast mina egna todos finnas") — en toggle i
   // Inställningar → Utseende visar den igen.
   showChildTodos?: boolean;
-  // Todos jag TAGIT från en annan familjs Hem-vy ("Ta uppgiften", 2026-08-01,
-  // Zaidas önskemål: "Mina uppgifter skall endast innehålla todos som jag
-  // signat upp mig på från mina familjer") — en enkel, egen mini-lista
-  // längst ner i Mina uppgifter-tråden, samma håll-in-för-att-markera-klar-
-  // mönster som CrossAccountFamilyThreads.tsx (medvetet INTE inbyggd i den
-  // generella bubbel-klick/dubbelklick/detaljvy-maskinen ovan, som förutsätter
-  // ett LOKALT konto — en todo härifrån lever i ett ANNAT konto).
-  extraMyTasks?: { accountId: Id; accountName: string; todos: Todo[] }[];
-  onCompleteExtraMyTask?: (accountId: Id, todoId: Id) => void;
-  onReleaseExtraMyTask?: (accountId: Id, todoId: Id) => void;
 };
 
 type Thread = {
@@ -265,10 +255,7 @@ export function ParentTodoThreadView({
   threadGap,
   bubbleSize,
   fixedTodoTimes,
-  showChildTodos = false,
-  extraMyTasks = [],
-  onCompleteExtraMyTask,
-  onReleaseExtraMyTask
+  showChildTodos = false
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
@@ -641,17 +628,13 @@ export function ParentTodoThreadView({
     // eller en ANNAN vuxens kategori — tidigare osynlig här, tråd-vyns
     // kolumner visar bara ägarens egna kategorier). Familjen (assignedTo:
     // null) hör numera bara hemma i Hem-vyn (se selectors.ts:s
-    // getFamilyViewTodos), även de jag själv skapat.
-    // Utökad 2026-08-01 (Zaidas önskemål: "det som är signat på mina todos
-    // skall istället visas i todovyn") — en Familjen-uppgift jag signat upp
-    // på (inProgressBy, dubbeltryck i Hem) räknas nu också som "min", inte
-    // bara direkt tilldelade. selectors.ts:s getMyTodosViewTodos släpper
-    // redan igenom den i `todos`-propen, men den här komponentens EGEN
-    // isMyTask-check behöver samma utökning för att faktiskt visa den.
+    // getFamilyViewTodos), även de jag själv skapat. En uppgift jag signat
+    // upp på därifrån (inProgressBy) blandas MEDVETET INTE in här (Zaidas
+    // rättelse 2026-08-01) — visas istället i en egen tråd per familj, se
+    // TodosView.tsx:s familySignedUpSources/FamilyTodoThreads.tsx.
     const myCategoryIds = new Set(myCategories.map((c) => c.id));
     const isMyTask = (t: Todo) =>
-      (t.assignedTo === currentMember.id || (t.assignedTo === null && (t.inProgressBy?.includes(currentMember.id) ?? false))) &&
-      !(t.personalCategoryId && myCategoryIds.has(t.personalCategoryId));
+      t.assignedTo === currentMember.id && !(t.personalCategoryId && myCategoryIds.has(t.personalCategoryId));
     const showMyTasksExpired = showExpiredThreadIds.has(MY_TASKS_THREAD_ID);
     const myTasksBaseTodos = visibleTodos.filter(
       (t) => isMyTask(t) && (t.status !== "expired" || showMyTasksExpired)
@@ -1400,48 +1383,6 @@ export function ParentTodoThreadView({
             </ul>
           )}
 
-          {thread.id === MY_TASKS_THREAD_ID && extraMyTasks.length > 0 && (
-            <ul className="todo-thread__list">
-              {extraMyTasks.flatMap(({ accountId, accountName, todos: claimedTodos }) =>
-                claimedTodos.map((todo) => (
-                  <li className="todo-thread__item" key={todo.id}>
-                    <button
-                      type="button"
-                      className={
-                        "todo-thread__ball todo-thread__ball--small" +
-                        (heldId === todo.id ? " todo-thread__ball--holding" : "")
-                      }
-                      onPointerDown={() =>
-                        onCompleteExtraMyTask && startHold(todo.id, () => onCompleteExtraMyTask(accountId, todo.id))
-                      }
-                      onPointerUp={clearHold}
-                      onPointerLeave={clearHold}
-                      onPointerCancel={clearHold}
-                      title={`${todo.title} (${accountName})`}
-                      aria-label={`${todo.title}, tagen från ${accountName}. Håll intryckt i två sekunder för att markera klar.`}
-                    >
-                      {todo.visual.value && (
-                        <span aria-hidden="true" className="todo-thread__ball-icon">
-                          {todo.visual.value}
-                        </span>
-                      )}
-                      <span className="todo-thread__ball-title">{todo.title}</span>
-                    </button>
-                    <small>{accountName}</small>
-                    {onReleaseExtraMyTask && (
-                      <button
-                        className="ghost-button"
-                        onClick={() => onReleaseExtraMyTask(accountId, todo.id)}
-                        type="button"
-                      >
-                        Släpp
-                      </button>
-                    )}
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
         </section>
       ))}
       </div>

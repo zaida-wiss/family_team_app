@@ -6,6 +6,11 @@ import { useConnectionRecipes } from "../accounts/useFamilyConnectionsState";
 // egen, tydligt avgränsad extra sektion, aldrig sammanslaget med mina egna
 // recept. Läsning bara i denna första version (skapa/redigera i en annan
 // familjs konto är inte byggt).
+//
+// Flyttad från Recept-panelen till Hem-vyns Måltidsplanering-flik
+// (2026-08-01, Zaidas rättelse: "de skall endast synas i hemvyn när jag
+// valt att visa dessa familjer där... de andra symbolerna i navbaren...
+// är mina personliga") — oförändrad komponent/logik, bara ny plats.
 export function ConnectionRecipesSection() {
   const groups = useConnectionRecipes();
   if (groups.length === 0) return null;

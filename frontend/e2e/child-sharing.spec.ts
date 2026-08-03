@@ -336,7 +336,7 @@ test("Todos-panelen: en delad barn-tråd visas med visnings-läge när access ä
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Visa todos" }).click();
 
   const sharedThread = page.getByRole("region", { name: "Delad tråd: Wilma" });
   await expect(sharedThread).toBeVisible();
@@ -377,7 +377,7 @@ test("Todos-panelen: info-knappen visar barnets kalender, köpta belöningar, st
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Visa todos" }).click();
 
   const sharedThread = page.getByRole("region", { name: "Delad tråd: Wilma" });
   await expect(sharedThread.getByText("Tandläkare")).toHaveCount(0);
@@ -424,7 +424,7 @@ test("Todos-panelen: markera en delad uppgift klar (edit-åtkomst) anropar compl
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Visa todos" }).click();
 
   const sharedThread = page.getByRole("region", { name: "Delad tråd: Wilma" });
   const ball = sharedThread.getByRole("button", { name: /Diska/ });

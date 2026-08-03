@@ -12,8 +12,11 @@ import { mockAuthAndData, MEMBER } from "./helpers";
 // uppgift på samma sätt som i todovyn med bollar i trådar" — den ursprungliga
 // "Ta uppgiften"-knappen (satte assignedTo) ersatt av samma dubbeltryck-"vem
 // håller på med den här"-gest (inProgressBy) som Todos-panelen redan har,
-// se FamilyTodoThreads.tsx. "Det som är signat på mina todos skall visas i
-// todovyn" — en Familjen-todo jag signat upp på syns nu i "Mina uppgifter".
+// se FamilyTodoThreads.tsx. Vidare rättelse SAMMA DAG: "det skall inte stå
+// 'mina uppgifter'... det skall stå familjens namn... som kategori i min
+// todovy" — en signad Familjen-todo syns i Todos-panelen i en EGEN tråd
+// namngiven efter familjen (personalSignedUpThreadSources,
+// MemberShellContent.tsx), inte i "Mina uppgifter".
 
 const CATEGORY = {
   id: "cat-1", accountId: "acc-1", memberId: "mem-1", name: "Träning",
@@ -63,13 +66,15 @@ test("Hem-vyns Todos-flik: signar upp sig på en Familjen-todo via dubbeltryck, 
   await page.getByRole("menu").getByRole("button", { name: MEMBER.name }).click();
   await expect.poll(() => patchedInProgress?.targetMemberId).toBe(MEMBER.id);
 
-  // Todos-panelen: "Mina uppgifter" inkluderar nu den signerade
-  // Familjen-todon (inProgressBy), aldrig en osignerad Familjen-todo.
-  // exact:true — Hem-vyns egen "Visa todos"-flikknapp innehåller annars
-  // "Todos" som substräng.
+  // Todos-panelen: en egen tråd namngiven efter familjen ("Familjen Test")
+  // innehåller den signerade Familjen-todon, aldrig en osignerad. exact:true
+  // — Hem-vyns egen "Visa todos"-flikknapp innehåller annars "Todos" som
+  // substräng.
   await page.getByRole("button", { name: "Todos", exact: true }).click();
+  const familyThread = page.getByRole("region", { name: "Tråd: Familjen Test" });
+  await expect(familyThread).toBeVisible();
+  await expect(familyThread.getByRole("button", { name: /Handla mat/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Hemlig grej/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Handla mat/ })).toBeVisible();
 });
 
 test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställningar visar den igen", async ({ page }) => {

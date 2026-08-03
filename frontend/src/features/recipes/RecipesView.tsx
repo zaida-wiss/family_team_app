@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { RecipeFormModal } from "./RecipeFormModal";
 import { RecipeDetailView } from "./RecipeDetailView";
-import { ConnectionRecipesSection } from "./ConnectionRecipesSection";
 import type { Id, Member, Recipe, ShoppingList, Todo } from "@shared/types";
 import type { RecipeFormInput } from "./RecipeFormModal";
 
@@ -170,8 +169,6 @@ export function RecipesView({
           shoppingLists={shoppingLists}
         />
       )}
-
-      <ConnectionRecipesSection />
     </article>
   );
 }

@@ -65,19 +65,21 @@ export async function mockDataAPIs(page: Page) {
   // backend och 401:ar (ofarligt i sig, men brusigt och kan racea med riktiga tester).
   await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
   // Delade barns todos/data (ADR-0024) — hämtas globalt av
-  // useSharedChildrenTodos (AccountSettings.tsx/SharedChildrenThreads.tsx),
-  // default-stubb så ett test utan egen mock inte faller igenom till ett
-  // riktigt, ej mockat nätverksanrop.
+  // useSharedChildrenTodos (AccountSettings.tsx/SharedChildrenThreads.tsx,
+  // sedan 2026-08-01 renderad i Hem-vyns Todos-flik, inte längre Todos-
+  // panelen), default-stubb så ett test utan egen mock inte faller igenom
+  // till ett riktigt, ej mockat nätverksanrop.
   await page.route("**/api/todos/shared-children", (route) => route.fulfill({ json: [] }));
-  // Familjeanslutningar (ADR-0030, 2026-07-29) — hämtas globalt av
-  // ConnectionTodosThreads/ConnectionRecipesSection/ConnectionShoppingListsSection,
+  // Familjeanslutningar (ADR-0030, 2026-07-29) — hämtas globalt av Hem-vyn
+  // (MemberOverview.tsx/ConnectionRecipesSection, sedan 2026-08-01 — flyttat
+  // ut ur Todos-/Recept-/Inköp-panelerna, som numera bara visar mitt eget),
   // default-stubbar så ett test utan egen mock inte faller igenom till ett
   // riktigt, ej mockat nätverksanrop.
   await page.route("**/api/todos/connections", (route) => route.fulfill({ json: [] }));
-  // Mina familjekonton (2026-07-25) — hämtades tidigare bara medan Todos-
-  // panelens tråd-vy visades (CrossAccountFamilyThreads.tsx). Hem-vyns
-  // familjefilter (2026-07-31) gör att MemberShellContent.tsx nu hämtar
-  // detta GLOBALT (varje gång Hem renderas), samma skäl som connections ovan.
+  // Mina familjekonton (2026-07-25) — hämtas globalt av MemberShellContent.tsx
+  // (Hem-vyns familjefilter, 2026-07-31) varje gång Hem renderas. Sedan
+  // 2026-08-01 bidrar detta även med Todos-panelens EGNA signade-tråd
+  // (personalSignedUpThreadSources) — se samma dags rättelse i CLAUDE.md.
   await page.route("**/api/todos/family-across-accounts", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/recipes/connections", (route) => route.fulfill({ json: [] }));
   // Mina familjekonton (2026-08-01) — recept/inköpslistor/måltidsplan i ett

@@ -7,6 +7,9 @@ import { MemberAvatar } from "../../components/MemberAvatar";
 import { WeeklyMealPlan } from "../mealplan/WeeklyMealPlan";
 import { FamilyTodoThreads } from "../todos/FamilyTodoThreads";
 import type { FamilyThreadSource } from "../todos/FamilyTodoThreads";
+import { SharedChildrenThreads } from "../todos/SharedChildrenThreads";
+import { SharedShoppingLists } from "../shopping/SharedShoppingLists";
+import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
   Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList
@@ -337,6 +340,14 @@ export function MemberOverview({
               todoThreadGap={todoThreadGap}
             />
           )}
+
+          {/* Delade barn (ADR-0024, 2026-07-22) — flyttad hit från
+              Todos-panelen (2026-08-01, Zaidas rättelse: "de skall endast
+              synas i hemvyn"), oförändrad komponent/logik. Ett barn en
+              ANNAN vuxen (i din familj eller en helt annan) delat med dig
+              — visas oavsett vald familj i filtret ovan (en delning är inte
+              knuten till ett specifikt familjekonto-val på samma sätt). */}
+          <SharedChildrenThreads />
         </article>
       )}
 
@@ -408,6 +419,11 @@ export function MemberOverview({
               })}
             </div>
           )}
+
+          {/* En annan familjs delade lista (ADR-0026, externalSharedWith) —
+              flyttad hit från Inköp-panelen (2026-08-01, Zaidas rättelse: "de
+              skall endast synas i hemvyn"), oförändrad komponent/logik. */}
+          <SharedShoppingLists currentMember={currentMember} />
         </article>
       )}
 
@@ -418,6 +434,10 @@ export function MemberOverview({
               <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
             </header>
             <WeeklyMealPlan recipes={recipes} />
+            {/* En ansluten familjs receptbok (ADR-0030, dataScope.recipes) —
+                flyttad hit från Recept-panelen (2026-08-01, Zaidas rättelse:
+                "de skall endast synas i hemvyn"), oförändrad komponent/logik. */}
+            <ConnectionRecipesSection />
           </article>
         ) : identityAccountIds.has(selectedFamilyId) ? (
           // Ett av Mina familjekonton (2026-08-01, Zaidas önskemål) — ett

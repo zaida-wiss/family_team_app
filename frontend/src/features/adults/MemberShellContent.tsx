@@ -191,13 +191,10 @@ export function MemberShellContent({
   // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
   // familj, då vill jag att endast den familjens kalenderhändelser, todos
   // och medlemmar visas, men möjlighet att välja samtliga familjer") — de
-  // två redan befintliga grupperade "andra familjer"-todos-hookarna
-  // (Todos-panelens egna trådar, oförändrade där) återanvänds här BARA för
-  // att bygga Hem-sammanfattningens utökade dataset. Panelerna är aldrig
-  // monterade samtidigt (activePanel växlar, ErrorBoundary key={activePanel}
-  // remountar), så två separata hook-instanser (en här, en i
-  // CrossAccountFamilyThreads.tsx/ConnectionTodosThreads.tsx) kostar ingen
-  // dubbel nätverkstrafik i praktiken.
+  // grupperade "andra familjer"-todos-hookarna byggda för Todos-panelens
+  // EGNA trådar (2026-07-25/2026-07-29, sedan 2026-08-01 ersatta där av
+  // personalSignedUpThreadSources) återanvänds här för att bygga Hem-
+  // sammanfattningens fulla dataset.
   const {
     threads: crossAccountFamilyThreads,
     completeCrossAccountTodo,
@@ -313,20 +310,48 @@ export function MemberShellContent({
     completeConnectionTodo, createConnectionTodo
   ]);
 
-  // Mina uppgifter-tråden (Todos-panelen) inkluderar todos jag SIGNAT UPP på
-  // från Mina familjekonton (2026-08-01, Zaidas rättelse: "signa upp sig...
-  // samma gester som todovyn" — dubbeltryck/"vem håller på med den här",
-  // inte en separat Ta uppgiften-knapp) — myMemberId (min egen medlemspost i
-  // det andra kontot, se CrossAccountFamilyThread) avgör vilka todos som är
-  // MIG i inProgressBy, utan att gissa. Familjeanslutningar har ingen egen
-  // identitet att signa upp med — bara Mina familjekonton kan bidra hit.
-  const crossAccountClaimedTasks = useMemo(
-    () =>
-      crossAccountFamilyThreads
-        .map((t) => ({ ...t, todos: t.todos.filter((td) => td.inProgressBy?.includes(t.myMemberId)) }))
-        .filter((t) => t.todos.length > 0),
-    [crossAccountFamilyThreads]
-  );
+  // Todos-panelens EGNA "signade familjeuppgifter"-trådar (2026-08-01,
+  // Zaidas rättelse: "det skall inte stå 'mina uppgifter'... det skall stå
+  // familjens namn... som kategori i min todovy") — helt separat från
+  // homeFamilyThreadSources (Hem-vyns fulla familjepooler): visar bara
+  // uppgifter jag faktiskt SIGNAT UPP på (inProgressBy), en egen tråd per
+  // familj, namngiven efter familjen — INTE inblandat i "Mina uppgifter"
+  // (som bara gäller direkt tilldelade uppgifter, oförändrat sedan
+  // 2026-07-31). Ingen "Lägg till uppgift" här — skapande hör hemma i Hem.
+  const personalSignedUpThreadSources = useMemo(() => {
+    if (!canSeeTodos) return [];
+    const ownSignedUp = homeVisibleTodos.filter((t) => t.inProgressBy?.includes(currentMember.id));
+    const own =
+      ownSignedUp.length > 0
+        ? [{
+            id: "__signedUpOwn__",
+            accountId: currentMember.accountId,
+            label: accountName,
+            todos: ownSignedUp,
+            members: activeMembers,
+            onComplete: completeOwnFamilyTodo,
+            onToggleInProgress: onToggleTodoInProgress,
+            onToggleSubtask
+          }]
+        : [];
+    const cross = crossAccountFamilyThreads
+      .map((t) => ({ ...t, todos: t.todos.filter((td) => td.inProgressBy?.includes(t.myMemberId)) }))
+      .filter((t) => t.todos.length > 0)
+      .map((t) => ({
+        id: `signedUp:${t.accountId}`,
+        accountId: t.accountId,
+        label: t.accountName,
+        todos: t.todos,
+        members: crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? [],
+        onComplete: (todoId: Id) => completeCrossAccountTodo(t.accountId, todoId),
+        onToggleInProgress: (todoId: Id, targetMemberId: Id) => toggleCrossAccountInProgress(t.accountId, todoId, targetMemberId)
+      }));
+    return [...own, ...cross];
+  }, [
+    canSeeTodos, homeVisibleTodos, currentMember.id, currentMember.accountId, accountName, activeMembers,
+    onToggleTodoInProgress, onToggleSubtask, crossAccountFamilyThreads, crossAccountMemberGroups,
+    completeCrossAccountTodo, toggleCrossAccountInProgress
+  ]);
 
   const homeAllShoppingLists = useMemo(
     () =>
@@ -617,12 +642,7 @@ export function MemberShellContent({
           todoThreadGap={todoThreadGap}
           todoBubbleSize={todoBubbleSize}
           showChildTodosInOwnView={currentMember.showChildTodosInOwnView ?? false}
-          extraMyTasks={crossAccountClaimedTasks}
-          onCompleteExtraMyTask={completeCrossAccountTodo}
-          onReleaseExtraMyTask={(accountId, todoId) => {
-            const myMemberId = crossAccountFamilyThreads.find((t) => t.accountId === accountId)?.myMemberId;
-            if (myMemberId) toggleCrossAccountInProgress(accountId, todoId, myMemberId);
-          }}
+          personalSignedUpThreadSources={personalSignedUpThreadSources}
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onToggleTodoInProgress={onToggleTodoInProgress}
