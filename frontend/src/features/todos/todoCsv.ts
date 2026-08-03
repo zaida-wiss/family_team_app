@@ -27,6 +27,9 @@ export const TODO_CSV_HEADERS = [
 ] as const;
 
 const SELF_LABEL = "Mig själv";
+// Familjen-tilldelning (2026-08-03, assignedTo:null) — samma etikett som
+// getAssigneeName (selectors.ts) redan använder i UI:t.
+const FAMILY_LABEL = "Familjen";
 const DEFAULT_EMOJI = "⭐";
 // Ett kalkylark ger ingen garanti att "Emoji"-cellen faktiskt innehåller en
 // emoji — ett vanligt misstag är att skriva ett ord (t.ex. "gympa") i
@@ -202,16 +205,18 @@ export function todosToCsv(
   // Återkommande MALLAR exporteras (recurringSourceId === null) — dagens
   // redan genererade occurrences (recurringSourceId satt) exporteras inte,
   // de är bara en frusen daglig kopia av mallen, inte något att importera.
-  const exportable = todos.filter(
-    (t) =>
-      t.deletedAt === null &&
-      t.recurringSourceId === null &&
-      (t.assignedTo === currentMemberId || t.createdBy === currentMemberId)
-  );
+  // Ingen egen assignedTo/createdBy-filtrering här (borttagen 2026-08-03) —
+  // BÅDA anropsställena (ParentTodoThreadView.tsx:s per-kategori-export,
+  // TodoImportExport.tsx:s kryssrutebaserade export) skickar redan in en
+  // FÄRDIGFILTRERAD lista. Den gamla interna filtreringen var av misstag för
+  // snäv för familje-scope (en familje-uppgift skapad av NÅGON ANNAN
+  // försvann tyst ur "Utan kategori"-exporten, trots ikryssad kryssruta).
+  const exportable = todos.filter((t) => t.deletedAt === null && t.recurringSourceId === null);
 
   const rows = exportable.map((todo) => {
     const assignee = members.find((m) => m.id === todo.assignedTo);
-    const assigneeLabel = todo.assignedTo === currentMemberId ? SELF_LABEL : assignee?.name ?? "";
+    const assigneeLabel =
+      todo.assignedTo === null ? FAMILY_LABEL : todo.assignedTo === currentMemberId ? SELF_LABEL : assignee?.name ?? "";
     const { unit, every, days } = formatRecurrenceForCsv(todo.recurrence);
     return toCsvRow([
       todo.title,
@@ -246,7 +251,10 @@ export type ParsedTodoRow = {
   sourceId: string | null;
   title: string;
   emoji: string;
-  assignedTo: Id;
+  // Id vid en vanlig import (default: importören själv), null vid en
+  // familje-import (default: Familjen, 2026-08-03) — se defaultAssignee-
+  // parametern nedan.
+  assignedTo: Id | null;
   // Satt när "Tilldelad" inte matchar någon medlem i KONTOT som importerar —
   // troligen en fil delad från en annan familj (2026-07-07, Zaidas resonemang).
   // TodoImportExport.tsx frågar importören vem i DERAS familj namnet menas,
@@ -269,14 +277,18 @@ export type TodoCsvParseResult = {
   errors: string[];
 };
 
-// Matchar "Tilldelad"-kolumnen mot ett kontonamn (skiftlägesokänsligt) eller
-// "Mig själv" — tvetydiga eller okända namn hoppas över med ett tydligt fel
-// istället för att gissa fel person.
+// Matchar "Tilldelad"-kolumnen mot ett kontonamn (skiftlägesokänsligt), "Mig
+// själv" eller "Familjen" — tvetydiga eller okända namn hoppas inte över,
+// utan flaggas som olösta (TodoImportExport.tsx frågar importören).
+// defaultAssignee (2026-08-03) styr vad en TOM cell betyder — importörens
+// eget id vid en vanlig import (oförändrat), null (Familjen) vid en
+// familje-import, se TodoImportExport.tsx:s scope-prop.
 export function parseTodoCsv(
   text: string,
   members: Member[],
   categories: TodoCategory[],
-  currentMemberId: Id
+  currentMemberId: Id,
+  defaultAssignee: Id | null = currentMemberId
 ): TodoCsvParseResult {
   const table = parseCsvText(text);
   if (table.length === 0) {
@@ -323,9 +335,11 @@ export function parseTodoCsv(
     const emoji = emojiRaw && EMOJI_PATTERN.test(emojiRaw) ? emojiRaw : DEFAULT_EMOJI;
 
     const assignedLabel = (assignedCol !== undefined ? cells[assignedCol] : "")?.trim() ?? "";
-    let assignedTo: Id = currentMemberId;
+    let assignedTo: Id | null = defaultAssignee;
     let unresolvedAssigneeLabel: string | null = null;
-    if (assignedLabel && assignedLabel.toLowerCase() !== SELF_LABEL.toLowerCase()) {
+    if (assignedLabel && assignedLabel.toLowerCase() === FAMILY_LABEL.toLowerCase()) {
+      assignedTo = null;
+    } else if (assignedLabel && assignedLabel.toLowerCase() !== SELF_LABEL.toLowerCase()) {
       const matches = members.filter(
         (m) => m.deletedAt === null && m.name.toLowerCase() === assignedLabel.toLowerCase()
       );
@@ -345,10 +359,12 @@ export function parseTodoCsv(
       }
     }
 
-    // En olöst rad är inte "jag själv" (den väntar på att mappas till en riktig
-    // medlem, troligen ett barn) — annars skulle Stjärnor/Timer nollställas
-    // innan mappningen ens gjorts.
-    const isSelf = assignedTo === currentMemberId && !unresolvedAssigneeLabel;
+    // En olöst rad är inte "jag själv"/"Familjen" (den väntar på att mappas
+    // till en riktig medlem, troligen ett barn) — annars skulle Stjärnor/
+    // Timer nollställas innan mappningen ens gjorts. En familje-uppgift
+    // (assignedTo: null) nollställs av samma anledning som "mig själv" —
+    // ingen specifik mottagare att belöna med stjärnor.
+    const isSelf = (assignedTo === currentMemberId || assignedTo === null) && !unresolvedAssigneeLabel;
     // Kategori gäller nu VILKEN mottagare som helst (2026-07-08, ADR-0020,
     // Zaidas beslut: "kategorierna kan vara samma, vi behöver ingen
     // rutinkategori, det räcker med kategori") — tidigare gällde det bara

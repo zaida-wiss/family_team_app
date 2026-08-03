@@ -2,8 +2,10 @@ import { MemberOverview } from "../features/layout/MemberOverview";
 import type { CalendarFilter } from "../features/calendars/CalendarView";
 import type { CrossAccountRecipes } from "../api/recipes";
 import type { FamilyThreadSource } from "../features/todos/FamilyTodoThreads";
+import type { ImportResult, ImportUndo } from "../features/todos/useTodosState";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
+  Todo, TodoCategory
 } from "@shared/types";
 
 type Props = {
@@ -50,6 +52,18 @@ type Props = {
   // konto eller Mina familjekonton, se MemberShellContent.tsx.
   onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
   shoppingCreatableFamilyAccountIds?: Set<Id>;
+  // Sökruta/plus-knapp/import-export i Todos-fliken (2026-08-03) — se
+  // MemberOverview.tsx.
+  members?: Member[];
+  categories?: TodoCategory[];
+  onCreateCategory?: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
+  onCreateTodo?: (todo: Todo) => void;
+  onUpdateTodo?: (todoId: Id, patch: Partial<Todo>) => void;
+  onDeleteTodo?: (todoId: Id) => void;
+  todoImportResult?: ImportResult | null;
+  onSetTodoImportResult?: (result: ImportResult | null) => void;
+  todoImportUndo?: ImportUndo | null;
+  onSetTodoImportUndo?: (undo: ImportUndo | null) => void;
   // "vald vuxen"-vyn (Medlemmar-panelen) sätter false — se MemberOverview.tsx.
   enableTabs?: boolean;
 };
@@ -61,7 +75,10 @@ export function HomePage({
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
   familyThreadSources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize,
-  onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds, enableTabs
+  onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
+  members, categories, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
+  todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
+  enableTabs
 }: Props) {
   return (
     <MemberOverview
@@ -99,6 +116,16 @@ export function HomePage({
       todoBubbleSize={todoBubbleSize}
       onCreateFamilyShoppingList={onCreateFamilyShoppingList}
       shoppingCreatableFamilyAccountIds={shoppingCreatableFamilyAccountIds}
+      members={members}
+      categories={categories}
+      onCreateCategory={onCreateCategory}
+      onCreateTodo={onCreateTodo}
+      onUpdateTodo={onUpdateTodo}
+      onDeleteTodo={onDeleteTodo}
+      todoImportResult={todoImportResult}
+      onSetTodoImportResult={onSetTodoImportResult}
+      todoImportUndo={todoImportUndo}
+      onSetTodoImportUndo={onSetTodoImportUndo}
       enableTabs={enableTabs}
     />
   );

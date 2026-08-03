@@ -24,7 +24,12 @@ todoCategoriesRouter.get("/", async (req, res) => {
 
 todoCategoriesRouter.post("/", async (req, res) => {
   const memberId = requireMemberId(req.memberId);
-  const category = await todoCategories.createCategory(req.accountId!, memberId, req.body?.name ?? "");
+  const category = await todoCategories.createCategory(
+    req.accountId!,
+    memberId,
+    req.body?.name ?? "",
+    Boolean(req.body?.isFamily)
+  );
   res.status(201).json(category);
 });
 

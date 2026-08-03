@@ -496,6 +496,10 @@ export function TodoCreatorModal({
             </>
           )}
 
+          {/* Familjekategorier (isFamily:true, 2026-08-03) exkluderade —
+              den här modalen skapar en uppgift åt en SPECIFIK mottagare,
+              en familjekategoris uppgifter hör bara hemma i Hem-vyns
+              familjeflik (FamilyTodoThreads.tsx), assignedTo alltid null. */}
           <label className="field-label">
             Kategori
             <select
@@ -504,7 +508,7 @@ export function TodoCreatorModal({
               value={selectedCategoryId}
             >
               <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
-              {categories.map((category) => (
+              {categories.filter((category) => !category.isFamily).map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>

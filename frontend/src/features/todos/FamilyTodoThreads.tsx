@@ -48,6 +48,17 @@ export type FamilyThreadSource = {
   onToggleInProgress?: (todoId: Id, targetMemberId: Id) => void;
   onToggleSubtask?: (todoId: Id, subtaskId: Id) => void;
   onCreateTodo?: (title: string, visual: string | null) => void;
+  // Massradering + kategorihantering (2026-08-03, Zaidas önskemål: "kunna
+  // massradera enkelt, utan att jag råkar göra det i misstag" + riktiga
+  // familjekategorier) — bara satt för LOKALA konton (Familjen-poolen och
+  // egna familjekategorier). Aldrig satt för cross-account/anslutnings-
+  // trådar (att radera en annan familjs uppgift från min vy stöds inte).
+  onDeleteTodo?: (todoId: Id) => void;
+  // Bara satt för riktiga familjekategorier, aldrig för den fasta
+  // Familjen-poolen eller Barn-liknande specialtrådar.
+  onRenameCategory?: (name: string) => void;
+  onDeleteCategory?: () => void;
+  onHideCategory?: () => void;
 };
 
 type Props = {
@@ -56,9 +67,19 @@ type Props = {
   onReorderBubbles: (threadId: Id, order: Id[]) => void;
   todoThreadGap?: number;
   todoBubbleSize?: number;
+  // Sökruta i MemberOverview.tsx (2026-08-03) — filtrerar bubblorna i ALLA
+  // trådar på titel, case-insensitive. Tom sträng = inget filter.
+  searchQuery?: string;
 };
 
-export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize }: Props) {
+export function FamilyTodoThreads({
+  sources,
+  todoBubbleOrder,
+  onReorderBubbles,
+  todoThreadGap,
+  todoBubbleSize,
+  searchQuery = ""
+}: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
   const suppressClickRef = useRef(false);
@@ -80,6 +101,23 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
   const categoryTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [addingToThreadId, setAddingToThreadId] = useState<Id | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState("");
+
+  // Massradering (2026-08-03) — egen, separat lägesstate (inte
+  // editingThreadId, som styr drag-omordning) så de två aldrig krockar,
+  // samma mönster som ParentTodoThreadView.tsx:s "Mina uppgifter"-tråd.
+  const [selectingThreadId, setSelectingThreadId] = useState<Id | null>(null);
+  const [selectedTodoIds, setSelectedTodoIds] = useState<Set<Id>>(new Set());
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
+
+  // Byt namn på en familjekategori (2026-08-03) — inline-formulär i samma
+  // stil som "Lägg till uppgift"-formuläret nedan, inte en separat modal.
+  const [renamingThreadId, setRenamingThreadId] = useState<Id | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Radera en familjekategori (2026-08-03) — tvåstegsbekräftelse INUTI
+  // kategorimenyn (samma "tryck igen för att bekräfta"-princip som resten
+  // av appens destruktiva knappar), återställs så fort menyn stängs.
+  const [confirmingDeleteThreadId, setConfirmingDeleteThreadId] = useState<Id | null>(null);
 
   const bubbleDragStateRef = useRef<{ threadId: Id; key: Id; x: number; y: number } | null>(null);
   const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
@@ -104,6 +142,7 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
     function handleOutsideClick(e: MouseEvent) {
       if (menuRef.current?.contains(e.target as Node)) return;
       setMenuThreadId(null);
+      setConfirmingDeleteThreadId(null);
     }
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
@@ -265,6 +304,76 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
     setNewTodoTitle("");
   }
 
+  // Massradering (2026-08-03) — "Välj flera" i kategorimenyn, tryck på en
+  // bubbla för att kryssa i/ur, en åtgärdsrad visar antal valda + en
+  // tvåstegsbekräftad "Ta bort"-knapp innan något faktiskt raderas.
+  function startSelecting(threadId: Id) {
+    setMenuThreadId(null);
+    setSelectingThreadId(threadId);
+    setSelectedTodoIds(new Set());
+    setConfirmingBulkDelete(false);
+  }
+
+  function handleCancelSelecting() {
+    setSelectingThreadId(null);
+    setSelectedTodoIds(new Set());
+    setConfirmingBulkDelete(false);
+  }
+
+  function toggleSelectedTodo(todoId: Id) {
+    setSelectedTodoIds((current) => {
+      const next = new Set(current);
+      if (next.has(todoId)) next.delete(todoId);
+      else next.add(todoId);
+      return next;
+    });
+  }
+
+  function handleBulkDeleteClick(source: FamilyThreadSource) {
+    if (selectedTodoIds.size === 0) return;
+    if (!confirmingBulkDelete) {
+      setConfirmingBulkDelete(true);
+      return;
+    }
+    for (const todoId of selectedTodoIds) {
+      source.onDeleteTodo?.(todoId);
+    }
+    handleCancelSelecting();
+  }
+
+  // Byt namn på en familjekategori (2026-08-03).
+  function startRename(source: FamilyThreadSource) {
+    setMenuThreadId(null);
+    setRenamingThreadId(source.id);
+    setRenameValue(source.label);
+  }
+
+  function submitRename(source: FamilyThreadSource) {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== source.label) {
+      source.onRenameCategory?.(trimmed);
+    }
+    setRenamingThreadId(null);
+  }
+
+  // Radera en familjekategori — tvåstegsbekräftelse inuti menyn (stannar
+  // öppen mellan de två klicken, återställs annars vid utsidesklick, se
+  // useEffect ovan).
+  function handleDeleteCategoryClick(source: FamilyThreadSource) {
+    if (confirmingDeleteThreadId !== source.id) {
+      setConfirmingDeleteThreadId(source.id);
+      return;
+    }
+    source.onDeleteCategory?.();
+    setMenuThreadId(null);
+    setConfirmingDeleteThreadId(null);
+  }
+
+  function handleHideCategoryFromMenu(source: FamilyThreadSource) {
+    setMenuThreadId(null);
+    source.onHideCategory?.();
+  }
+
   return (
     <div
       className="todo-thread-view"
@@ -277,11 +386,16 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
     >
       {sources.map((source) => {
         const showExpired = showExpiredThreadIds.has(source.id);
+        const query = searchQuery.trim().toLowerCase();
         const baseTodos = source.todos.filter(
-          (t) => (t.status === "pending" || (t.status === "expired" && showExpired)) || dissolving.has(t.id)
+          (t) =>
+            ((t.status === "pending" || (t.status === "expired" && showExpired)) || dissolving.has(t.id)) &&
+            (!query || t.title.toLowerCase().includes(query))
         );
         const threadTodos = applyBubbleOrder(sortByEndThenStartTime(baseTodos), todoBubbleOrder[source.id]);
         const isEditing = editingThreadId === source.id;
+        const isSelecting = selectingThreadId === source.id;
+        const isRenaming = renamingThreadId === source.id;
 
         return (
           <section
@@ -291,18 +405,37 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
             key={source.id}
           >
             <div className="todo-thread__header">
-              <h3 className="todo-thread__category">
-                <button
-                  aria-expanded={menuThreadId === source.id}
-                  aria-label={`${source.label}. Klicka för fler val, tre snabba tryck för att växla flyttläge.`}
-                  aria-pressed={isEditing}
-                  className="todo-thread__category-button"
-                  onClick={(e) => handleThreadHeaderClick(source, e)}
-                  type="button"
+              {isRenaming ? (
+                <form
+                  className="todo-thread__add-form"
+                  onSubmit={(e) => { e.preventDefault(); submitRename(source); }}
                 >
-                  {source.label}
-                </button>
-              </h3>
+                  <input
+                    aria-label={`Nytt namn för ${source.label}`}
+                    autoFocus
+                    className="text-input"
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    value={renameValue}
+                  />
+                  <button className="secondary-button" type="submit">Spara</button>
+                  <button className="secondary-button" onClick={() => setRenamingThreadId(null)} type="button">
+                    Avbryt
+                  </button>
+                </form>
+              ) : (
+                <h3 className="todo-thread__category">
+                  <button
+                    aria-expanded={menuThreadId === source.id}
+                    aria-label={`${source.label}. Klicka för fler val, tre snabba tryck för att växla flyttläge.`}
+                    aria-pressed={isEditing}
+                    className="todo-thread__category-button"
+                    onClick={(e) => handleThreadHeaderClick(source, e)}
+                    type="button"
+                  >
+                    {source.label}
+                  </button>
+                </h3>
+              )}
 
               {menuThreadId === source.id &&
                 createPortal(
@@ -319,10 +452,47 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
                     <button onClick={() => handleToggleExpiredFromMenu(source.id)} type="button">
                       {showExpiredThreadIds.has(source.id) ? "Dölj utgångna" : "Visa utgångna"}
                     </button>
+                    {source.onDeleteTodo && (
+                      <button onClick={() => startSelecting(source.id)} type="button">
+                        Välj flera
+                      </button>
+                    )}
+                    {source.onRenameCategory && (
+                      <button onClick={() => startRename(source)} type="button">
+                        Byt namn
+                      </button>
+                    )}
+                    {source.onHideCategory && (
+                      <button onClick={() => handleHideCategoryFromMenu(source)} type="button">
+                        Göm
+                      </button>
+                    )}
+                    {source.onDeleteCategory && (
+                      <button onClick={() => handleDeleteCategoryClick(source)} type="button">
+                        {confirmingDeleteThreadId === source.id ? "Bekräfta radering" : "Radera"}
+                      </button>
+                    )}
                   </div>,
                   document.body
                 )}
             </div>
+
+            {isSelecting && (
+              <div className="todo-thread__select-bar">
+                <span className="todo-thread__select-count">{selectedTodoIds.size} valda</span>
+                <button
+                  className="todo-thread__select-remove danger-button"
+                  disabled={selectedTodoIds.size === 0}
+                  onClick={() => handleBulkDeleteClick(source)}
+                  type="button"
+                >
+                  {confirmingBulkDelete ? "Bekräfta radering" : "Ta bort"}
+                </button>
+                <button onClick={handleCancelSelecting} type="button">
+                  Avbryt
+                </button>
+              </div>
+            )}
 
             {threadTodos.length > 0 ? (
               <ul className="todo-thread__list">
@@ -362,7 +532,9 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
                     >
                       <button
                         aria-label={
-                          isEditing
+                          isSelecting
+                            ? `${todo.title}${selectedTodoIds.has(todo.id) ? ", vald" : ""}. Tryck för att välja/avmarkera.`
+                            : isEditing
                             ? `${todo.title}. Håll och dra för att flytta ordningen inom ${source.label}.`
                             : `${todo.title}, tilldelad ${assignee}` +
                               (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +
@@ -372,23 +544,37 @@ export function FamilyTodoThreads({ sources, todoBubbleOrder, onReorderBubbles, 
                               ". Håll intryckt i två sekunder för att markera hela uppgiften klar." +
                               (source.onToggleInProgress ? " Dubbeltryck för att signa upp dig." : "")
                         }
+                        aria-pressed={isSelecting ? selectedTodoIds.has(todo.id) : undefined}
                         className={
                           "todo-thread__ball todo-thread__ball--home todo-thread__ball--small" +
                           (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                           (isDissolving ? " todo-thread__ball--dissolving" : "") +
                           (inProgressColor ? " todo-thread__ball--in-progress" : "") +
-                          (isEditing ? " todo-thread__ball--edit" : "")
+                          (isEditing ? " todo-thread__ball--edit" : "") +
+                          (isSelecting && selectedTodoIds.has(todo.id) ? " todo-thread__ball--selected" : "")
                         }
                         disabled={isDissolving}
-                        onClick={(e) => { if (!isEditing) handleBallClick(source, todo, e); }}
-                        onPointerCancel={() => { if (isEditing) { handleBubblePointerUp(threadTodos); return; } clearHold(); }}
+                        onClick={(e) => {
+                          if (isSelecting) { toggleSelectedTodo(todo.id); return; }
+                          if (!isEditing) handleBallClick(source, todo, e);
+                        }}
+                        onPointerCancel={() => {
+                          if (isSelecting) return;
+                          if (isEditing) { handleBubblePointerUp(threadTodos); return; }
+                          clearHold();
+                        }}
                         onPointerDown={(e) => {
+                          if (isSelecting) return;
                           if (isEditing) { handleBubblePointerDown(e, source.id, bubbleKey); return; }
                           startHold(todo.id, () => handleConfirmComplete(source, todo));
                         }}
-                        onPointerLeave={isEditing ? undefined : clearHold}
-                        onPointerMove={isEditing ? handleBubblePointerMove : undefined}
-                        onPointerUp={() => { if (isEditing) { handleBubblePointerUp(threadTodos); return; } clearHold(); }}
+                        onPointerLeave={isSelecting || isEditing ? undefined : clearHold}
+                        onPointerMove={!isSelecting && isEditing ? handleBubblePointerMove : undefined}
+                        onPointerUp={() => {
+                          if (isSelecting) return;
+                          if (isEditing) { handleBubblePointerUp(threadTodos); return; }
+                          clearHold();
+                        }}
                         title={todo.title}
                         type="button"
                       >

@@ -3,10 +3,10 @@ import { api, request } from "./client";
 
 export const todoCategoriesApi = {
   getAll: () => request<TodoCategory[]>(api("todo-categories")),
-  create: (name: string) =>
+  create: (name: string, isFamily = false) =>
     request<TodoCategory>(api("todo-categories"), {
       method: "POST",
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, isFamily })
     }),
   rename: (id: Id, name: string) =>
     request<{ ok: boolean }>(api(`todo-categories/${id}`), {

@@ -12,6 +12,8 @@ const todoCategorySchema = new Schema<TodoCategory>({
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
   hidden: { type: Boolean, default: false },
+  // Familjekategori (2026-08-03) — se shared/types.ts:s kommentar.
+  isFamily: { type: Boolean, default: false },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });

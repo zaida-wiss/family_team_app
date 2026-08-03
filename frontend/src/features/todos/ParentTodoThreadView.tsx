@@ -593,7 +593,9 @@ export function ParentTodoThreadView({
     // tråd-vyns KOLUMNER visar fortsatt bara MINA egna — annars skulle varje
     // vuxens personliga trådar dyka upp som tomma kolumner hos alla andra,
     // vilket varken efterfrågats eller önskvärt (bryter mot minimalism-principen).
-    const myCategories = categories.filter((c) => c.memberId === currentMember.id);
+    // Familjekategorier (2026-08-03, isFamily:true) hör hemma i Hem-vyn
+    // (FamilyTodoThreads.tsx), aldrig här — annars skulle de dyka upp dubbelt.
+    const myCategories = categories.filter((c) => c.memberId === currentMember.id && !c.isFamily);
     const categoryThreads: Thread[] = myCategories.filter((c) => !c.hidden).map((category, index) => {
       const showExpired = showExpiredThreadIds.has(category.id);
       const categoryBaseTodos = visibleTodos.filter(

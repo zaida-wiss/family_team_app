@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckSquare, Plus, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { CalendarDays, CheckSquare, Plus, Search, ShoppingCart, Upload, UtensilsCrossed } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -10,9 +10,12 @@ import type { FamilyThreadSource } from "../todos/FamilyTodoThreads";
 import { SharedChildrenThreads } from "../todos/SharedChildrenThreads";
 import { SharedShoppingLists } from "../shopping/SharedShoppingLists";
 import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
+import { TodoImportExport } from "../todos/TodoImportExport";
+import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList
+  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
+  Todo, TodoCategory
 } from "@shared/types";
 import styles from "./MemberOverview.module.css";
 
@@ -91,6 +94,22 @@ type Props = {
   // göra inköpslistor i familjer man inte är medlem i").
   onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
   shoppingCreatableFamilyAccountIds?: Set<Id>;
+  // Sökruta + "+"-knapp (ny familjekategori) + massimport/export av
+  // familjens uppgifter (2026-08-03, Zaidas önskemål: "en sökruta och en
+  // plusknapp där jag kan lägga till kategorier och uppgifter... kunna
+  // massimportera och exportera, samt kunna massradera") — bara relevant
+  // för MITT EGET konto (isOwnFamilySelected nedan), aldrig en annan familj
+  // jag bara tittar på.
+  members?: Member[];
+  categories?: TodoCategory[];
+  onCreateCategory?: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
+  onCreateTodo?: (todo: Todo) => void;
+  onUpdateTodo?: (todoId: Id, patch: Partial<Todo>) => void;
+  onDeleteTodo?: (todoId: Id) => void;
+  todoImportResult?: ImportResult | null;
+  onSetTodoImportResult?: (result: ImportResult | null) => void;
+  todoImportUndo?: ImportUndo | null;
+  onSetTodoImportUndo?: (undo: ImportUndo | null) => void;
   // Flik-/familjeväljaren gäller bara den RIKTIGA Hem-översikten (2026-08-01,
   // fynd vid samma dags Todos/familjevy-arbete) — "vald vuxen"-vyn
   // (MemberShellContent.tsx, en annan medlems kalender via Medlemmar-panelen)
@@ -134,12 +153,28 @@ export function MemberOverview({
   todoBubbleSize,
   onCreateFamilyShoppingList,
   shoppingCreatableFamilyAccountIds,
+  members = [],
+  categories = [],
+  onCreateCategory,
+  onCreateTodo,
+  onUpdateTodo,
+  onDeleteTodo,
+  todoImportResult = null,
+  onSetTodoImportResult,
+  todoImportUndo = null,
+  onSetTodoImportUndo,
   enableTabs = true,
 }: Props) {
   const ownAccountId = currentMember.accountId;
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
   const [activeTab, setActiveTab] = useState<HomeTab>("calendar");
   const [newListName, setNewListName] = useState("");
+  // Sökruta + "+"-knapp (ny familjekategori) + import/export-panel
+  // (2026-08-03) — se Props-kommentaren ovan.
+  const [todoSearchQuery, setTodoSearchQuery] = useState("");
+  const [addingFamilyCategory, setAddingFamilyCategory] = useState(false);
+  const [newFamilyCategoryName, setNewFamilyCategoryName] = useState("");
+  const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
 
   function setSelectedFamilyId(id: Id | "all") {
     setSelectedFamilyIdState(id);
@@ -188,6 +223,15 @@ export function MemberOverview({
   const pendingTodoCount = filteredThreadSources.reduce(
     (sum, s) => sum + s.todos.filter((t) => t.status === "pending").length,
     0
+  );
+  // Massimport/export (2026-08-03) — bara MITT EGET kontos familje-trådar
+  // (Familjen-poolen + egna familjekategorier), oavsett vilket familjeval
+  // som råkar vara aktivt i filtret ovan (own/familyCategoryThreads i
+  // MemberShellContent.tsx delar redan upp homeVisibleTodos utan
+  // dubbelräkning — flatMap:as här tillbaka till en enda lista).
+  const localFamilyTodos = useMemo(
+    () => familyThreadSources.filter((s) => s.accountId === ownAccountId).flatMap((s) => s.todos),
+    [familyThreadSources, ownAccountId]
   );
   // Mitt eget konto + Mina familjekonton (genuint medlemskap, "vem håller på
   // med den här" tillgänglig) — en Familjeanslutning har aldrig
@@ -327,11 +371,93 @@ export function MemberOverview({
             )}
           </header>
 
+          {/* Sökruta + "+" (ny familjekategori) + import/export (2026-08-03)
+              — bara för mitt EGET konto, aldrig en annan familj jag bara
+              tittar på via filtret ovan. */}
+          {isOwnFamilySelected && onCreateCategory && (
+            <div className={styles.homeQuickAdd}>
+              <label aria-label="Sök bland familjens uppgifter" className={styles.todoSearchLabel}>
+                <Search aria-hidden="true" size={16} />
+                <input
+                  className="text-input"
+                  onChange={(e) => setTodoSearchQuery(e.target.value)}
+                  placeholder="Sök bland familjens uppgifter…"
+                  type="search"
+                  value={todoSearchQuery}
+                />
+              </label>
+              <button
+                aria-label="Ny familjekategori"
+                className="icon-button"
+                onClick={() => { setAddingFamilyCategory((v) => !v); setNewFamilyCategoryName(""); }}
+                title="Ny familjekategori"
+                type="button"
+              >
+                <Plus size={18} />
+              </button>
+              <button
+                aria-expanded={showFamilyImportExport}
+                aria-label="Importera/exportera familjens uppgifter"
+                className="icon-button"
+                onClick={() => setShowFamilyImportExport((v) => !v)}
+                title="Importera/exportera"
+                type="button"
+              >
+                <Upload size={18} />
+              </button>
+            </div>
+          )}
+
+          {addingFamilyCategory && onCreateCategory && (
+            <form
+              className={styles.homeQuickAdd}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const trimmed = newFamilyCategoryName.trim();
+                if (!trimmed) return;
+                onCreateCategory(trimmed, true);
+                setNewFamilyCategoryName("");
+                setAddingFamilyCategory(false);
+              }}
+            >
+              <input
+                aria-label="Namn på ny familjekategori"
+                autoFocus
+                className="text-input"
+                onChange={(e) => setNewFamilyCategoryName(e.target.value)}
+                placeholder="Namn på ny familjekategori…"
+                value={newFamilyCategoryName}
+              />
+              <button aria-label="Skapa familjekategori" className="icon-button" type="submit">
+                <Plus size={18} />
+              </button>
+            </form>
+          )}
+
+          {isOwnFamilySelected && showFamilyImportExport && onCreateTodo && onUpdateTodo && onDeleteTodo && onCreateCategory && (
+            <TodoImportExport
+              categories={categories}
+              currentMember={currentMember}
+              lastImportUndo={todoImportUndo ?? null}
+              members={members}
+              onCreateCategory={onCreateCategory}
+              onCreateTodo={onCreateTodo}
+              onDeleteTodo={onDeleteTodo}
+              onUpdateTodo={onUpdateTodo}
+              result={todoImportResult ?? null}
+              scope="family"
+              setLastImportUndo={onSetTodoImportUndo ?? (() => {})}
+              setResult={onSetTodoImportResult ?? (() => {})}
+              todos={localFamilyTodos}
+            />
+          )}
+
           {filteredThreadSources.length === 0 ? (
             <p className="empty-note">Inget väntar just nu.</p>
           ) : (
             <FamilyTodoThreads
               onReorderBubbles={onReorderBubbles}
+              searchQuery={todoSearchQuery}
               sources={filteredThreadSources}
               todoBubbleOrder={todoBubbleOrder}
               todoBubbleSize={todoBubbleSize}

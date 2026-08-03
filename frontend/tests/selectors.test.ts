@@ -47,32 +47,51 @@ describe("getMyTodosViewTodos", () => {
   });
 });
 
+const personalCategory = {
+  id: "cat-1",
+  accountId: "account-family",
+  memberId: me.id,
+  name: "Hushåll",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  deletedAt: null,
+  deletedBy: null
+};
+const familyCategory = { ...personalCategory, id: "cat-family", isFamily: true };
+
 describe("getFamilyViewTodos", () => {
   test("en Familjen-todo (assignedTo: null) visas", () => {
     const todo = createTodo({ assignedTo: null, personalCategoryId: null });
-    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child])).toEqual([todo]);
+    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child], [])).toEqual([todo]);
   });
 
   test("en todo tilldelad VILKEN VUXEN SOM HELST visas (inte bara mig)", () => {
     const mine = createTodo({ id: "todo-a", assignedTo: me.id, personalCategoryId: null });
     const others = createTodo({ id: "todo-b", assignedTo: otherAdult.id, personalCategoryId: null });
-    const result = getFamilyViewTodos([mine, others], roles, [me, otherAdult, child]);
+    const result = getFamilyViewTodos([mine, others], roles, [me, otherAdult, child], []);
     expect(result.map((t) => t.id)).toEqual(["todo-a", "todo-b"]);
   });
 
   test("en todo tilldelad ett barn visas INTE (bara 'alla vuxna')", () => {
     const todo = createTodo({ assignedTo: child.id, personalCategoryId: null });
-    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child])).toEqual([]);
+    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child], [])).toEqual([]);
   });
 
-  test("en todo med en personlig kategori visas ALDRIG, oavsett vem den är tilldelad", () => {
+  test("en todo med en PERSONLIG kategori visas ALDRIG, oavsett vem den är tilldelad", () => {
     const assignedToMe = createTodo({ id: "todo-a", assignedTo: me.id, personalCategoryId: "cat-1" });
     const unassigned = createTodo({ id: "todo-b", assignedTo: null, personalCategoryId: "cat-1" });
-    expect(getFamilyViewTodos([assignedToMe, unassigned], roles, [me, otherAdult, child])).toEqual([]);
+    expect(getFamilyViewTodos([assignedToMe, unassigned], roles, [me, otherAdult, child], [personalCategory])).toEqual([]);
+  });
+
+  // 2026-08-03, Zaidas önskemål om riktiga familjekategorier — en todo vars
+  // personalCategoryId pekar på en kategori med isFamily:true hör hemma i
+  // familjevyn, till skillnad från en personlig kategori (testet ovan).
+  test("en todo med en FAMILJEKATEGORI (isFamily:true) visas", () => {
+    const todo = createTodo({ assignedTo: null, personalCategoryId: "cat-family" });
+    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child], [familyCategory])).toEqual([todo]);
   });
 
   test("en mjuk-raderad todo visas aldrig", () => {
     const todo = createTodo({ assignedTo: null, personalCategoryId: null, deletedAt: "2026-07-31T00:00:00.000Z" });
-    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child])).toEqual([]);
+    expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child], [])).toEqual([]);
   });
 });

@@ -27,7 +27,7 @@ export async function getAllCategories(accountId: string) {
   ).sort({ createdAt: 1 });
 }
 
-export async function createCategory(accountId: string, memberId: string, name: string) {
+export async function createCategory(accountId: string, memberId: string, name: string, isFamily = false) {
   await requireAdultMember(memberId, accountId);
   const trimmed = name.trim();
   if (!trimmed) {
@@ -39,6 +39,7 @@ export async function createCategory(accountId: string, memberId: string, name: 
     memberId,
     name: trimmed,
     createdAt: new Date().toISOString(),
+    isFamily,
     deletedAt: null,
     deletedBy: null
   });

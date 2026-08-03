@@ -189,6 +189,14 @@ export function useShellState(
     onRenameCategory: renameTodoCategory,
     onRemoveCategory: removeTodoCategory,
     onSetCategoryHidden: setTodoCategoryHidden,
+    // Massimport/export av familjens uppgifter i Hem-vyn (2026-08-03, Zaidas
+    // önskemål) — samma undo/resultat-state som Inställningars personliga
+    // import/export (useTodosState.ts), delad så "Ångra senaste import"
+    // fungerar oavsett vilken av de två man senast använde.
+    todoImportResult: lastImportResult,
+    onSetTodoImportResult: setLastImportResult,
+    todoImportUndo: lastImportUndo,
+    onSetTodoImportUndo: setLastImportUndo,
     // Mallbibliotek (2026-07-08) — läses in i tråd-vyn/skapa-modalen (Hämta
     // från mall) och skrivs till från tråd-vyns "Spara som mall"-menyval.
     taskTemplates,

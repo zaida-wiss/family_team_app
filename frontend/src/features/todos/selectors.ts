@@ -1,4 +1,4 @@
-import type { Id, Member, Role, Todo, TodoThreadRange } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory, TodoThreadRange } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
@@ -106,15 +106,26 @@ export function getMyTodosViewTodos(
 // familjen eller alla (vuxna) skall visas i familjevyn. Mina privata
 // todos... skall inte visas i familjevyns todo.") — familjen (assignedTo:
 // null) ELLER tilldelad en VUXEN (vem som helst, inte bara jag), men ALDRIG
-// en todo med en personlig kategori satt (personalCategoryId) — en
-// personlig kategori är per definition ett privat organiseringsverktyg i
-// den här appen (tråd-vyns kolumner visar redan bara ägarens EGNA
-// kategorier, aldrig andras), oavsett vem uppgiften råkar vara tilldelad.
-// Barnens tilldelade uppgifter räknas medvetet INTE som "alla (vuxna)".
-export function getFamilyViewTodos(todos: Todo[], roles: Role[], members: Member[]): Todo[] {
+// en todo med en PERSONLIG kategori satt (personalCategoryId) — en personlig
+// kategori är per definition ett privat organiseringsverktyg (tråd-vyns
+// kolumner visar bara ägarens EGNA kategorier, aldrig andras). Barnens
+// tilldelade uppgifter räknas medvetet INTE som "alla (vuxna)".
+//
+// 2026-08-03 utökad med riktiga familjekategorier (Zaidas önskemål: "lägga
+// till kategorier... i familjevyn") — en todo vars personalCategoryId pekar
+// på en KATEGORI MED isFamily:true hör hemma här (en egen tråd per
+// familjekategori, se MemberShellContent.tsx), till skillnad från en
+// personlig kategori som fortsatt utesluts helt.
+export function getFamilyViewTodos(
+  todos: Todo[],
+  roles: Role[],
+  members: Member[],
+  categories: TodoCategory[]
+): Todo[] {
+  const familyCategoryIds = new Set(categories.filter((c) => c.isFamily).map((c) => c.id));
   return todos.filter((todo) => {
     if (todo.deletedAt !== null) return false;
-    if (todo.personalCategoryId != null) return false;
+    if (todo.personalCategoryId != null && !familyCategoryIds.has(todo.personalCategoryId)) return false;
     if (todo.assignedTo === null) return true;
     return !isChildMember(members.find((m) => m.id === todo.assignedTo), roles);
   });

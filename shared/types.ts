@@ -991,6 +991,15 @@ export type TodoCategory = {
   // helst via Inställningar. Valfritt/saknas = inte gömd (bakåtkompatibelt,
   // ingen migrering av befintliga kategorier behövs).
   hidden?: boolean;
+  // Familjekategori (2026-08-03, Zaidas önskemål: "lägga till kategorier...
+  // dela den hooken med todo i min personliga vy") — samma TodoCategory-
+  // modell/CRUD-hook återanvänd rakt av, `memberId` förblir alltid skaparen
+  // (metadata, ingen åtkomstspärr, se ADR-0019). Valfritt/saknas = en vanlig
+  // personlig kategori (bakåtkompatibelt, ingen migrering behövs). En
+  // familjekategoris uppgifter är alltid `assignedTo: null` (Familjen),
+  // visas som en egen tråd i Hem-vyn istället för i den personliga
+  // Todos-panelen — se getFamilyViewTodos (selectors.ts).
+  isFamily?: boolean;
   deletedAt: string | null;
   deletedBy: Id | null;
 };

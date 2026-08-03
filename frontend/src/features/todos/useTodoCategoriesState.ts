@@ -22,8 +22,8 @@ export function useTodoCategoriesState() {
     writeCache(TODO_CATEGORIES_CACHE_KEY, categories);
   }, [categories]);
 
-  function createCategory(name: string) {
-    return todoCategoriesApi.create(name).then((category) => {
+  function createCategory(name: string, isFamily = false) {
+    return todoCategoriesApi.create(name, isFamily).then((category) => {
       setCategories((current) => [...current, category]);
       return category;
     });

@@ -129,7 +129,12 @@ describe("todoCsv", () => {
     expect(new Date(rows[0].expiresAt!).getDate()).toBe(11);
   });
 
-  test("todosToCsv exporterar egna todos INKLUSIVE återkommande mallar, men inte occurrences/andras/raderade", () => {
+  // 2026-08-03: todosToCsv:s egen assignedTo/createdBy-filtrering togs bort
+  // (var av misstag för snäv för familje-scope, se todoCsv.ts) — funktionen
+  // exporterar nu exakt det som skickas in (bara deletedAt/recurringSourceId
+  // filtreras internt), CALLERN (TodoImportExport.tsx:s kryssrutor,
+  // ParentTodoThreadView.tsx:s per-kategori-export) ansvarar för resten.
+  test("todosToCsv exporterar INKLUSIVE återkommande mallar och andras uppgifter, men inte occurrences/raderade", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const todos = [
       createTodo({ id: "t1", title: "Min uppgift", createdBy: "mem-1", assignedTo: "mem-1", starValue: 0, notes: "Anteckning" }),
@@ -142,7 +147,30 @@ describe("todoCsv", () => {
     const csv = todosToCsv(todos, members, "mem-1", []);
     const table = parseCsvText(csv);
     const titles = table.slice(1).map((row) => row[0]);
-    expect(titles).toEqual(["Min uppgift", "Återkommande mall"]);
+    expect(titles).toEqual(["Min uppgift", "Annans uppgift", "Återkommande mall"]);
+  });
+
+  test("todosToCsv skriver Familjen som Tilldelad-etikett för en otilldelad uppgift", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const todo = createTodo({ id: "t1", title: "Handla mat", createdBy: "mem-1", assignedTo: null });
+    const csv = todosToCsv([todo], members, "mem-1", []);
+    const table = parseCsvText(csv);
+    const assignedCol = table[0].indexOf("Tilldelad");
+    expect(table[1][assignedCol]).toBe("Familjen");
+  });
+
+  test("parseTodoCsv: en tom Tilldelad-cell använder defaultAssignee (null för familje-import)", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = "Titel,Tilldelad\r\nDiska,\r\n";
+    const { rows } = parseTodoCsv(csv, members, [], "mem-1", null);
+    expect(rows[0].assignedTo).toBeNull();
+  });
+
+  test("parseTodoCsv: en Familjen-cell resolvear alltid till null, oavsett defaultAssignee", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = "Titel,Tilldelad\r\nDiska,Familjen\r\n";
+    const { rows } = parseTodoCsv(csv, members, [], "mem-1", "mem-1");
+    expect(rows[0].assignedTo).toBeNull();
   });
 
   test("todosToCsv → parseTodoCsv tur och retur bevarar återkommelse (enhet, intervall, veckodagar)", () => {

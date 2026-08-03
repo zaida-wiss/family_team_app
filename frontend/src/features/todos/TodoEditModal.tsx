@@ -439,6 +439,8 @@ export function TodoEditModal({
           </div>
           {isTitleMissing && <p className="field-hint">Titel krävs.</p>}
 
+          {/* Familjekategorier (isFamily:true, 2026-08-03) exkluderade — se
+              samma resonemang i TodoCreatorModal.tsx. */}
           <label className="field-label">
             Kategori
             <select
@@ -447,7 +449,7 @@ export function TodoEditModal({
               value={selectedCategoryId}
             >
               <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
-              {categories.map((category) => (
+              {categories.filter((category) => !category.isFamily).map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>

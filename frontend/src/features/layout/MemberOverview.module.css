@@ -158,6 +158,15 @@
   flex: 1;
 }
 
+/* Sökruta ovanför familjetrådarna (2026-08-03). */
+.todoSearchLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-fg);
+}
+
 @media (max-width: 759px) {
   .home {
     gap: 10px;

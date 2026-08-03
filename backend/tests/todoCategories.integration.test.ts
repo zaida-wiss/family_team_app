@@ -75,7 +75,7 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
     childMemberId = (childMember.body as { id: string }).id;
   });
 
-  it("skapar en personlig kategori", async () => {
+  it("skapar en personlig kategori (isFamily default false)", async () => {
     const res = await request(app)
       .post("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -83,7 +83,36 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
       .send({ name: "Träning" });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe("Träning");
+    expect(res.body.isFamily).toBe(false);
     categoryId = res.body.id;
+  });
+
+  // 2026-08-03, Zaidas önskemål: riktiga familjekategorier i Hem-vyn, delar
+  // samma CRUD/hook som den personliga Todos-panelen (isFamily:true).
+  it("skapar en familjekategori (isFamily:true)", async () => {
+    const res = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Hushåll", isFamily: true });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe("Hushåll");
+    expect(res.body.isFamily).toBe(true);
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const family = (list.body as Array<{ name: string; isFamily?: boolean }>).find((c) => c.name === "Hushåll");
+    expect(family?.isFamily).toBe(true);
+
+    // Städas bort igen så resten av testfilens antaganden (t.ex. "listar
+    // kontots kategorier" nedan förväntar bara EN kvarvarande kategori) inte
+    // påverkas av den här familjekategorin.
+    await request(app)
+      .delete(`/api/todo-categories/${res.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
   });
 
   it("listar kontots kategorier (kontobrett sedan ADR-0019)", async () => {

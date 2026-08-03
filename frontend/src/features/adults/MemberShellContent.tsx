@@ -35,6 +35,7 @@ import type { ShellPanel } from "../../hooks/useAppState";
 import type { Calendar, CalendarEvent, CalendarFilterKey, CalendarSettings, CalendarViewMode, Id, Member, Recipe, Reward, Role, ShoppingList, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 import type { RecipeFormInput } from "../recipes/RecipeFormModal";
+import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 
 type CalendarPanelProps = ComponentProps<typeof CalendarPanel>;
 
@@ -88,10 +89,15 @@ type Props = {
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   personalCategories: TodoCategory[];
-  onCreateCategory: (name: string) => Promise<TodoCategory>;
+  onCreateCategory: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
   onSetCategoryHidden: (id: Id, hidden: boolean) => void;
+  // Massimport/export av familjens uppgifter i Hem-vyn (2026-08-03).
+  todoImportResult: ImportResult | null;
+  onSetTodoImportResult: (result: ImportResult | null) => void;
+  todoImportUndo: ImportUndo | null;
+  onSetTodoImportUndo: (undo: ImportUndo | null) => void;
   taskTemplates: TodoTemplate[];
   categoryTemplates: TodoCategoryTemplate[];
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
@@ -159,6 +165,7 @@ export function MemberShellContent({
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUnassignSelf, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
+  todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
   taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate, onUpdateCategoryTemplate,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
   onUpdateCalendarEvent, onDeleteCalendarEvent, onRsvpCalendarEvent,
@@ -184,8 +191,16 @@ export function MemberShellContent({
   // — getFamilyViewTodos (inte längre getVisibleTodos, som en canSeeAllTodos-
   // medlem såg ALLT igenom, inklusive andras privata personliga kategorier).
   const homeVisibleTodos = useMemo(
-    () => (canSeeTodos ? getFamilyViewTodos(todos, roles, members) : []),
-    [canSeeTodos, todos, roles, members]
+    () => (canSeeTodos ? getFamilyViewTodos(todos, roles, members, personalCategories) : []),
+    [canSeeTodos, todos, roles, members, personalCategories]
+  );
+  // Riktiga familjekategorier (2026-08-03, isFamily:true) — samma
+  // personalCategories-array som den personliga Todos-panelen redan
+  // konsumerar (delad hook, se todoCategoriesService.ts), filtrerad till de
+  // som är markerade som familjens istället för en specifik medlems.
+  const familyCategories = useMemo(
+    () => personalCategories.filter((c) => c.isFamily && !c.hidden),
+    [personalCategories]
   );
   const canSeeMembers = canSeeMembersPanel(currentMember, roles);
 
@@ -269,13 +284,39 @@ export function MemberShellContent({
       id: "__familyHome__",
       accountId: currentMember.accountId,
       label: "Familjen",
-      todos: homeVisibleTodos,
+      // Bara okategoriserade familje-uppgifter — kategoriserade ligger i
+      // sin egen tråd nedan (familyCategoryThreads), annars skulle de synas
+      // dubbelt (2026-08-03, samma princip som Mina uppgifter/kategori-
+      // trådarna i den personliga Todos-panelen).
+      todos: homeVisibleTodos.filter((t) => t.personalCategoryId === null),
       members: activeMembers,
       onComplete: completeOwnFamilyTodo,
       onToggleInProgress: onToggleTodoInProgress,
       onToggleSubtask,
-      onCreateTodo: (title: string, visual: string | null) => handleCreateFamilyTodo(currentMember.accountId, title, visual)
+      onCreateTodo: (title: string, visual: string | null) => handleCreateFamilyTodo(currentMember.accountId, title, visual),
+      onDeleteTodo: onSoftDeleteTodo
     };
+    // Riktiga familjekategorier (2026-08-03, isFamily:true) — en egen tråd
+    // per kategori, samma mutationer som "Familjen"-poolen ovan plus
+    // rename/radera/göm (kategori-hanteringen, delad med den personliga
+    // Todos-panelen via samma onRenameCategory/onRemoveCategory/
+    // onSetCategoryHidden-funktioner).
+    const familyCategoryThreads = familyCategories.map((category) => ({
+      id: category.id,
+      accountId: currentMember.accountId,
+      label: category.name,
+      todos: homeVisibleTodos.filter((t) => t.personalCategoryId === category.id),
+      members: activeMembers,
+      onComplete: completeOwnFamilyTodo,
+      onToggleInProgress: onToggleTodoInProgress,
+      onToggleSubtask,
+      onCreateTodo: (title: string, visual: string | null) =>
+        handleCreateFamilyTodo(currentMember.accountId, title, visual, category.id),
+      onDeleteTodo: onSoftDeleteTodo,
+      onRenameCategory: (name: string) => onRenameCategory(category.id, name),
+      onDeleteCategory: () => onRemoveCategory(category.id),
+      onHideCategory: () => onSetCategoryHidden(category.id, true)
+    }));
     const cross = crossAccountFamilyThreads.map((t) => ({
       id: `crossAccount:${t.accountId}`,
       accountId: t.accountId,
@@ -303,9 +344,10 @@ export function MemberShellContent({
           ? (title: string, visual: string | null) => createConnectionTodo(t.accountId, title, visual)
           : undefined
     }));
-    return [own, ...cross, ...connections];
+    return [own, ...familyCategoryThreads, ...cross, ...connections];
   }, [
     canSeeTodos, currentMember.accountId, currentMember.id, homeVisibleTodos, activeMembers, todos, members, roles,
+    familyCategories, onSoftDeleteTodo, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
     onCompleteTodo, onToggleTodoInProgress, onToggleSubtask, crossAccountFamilyThreads, crossAccountMemberGroups,
     completeCrossAccountTodo, toggleCrossAccountInProgress, createCrossAccountTodo, connectionTodoThreads,
     completeConnectionTodo, createConnectionTodo
@@ -757,8 +799,10 @@ export function MemberShellContent({
   // familjen" (2026-08-01, Zaidas önskemål) — cross-account/Familjeanslutning
   // har varsin egen onCreateTodo-koppling direkt i homeFamilyThreadSources
   // nedan (createCrossAccountTodo/createConnectionTodo), ingen gemensam
-  // dirigering behövs längre.
-  function handleCreateFamilyTodo(accountId: Id, title: string, visual: string | null) {
+  // dirigering behövs längre. categoryId (2026-08-03) — satt när uppgiften
+  // skapas inifrån en riktig familjekategoris egen tråd, annars null (den
+  // okategoriserade Familjen-poolen).
+  function handleCreateFamilyTodo(accountId: Id, title: string, visual: string | null, categoryId: Id | null = null) {
     onCreateTodo({
       id: `todo-${generateId()}`,
       accountId,
@@ -782,7 +826,7 @@ export function MemberShellContent({
       rejectedReason: null,
       deletedAt: null,
       deletedBy: null,
-      personalCategoryId: null,
+      personalCategoryId: categoryId,
       notes: null,
       subtasks: []
     });
@@ -837,6 +881,16 @@ export function MemberShellContent({
         todoBubbleSize={todoBubbleSize}
         onCreateFamilyShoppingList={handleCreateFamilyShoppingList}
         shoppingCreatableFamilyAccountIds={homeShoppingCreatableAccountIds}
+        members={members}
+        categories={personalCategories}
+        onCreateCategory={onCreateCategory}
+        onCreateTodo={onCreateTodo}
+        onUpdateTodo={onUpdateTodo}
+        onDeleteTodo={onSoftDeleteTodo}
+        todoImportResult={todoImportResult}
+        onSetTodoImportResult={onSetTodoImportResult}
+        todoImportUndo={todoImportUndo}
+        onSetTodoImportUndo={onSetTodoImportUndo}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

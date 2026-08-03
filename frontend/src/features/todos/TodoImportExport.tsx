@@ -14,7 +14,15 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onDeleteTodo: (todoId: Id) => void;
-  onCreateCategory: (name: string) => Promise<TodoCategory>;
+  onCreateCategory: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
+  // "family" (2026-08-03, Zaidas önskemål: massimport/export av familjens
+  // uppgifter i Hem-vyn) — samma komponent, tre skillnader: kryssrutelistan
+  // visar familjekategorier istället för mina egna (ingen Barn-kryssruta,
+  // familjevyn innehåller aldrig barns uppgifter), en tom "Tilldelad"-cell
+  // betyder Familjen istället för mig själv, och `todos`/`categories` antas
+  // redan vara familje-scopade av anroparen (ingen extra assignedTo/
+  // createdBy-koll behövs vid Id-matchning för uppdatering).
+  scope?: "personal" | "family";
   // Ligger i useTodosState (2026-07-08, Zaidas önskemål: "ångra senaste import
   // måste vara kvar även om jag växlar vy") istället för lokal state här —
   // Shell.tsx:s <ErrorBoundary key={activePanel}> ommonterar hela panelen vid
@@ -29,7 +37,7 @@ const CHILDREN_FILTER_ID = "__children__";
 const NO_CATEGORY_FILTER_ID = "__none__";
 const SKIP_RESOLUTION = "__skip__";
 
-function buildNewTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | null, assignedTo: Id): Todo {
+function buildNewTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | null, assignedTo: Id | null): Todo {
   return {
     id: `todo-${generateId()}`,
     title: row.title,
@@ -121,8 +129,10 @@ export function TodoImportExport({
   result,
   setResult,
   lastImportUndo,
-  setLastImportUndo
+  setLastImportUndo,
+  scope = "personal"
 }: Props) {
+  const isFamilyScope = scope === "family";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   // Väntar på att importören mappar okända "Tilldelad"-namn innan importen
@@ -133,13 +143,23 @@ export function TodoImportExport({
 
   // Gömda kategorier (redan tomma trådar i tråd-vyn) hålls utanför export-
   // filtret också — annars listas de dubbelt (t.ex. bredvid "🙈 Gömda
-  // kategorier"-sektionen i samma Inställningar-panel).
-  const myCategories = categories.filter((c) => c.memberId === currentMember.id && !c.hidden);
+  // kategorier"-sektionen i samma Inställningar-panel). I familje-scope
+  // (2026-08-03) visas familjekategorier (isFamily:true) istället för mina
+  // egna personliga.
+  const myCategories = categories.filter(
+    (c) => !c.hidden && (isFamilyScope ? c.isFamily : c.memberId === currentMember.id && !c.isFamily)
+  );
   // Standard: allt ikryssat (oförändrat beteende om man inte aktivt väljer
   // bort något) — Zaidas önskemål: "måste kunna välja vilka todolistor man
-  // vill dela, alla eller bara en eller några".
+  // vill dela, alla eller bara en eller några". Ingen Barn-kryssruta i
+  // familje-scope — familjevyn innehåller aldrig barns uppgifter.
   const [exportSelection, setExportSelection] = useState<Set<string>>(
-    () => new Set([CHILDREN_FILTER_ID, NO_CATEGORY_FILTER_ID, ...myCategories.map((c) => c.id)])
+    () =>
+      new Set([
+        ...(isFamilyScope ? [] : [CHILDREN_FILTER_ID]),
+        NO_CATEGORY_FILTER_ID,
+        ...myCategories.map((c) => c.id)
+      ])
   );
 
   function toggleExportSelection(id: string) {
@@ -155,7 +175,7 @@ export function TodoImportExport({
   }
 
   function handleDownloadTemplate() {
-    downloadCsv("todo-mall.csv", buildTemplateCsv());
+    downloadCsv(isFamilyScope ? "familj-mall.csv" : "todo-mall.csv", buildTemplateCsv());
   }
 
   function handleExport() {
@@ -166,7 +186,10 @@ export function TodoImportExport({
         ? exportSelection.has(todo.personalCategoryId)
         : exportSelection.has(NO_CATEGORY_FILTER_ID);
     });
-    downloadCsv("mina-todos.csv", todosToCsv(included, members, currentMember.id, categories));
+    downloadCsv(
+      isFamilyScope ? "familjens-todos.csv" : "mina-todos.csv",
+      todosToCsv(included, members, currentMember.id, categories)
+    );
   }
 
   async function runImport(
@@ -215,7 +238,7 @@ export function TodoImportExport({
           if (cached) {
             categoryId = cached;
           } else {
-            const category = await onCreateCategory(row.newCategoryName);
+            const category = await onCreateCategory(row.newCategoryName, isFamilyScope);
             createdCategoryIds.set(key, category.id);
             categoryId = category.id;
           }
@@ -223,12 +246,16 @@ export function TodoImportExport({
 
         // Matchar mot en egen, ej raderad todo med samma Id — annars skapas en
         // ny (samma fallback som om Id-kolumnen saknas helt, t.ex. en mall).
+        // I familje-scope är `todos`-propen redan familje-scopad av
+        // anroparen (2026-08-03) — ingen extra assignedTo/createdBy-koll
+        // behövs där, till skillnad från den personliga varianten, vars
+        // `todos`-prop är HELA kontots lista.
         const existing = row.sourceId
           ? todos.find(
               (t) =>
                 t.id === row.sourceId &&
                 t.deletedAt === null &&
-                (t.assignedTo === currentMember.id || t.createdBy === currentMember.id)
+                (isFamilyScope || t.assignedTo === currentMember.id || t.createdBy === currentMember.id)
             )
           : undefined;
 
@@ -274,7 +301,13 @@ export function TodoImportExport({
     if (!file) return;
     setResult(null);
     const text = await file.text();
-    const { rows, errors } = parseTodoCsv(text, members, categories, currentMember.id);
+    const { rows, errors } = parseTodoCsv(
+      text,
+      members,
+      categories,
+      currentMember.id,
+      isFamilyScope ? null : currentMember.id
+    );
 
     const unresolvedLabels = [
       ...new Set(rows.filter((r) => r.unresolvedAssigneeLabel).map((r) => r.unresolvedAssigneeLabel as string))
@@ -297,21 +330,23 @@ export function TodoImportExport({
   return (
     <div className="todo-import-export">
       <p className="todo-import-export__intro">
-        Exportera dina egna uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera
-        tillbaka. Både engångsuppgifter och återkommande mallar (med sina scheman) räknas med. Importerar du en fil
-        som redan innehåller Id:n för dina egna uppgifter uppdateras de istället för att skapas som nya.
+        {isFamilyScope
+          ? "Exportera familjens uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. En tom \"Tilldelad\"-cell betyder Familjen."
+          : "Exportera dina egna uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. Både engångsuppgifter och återkommande mallar (med sina scheman) räknas med. Importerar du en fil som redan innehåller Id:n för dina egna uppgifter uppdateras de istället för att skapas som nya."}
       </p>
 
       <fieldset className="todo-import-export__filter">
         <legend>Vad ska exporteras?</legend>
-        <label>
-          <input
-            checked={exportSelection.has(CHILDREN_FILTER_ID)}
-            onChange={() => toggleExportSelection(CHILDREN_FILTER_ID)}
-            type="checkbox"
-          />
-          Barn
-        </label>
+        {!isFamilyScope && (
+          <label>
+            <input
+              checked={exportSelection.has(CHILDREN_FILTER_ID)}
+              onChange={() => toggleExportSelection(CHILDREN_FILTER_ID)}
+              type="checkbox"
+            />
+            Barn
+          </label>
+        )}
         <label>
           <input
             checked={exportSelection.has(NO_CATEGORY_FILTER_ID)}
@@ -339,7 +374,7 @@ export function TodoImportExport({
         </button>
         <button className="secondary-button" onClick={handleExport} type="button">
           <Download size={16} />
-          Exportera mina uppgifter (CSV)
+          {isFamilyScope ? "Exportera familjens uppgifter (CSV)" : "Exportera mina uppgifter (CSV)"}
         </button>
         <button
           className="secondary-button"
