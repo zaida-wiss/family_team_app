@@ -44,7 +44,6 @@ type Props = {
   canSeeCalendar: boolean;
   calendarFilter?: CalendarFilter;
   onSelectMember: (memberId: string) => void;
-  onOpenCalendar?: () => void;
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
@@ -110,7 +109,6 @@ export function MemberOverview({
   canSeeCalendar,
   calendarFilter,
   onSelectMember,
-  onOpenCalendar,
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,

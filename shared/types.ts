@@ -72,13 +72,6 @@ export type FamilyConnectionScope = {
   calendars: boolean;
 };
 
-export const FULL_FAMILY_CONNECTION_SCOPE: FamilyConnectionScope = {
-  todos: true,
-  recipes: true,
-  shoppingLists: true,
-  calendars: true
-};
-
 export type FamilyConnection = {
   id: Id;
   otherAccountId: Id;

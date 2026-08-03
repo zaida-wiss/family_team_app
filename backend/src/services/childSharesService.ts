@@ -4,7 +4,7 @@ import { UserModel } from "../db/models/User.js";
 import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
 import { getAllRoles } from "./rolesService.js";
-import { canManageChildShares, isShareActive } from "../../../shared/permissions.js";
+import { canManageChildShares } from "../../../shared/permissions.js";
 import type { AccessLevel } from "../../../shared/types.js";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024,

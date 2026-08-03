@@ -11,7 +11,6 @@ import {
   getMonthCells,
   resolveDisplaySymbol,
   toLocalDateStr,
-  toLocalDateTimeStr,
 } from "./calendarHelpers";
 
 function getWeekMonday(offset: number): Date {

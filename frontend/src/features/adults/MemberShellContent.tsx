@@ -742,7 +742,6 @@ export function MemberShellContent({
         canSeeCalendar={canSeeCalendar}
         calendarFilter={homeFilter}
         onSelectMember={onSelectMember}
-        onOpenCalendar={() => onNavigate("calendar")}
         calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
@@ -813,7 +812,6 @@ export function MemberShellContent({
         canSeeCalendar={canSeeCalendar}
         calendarFilter={homeFilter}
         onSelectMember={onSelectMember}
-        onOpenCalendar={() => onNavigate("calendar")}
         calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}

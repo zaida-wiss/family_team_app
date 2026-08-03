@@ -17,7 +17,6 @@ type Props = {
   calendarSettings?: CalendarSettings;
   calendarFilter: CalendarFilter;
   onSelectMember: (memberId: string) => void;
-  onOpenCalendar?: () => void;
   onAddEvent?: (calendarId: Id, event: Omit<CalendarEvent, "id" | "calendarId" | "createdBy" | "deletedAt" | "deletedBy">) => void;
   onUpdateEvent?: (calendarId: string, eventId: string, updates: Partial<CalendarEvent>) => void;
   onDeleteEvent?: (calendarId: string, eventId: string) => void;
@@ -57,7 +56,7 @@ type Props = {
 
 export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
-  calendarSettings, calendarFilter, onSelectMember, onOpenCalendar, onAddEvent, onUpdateEvent, onDeleteEvent,
+  calendarSettings, calendarFilter, onSelectMember, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
@@ -76,7 +75,6 @@ export function HomePage({
       calendarSettings={calendarSettings}
       calendarFilter={calendarFilter}
       onSelectMember={onSelectMember}
-      onOpenCalendar={onOpenCalendar}
       onAddEvent={onAddEvent}
       onUpdateEvent={onUpdateEvent}
       onDeleteEvent={onDeleteEvent}

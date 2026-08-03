@@ -1,9 +1,6 @@
 import type {
   AccessLevel,
-  Account,
   Calendar,
-  FamilyConnectionScope,
-  Id,
   Member,
   OwnedSharedResource,
   PermissionKey,
@@ -142,22 +139,6 @@ export function getChildShareAccess(caller: Member, child: Member): AccessLevel 
   return grant.access;
 }
 
-// En förälder i barnets EGET konto med canManageChildTodos har redan full
-// åtkomst via den befintliga vägen (canManageChildAccount nedan) — den här
-// funktionen lägger till en KOMPLETTERANDE väg för scopade delningar (en
-// vuxen utan canManageChildTodos i samma konto, ELLER en vuxen i ETT ANNAT
-// konto helt och hållet).
-export function canAccessChildTodos(
-  caller: Member,
-  child: Member,
-  roles: Role[]
-): AccessLevel | null {
-  if (canManageChildAccount(caller, child, roles)) {
-    return "edit";
-  }
-  return getChildShareAccess(caller, child);
-}
-
 // Icke-transitivt BY CONSTRUCTION, inte en flagga (ADR-0024) — bara en
 // medlem i barnets EGET konto med canManageMembers får skapa/återkalla en
 // delning. En mottagare som bara har åtkomst via childSharedWith är per
@@ -195,25 +176,6 @@ export function canSeeMembersPanel(member: Member, roles: Role[]): boolean {
 // kopplingen till ett specifikt barn eftersom detta är kontobrett.
 export function canManageFamilyConnections(caller: Member, roles: Role[]): boolean {
   return hasPermission(caller, roles, "canManageMembers");
-}
-
-// Hittar om `targetMemberId` (i `targetAccount`) exponerats till
-// `callerAccountId` via en ACCEPTERAD familjeanslutning, för den efterfrågade
-// datadomänen (dataScope). Symmetriskt med getChildShareAccess ovan, men
-// läser från Account.familyConnections (kontobrett) istället för
-// Member.childSharedWith (per barn) — se ADR-0030 för varför modellen är
-// två oberoende halvor istället för en delad post.
-export function getFamilyConnectionAccess(
-  callerAccountId: Id,
-  targetAccount: Account,
-  targetMemberId: Id,
-  scopeKey: keyof FamilyConnectionScope
-): AccessLevel | null {
-  const connection = (targetAccount.familyConnections ?? []).find(
-    (c) => c.otherAccountId === callerAccountId && c.status === "accepted" && c.exposedMemberIds.includes(targetMemberId)
-  );
-  if (!connection || !connection.dataScope[scopeKey]) return null;
-  return connection.access;
 }
 
 // Delning av inköpslistor mellan FAMILJER (ADR-0026, 2026-07-23) — samma

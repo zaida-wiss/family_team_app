@@ -181,6 +181,7 @@ async function handleUnauthorized<T>(
 
   if (!skipUnauthorizedHandler) {
     onApiError?.("Sessionen kunde inte förnyas");
+    onUnauthorized?.();
   }
   throw new Error("Inte autentiserad");
 }

@@ -67,10 +67,6 @@ export function toLocalDateStr(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export function toLocalDateTimeStr(date: Date) {
-  return `${toLocalDateStr(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
 // fixedCalendarTimes (2026-07-30) — samma "10:00 förblir alltid 10:00
 // oavsett var enheten befinner sig"-princip som todos/rutiner redan har
 // (fixedTodoTimes), en HELT EGEN inställning. Standard (false, oförändrat

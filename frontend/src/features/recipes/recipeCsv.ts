@@ -1,7 +1,6 @@
 import { RECIPE_UNITS } from "@shared/types";
 import type { Recipe, RecipeIngredient, RecipeUnit } from "@shared/types";
 import { downloadCsv, parseCsvText, toCsvRow } from "../todos/todoCsv";
-import { generateId } from "../../utils/uuid";
 import { formatQuantity } from "./recipeScaling";
 
 // Import/export av recept via kalkylark (2026-07-25, Zaidas önskemål:
@@ -132,8 +131,3 @@ export function parseRecipeCsv(text: string): ParsedRecipeRow[] {
     .filter((r): r is ParsedRecipeRow => r !== null);
 }
 
-// Bara för att generera ett unikt filnamn vid export — inte kopplat till
-// receptets egna id:n.
-export function recipeExportFilename(): string {
-  return `recept-${generateId().slice(0, 8)}.csv`;
-}

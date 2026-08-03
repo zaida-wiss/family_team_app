@@ -353,31 +353,6 @@
   margin-top: 8px;
 }
 
-/* Delade med RecipeFormModal.tsx (kopierade från TodoCreatorModal.css,
-   inte ett cross-chunk-beroende — lazy-laddade paneler garanterar inte
-   inbördes CSS-laddningsordning). */
-.todo-emoji-title-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.todo-emoji-title-row__title {
-  flex: 1;
-  min-width: 0;
-}
-
-.todo-emoji-btn {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--muted);
-  font-size: 1.3rem;
-  cursor: pointer;
-}
-
-.todo-emoji-btn:hover {
-  border-color: var(--primary);
-}
+/* .todo-emoji-title-row/.todo-emoji-btn (använda av RecipeFormModal.tsx)
+   flyttade till styles/components.css (kodstädning 2026-08-03) — låg
+   tidigare kopierade här som tre separata, identiska kopior. */

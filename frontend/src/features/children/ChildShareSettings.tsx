@@ -29,7 +29,7 @@ type Props = {
 // kryssas i samtidigt innan en delning beviljas.
 export function ChildShareSettings({ childMembers }: Props) {
   const childIds = childMembers.map((c) => c.id);
-  const { sharesByChild, candidates, loading, lookup, grant, revoke, clearCandidates } =
+  const { sharesByChild, candidates, loading, lookup, grant, revoke } =
     useChildShareManagement(childIds);
   const [selectedChildIds, setSelectedChildIds] = useState<Set<Id>>(
     () => new Set(childMembers.length === 1 ? childIds : [])

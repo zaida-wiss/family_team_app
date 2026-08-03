@@ -1,7 +1,6 @@
 import type {
   Calendar,
   Member,
-  Reward,
   Role,
   ShoppingList,
   Todo
@@ -74,23 +73,6 @@ export function createShoppingList(
     deletedBy: null,
     items: [],
     ...overrides
-  };
-}
-
-export function createReward(overrides: Partial<Reward> = {}): Reward {
-  return {
-    id: "reward-1",
-    title: "Belöning",
-    wishedBy: "member-child",
-    starsNeeded: 10,
-    status: "active",
-    approvedBy: "member-parent",
-    approvedAt: "2026-06-09T08:00:00",
-    redeemedAt: null,
-    deletedAt: null,
-    deletedBy: null,
-    ...overrides,
-    symbol: overrides.symbol ?? null,
   };
 }
 
