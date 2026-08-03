@@ -335,18 +335,37 @@ export function MemberShellContent({
             onToggleSubtask
           }]
         : [];
+    // Gruppera per (familj, kategori) istället för bara per familj
+    // (2026-08-03, Zaidas önskemål: "det ska stå inom parentes vilken
+    // familj kategorin tillhör") — en signad uppgift kan komma från en av
+    // den andra familjens EGNA namngivna kategorier (categoryNames,
+    // uppslaget server-side, se getCrossAccountFamilyTodos) eller vara en
+    // otagen Familjen-pool-uppgift (personalCategoryId===null).
     const cross = crossAccountFamilyThreads
       .map((t) => ({ ...t, todos: t.todos.filter((td) => td.inProgressBy?.includes(t.myMemberId)) }))
       .filter((t) => t.todos.length > 0)
-      .map((t) => ({
-        id: `signedUp:${t.accountId}`,
-        accountId: t.accountId,
-        label: t.accountName,
-        todos: t.todos,
-        members: crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? [],
-        onComplete: (todoId: Id) => completeCrossAccountTodo(t.accountId, todoId),
-        onToggleInProgress: (todoId: Id, targetMemberId: Id) => toggleCrossAccountInProgress(t.accountId, todoId, targetMemberId)
-      }));
+      .flatMap((t) => {
+        const byCategory = new Map<string, Todo[]>();
+        for (const todo of t.todos) {
+          const key = todo.personalCategoryId ?? "__none__";
+          const list = byCategory.get(key) ?? [];
+          list.push(todo);
+          byCategory.set(key, list);
+        }
+        const members = crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? [];
+        return [...byCategory.entries()].map(([categoryKey, categoryTodos]) => {
+          const categoryName = categoryKey !== "__none__" ? t.categoryNames[categoryKey] : null;
+          return {
+            id: `signedUp:${t.accountId}:${categoryKey}`,
+            accountId: t.accountId,
+            label: `${categoryName ?? "Familjen"} (${t.accountName})`,
+            todos: categoryTodos,
+            members,
+            onComplete: (todoId: Id) => completeCrossAccountTodo(t.accountId, todoId),
+            onToggleInProgress: (todoId: Id, targetMemberId: Id) => toggleCrossAccountInProgress(t.accountId, todoId, targetMemberId)
+          };
+        });
+      });
     return [...own, ...cross];
   }, [
     canSeeTodos, homeVisibleTodos, currentMember.id, currentMember.accountId, accountName, activeMembers,

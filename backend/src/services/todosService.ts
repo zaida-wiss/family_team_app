@@ -22,6 +22,7 @@ import { getAllCalendars } from "./calendarsService.js";
 import { getPurchasedRewardsForMember } from "./rewardShopService.js";
 import { getAllTimedTasks } from "./timedTasksService.js";
 import { findAcceptedConnectionFrom } from "./familyConnectionsService.js";
+import { getAllCategories } from "./todoCategoriesService.js";
 
 // Servern litade tidigare bara på att frontend gömde knapparna bakom
 // canCompleteTodo/hasPermission(..., "canApproveTodos") — vem som helst
@@ -247,7 +248,15 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
         t.deletedAt === null &&
         t.recurrence.type === "none"
     );
-    results.push({ accountId: m.accountId, accountName: account.name, myMemberId: m.id, todos: familyTodos });
+    // Kategorinamn (2026-08-03, Zaidas önskemål: "det ska stå inom parentes
+    // vilken familj kategorin tillhör") — en signad uppgift har bara
+    // personalCategoryId (ett rått id in i DET ANDRA kontots egna
+    // kategorier) tillgängligt tidigare, ingen namn-uppslagning. Skickar nu
+    // med en liten karta id→namn, byggd en gång per konto, istället för att
+    // skicka med hela kategoriobjekt (mindre svar, samma info frontend behöver).
+    const categories = await getAllCategories(m.accountId);
+    const categoryNames = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+    results.push({ accountId: m.accountId, accountName: account.name, myMemberId: m.id, todos: familyTodos, categoryNames });
   }
   return results;
 }

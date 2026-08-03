@@ -155,6 +155,10 @@ export type CrossAccountFamilyThread = {
   // getMyTodosViewTodos/ParentTodoThreadView.tsx:s extraMyTasks.
   myMemberId: Id;
   todos: Todo[];
+  // Kategorinamn i DET ANDRA kontot (2026-08-03) — id→namn, så en signad
+  // uppgifts todo.personalCategoryId kan visas läsbart ("Städning") istället
+  // för ett rått id, se MemberShellContent.tsx:s personalSignedUpThreadSources.
+  categoryNames: Record<Id, string>;
 };
 
 // Hur mycket som visas i "bollar i tråd" (2026-07-06, Zaidas begäran: "bara

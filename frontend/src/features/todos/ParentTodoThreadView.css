@@ -126,6 +126,37 @@
   min-height: calc(100dvh - 170px);
 }
 
+/* Gemensam rad för mina egna trådar + signade familjeuppgifter (2026-08-03,
+   Zaidas önskemål: "jag vill ha dem i samma rad", inte staplade som två
+   separata rader). ParentTodoThreadView.tsx och FamilyTodoThreads.tsx
+   renderar var sin egen .todo-thread-view — medvetet fortfarande TVÅ skilda
+   komponenter (olika mutationsmodeller, se FamilyTodoThreads.tsx:s
+   filhuvud), men den yttre wrappern gör dem till flex-syskon sida vid sida
+   istället för block-element som staplas vertikalt. Skrollningen flyttas
+   hit (en enda rad som scrollar som en enhet) istället för att varje
+   .todo-thread-view scrollar för sig.
+*/
+.todo-threads-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* ParentTodoThreadView.tsx returnerar .todo-thread-view-wrapper (toolbar +
+   .todo-thread-view), FamilyTodoThreads.tsx returnerar .todo-thread-view
+   direkt (ingen egen toolbar) — olika djup, men båda ska vara oskrymplade
+   flex-syskon i raden. */
+.todo-threads-row > * {
+  flex-shrink: 0;
+}
+
+.todo-threads-row .todo-thread-view {
+  overflow-x: visible;
+  width: max-content;
+}
+
 /* Kolumnen matchar bollens bredd med en liten, konstant marginal — växer med
    --ball-size istället för att vara ett eget fast mått (2026-07-06).
    Ogenomskinlig ljus bakgrund (2026-07-08, Zaidas begäran: "bakgrunden kan

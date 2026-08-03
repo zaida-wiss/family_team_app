@@ -231,6 +231,15 @@ export function TodosView({
           />
         )}
 
+        {/* Gemensam rad (2026-08-03, Zaidas önskemål: "jag vill ha dem i
+            samma rad") — mina egna trådar och signade familjeuppgifter
+            ligger sida vid sida istället för staplade som två separata
+            rader. Fortsatt två oberoende, egna skrollbara grupper bakom
+            kulisserna (varsin ParentTodoThreadView/FamilyTodoThreads-
+            komponent, med olika mutationsmodeller — en fullständig
+            sammanslagning till EN skrollbar lista är en större omskrivning,
+            medvetet inte gjord denna gång). */}
+        <div className="todo-threads-row">
         {todoViewMode === "thread" && canSeeTodos && (
           <ParentTodoThreadView
             todos={visibleTodos}
@@ -283,6 +292,7 @@ export function TodosView({
             todoThreadGap={todoThreadGap}
           />
         )}
+        </div>
 
         {todoViewMode === "list" && rangeFilteredTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>

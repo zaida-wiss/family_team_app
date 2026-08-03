@@ -109,3 +109,69 @@ test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställninga
   await page.getByRole("button", { name: "Todos" }).click();
   await expect(page.getByRole("region", { name: "Tråd: Barn" }).getByText("Läxor")).toBeVisible();
 });
+
+// 2026-08-03 (Zaidas önskemål: "jag vill ha dem i samma rad, men att det
+// inom parentes står vilken familj kategorin tillhör") — en signad uppgift
+// från en annan familj grupperas nu per (kategori, familj) istället för en
+// enda tråd per familj, och den nya tråd-raden ligger sida vid sida med
+// mina egna trådar istället för i en egen rad under.
+test("Todos-panelen: signade uppgifter från en annan familj grupperas per kategori, etiketten visar '(Familjenamn)', samma rad som mina egna trådar", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/members/cross-account", (route) =>
+    route.fulfill({
+      json: [{ accountId: "acc-b", accountName: "Familjen B", members: [{ id: "mem-b-a", name: "Förälder B", avatarUrl: null, color: null, isChild: false }] }]
+    })
+  );
+  await page.route("**/api/todos/family-across-accounts", (route) =>
+    route.fulfill({
+      json: [{
+        accountId: "acc-b",
+        accountName: "Familjen B",
+        myMemberId: "mem-b-a",
+        categoryNames: { "cat-b-1": "Städning" },
+        todos: [
+          {
+            id: "todo-b-cat", accountId: "acc-b", title: "Dammsuga", createdBy: "mem-b-a",
+            assignedTo: null, isShared: false, status: "pending", starValue: 0,
+            visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+            recurringSourceId: null, occurrenceDate: null, completedAt: null,
+            approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+            rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+            personalCategoryId: "cat-b-1", notes: null, inProgressBy: ["mem-b-a"], inProgressSince: "2026-08-03T10:00:00.000Z"
+          },
+          {
+            id: "todo-b-pool", accountId: "acc-b", title: "Handla mjölk", createdBy: "mem-b-a",
+            assignedTo: null, isShared: false, status: "pending", starValue: 0,
+            visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+            recurringSourceId: null, occurrenceDate: null, completedAt: null,
+            approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+            rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+            personalCategoryId: null, notes: null, inProgressBy: ["mem-b-a"], inProgressSince: "2026-08-03T10:00:00.000Z"
+          }
+        ]
+      }]
+    })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
+
+  const categoryThread = page.getByRole("region", { name: "Tråd: Städning (Familjen B)" });
+  const poolThread = page.getByRole("region", { name: "Tråd: Familjen (Familjen B)" });
+  await expect(categoryThread.getByText("Dammsuga")).toBeVisible();
+  await expect(poolThread.getByText("Handla mjölk")).toBeVisible();
+  // Den kategoriserade uppgiften hamnar INTE i pool-tråden och tvärtom.
+  await expect(categoryThread.getByText("Handla mjölk")).toHaveCount(0);
+  await expect(poolThread.getByText("Dammsuga")).toHaveCount(0);
+
+  // Samma rad som mina egna trådar (Mina uppgifter) — en gemensam
+  // .todo-threads-row omsluter BÅDE ParentTodoThreadView.tsx:s
+  // .todo-thread-view-wrapper OCH FamilyTodoThreads.tsx:s bara
+  // .todo-thread-view, istället för att de staplas som två separata rader.
+  const row = page.locator(".todo-threads-row");
+  await expect(row).toBeVisible();
+  await expect(row.getByRole("region", { name: "Tråd: Mina uppgifter" })).toBeVisible();
+  await expect(row.getByRole("region", { name: "Tråd: Städning (Familjen B)" })).toBeVisible();
+});
