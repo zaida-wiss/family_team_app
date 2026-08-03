@@ -84,6 +84,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
+  onUnassignSelf: (todoId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   personalCategories: TodoCategory[];
@@ -156,7 +157,7 @@ export function MemberShellContent({
   wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange, todoThreadGap, todoBubbleSize,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
-  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
+  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUnassignSelf, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate, onUpdateCategoryTemplate,
   onApproveWish, onRejectWish, onSetWishStars, onAddCalendarEvent,
@@ -646,6 +647,7 @@ export function MemberShellContent({
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onToggleTodoInProgress={onToggleTodoInProgress}
+          onUnassignSelf={onUnassignSelf}
           onUpdateTodo={onUpdateTodo}
           onRefreshRoutine={onRefreshRoutine}
           onCompleteTodo={(todoId) => {

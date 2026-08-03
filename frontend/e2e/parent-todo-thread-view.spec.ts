@@ -2600,3 +2600,76 @@ test("Redigera uppgift: cyklar ett delmoments tilldelning, autosparas", async ({
   await expect.poll(() => (updatedPatch?.subtasks as Array<{ assignedTo: string | null }> | undefined)?.[0]?.assignedTo)
     .toBe("mem-1");
 });
+
+// 2026-08-03 (Zaidas önskemål: "hur kan jag massradera todos smidigt i Mina
+// uppgifter? Todos som inte tillhör mig skall då sluta assignas på mig, utan
+// att uppgiften försvinner. Familjens todon skall endast gå att tas bort
+// från familjevyn.") — en genuint egen uppgift (createdBy===mig) raderas på
+// riktigt vid massradering, medan en uppgift NÅGON ANNAN skapat och tilldelat
+// mig bara slutar vara tilldelad mig (unassign-self), aldrig raderas.
+const MY_OWN_TODO = {
+  id: "todo-mine-1", accountId: "acc-1", title: "Egen sak", createdBy: "mem-1",
+  assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+  personalCategoryId: null
+};
+
+const ASSIGNED_BY_OTHER_TODO = {
+  id: "todo-assigned-1", accountId: "acc-1", title: "Handla mjölk", createdBy: "mem-2",
+  assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+  personalCategoryId: null
+};
+
+test("Mina uppgifter: Välj flera + Ta bort raderar egna uppgifter men bara avassignerar andras", async ({ page }) => {
+  let deletedId: string | null = null;
+  let unassignedId: string | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, OTHER_ADULT_MEMBER] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [MY_OWN_TODO, ASSIGNED_BY_OTHER_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route(`**/api/todos/${MY_OWN_TODO.id}`, (route) => {
+    if (route.request().method() === "DELETE") deletedId = MY_OWN_TODO.id;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route(`**/api/todos/${ASSIGNED_BY_OTHER_TODO.id}/unassign-self`, (route) => {
+    unassignedId = ASSIGNED_BY_OTHER_TODO.id;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Mina uppgifter" });
+  await expect(thread.getByText("Egen sak")).toBeVisible();
+  await expect(thread.getByText("Handla mjölk")).toBeVisible();
+
+  await thread.getByRole("button", { name: /^Mina uppgifter\./ }).click();
+  await page.getByRole("button", { name: "Välj flera" }).click();
+
+  await expect(thread.getByText("0 valda")).toBeVisible();
+  const removeBtn = page.getByRole("button", { name: "Ta bort" });
+  await expect(removeBtn).toBeDisabled();
+
+  await page.getByRole("button", { name: /Egen sak.*Tryck för att välja/ }).click();
+  await page.getByRole("button", { name: /Handla mjölk.*Tryck för att välja/ }).click();
+  await expect(thread.getByText("2 valda")).toBeVisible();
+  await expect(removeBtn).toBeEnabled();
+
+  await removeBtn.click();
+
+  await expect.poll(() => deletedId).toBe(MY_OWN_TODO.id);
+  await expect.poll(() => unassignedId).toBe(ASSIGNED_BY_OTHER_TODO.id);
+  // Väljläget stängs av och båda bollarna är borta ur "Mina uppgifter" —
+  // den ena riktigt raderad, den andra bara avassignerad (assignedTo blir
+  // null lokalt, vilket flyttar den ut ur MY_TASKS_THREAD_ID:s filter).
+  await expect(thread.getByText("Egen sak")).toHaveCount(0);
+  await expect(thread.getByText("Handla mjölk")).toHaveCount(0);
+  await expect(page.getByText("valda")).toHaveCount(0);
+});

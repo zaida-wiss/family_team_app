@@ -221,6 +221,19 @@ export function useTodosState(fixedTodoTimes = false) {
     );
   }
 
+  // Massradering i "Mina uppgifter" (2026-08-03, Zaidas önskemål): en uppgift
+  // som inte är min egen (någon annan skapade/tilldelade den) ska bara sluta
+  // vara tilldelad mig, inte raderas — familjens uppgifter tas bara bort från
+  // Hem-vyns familjeflik. personalCategoryId nollställs samtidigt (samma
+  // mönster som backend, se todosService.ts:s unassignSelf) så uppgiften
+  // faktiskt blir en synlig familjeuppgift istället för att tyst försvinna.
+  function unassignSelf(todoId: Id) {
+    todosApi.unassignSelf(todoId).catch(console.error);
+    setTodos((current) =>
+      current.map((t) => (t.id === todoId ? { ...t, assignedTo: null, personalCategoryId: null } : t))
+    );
+  }
+
   function completeTodo(member: Member, todoId: Id, roles: Role[], elapsedMs: number | null = null) {
     const todoToComplete = todos.find((todo) => todo.id === todoId);
     if (!todoToComplete || !canCompleteTodo(member, roles, todoToComplete)) {
@@ -474,6 +487,7 @@ export function useTodosState(fixedTodoTimes = false) {
     updateTodo,
     toggleSubtask,
     toggleTodoInProgress,
+    unassignSelf,
     completeTodo,
     softDeleteTodo,
     restoreTodo,

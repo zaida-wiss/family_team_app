@@ -36,7 +36,7 @@ export function useShellState(
   } = useAppState(activeMembership);
 
   const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, approveTodo, rejectTodo,
-    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, refreshRoutineOccurrence,
+    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, unassignSelf, refreshRoutineOccurrence,
     lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, updateCalendarShareAcrossMyAccounts, addCalendarEvent, updateCalendarEvent,
@@ -181,6 +181,7 @@ export function useShellState(
     onCreateTodo: createTodo,
     onToggleSubtask: toggleSubtask,
     onToggleTodoInProgress: toggleTodoInProgress,
+    onUnassignSelf: unassignSelf,
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,
     personalCategories: personalTodoCategories,

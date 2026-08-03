@@ -236,6 +236,12 @@ todosRouter.patch("/:id/in-progress", requireAuth, attachAccountId, async (req, 
   res.json(result);
 });
 
+// Massradering i "Mina uppgifter" (2026-08-03) — se todosService.ts:s unassignSelf.
+todosRouter.patch("/:id/unassign-self", requireAuth, attachAccountId, async (req, res) => {
+  const result = await todos.unassignSelf(req.params.id, req.accountId!, req.memberId ?? null);
+  res.json(result);
+});
+
 todosRouter.patch("/:id/subtasks/:subtaskId", requireAuth, attachAccountId, async (req, res) => {
   const result = await todos.toggleSubtask(req.params.id, req.accountId!, req.params.subtaskId);
   res.json(result);

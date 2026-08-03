@@ -50,6 +50,7 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
+  onUnassignSelf: (todoId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
@@ -103,6 +104,7 @@ export function TodosView({
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
+  onUnassignSelf,
   onUpdateTodo,
   onRefreshRoutine,
   onCompleteTodo,
@@ -240,6 +242,7 @@ export function TodosView({
             showChildTodos={showChildTodosInOwnView}
             onToggleSubtask={onToggleSubtask}
             onToggleTodoInProgress={onToggleTodoInProgress}
+            onUnassignSelf={onUnassignSelf}
             onUpdateTodo={onUpdateTodo}
             onRefreshRoutine={onRefreshRoutine}
             onCompleteTodo={onCompleteTodo}

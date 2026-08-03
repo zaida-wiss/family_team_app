@@ -80,6 +80,12 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({ targetMemberId })
     }),
+  // Massradering i "Mina uppgifter" (2026-08-03) — se todosService.ts:s unassignSelf.
+  unassignSelf: (id: string) =>
+    request<{ ok: boolean }>(api(`todos/${id}/unassign-self`), {
+      method: "PATCH",
+      body: JSON.stringify({})
+    }),
   restore: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}/restore`), {
       method: "PATCH",

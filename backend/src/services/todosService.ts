@@ -778,6 +778,35 @@ export async function toggleInProgress(
   return { inProgressBy: nextList, inProgressSince: todo.inProgressSince };
 }
 
+// Massradering i "Mina uppgifter" (2026-08-03, Zaidas önskemål): en uppgift
+// som INTE är min egen — någon annan skapade den och tilldelade mig den —
+// ska bara sluta vara tilldelad mig, inte raderas (familjens uppgifter ska
+// bara gå att ta bort från Hem-vyns familjeflik, se getFamilyViewTodos).
+// Egen, snäv självbetjänings-endpoint istället för att bredda canEditTodo
+// (som kräver createdBy===mig eller canEditAnyTodos) — bara den som
+// FAKTISKT är tilldelad todon just nu får ta bort sig själv, ingen generell
+// redigeringsrätt krävs eller ges, samma "smal, självbetjänad kontroll"-
+// mönster som toggleInProgress ovan.
+export async function unassignSelf(id: string, accountId: string, memberId: string | null) {
+  const todo = await TodoModel.findOne({ id, accountId });
+  if (!todo) {
+    throw new AppError(404, "Todo hittades inte");
+  }
+  await requireMember(memberId, accountId);
+  if (todo.assignedTo !== memberId) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  todo.assignedTo = null;
+  // Kategorin är alltid privat oavsett tilldelning (ADR-0019/getFamilyViewTodos)
+  // — utan att nollställa den skulle uppgiften bli osynlig både i Mina
+  // uppgifter (inte längre tilldelad mig) OCH i Hem-vyns familjeflik
+  // (fortfarande "privat" via personalCategoryId) — tyst försvinna.
+  todo.personalCategoryId = null;
+  await todo.save();
+  broadcastTodosChanged();
+  return { ok: true };
+}
+
 export async function updateTodo(id: string, accountId: string, data: unknown, memberId: string | null) {
   const patch = TodoPatchSchema.parse(data);
   const todo = await TodoModel.findOne({ id, accountId });

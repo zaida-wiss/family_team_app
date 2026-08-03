@@ -329,6 +329,73 @@
   touch-action: none;
 }
 
+/* Massradering i "Mina uppgifter" (2026-08-03). En vald bubbla får en tydlig
+   ring + en liten bock uppe i hörnet, samma etablerade "ring runt bollen"-
+   mönster som redan används för --in-progress/--holding. */
+.todo-thread__ball--selecting {
+  cursor: pointer;
+}
+
+.todo-thread__ball--selected {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.todo-thread__ball--selected::after {
+  content: "✓";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Bulk-åtgärdsfältet under trådens rubrik (2026-08-03, Zaidas önskemål: en
+   smidig massradering i "Mina uppgifter"). Samma knappmönster/touch-mål som
+   kategorimenyn. */
+.todo-thread__select-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 8px;
+  flex-wrap: wrap;
+}
+
+.todo-thread__select-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-fg);
+  margin-right: auto;
+}
+
+.todo-thread__select-bar button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+/* "Ta bort"-knappen återanvänder den delade .danger-button-klassen
+   (components.css) för färgen — den här regeln säkerställer bara samma
+   44px-touch-mål som Avbryt-knappen, .danger-button själv sätter ingen
+   min-height. */
+.todo-thread__select-remove.danger-button {
+  min-height: 44px;
+}
+
 .todo-thread__category-input {
   width: 100%;
   font-size: 0.78rem;
