@@ -20,14 +20,23 @@ describe("todoCsv", () => {
     ]);
   });
 
-  test("buildTemplateCsv innehåller alla rubriker plus exempel för både engångs- och återkommande uppgift", () => {
+  // 2026-08-03: mallen fick två nya kolumner (Fler tidsrutor/Slutar) och två
+  // nya exempelrader som visar dem — Zaidas exakta önskemål om tidsbegränsade
+  // återkommande uppgifter (synlig kl. X, försvinner kl. Y, nästa dags kopia
+  // oberoende av gårdagens).
+  test("buildTemplateCsv innehåller alla rubriker plus exempel för engångs-, enkel återkommande, flera-tidsrutor- och slutar-uppgifter", () => {
     const csv = buildTemplateCsv();
     const table = parseCsvText(csv);
+    const headerIndex = new Map(table[0].map((h, i) => [h, i]));
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
-    expect(table.length).toBe(3);
+    expect(table.length).toBe(5);
     expect(table[1][0]).toBe("Handla mat");
-    expect(table[2][0]).toBe("Borsta tänderna");
-    expect(table[2][9]).toBe("Dag");
+    expect(table[2][0]).toBe("Andningsövning");
+    expect(table[2][headerIndex.get("Återkommer")!]).toBe("Dag");
+    expect(table[3][0]).toBe("Borsta tänderna");
+    expect(table[3][headerIndex.get("Fler tidsrutor")!]).toBe("19:00-19:15");
+    expect(table[4][0]).toBe("Öva piano");
+    expect(table[4][headerIndex.get("Slutar")!]).toBe("30");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -400,5 +409,132 @@ describe("todoCsv", () => {
     expect(rows).toEqual([]);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain("Startdatum");
+  });
+
+  // 2026-08-03, Zaidas önskemål: tidsbegränsade återkommande uppgifter helt
+  // från kalkylark — "Borsta tänderna" morgon OCH kväll som EN mall.
+  describe("Fler tidsrutor (Todo.timeWindows)", () => {
+    test("todosToCsv → parseTodoCsv tur och retur bevarar flera tidsrutor på samma mall", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const original = createTodo({
+        id: "t1",
+        title: "Borsta tänderna",
+        createdBy: "mem-1",
+        assignedTo: "mem-1",
+        recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+        visibleFrom: new Date(2026, 7, 4, 7, 0).toISOString(),
+        expiresAt: new Date(2026, 7, 4, 7, 15).toISOString(),
+        timeWindows: [
+          { visibleFrom: new Date(2026, 7, 4, 7, 0).toISOString(), expiresAt: new Date(2026, 7, 4, 7, 15).toISOString() },
+          { visibleFrom: new Date(2026, 7, 4, 19, 0).toISOString(), expiresAt: new Date(2026, 7, 4, 19, 15).toISOString() }
+        ]
+      });
+
+      const csv = todosToCsv([original], members, "mem-1", []);
+      const table = parseCsvText(csv);
+      const headerIndex = new Map(table[0].map((h, i) => [h, i]));
+      expect(table[1][headerIndex.get("Fler tidsrutor")!]).toBe("19:00-19:15");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors).toEqual([]);
+      expect(rows[0].timeWindows).toHaveLength(2);
+      expect(new Date(rows[0].timeWindows![1].visibleFrom!).getHours()).toBe(19);
+      expect(new Date(rows[0].timeWindows![1].expiresAt!).getMinutes()).toBe(15);
+      // Ankaret blir bara ett datum (ingen tid) + null, samma sätt som
+      // TodoCreatorModal.tsx bygger en recurring+timeWindows-uppgift.
+      expect(rows[0].expiresAt).toBeNull();
+    });
+
+    test("parseTodoCsv: en ogiltig tidsruta flaggas med ett tydligt fel, hoppas över", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const csv = [
+        "Titel,Tilldelad,Startdatum,Slutdatum,Fler tidsrutor,Återkommer",
+        "Borsta tänderna,Mig själv,2026-08-04 07:00,2026-08-04 07:15,inte-en-tid,Dag"
+      ].join("\r\n");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors.some((e) => e.includes("Fler tidsrutor"))).toBe(true);
+      expect(rows[0].timeWindows).toBeUndefined();
+    });
+
+    test("parseTodoCsv: Fler tidsrutor på en engångsuppgift ignoreras med ett fel", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const csv = [
+        "Titel,Tilldelad,Startdatum,Slutdatum,Fler tidsrutor,Återkommer",
+        "Handla mat,Mig själv,2026-08-04 07:00,2026-08-04 07:15,19:00-19:15,Nej"
+      ].join("\r\n");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors.some((e) => e.includes("engångsuppgift"))).toBe(true);
+      expect(rows[0].timeWindows).toBeUndefined();
+    });
+  });
+
+  // 2026-08-03, ADR-0017/RecurrenceEnd via kalkylark.
+  describe("Slutar (RecurrenceEnd)", () => {
+    test("todosToCsv → parseTodoCsv tur och retur bevarar Slutar vid ett datum", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const original = createTodo({
+        id: "t1",
+        title: "Öva piano",
+        createdBy: "mem-1",
+        assignedTo: "mem-1",
+        recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null, end: { type: "until", date: "2026-09-01" } },
+        visibleFrom: new Date(2026, 7, 4, 17, 0).toISOString()
+      });
+
+      const csv = todosToCsv([original], members, "mem-1", []);
+      const table = parseCsvText(csv);
+      const headerIndex = new Map(table[0].map((h, i) => [h, i]));
+      expect(table[1][headerIndex.get("Slutar")!]).toBe("2026-09-01");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors).toEqual([]);
+      expect(rows[0].recurrence).toMatchObject({ end: { type: "until", date: "2026-09-01" } });
+    });
+
+    test("todosToCsv → parseTodoCsv tur och retur bevarar Slutar efter ett antal gånger", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const original = createTodo({
+        id: "t1",
+        title: "Öva piano",
+        createdBy: "mem-1",
+        assignedTo: "mem-1",
+        recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null, end: { type: "count", count: 30 } },
+        visibleFrom: new Date(2026, 7, 4, 17, 0).toISOString()
+      });
+
+      const csv = todosToCsv([original], members, "mem-1", []);
+      const table = parseCsvText(csv);
+      const headerIndex = new Map(table[0].map((h, i) => [h, i]));
+      expect(table[1][headerIndex.get("Slutar")!]).toBe("30");
+
+      const { rows } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(rows[0].recurrence).toMatchObject({ end: { type: "count", count: 30 } });
+    });
+
+    test("parseTodoCsv: ett okänt värde i Slutar flaggas, tolkas som aldrig", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const csv = [
+        "Titel,Tilldelad,Startdatum,Återkommer,Slutar",
+        "Öva piano,Mig själv,2026-08-04 17:00,Dag,snart"
+      ].join("\r\n");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors.some((e) => e.includes("Slutar"))).toBe(true);
+      expect((rows[0].recurrence as { end?: unknown }).end).toBeUndefined();
+    });
+
+    test("parseTodoCsv: Slutar ignoreras tyst för en engångsuppgift", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const csv = [
+        "Titel,Tilldelad,Startdatum,Återkommer,Slutar",
+        "Handla mat,Mig själv,2026-08-04,Nej,30"
+      ].join("\r\n");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors).toEqual([]);
+      expect(rows[0].recurrence).toEqual({ type: "none" });
+    });
   });
 });

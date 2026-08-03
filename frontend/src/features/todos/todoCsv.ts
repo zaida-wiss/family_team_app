@@ -1,13 +1,20 @@
-import type { Id, Member, RecurrenceRule, RecurrenceUnit, Todo, TodoCategory, TodoSubtask, Weekday } from "@shared/types";
-import { WEEKDAY_SHORT } from "./recurringTodos";
+import type {
+  Id, Member, RecurrenceEnd, RecurrenceRule, RecurrenceUnit, Todo, TodoCategory, TodoSubtask, TodoTimeWindow, Weekday
+} from "@shared/types";
+import { WEEKDAY_SHORT, dateOnlyToISO } from "./recurringTodos";
 import { generateId } from "../../utils/uuid";
 
 // Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål, utökad
 // samma dag till att även täcka återkommelse — Zaida upptäckte att
 // återkommande uppgifter tystnade helt ur exporten). En rad = en mall (för
-// återkommande) eller en engångsuppgift. Flera tidsintervall per dag
-// (Todo.timeWindows) täcks INTE — för komplext för en enda kalkylarksrad,
-// måste läggas till separat via RecurrencePicker/TimeWindowsPicker efteråt.
+// återkommande) eller en engångsuppgift.
+//
+// 2026-08-03 utökad med "Fler tidsrutor" (Todo.timeWindows, tidigare uttryckligen
+// UTESLUTEN som "för komplext för en enda kalkylarksrad") och "Slutar"
+// (RecurrenceEnd/ADR-0017, tidigare inte alls representerad i CSV) — Zaidas
+// exakta önskemål: tidsbegränsade återkommande uppgifter (synlig kl. X,
+// försvinner kl. Y om ogjord, nästa dags kopia oberoende) ska gå att sätta
+// upp HELT från kalkylark, inte bara via appens UI efteråt.
 export const TODO_CSV_HEADERS = [
   "Titel",
   "Emoji",
@@ -18,13 +25,21 @@ export const TODO_CSV_HEADERS = [
   "Timer (min)",
   "Startdatum",
   "Slutdatum",
+  "Fler tidsrutor",
   "Återkommer",
   "Intervall",
   "Veckodagar",
+  "Slutar",
   "Delmoment",
   "Anteckningar",
   "Id"
 ] as const;
+
+// "HH:MM-HH:MM, HH:MM-HH:MM, ..." — ytterligare tidsrutor UTÖVER den första
+// (som redan täcks av Startdatum/Slutdatum), alla på SAMMA ankardag som
+// Startdatum. Matchar TimeWindowsPicker.tsx:s "Från kl./Till kl."-par, bara
+// hoprullat till en enda cell istället för flera UI-rader.
+const TIME_RANGE_PATTERN = /^(\d{2}:\d{2})-(\d{2}:\d{2})$/;
 
 const SELF_LABEL = "Mig själv";
 // Familjen-tilldelning (2026-08-03, assignedTo:null) — samma etikett som
@@ -142,9 +157,26 @@ export function downloadCsv(filename: string, csv: string) {
 }
 
 export function buildTemplateCsv(): string {
-  const oneOff = ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", ""];
-  const recurring = ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-07-06 07:00", "", "Dag", "1", "", "", "", ""];
-  return [toCsvRow([...TODO_CSV_HEADERS]), toCsvRow(oneOff), toCsvRow(recurring)].join("\r\n");
+  const oneOff =
+    ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", ""];
+  // Enkel återkommande, en tidsruta per dag (synlig kl./försvinner kl.) —
+  // det vanligaste fallet, ingen "Fler tidsrutor" eller "Slutar" behövs.
+  const recurringSimple =
+    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", "2026-08-04 10:00", "2026-08-04 10:30", "", "Dag", "1", "", "", "", "", ""];
+  // Flera tidsrutor på SAMMA mall (morgon OCH kväll) — Startdatum/Slutdatum
+  // är den FÖRSTA rutan, "Fler tidsrutor" lägger till resten (samma ankardag).
+  const recurringMultiWindow =
+    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-08-04 07:00", "2026-08-04 07:15", "19:00-19:15", "Dag", "1", "", "", "", "", ""];
+  // Slutar efter ett visst antal gånger (eller sätt ett datum i ÅÅÅÅ-MM-DD).
+  const recurringWithEnd =
+    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", "2026-08-04 17:00", "2026-08-04 17:20", "", "Dag", "1", "", "30", "", "", ""];
+  return [
+    toCsvRow([...TODO_CSV_HEADERS]),
+    toCsvRow(oneOff),
+    toCsvRow(recurringSimple),
+    toCsvRow(recurringMultiWindow),
+    toCsvRow(recurringWithEnd)
+  ].join("\r\n");
 }
 
 // Försvar mot ännu omigrerad produktionsdata (ADR-0015, 2026-07-05 CSV-fynd) —
@@ -187,6 +219,79 @@ function isoToDateTimeDisplay(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function isoToTimeOnlyDisplay(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Ytterligare tidsrutor UTÖVER den första (2026-08-03) — todo.timeWindows[0]
+// motsvarar redan Startdatum/Slutdatum, resten skrivs ut här som
+// "HH:MM-HH:MM"-par, kommaseparerade. Ankardagen (datumdelen) är alltid
+// samma som Startdatum, bara klockslagen skiljer sig mellan rutorna.
+function formatExtraTimeWindows(windows: TodoTimeWindow[] | undefined): string {
+  if (!windows || windows.length < 2) return "";
+  return windows
+    .slice(1)
+    .map((w) => `${isoToTimeOnlyDisplay(w.visibleFrom)}-${isoToTimeOnlyDisplay(w.expiresAt)}`)
+    .join(", ");
+}
+
+// Bygger extra TodoTimeWindow-objekt från en "Fler tidsrutor"-cell, alla
+// förlagda till SAMMA ankardag (dateKey, "ÅÅÅÅ-MM-DD") som Startdatum.
+function parseExtraTimeWindows(
+  value: string,
+  dateKey: string,
+  rowNumber: number,
+  title: string,
+  errors: string[]
+): TodoTimeWindow[] {
+  const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+  const windows: TodoTimeWindow[] = [];
+  for (const part of parts) {
+    const match = TIME_RANGE_PATTERN.exec(part);
+    if (!match) {
+      errors.push(
+        `Rad ${rowNumber} ("${title}"): ogiltig tidsruta "${part}" i Fler tidsrutor (vänta TT:MM-TT:MM), hoppas över.`
+      );
+      continue;
+    }
+    windows.push({
+      visibleFrom: dateTimeDisplayToISO(`${dateKey} ${match[1]}`, false),
+      expiresAt: dateTimeDisplayToISO(`${dateKey} ${match[2]}`, true)
+    });
+  }
+  return windows;
+}
+
+// RecurrenceEnd/ADR-0017 (2026-08-03) — "Aldrig"/tom cell, ett datum
+// (ÅÅÅÅ-MM-DD, samma format som RecurrencePicker.tsx:s <input type="date">)
+// eller ett heltal ("efter N gånger"). Samma smarta typdetektering som
+// Återkommer redan gör för enhet — en kalkylarksrad ska inte behöva en
+// separat "typ"-kolumn för det här.
+function formatRecurrenceEnd(end: RecurrenceEnd | undefined): string {
+  if (!end || end.type === "never") return "";
+  if (end.type === "until") return end.date;
+  return String(end.count);
+}
+
+function parseRecurrenceEnd(value: string, rowNumber: number, title: string, errors: string[]): RecurrenceEnd | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return { type: "until", date: trimmed };
+  }
+  if (/^\d+$/.test(trimmed)) {
+    const count = Math.max(1, parseInt(trimmed, 10));
+    return { type: "count", count };
+  }
+  errors.push(
+    `Rad ${rowNumber} ("${title}"): okänt värde "${trimmed}" i Slutar (vänta ett datum ÅÅÅÅ-MM-DD eller ett antal gånger), tolkas som "aldrig".`
+  );
+  return undefined;
+}
+
 function subtasksToCsv(subtasks: TodoSubtask[] | undefined): string {
   if (!subtasks || subtasks.length === 0) return "";
   return subtasks.map((s) => s.title).join("; ");
@@ -218,6 +323,12 @@ export function todosToCsv(
     const assigneeLabel =
       todo.assignedTo === null ? FAMILY_LABEL : todo.assignedTo === currentMemberId ? SELF_LABEL : assignee?.name ?? "";
     const { unit, every, days } = formatRecurrenceForCsv(todo.recurrence);
+    // Har mallen flera tidsrutor (2026-08-03, Todo.timeWindows) bär
+    // Startdatum/Slutdatum den FÖRSTA rutan (todo.visibleFrom/expiresAt är då
+    // bara ett datum-ankare + null, se TodoCreatorModal.tsx) — "Fler
+    // tidsrutor" bär resten.
+    const firstWindow = todo.timeWindows?.[0];
+    const end = todo.recurrence.type === "recurring" ? todo.recurrence.end : undefined;
     return toCsvRow([
       todo.title,
       todo.visual.value,
@@ -229,11 +340,13 @@ export function todosToCsv(
       // Lokala Date-getters (inte en rå ISO-sträng-slice, som läser UTC och
       // kan hamna en dag fel beroende på tidszon) — inkluderar nu klockslag,
       // inte bara datum (2026-07-05, Zaidas fynd).
-      isoToDateTimeDisplay(todo.visibleFrom),
-      isoToDateTimeDisplay(todo.expiresAt),
+      isoToDateTimeDisplay(firstWindow ? firstWindow.visibleFrom : todo.visibleFrom),
+      isoToDateTimeDisplay(firstWindow ? firstWindow.expiresAt : todo.expiresAt),
+      formatExtraTimeWindows(todo.timeWindows),
       unit,
       every,
       days,
+      formatRecurrenceEnd(end),
       subtasksToCsv(todo.subtasks),
       todo.notes ?? "",
       todo.id
@@ -268,6 +381,10 @@ export type ParsedTodoRow = {
   visibleFrom: string | null;
   expiresAt: string | null;
   recurrence: RecurrenceRule;
+  // Fler tidsrutor UTÖVER Startdatum/Slutdatum (2026-08-03, Todo.timeWindows)
+  // — bara satt när "Fler tidsrutor"-cellen faktiskt innehöll något giltigt.
+  // undefined = engångsuppgift/enkel återkommelse, oförändrat beteende.
+  timeWindows: TodoTimeWindow[] | undefined;
   subtasks: TodoSubtask[];
   notes: string | null;
 };
@@ -312,9 +429,11 @@ export function parseTodoCsv(
   const timerMinutesCol = col("Timer (min)");
   const startCol = col("Startdatum");
   const endCol = col("Slutdatum");
+  const extraWindowsCol = col("Fler tidsrutor");
   const recurrenceCol = col("Återkommer");
   const intervalCol = col("Intervall");
   const weekdaysCol = col("Veckodagar");
+  const recurrenceEndCol = col("Slutar");
   const subtasksCol = col("Delmoment");
   const notesCol = col("Anteckningar");
   const idCol = col("Id");
@@ -437,6 +556,17 @@ export function parseTodoCsv(
       }
     }
 
+    // Slutar (2026-08-03, ADR-0017/RecurrenceEnd) — bara meningsfullt för en
+    // återkommande rad, ignoreras tyst annars (samma "irrelevant för den här
+    // radtypen"-hållning som Stjärnor/Timer redan har för icke-Mig-själv-rader).
+    const recurrenceEndRaw = (recurrenceEndCol !== undefined ? cells[recurrenceEndCol] : "")?.trim() ?? "";
+    if (recurrenceEndRaw && recurrence.type === "recurring") {
+      const end = parseRecurrenceEnd(recurrenceEndRaw, rowNumber, title, errors);
+      if (end) {
+        recurrence = { ...recurrence, end };
+      }
+    }
+
     // En återkommande mall MÅSTE ha ett ankardatum (Startdatum) — utan det
     // kan förfallo-beräkningen (recurringTodos.ts) aldrig avgöra om mallen är
     // förfallen, exakt samma grundorsak som produktionsincidenten 2026-07-06
@@ -451,6 +581,34 @@ export function parseTodoCsv(
         `Rad ${rowNumber} ("${title}"): återkommande uppgifter kräver ett Startdatum (annars tappar mallen sitt ankardatum och slutar fungera) — raden hoppas över.`
       );
       return;
+    }
+
+    // Fler tidsrutor (2026-08-03, Todo.timeWindows) — bara meningsfullt på en
+    // återkommande mall (samma regel som shared/types.ts:s egen kommentar).
+    // Startdatum/Slutdatum blir tidsrutan[0], cellens värden läggs till som
+    // resten, alla förlagda till Startdatums ankardag. Todo.visibleFrom/
+    // expiresAt byggs sedan om till bara ett datum-ankare + null (matchar
+    // exakt hur TodoCreatorModal.tsx redan bygger en recurring+timeWindows-
+    // uppgift, se dess kommentar "de faktiska klockslagen kommer från
+    // timeWindows").
+    const extraWindowsRaw = (extraWindowsCol !== undefined ? cells[extraWindowsCol] : "")?.trim() ?? "";
+    let timeWindows: TodoTimeWindow[] | undefined;
+    let finalVisibleFrom = visibleFrom;
+    let finalExpiresAt = expiresAt;
+    if (extraWindowsRaw) {
+      if (recurrence.type !== "recurring") {
+        errors.push(
+          `Rad ${rowNumber} ("${title}"): Fler tidsrutor gäller bara återkommande uppgifter (Återkommer), ignoreras för en engångsuppgift.`
+        );
+      } else {
+        const anchorDateKey = startRaw.split(/\s+/, 1)[0];
+        const extraWindows = parseExtraTimeWindows(extraWindowsRaw, anchorDateKey, rowNumber, title, errors);
+        if (extraWindows.length > 0) {
+          timeWindows = [{ visibleFrom, expiresAt }, ...extraWindows];
+          finalVisibleFrom = dateOnlyToISO(anchorDateKey);
+          finalExpiresAt = null;
+        }
+      }
     }
 
     const subtasksRaw = (subtasksCol !== undefined ? cells[subtasksCol] : "")?.trim() ?? "";
@@ -474,9 +632,10 @@ export function parseTodoCsv(
       starValue: isSelf ? 0 : starValue,
       timerEnabled: isSelf ? false : timerEnabled,
       plannedDurationMinutes: isSelf ? null : plannedDurationMinutes,
-      visibleFrom,
-      expiresAt,
+      visibleFrom: finalVisibleFrom,
+      expiresAt: finalExpiresAt,
       recurrence,
+      timeWindows,
       subtasks,
       notes
     });

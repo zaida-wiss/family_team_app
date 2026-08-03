@@ -55,6 +55,7 @@ function buildNewTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | 
     occurrenceDate: null,
     visibleFrom: row.visibleFrom,
     expiresAt: row.expiresAt,
+    timeWindows: row.timeWindows,
     completedAt: null,
     approvedBy: null,
     approvedAt: null,
@@ -82,6 +83,7 @@ function buildUpdatePatch(row: ParsedTodoRow, categoryId: Id | null): Partial<To
     recurrence: row.recurrence,
     visibleFrom: row.visibleFrom,
     expiresAt: row.expiresAt,
+    timeWindows: row.timeWindows,
     personalCategoryId: categoryId,
     subtasks: row.subtasks.length > 0 ? row.subtasks : undefined,
     notes: row.notes
@@ -102,6 +104,7 @@ function extractPatchFields(todo: Todo): Partial<Todo> {
     recurrence: todo.recurrence,
     visibleFrom: todo.visibleFrom,
     expiresAt: todo.expiresAt,
+    timeWindows: todo.timeWindows,
     personalCategoryId: todo.personalCategoryId,
     subtasks: todo.subtasks,
     notes: todo.notes
