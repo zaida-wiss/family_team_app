@@ -389,7 +389,7 @@ test("Todos-import/export: importresultatet och Ångra-knappen ligger kvar efter
   await expect(page.getByRole("button", { name: "Ångra senaste import" })).toBeVisible();
 
   // Byt till en annan panel och tillbaka till Inställningar.
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "📥 Importera/exportera uppgifter" }).click();

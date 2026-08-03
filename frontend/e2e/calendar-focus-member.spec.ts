@@ -132,7 +132,7 @@ test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar mi
   // specifik person längre) — det är just avsaknaden av en Lars-ENDAST-
   // filtrering som visar att bugfixen fungerar, inte att Lars kalender
   // försvinner helt.
-  await page.getByRole("button", { name: "Kalender" }).click();
+  await page.getByRole("button", { name: "Kalender", exact: true }).click();
 
   // .first() — månadsvyn visar varje händelse BÅDE som en pill i minirutnätet
   // och som en rad i den bredvidliggande agenda-listan (CalendarMonthLayout),

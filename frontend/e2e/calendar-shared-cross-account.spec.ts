@@ -93,7 +93,7 @@ test("en kalender delad via Mina familjekonton visas i den riktiga Kalender-pane
   await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Kalender" }).click();
+  await page.getByRole("button", { name: "Kalender", exact: true }).click();
 
   // Den delade kalenderns händelse syns i den vanliga Kalender-panelen —
   // både som en pill i månadsrutnätet och i dagens händelselista under.

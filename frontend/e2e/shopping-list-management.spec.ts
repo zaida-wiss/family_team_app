@@ -93,7 +93,7 @@ test("kan radera en enskild rad i inköpslistan, bara i redigeringsläge", async
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
 
   await expect(page.getByText("Mjölk")).toBeVisible();
   await expect(page.getByRole("button", { name: "Ta bort Mjölk" })).toHaveCount(0);
@@ -121,7 +121,7 @@ test("bockade varor hamnar sist när de visas, kan döljas med en toggle", async
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
 
   // Standard: bockade visas, men alltid sist (Chips är bockad, kom först i API-svaret).
   await expect(page.getByText("Chips")).toBeVisible();
@@ -150,14 +150,14 @@ test("Visa avklarade-valet sparas på enheten, överlever en omladdning", async 
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await expect(page.getByText("Ost")).toBeVisible();
 
   await page.getByRole("switch", { name: "Visa avklarade" }).click();
   await expect(page.getByText("Ost")).toHaveCount(0);
 
   await page.reload();
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await expect(page.getByText("Ost")).toHaveCount(0);
 });
 
@@ -213,7 +213,7 @@ test("Töm listan (i redigeringsläge) rensar bara bockade varor", async ({ page
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
 
   await expect(page.getByText("Ost")).toBeVisible();
   await expect(page.getByRole("button", { name: "Töm bockade varor i Storhandling" })).toHaveCount(0);
@@ -243,7 +243,7 @@ test("bockar bara av en vara genom att klicka på kryssrutan, inte genom att kli
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
 
   // Klick på själva texten ska INTE bocka av — bara kryssrutan.
   await page.getByText("Ägg", { exact: true }).click();
@@ -269,7 +269,7 @@ test("kan skapa en ny lista med en vald symbol direkt i Inköp-panelen", async (
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await page.getByRole("button", { name: "Ny lista" }).click();
   await page.getByPlaceholder("Namn på listan").fill("Skolstart");
   await page.getByRole("button", { name: "Skapa lista" }).click();
@@ -294,7 +294,7 @@ test("kan dela en lista med en annan familjemedlem direkt i Inköp-panelen", asy
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await page.getByRole("button", { name: "Dela Delad lista" }).click();
   await page.getByLabel("Välj medlem att dela med").selectOption("mem-2");
   await page.getByRole("button", { name: "Dela lista" }).click();
@@ -328,7 +328,7 @@ test("kan radera en hel inköpslista i redigeringsläge, ett klick räcker", asy
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await expect(page.getByText("Veckohandling")).toBeVisible();
   await expect(page.getByRole("button", { name: "Radera Veckohandling" })).toHaveCount(0);
 
@@ -358,7 +358,7 @@ test("kan byta namn på en inköpslista i redigeringsläge", async ({ page }) =>
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await page.getByRole("button", { name: "Redigera" }).click();
 
   const nameInput = page.getByLabel("Namn på Veckohandling");
@@ -390,7 +390,7 @@ test("kan dra och släppa för att ändra ordning på varorna i redigeringsläge
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await page.getByRole("button", { name: "Redigera" }).click();
 
   const mjolkHandle = page.locator('[data-item-id="item-mjolk"]').getByRole("button", { name: /Dra för att flytta/ });
@@ -435,7 +435,7 @@ test("kan slå ihop två inköpslistor i redigeringsläge", async ({ page }) => 
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
 
   // Ankrad på varans namn ("Mjölk"), inte listans eget namn — listnamnet blir
   // en <input> (inte längre ren textContent) i redigeringsläge sedan

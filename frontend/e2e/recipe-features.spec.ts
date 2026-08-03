@@ -291,7 +291,7 @@ test("Handlingslista-modalen förifylls med aktuellt antal personer och skalar m
   // öppen bakom handlingslista-modalen och fångar annars klicket på
   // huvudnavets Inköp-knapp.
   await page.getByRole("button", { name: "Tillbaka" }).click();
-  await page.getByRole("button", { name: "Inköp" }).click();
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
   await expect(page.getByText("Ingredienser från recept")).toBeVisible();
   await expect(page.getByText("📐 Skalat från 4 till 6 personer")).toBeVisible();
   await expect(page.getByText("750 g köttfärs")).toBeVisible();

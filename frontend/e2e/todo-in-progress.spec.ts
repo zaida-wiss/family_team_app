@@ -81,7 +81,7 @@ test("dubbeltryck öppnar en avatarväljare, val av en medlem visar en tjock kan
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
 
   const ball = page.getByRole("button", { name: /Dammsuga/ });
   await ball.click();
@@ -106,7 +106,7 @@ test("två personer på samma uppgift visar en delad klocka istället för en ka
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
 
   // Klockan visar minuter:sekunder och tickar (så exakt sekund inte
   // hårdkodas, bara att en rimlig "1:0X"-etikett syns).
@@ -121,7 +121,7 @@ test("ett vanligt enkelt tryck öppnar fortsatt detaljvyn (oförändrat)", async
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
   await page.getByRole("button", { name: /Handla mat/ }).click();
 
   await expect(page.getByRole("dialog")).toBeVisible();

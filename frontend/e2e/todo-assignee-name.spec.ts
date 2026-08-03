@@ -67,7 +67,7 @@ test("Todos: uppgift som tillhör ett borttaget barn visar barnets namn, inte Ok
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Utseende" }).click();
   await page.getByLabel("Todos-vy").selectOption("list");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
 
   await expect(page.getByText("Läxor")).toBeVisible();
   await expect(page.getByText("Astrid")).toBeVisible();

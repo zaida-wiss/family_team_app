@@ -33,7 +33,7 @@ test.describe("Inloggningsformulär", () => {
     // Steg 3: fyll i formuläret — loginViaUI mock:ar POST /api/auth/login
     await loginViaUI(page);
     await expect(page.getByRole("button", { name: "Hem" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Todos" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Todos", exact: true })).toBeVisible();
   });
 
   test("kan växla till registreringsformuläret", async ({ page }) => {

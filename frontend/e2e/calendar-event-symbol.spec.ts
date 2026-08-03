@@ -106,7 +106,7 @@ test("Kalender-panelen (månadsvy): en importerad händelses egen symbol visas, 
   await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Kalender" }).click();
+  await page.getByRole("button", { name: "Kalender", exact: true }).click();
 
   const pill = page.locator(".cal-event-pill[title='Tandläkarbesök (importerad)']");
   await expect(pill).toBeVisible();

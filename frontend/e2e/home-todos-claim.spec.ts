@@ -98,7 +98,7 @@ test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställninga
   await page.route("**/api/todos", (route) => route.fulfill({ json: [CHILD_TODO] }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
   await expect(page.getByRole("region", { name: "Tråd: Barn" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Inställningar" }).click();
@@ -106,7 +106,7 @@ test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställninga
   await page.getByLabel("Visa barnens uppgifter i Todos-panelen").check();
   await expect.poll(() => patchedMember?.showChildTodosInOwnView).toBe(true);
 
-  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
   await expect(page.getByRole("region", { name: "Tråd: Barn" }).getByText("Läxor")).toBeVisible();
 });
 

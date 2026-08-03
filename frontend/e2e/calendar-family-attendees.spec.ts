@@ -84,7 +84,7 @@ test("Ny händelse-modalen: 'Hela familjen' kryssar i/ur alla deltagare på en g
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Kalender" }).click();
+  await page.getByRole("button", { name: "Kalender", exact: true }).click();
   await page.getByRole("button", { name: "Ny händelse" }).click();
 
   // Deltagar-kryssrutorna är visuellt dolda (style display:none, egen

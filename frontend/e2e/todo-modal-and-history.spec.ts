@@ -65,7 +65,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     );
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Todos" }).click();
+    await page.getByRole("button", { name: "Todos", exact: true }).click();
 
     await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toHaveCount(0);
     // Den fristående +-knappen togs bort 2026-07-06 — nya uppgifter skapas via
@@ -96,7 +96,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Todos-vy").selectOption("list");
-    await page.getByRole("button", { name: "Todos" }).click();
+    await page.getByRole("button", { name: "Todos", exact: true }).click();
 
     await expect(page.getByText("Dammsuga")).toBeVisible();
     await expect(page.getByText("Diska")).toHaveCount(0);
@@ -127,7 +127,7 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
     await page.getByLabel("Todos-vy").selectOption("list");
-    await page.getByRole("button", { name: "Todos" }).click();
+    await page.getByRole("button", { name: "Todos", exact: true }).click();
 
     await page.getByRole("button", { name: "Redigera" }).click();
 
