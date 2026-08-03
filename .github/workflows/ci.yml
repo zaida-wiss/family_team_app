@@ -68,6 +68,9 @@ jobs:
       - name: TypeScript
         run: npx tsc --noEmit
 
+      - name: Zod/Mongoose-schemakontroll
+        run: npm run check:schema-sync
+
       - name: Tests
         run: npm test
 
