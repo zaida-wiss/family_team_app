@@ -254,15 +254,26 @@ function formatExtraTimeWindows(windows: TodoTimeWindow[] | undefined): string {
 
 // Bygger extra TodoTimeWindow-objekt från en "Fler tidsrutor"-cell, alla
 // förlagda till SAMMA ankardag (dateKey, "ÅÅÅÅ-MM-DD") som Startdatum.
+//
+// firstWindowRange (2026-08-04, Zaidas fynd — se incidents-dokumentet för
+// samma dag): en "Fler tidsrutor"-cell som råkar UPPREPA exakt samma
+// klockslag som Startdatum/Slutdatum (t.ex. av misstag när en extern
+// AI-assistent skrev om filen) genererade tidigare TVÅ IDENTISKA occurrences
+// för samma dag och tidsfönster — syntes i appen som en till synes
+// duplicerad boll. En exakt duplicerad tidsruta (mot första rutan ELLER mot
+// en annan "Fler tidsrutor"-cell på samma rad) hoppas nu över med ett
+// tydligt fel istället för att tyst skapa dubblerade occurrences.
 function parseExtraTimeWindows(
   value: string,
   dateKey: string,
   rowNumber: number,
   title: string,
-  errors: string[]
+  errors: string[],
+  firstWindowRange: string | null
 ): TodoTimeWindow[] {
   const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
   const windows: TodoTimeWindow[] = [];
+  const seenRanges = new Set<string>(firstWindowRange ? [firstWindowRange] : []);
   for (const part of parts) {
     const match = TIME_RANGE_PATTERN.exec(part);
     if (!match) {
@@ -271,6 +282,13 @@ function parseExtraTimeWindows(
       );
       continue;
     }
+    if (seenRanges.has(part)) {
+      errors.push(
+        `Rad ${rowNumber} ("${title}"): tidsrutan "${part}" i Fler tidsrutor är samma som en redan befintlig tidsruta (Startdatum/Slutdatum eller en tidigare "Fler tidsrutor"-ruta), hoppas över för att undvika dubbletter.`
+      );
+      continue;
+    }
+    seenRanges.add(part);
     windows.push({
       visibleFrom: dateTimeDisplayToISO(`${dateKey} ${match[1]}`, false),
       expiresAt: dateTimeDisplayToISO(`${dateKey} ${match[2]}`, true)
@@ -662,7 +680,9 @@ export function parseTodoCsv(
         );
       } else {
         const anchorDateKey = startRaw.split(/\s+/, 1)[0];
-        const extraWindows = parseExtraTimeWindows(extraWindowsRaw, anchorDateKey, rowNumber, title, errors);
+        const firstWindowRange =
+          visibleFrom && expiresAt ? `${isoToTimeOnlyDisplay(visibleFrom)}-${isoToTimeOnlyDisplay(expiresAt)}` : null;
+        const extraWindows = parseExtraTimeWindows(extraWindowsRaw, anchorDateKey, rowNumber, title, errors, firstWindowRange);
         if (extraWindows.length > 0) {
           timeWindows = [{ visibleFrom, expiresAt }, ...extraWindows];
           finalVisibleFrom = dateOnlyToISO(anchorDateKey);

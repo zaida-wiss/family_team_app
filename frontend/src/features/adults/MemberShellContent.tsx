@@ -34,7 +34,7 @@ const RecipesView = lazy(() =>
 );
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
-import { getFamilyViewTodos, isDueWithinRange } from "../todos/selectors";
+import { getFamilyViewTodos, isDueWithinRange, isTodoVisibleNow } from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers, useCrossAccountRecipes, useCrossAccountShoppingLists } from "../todos/useCrossAccountFamilyState";
 import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
 import { generateId } from "../../utils/uuid";
@@ -149,15 +149,6 @@ type Props = {
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   onUpdateCalendarKeepAllHistory?: CalendarPanelProps["onUpdateCalendarKeepAllHistory"];
 };
-
-function isTodoVisibleNow(
-  todo: { visibleFrom: string | null; expiresAt: string | null },
-  now: number
-) {
-  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
-  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
-  return from <= now && now < until;
-}
 
 export function MemberShellContent({
   activePanel, accountName,

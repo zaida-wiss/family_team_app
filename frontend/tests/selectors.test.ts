@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { getFamilyViewTodos, getMyTodosViewTodos } from "../src/features/todos/selectors";
+import { getFamilyViewTodos, getMyTodosViewTodos, isTodoVisibleNow } from "../src/features/todos/selectors";
 import { createMember, createRole, createTodo } from "./testUtils";
 
 // 2026-07-31, Zaidas önskemål: "i min egen todo vy skall endast mina egna
@@ -11,6 +11,34 @@ const me = createMember("member-parent");
 const otherAdult = createMember("member-other-adult");
 const child = createMember("member-child", { isChild: true });
 const roles = [createRole("role-member", [])];
+
+// 2026-08-04, Zaidas önskemål: "visaren skall endast visas idag, så
+// uppgifter som har gått ut, eller inte har börjat än skall inte visas" —
+// exakt klockslags-gating, flyttad hit från MemberShellContent.tsx/
+// ChildShellContent.tsx (som tidigare hade varsin identisk, lokal kopia) så
+// ParentTodoThreadView.tsx/FamilyTodoThreads.tsx kan använda samma helper
+// för "idag"-tidsspannet.
+describe("isTodoVisibleNow", () => {
+  const NOW = new Date("2026-08-04T12:00:00.000Z").getTime();
+
+  test("en uppgift utan schema (visibleFrom/expiresAt null) är alltid synlig", () => {
+    expect(isTodoVisibleNow({ visibleFrom: null, expiresAt: null }, NOW)).toBe(true);
+  });
+
+  test("en uppgift som ännu inte börjat (visibleFrom i framtiden) är INTE synlig", () => {
+    expect(isTodoVisibleNow({ visibleFrom: "2026-08-04T13:00:00.000Z", expiresAt: null }, NOW)).toBe(false);
+  });
+
+  test("en uppgift som redan gått ut (expiresAt i det förflutna) är INTE synlig", () => {
+    expect(isTodoVisibleNow({ visibleFrom: null, expiresAt: "2026-08-04T11:00:00.000Z" }, NOW)).toBe(false);
+  });
+
+  test("en uppgift mitt i sitt tidsfönster är synlig", () => {
+    expect(
+      isTodoVisibleNow({ visibleFrom: "2026-08-04T11:00:00.000Z", expiresAt: "2026-08-04T13:00:00.000Z" }, NOW)
+    ).toBe(true);
+  });
+});
 
 describe("getMyTodosViewTodos", () => {
   test("en todo tilldelad mig visas, oavsett personlig kategori", () => {

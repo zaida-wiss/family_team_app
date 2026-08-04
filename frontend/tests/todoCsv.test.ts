@@ -489,6 +489,35 @@ describe("todoCsv", () => {
       expect(rows[0].timeWindows).toBeUndefined();
     });
 
+    // 2026-08-04, Zaidas fynd (verkligt exempel i produktionsanvändning): en
+    // "Fler tidsrutor"-cell som råkar upprepa exakt samma klockslag som
+    // Startdatum/Slutdatum genererade tidigare två IDENTISKA occurrences per
+    // dag, till synes en duplicerad boll i appen.
+    test("parseTodoCsv: en 'Fler tidsrutor'-ruta som exakt upprepar Startdatum/Slutdatum hoppas över med ett fel", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const csv = [
+        "Titel,Tilldelad,Startdatum,Slutdatum,Fler tidsrutor,Återkommer",
+        "Kvällsrutiner,Mig själv,2026-08-04 19:00,2026-08-04 23:55,19:00-23:55,Dag"
+      ].join("\r\n");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors.some((e) => e.includes("dubbletter"))).toBe(true);
+      expect(rows[0].timeWindows).toBeUndefined();
+      expect(rows[0].expiresAt).toBe(new Date("2026-08-04T23:55:00").toISOString());
+    });
+
+    test("parseTodoCsv: två identiska rutor i 'Fler tidsrutor' på samma rad — bara den första behålls", () => {
+      const members = [createMember("mem-1", { name: "Zaida" })];
+      const csv = [
+        "Titel,Tilldelad,Startdatum,Slutdatum,Fler tidsrutor,Återkommer",
+        "Borsta tänderna,Mig själv,2026-08-04 07:00,2026-08-04 07:15,\"19:00-19:15, 19:00-19:15\",Dag"
+      ].join("\r\n");
+
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+      expect(errors.some((e) => e.includes("dubbletter"))).toBe(true);
+      expect(rows[0].timeWindows).toHaveLength(2);
+    });
+
     test("parseTodoCsv: Fler tidsrutor på en engångsuppgift ignoreras med ett fel", () => {
       const members = [createMember("mem-1", { name: "Zaida" })];
       const csv = [

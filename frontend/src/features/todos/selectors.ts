@@ -197,6 +197,25 @@ export function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange
   return from < rangeEnd && until > dayStart;
 }
 
+// Exakt klockslags-gating (2026-08-04, Zaidas önskemål: "visaren skall
+// endast visas idag, så uppgifter som har gått ut, eller inte har börjat än
+// skall inte visas") — till skillnad från isDueWithinRange (dag-baserad,
+// visar en uppgift HELA dagen oavsett exakt klockslag) kräver denna att
+// NU verkligen ligger mellan visibleFrom och expiresAt. Var tidigare
+// duplicerad lokalt i MemberShellContent.tsx/ChildShellContent.tsx — flyttad
+// hit som en delad helper, nu även använd av ParentTodoThreadView.tsx/
+// FamilyTodoThreads.tsx för "idag"-tidsspannet (samma hybrid-princip som
+// redan gällde PersonalDashboard sedan tidigare samma dag: "idag" = exakt
+// klockslag, "vecka"/"månad"/"allt" = dag-baserad isDueWithinRange).
+export function isTodoVisibleNow(
+  todo: { visibleFrom: string | null; expiresAt: string | null },
+  now: number
+): boolean {
+  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
+  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+  return from <= now && now < until;
+}
+
 // Avklarade delmoment längst ner i checklistan (2026-08-04, Zaidas önskemål)
 // — bara för LÄS-/bock-av-vyer (TodoDetailView.tsx), inte för redigera-
 // modalernas egen delmoment-editor (TodoCreatorModal.tsx/TodoEditModal.tsx),

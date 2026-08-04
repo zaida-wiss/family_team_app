@@ -9,7 +9,7 @@ import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { dateOnlyToISO, isRecurringTemplate } from "./recurringTodos";
-import { isChildMember, isDueWithinRange } from "./selectors";
+import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
 import { generateId } from "../../utils/uuid";
 
 const HOLD_DURATION_MS = 2000;
@@ -528,15 +528,22 @@ export function ParentTodoThreadView({
   );
 
   const today = new Date();
-  // Återkommande MALLAR (recurringSourceId===null, recurrence!=="none") ska
-  // aldrig visas som en egen boll — bara deras dagliga OCCURRENCE (frusen
-  // kopia, recurrence:"none") gör det. Utan detta blev mallen synlig som en
-  // andra, till synes duplicerad boll bredvid sin egen occurrence (upptäckt
-  // 2026-07-06 av Zaida — mallen saknar riktiga tider (bara ankardatumet),
-  // occurrensen har de faktiska tiderna från timeWindows, vilket gjorde
-  // dubbletten synlig först efter att flera tidsintervall infördes).
+  // "Idag" = exakt klockslag, inte hela dagen (2026-08-04, Zaidas önskemål:
+  // "visaren skall endast visas idag, så uppgifter som har gått ut, eller
+  // inte har börjat än skall inte visas") — isDueWithinRange är dag-baserad
+  // (en 19:00-uppgift syntes tidigare hela dagen från midnatt), isTodoVisibleNow
+  // kräver att NU faktiskt ligger mellan visibleFrom/expiresAt. "Vecka"/
+  // "månad"/"allt" förblir dag-baserade (en förhandsvisning längre fram i
+  // tiden ska inte kräva att klockan redan slagit om) — samma hybrid-princip
+  // som redan gäller PersonalDashboard (MemberShellContent.tsx) sedan tidigare
+  // samma dag. nowTick (redan tickande varje sekund för den delade klockan i
+  // "någon håller på med den här"-indikatorn) gör att en uppgift dyker upp
+  // automatiskt i realtid när dess klockslag inträffar, ingen omladdning krävs.
   const pendingTodos = todos.filter(
-    (t) => t.status === "pending" && !isRecurringTemplate(t) && isDueWithinRange(t, today, range)
+    (t) =>
+      t.status === "pending" &&
+      !isRecurringTemplate(t) &&
+      (range === "today" ? isTodoVisibleNow(t, nowTick) : isDueWithinRange(t, today, range))
   );
   // Utgångna (missade) uppgifter är medvetet UTANFÖR range-filtret ovan — de
   // ska gå att hitta oavsett vilket tidsspann (idag/vecka/månad) som är valt,

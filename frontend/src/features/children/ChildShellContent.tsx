@@ -3,6 +3,7 @@ import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
+import { isTodoVisibleNow } from "../todos/selectors";
 
 type Props = {
   currentMember: Member;
@@ -19,15 +20,6 @@ type Props = {
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
 };
-
-function isTodoVisibleNow(
-  todo: { visibleFrom: string | null; expiresAt: string | null },
-  now: number
-) {
-  const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
-  const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
-  return from <= now && now < until;
-}
 
 export function ChildShellContent({
   currentMember,

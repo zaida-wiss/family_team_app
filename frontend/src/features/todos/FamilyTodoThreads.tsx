@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import type { Id, Member, Todo, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
-import { isDueWithinRange } from "./selectors";
+import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
 import {
   applyBubbleOrder,
   assigneeColorFor,
@@ -410,10 +410,14 @@ export function FamilyTodoThreads({
         // utgångna" är att hitta det man missade oavsett valt tidsspann.
         // Håller-på-att-tona-bort (dissolving) bubblor bypassar filtret
         // helt, de ska aldrig försvinna abrupt mitt i animationen.
+        // "Idag" = exakt klockslag (2026-08-04, Zaidas önskemål) — samma
+        // hybrid som ParentTodoThreadView.tsx: "vecka"/"månad"/"allt" är
+        // fortsatt dag-baserade (isDueWithinRange).
         const baseTodos = source.todos.filter(
           (t) =>
             (dissolving.has(t.id) ||
-              (t.status === "pending" && isDueWithinRange(t, today, range)) ||
+              (t.status === "pending" &&
+                (range === "today" ? isTodoVisibleNow(t, nowTick) : isDueWithinRange(t, today, range))) ||
               (t.status === "expired" && showExpired)) &&
             (!query || t.title.toLowerCase().includes(query))
         );
