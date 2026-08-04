@@ -6,6 +6,7 @@ import { useModalA11y } from "../../hooks/useModalA11y";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
+import { sortSubtasksForDisplay } from "./selectors";
 
 type Props = {
   todo: Todo;
@@ -153,7 +154,7 @@ export function TodoDetailView({
               </div>
 
               <ul className="todo-detail-modal__checklist">
-                {subtasks.map((subtask) => {
+                {sortSubtasksForDisplay(subtasks).map((subtask) => {
                   const subtaskAssignee = members.find((m) => m.id === subtask.assignedTo);
                   return (
                     <li className="todo-detail-modal__checklist-item" key={subtask.id}>

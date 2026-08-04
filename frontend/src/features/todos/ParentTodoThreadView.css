@@ -540,18 +540,24 @@
   /* rem, inte px (2026-07-25) — samma skäl som --ball-size ovan, växer med
      textSize. Golvet (2.75rem = 44px vid normal textstorlek) är fortfarande
      exakt det minsta tillåtna touch-målet, aldrig lägre — bara textSize kan
-     göra den större än så, aldrig mindre. */
-  width: clamp(2.75rem, 6vw, 3.75rem);
-  height: clamp(2.75rem, 6vw, 3.75rem);
+     göra den större än så, aldrig mindre.
+     Egen --ball-size-small (2026-08-04, Zaidas önskemål: "text och symboler
+     skall öka och minska i procent med uppdragskort och bollar") — samma
+     "en enda källa till sanning"-princip som huvudbollens --ball-size,
+     bara ett eget mått eftersom denna bollen redan hade en separat,
+     lägre clamp()-formel. Titel/ikon/procent nedan läser samma variabel. */
+  --ball-size-small: clamp(2.75rem, 6vw, 3.75rem);
+  width: var(--ball-size-small);
+  height: var(--ball-size-small);
   padding: 2px;
 }
 
 .todo-thread__ball--small .todo-thread__ball-title {
-  font-size: clamp(0.44rem, 1vw, 0.52rem);
+  font-size: clamp(0.4rem, calc(var(--ball-size-small) * 0.115), 0.58rem);
 }
 
 .todo-thread__ball--small .todo-thread__ball-progress {
-  font-size: clamp(0.4rem, 0.9vw, 0.46rem);
+  font-size: clamp(0.36rem, calc(var(--ball-size-small) * 0.095), 0.5rem);
 }
 
 /* Långt tryck (2s) markerar hela uppgiften klar (Sprint 6 S4) — samma
@@ -639,19 +645,31 @@
 /* Ikon på bollen (2026-07-07, Zaidas begäran) — annars bara synlig i
    barnvyn, men uppgifter tilldelade ett barn ska alltid visa den här också,
    "så att de kan läsa" (barnet kan känna igen ikonen även om det inte kan
-   läsa titeln). */
+   läsa titeln).
+
+   Font-size en procentandel av --ball-size, inte vw (2026-08-04, Zaidas
+   fynd: "text och symboler skall öka och minska i procent med uppdragskort
+   och bollar") — vw-baserad clamp() följde SKÄRMBREDDEN, inte bollens EGEN
+   storlek, så en dragen "Bubblornas storlek"-reglage (--todo-bubble-size-
+   override, se .todo-thread-view) ändrade bollens diameter utan att texten/
+   ikonen följde med — text/symbol blev då antingen för trångt eller för
+   glest i förhållande till bollen. Uppdragskorten (ChildTasks.css) gjorde
+   redan exakt detta rätt via CSS container query-enheter (cqi/cqb), samma
+   princip här fast via --ball-size direkt (bollen är inte en egen container-
+   kontext). Golv/tak-gränserna är kvar som en säkerhetsmarginal mot extrema
+   reglage-värden (64–160px), inte den huvudsakliga skalningen längre. */
 .todo-thread__ball-icon {
-  font-size: clamp(1rem, 2.4vw, 1.3rem);
+  font-size: clamp(0.85rem, calc(var(--ball-size) * 0.16), 1.6rem);
   line-height: 1;
 }
 
 .todo-thread__ball--small .todo-thread__ball-icon {
-  font-size: clamp(0.85rem, 2vw, 1.05rem);
+  font-size: clamp(0.75rem, calc(var(--ball-size-small) * 0.16), 1.05rem);
 }
 
 .todo-thread__ball-title {
   font-weight: 700;
-  font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+  font-size: clamp(0.6rem, calc(var(--ball-size) * 0.105), 1rem);
   line-height: 1.05;
   /* Bollen är nu en fast rund cirkel (se .todo-thread__ball) — långa titlar
      kapas med ellips istället för att göra bollen avlång (2026-07-05
@@ -667,7 +685,7 @@
 }
 
 .todo-thread__ball-progress {
-  font-size: clamp(0.6rem, 1.3vw, 0.7rem);
+  font-size: clamp(0.5rem, calc(var(--ball-size) * 0.085), 0.85rem);
   font-weight: 700;
   color: #000;
 }

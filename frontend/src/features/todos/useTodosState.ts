@@ -171,16 +171,29 @@ export function useTodosState(fixedTodoTimes = false) {
     }
   }
 
+  // Returnerar nu ett promise (2026-08-04, Zaidas fynd: "kvällsrutiner och
+  // tvätt blir dubletter" efter en snabb Ångra-senaste-import→ny-import) —
+  // fortsatt "skicka och glöm" för ALLA vanliga anropsställen (ingen av dem
+  // väntar in det), men TodoImportExport.tsx:s runImport kan nu MEDVETET
+  // invänta varje rad innan nästa påbörjas. Utan det kunde en snabbt
+  // påföljande "Ångra"-radering hinna nå servern INNAN skapandet ens
+  // hunnit sparas där — raderingen missade sitt mål, och den "ångrade"
+  // uppgiften dök upp igen (som en dublett) vid nästa hämtning. Fångar
+  // fortfarande felet internt (aldrig en avvisad promise) så inget annat
+  // anropsställe som redan ignorerar returvärdet plötsligt får en ohanterad
+  // avvisning i konsolen.
   function createTodo(todo: Todo) {
-    todosApi.create(todo).catch(console.error);
+    const request = todosApi.create(todo).catch(console.error);
     setTodos((current) => [...current, todo]);
+    return request;
   }
 
   function updateTodo(todoId: Id, patch: Partial<Todo>) {
-    todosApi.update(todoId, patch).catch(console.error);
+    const request = todosApi.update(todoId, patch).catch(console.error);
     setTodos((current) =>
       current.map((todo) => (todo.id === todoId ? { ...todo, ...patch } : todo))
     );
+    return request;
   }
 
   // Föräldravyn med delmoment (Sprint 6 S3) — bockar av/på ett enskilt delmoment,

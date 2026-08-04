@@ -1,9 +1,10 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Id, Member, Todo } from "@shared/types";
+import type { Id, Member, Todo, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { isDueWithinRange } from "./selectors";
 import {
   applyBubbleOrder,
   assigneeColorFor,
@@ -59,6 +60,12 @@ export type FamilyThreadSource = {
   onRenameCategory?: (name: string) => void;
   onDeleteCategory?: () => void;
   onHideCategory?: () => void;
+  // Full redigering (2026-08-04, Zaidas önskemål: "det skall gå att
+  // redigera i hemvyns todo, precis som i min personliga todovy") — bara
+  // satt för LOKALA konton (samma gräns som onDeleteTodo/kategori-
+  // hanteringen ovan). Aldrig satt för cross-account/anslutningstrådar,
+  // döljer pennikonen i TodoDetailView där precis som tidigare.
+  onEdit?: (todo: Todo) => void;
 };
 
 type Props = {
@@ -70,6 +77,14 @@ type Props = {
   // Sökruta i MemberOverview.tsx (2026-08-03) — filtrerar bubblorna i ALLA
   // trådar på titel, case-insensitive. Tom sträng = inget filter.
   searchQuery?: string;
+  // Tidsspån (2026-08-04, Zaidas fynd: "Barnens rutiner lyckas visa
+  // uppgifter i olika tidsspann, men inte mina egna todos... varken i min
+  // personliga eller i familjens todo") — samma Inställningar → Utseende-
+  // inställning som redan gäller ParentTodoThreadView.tsx:s trådar
+  // (Barn/Mina uppgifter/kategorier), bara aldrig trådad hit. Default
+  // "today" matchar det tidigare, ograviterade beteendet om en anropare
+  // inte skickar med värdet.
+  range?: TodoThreadRange;
 };
 
 export function FamilyTodoThreads({
@@ -78,7 +93,8 @@ export function FamilyTodoThreads({
   onReorderBubbles,
   todoThreadGap,
   todoBubbleSize,
-  searchQuery = ""
+  searchQuery = "",
+  range = "today"
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
@@ -374,6 +390,8 @@ export function FamilyTodoThreads({
     source.onHideCategory?.();
   }
 
+  const today = new Date();
+
   return (
     <div
       className="todo-thread-view"
@@ -387,9 +405,16 @@ export function FamilyTodoThreads({
       {sources.map((source) => {
         const showExpired = showExpiredThreadIds.has(source.id);
         const query = searchQuery.trim().toLowerCase();
+        // Utgångna (missade) uppgifter är medvetet UTANFÖR range-filtret,
+        // samma princip som ParentTodoThreadView.tsx — poängen med "Visa
+        // utgångna" är att hitta det man missade oavsett valt tidsspann.
+        // Håller-på-att-tona-bort (dissolving) bubblor bypassar filtret
+        // helt, de ska aldrig försvinna abrupt mitt i animationen.
         const baseTodos = source.todos.filter(
           (t) =>
-            ((t.status === "pending" || (t.status === "expired" && showExpired)) || dissolving.has(t.id)) &&
+            (dissolving.has(t.id) ||
+              (t.status === "pending" && isDueWithinRange(t, today, range)) ||
+              (t.status === "expired" && showExpired)) &&
             (!query || t.title.toLowerCase().includes(query))
         );
         const threadTodos = applyBubbleOrder(sortByEndThenStartTime(baseTodos), todoBubbleOrder[source.id]);
@@ -671,6 +696,14 @@ export function FamilyTodoThreads({
               categoryName={null}
               members={match.source.members as unknown as Member[]}
               onClose={() => setDetailTodoId(null)}
+              onEdit={
+                match.source.onEdit
+                  ? () => {
+                      setDetailTodoId(null);
+                      match.source.onEdit!(match.todo);
+                    }
+                  : undefined
+              }
               onToggleSubtask={(todoId, subtaskId) => match.source.onToggleSubtask?.(todoId, subtaskId)}
               todo={match.todo}
             />

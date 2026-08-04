@@ -1,4 +1,4 @@
-import type { Id, Member, Role, Todo, TodoCategory, TodoThreadRange } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory, TodoSubtask, TodoThreadRange } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
@@ -195,4 +195,17 @@ export function isDueWithinRange(todo: Todo, today: Date, range: TodoThreadRange
   const from = todo.visibleFrom ? new Date(todo.visibleFrom).getTime() : Number.NEGATIVE_INFINITY;
   const until = todo.expiresAt ? new Date(todo.expiresAt).getTime() : Number.POSITIVE_INFINITY;
   return from < rangeEnd && until > dayStart;
+}
+
+// Avklarade delmoment längst ner i checklistan (2026-08-04, Zaidas önskemål)
+// — bara för LÄS-/bock-av-vyer (TodoDetailView.tsx), inte för redigera-
+// modalernas egen delmoment-editor (TodoCreatorModal.tsx/TodoEditModal.tsx),
+// som saknar en done-status att visa och där ordningen istället styrs
+// medvetet manuellt via upp/ner-pilarna (moveSubtask) — att sortera om
+// DÄR hade gjort pilarnas index missvisande mot vad som faktiskt syns.
+// Stabil sort (Array.prototype.sort, garanterat stabil sedan ES2019) —
+// bevarar den sparade inbördes ordningen inom både den obockade och den
+// bockade gruppen.
+export function sortSubtasksForDisplay(subtasks: TodoSubtask[]): TodoSubtask[] {
+  return [...subtasks].sort((a, b) => Number(a.done) - Number(b.done));
 }

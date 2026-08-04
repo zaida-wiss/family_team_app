@@ -1,18 +1,31 @@
 import "./TodoImportExport.css";
 import { useRef, useState } from "react";
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
-import type { Id, Member, Todo, TodoCategory } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
 import { generateId } from "../../utils/uuid";
 import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type ParsedTodoRow } from "./todoCsv";
+import { isChildMember } from "./selectors";
 import type { ImportResult, ImportUndo } from "./useTodosState";
 
 type Props = {
   currentMember: Member;
   members: Member[];
+  // Behövs för isChildMember (2026-08-04, buggfynd: exportens "Barn"-
+  // kryssruta kollade tidigare bara member.isChild direkt — inte samma
+  // helper (isChildMember) som resten av appen använder, som ÄVEN faller
+  // tillbaka på rollens isChildRole. Ett barn vars Member.isChild av någon
+  // anledning stod fel (samma klass av trasig data som 2026-07-15s Wilja/
+  // Maja-incident) exporterades då aldrig med, tyst, även med kryssrutan i).
+  roles: Role[];
   todos: Todo[];
   categories: TodoCategory[];
-  onCreateTodo: (todo: Todo) => void;
-  onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
+  // Returnerar nu ett promise (2026-08-04, Zaidas fynd: "kvällsrutiner och
+  // tvätt blir dubletter" efter Ångra-senaste-import→ny-import i snabb
+  // följd) — runImport VÄNTAR IN varje rad innan nästa påbörjas, så en
+  // efterföljande "Ångra"-radering aldrig kan hinna nå servern innan
+  // skapandet/uppdateringen den ska ångra ens sparats där.
+  onCreateTodo: (todo: Todo) => Promise<unknown> | void;
+  onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => Promise<unknown> | void;
   onDeleteTodo: (todoId: Id) => void;
   onCreateCategory: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
   // "family" (2026-08-03, Zaidas önskemål: massimport/export av familjens
@@ -123,6 +136,7 @@ function extractPatchFields(todo: Todo): Partial<Todo> {
 export function TodoImportExport({
   currentMember,
   members,
+  roles,
   todos,
   categories,
   onCreateTodo,
@@ -184,7 +198,7 @@ export function TodoImportExport({
   function handleExport() {
     const included = todos.filter((todo) => {
       const assignee = members.find((m) => m.id === todo.assignedTo);
-      if (assignee?.isChild) return exportSelection.has(CHILDREN_FILTER_ID);
+      if (isChildMember(assignee, roles)) return exportSelection.has(CHILDREN_FILTER_ID);
       return todo.personalCategoryId
         ? exportSelection.has(todo.personalCategoryId)
         : exportSelection.has(NO_CATEGORY_FILTER_ID);
@@ -212,11 +226,10 @@ export function TodoImportExport({
 
       // Bunta i grupper om 4 rader, samma mönster/orsak som ADR-0023
       // (2026-07-16, ett konto delar ofta en enda hem-IP över flera
-      // medlemmar) — onCreateTodo/onUpdateTodo är fire-and-forget, så en
-      // stor import (t.ex. 500+ rader) kunde annars skjuta iväg lika många
-      // parallella POST/PATCH-anrop i en enda synkron loop, samma sorts
-      // burst som orsakade 429-incidenten. En kort paus var 4:e rad räcker
-      // för att sprida ut anropen utan att göra importen märkbart segare.
+      // medlemmar). onCreateTodo/onUpdateTodo väntas numera in per rad
+      // (2026-08-04) — requesterna kan alltså inte längre komma i en enda
+      // burst, men en kort paus var 4:e rad kvarstår ändå som extra marginal
+      // mot rate-limiten utan att göra importen märkbart segare.
       const BATCH_SIZE = 4;
       let rowsSinceBatchPause = 0;
 
@@ -264,12 +277,13 @@ export function TodoImportExport({
 
         if (existing) {
           undoUpdated.push({ id: existing.id, previous: extractPatchFields(existing) });
-          onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId));
+          // Inväntad (2026-08-04) — se Props-kommentaren ovan.
+          await onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId));
           updated++;
         } else {
           const newTodo = buildNewTodo(row, currentMember.id, categoryId, assignedTo);
           undoCreatedIds.push(newTodo.id);
-          onCreateTodo(newTodo);
+          await onCreateTodo(newTodo);
           created++;
         }
       }

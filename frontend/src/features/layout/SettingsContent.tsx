@@ -600,6 +600,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
             <TodoImportExport
               currentMember={currentMember}
               members={members}
+              roles={roles}
               todos={todos}
               categories={personalCategories}
               onCreateTodo={onCreateTodo}

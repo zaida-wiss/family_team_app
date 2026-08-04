@@ -5,7 +5,7 @@ import type { FamilyThreadSource } from "../features/todos/FamilyTodoThreads";
 import type { ImportResult, ImportUndo } from "../features/todos/useTodosState";
 import type {
   Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
-  Todo, TodoCategory
+  Todo, TodoCategory, TodoThreadRange
 } from "@shared/types";
 
 type Props = {
@@ -48,6 +48,8 @@ type Props = {
   onReorderBubbles?: (threadId: Id, order: Id[]) => void;
   todoThreadGap?: number;
   todoBubbleSize?: number;
+  // Tidsspann (2026-08-04, Zaidas fynd) — se MemberOverview.tsx.
+  todoThreadRange?: TodoThreadRange;
   // Ny inköpslista, förinställd på familjen (2026-08-01) — ENDAST mitt eget
   // konto eller Mina familjekonton, se MemberShellContent.tsx.
   onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
@@ -74,7 +76,7 @@ export function HomePage({
   onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
-  familyThreadSources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize,
+  familyThreadSources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize, todoThreadRange,
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
   members, categories, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
@@ -114,6 +116,7 @@ export function HomePage({
       onReorderBubbles={onReorderBubbles}
       todoThreadGap={todoThreadGap}
       todoBubbleSize={todoBubbleSize}
+      todoThreadRange={todoThreadRange}
       onCreateFamilyShoppingList={onCreateFamilyShoppingList}
       shoppingCreatableFamilyAccountIds={shoppingCreatableFamilyAccountIds}
       members={members}

@@ -22,12 +22,19 @@ const ShoppingView = lazy(() =>
 const TodosView = lazy(() =>
   import("../todos/TodosView").then((m) => ({ default: m.TodosView }))
 );
+// Full redigering av en todo i Hem-vyns familjetrådar (2026-08-04, Zaidas
+// önskemål: "det skall gå att redigera i hemvyns todo, precis som i min
+// personliga todovy") — samma TodoEditModal som Todos-panelen redan
+// använder, bara öppnad från FamilyTodoThreads.tsx:s onEdit-callback istället.
+const TodoEditModal = lazy(() =>
+  import("../todos/TodoEditModal").then((m) => ({ default: m.TodoEditModal }))
+);
 const RecipesView = lazy(() =>
   import("../recipes/RecipesView").then((m) => ({ default: m.RecipesView }))
 );
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
-import { getFamilyViewTodos } from "../todos/selectors";
+import { getFamilyViewTodos, isDueWithinRange } from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers, useCrossAccountRecipes, useCrossAccountShoppingLists } from "../todos/useCrossAccountFamilyState";
 import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
 import { generateId } from "../../utils/uuid";
@@ -178,6 +185,12 @@ export function MemberShellContent({
 }: Props) {
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
+  // Full redigering av en todo öppnad via Hem-vyns familjetrådar (2026-08-04)
+  // — bara satt för MITT EGET kontos trådar (Familjen-poolen + egna
+  // familjekategorier), aldrig cross-account/anslutningstrådar (samma
+  // "ingen redigera-modal för andra kontons todos"-gräns som redan gäller
+  // FamilyTodoThreads.tsx:s övriga mutationer).
+  const [editFamilyTodoId, setEditFamilyTodoId] = useState<Id | null>(null);
   // Egen sida för Medaljer/Rekord (2026-07-06) — samma pokal-knapp/sida som
   // barnets egen vy, men här när en vuxen tittar på ett barns dashboard.
   const [showChildRecords, setShowChildRecords] = useState(false);
@@ -294,7 +307,8 @@ export function MemberShellContent({
       onToggleInProgress: onToggleTodoInProgress,
       onToggleSubtask,
       onCreateTodo: (title: string, visual: string | null) => handleCreateFamilyTodo(currentMember.accountId, title, visual),
-      onDeleteTodo: onSoftDeleteTodo
+      onDeleteTodo: onSoftDeleteTodo,
+      onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id)
     };
     // Riktiga familjekategorier (2026-08-03, isFamily:true) — en egen tråd
     // per kategori, samma mutationer som "Familjen"-poolen ovan plus
@@ -315,7 +329,8 @@ export function MemberShellContent({
       onDeleteTodo: onSoftDeleteTodo,
       onRenameCategory: (name: string) => onRenameCategory(category.id, name),
       onDeleteCategory: () => onRemoveCategory(category.id),
-      onHideCategory: () => onSetCategoryHidden(category.id, true)
+      onHideCategory: () => onSetCategoryHidden(category.id, true),
+      onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id)
     }));
     const cross = crossAccountFamilyThreads.map((t) => ({
       id: `crossAccount:${t.accountId}`,
@@ -547,6 +562,23 @@ export function MemberShellContent({
     // med", inProgressBy) på en otilldelad Familjen-uppgift ska den även
     // dyka upp i barnets EGEN dashboard-lista, inte bara i vuxenvyns
     // gemensamma Familjen-tråd.
+    //
+    // Tidsspann (2026-08-04, Zaidas fynd: "Barnens rutiner lyckas visa
+    // uppgifter i olika tidsspann, men inte mina egna todos... varken i min
+    // personliga eller i familjens todo") — ett BARNS egen dashboard förblir
+    // MEDVETET alltid isTodoVisibleNow (exakt klockslag, "görs den innan
+    // sluttiden") oavsett todoThreadRange, precis som tidigare — den
+    // inställningen gäller uttryckligen bara den inloggades EGNA vy
+    // (2026-07-27: "I barnens vy är det dock alltid bara dagens man ser").
+    // För en VUXEN som tittar på sin EGEN (eller en annan vuxens)
+    // PersonalDashboard gäller samma tidsspann som den vanliga Todos-panelen
+    // redan respekterar: "idag" behåller den exakta klockslags-gatingen
+    // (isTodoVisibleNow), "vecka"/"månad"/"allt" breddas till dag-baserad
+    // isDueWithinRange (samma som Barn-tråden i ParentTodoThreadView.tsx
+    // redan använder för alla spann) — annars hade en uppgift som ännu inte
+    // nått sitt klockslag idag aldrig kunnat förhandsvisas för en vecka
+    // framåt.
+    const useRangeAwareVisibility = !selectedMemberIsChild && todoThreadRange !== "today";
     const activeChildTodos = todos
       .filter(
         (t) =>
@@ -555,7 +587,9 @@ export function MemberShellContent({
           t.status === "pending" &&
           t.recurrence.type === "none" &&
           t.deletedAt === null &&
-          isTodoVisibleNow(t, now) &&
+          (useRangeAwareVisibility
+            ? isDueWithinRange(t, new Date(now), todoThreadRange)
+            : isTodoVisibleNow(t, now)) &&
           !(t.personalCategoryId && personalCategories.find((c) => c.id === t.personalCategoryId)?.hidden)
       )
       .sort((a, b) => {
@@ -879,6 +913,7 @@ export function MemberShellContent({
         onReorderBubbles={onReorderBubbles}
         todoThreadGap={todoThreadGap}
         todoBubbleSize={todoBubbleSize}
+        todoThreadRange={todoThreadRange}
         onCreateFamilyShoppingList={handleCreateFamilyShoppingList}
         shoppingCreatableFamilyAccountIds={homeShoppingCreatableAccountIds}
         members={members}
@@ -900,6 +935,30 @@ export function MemberShellContent({
           <p className="empty-note">Öppna inställningar för att bjuda in ett barn.</p>
         </article>
       )}
+      {editFamilyTodoId &&
+        (() => {
+          const editFamilyTodo = todos.find((t) => t.id === editFamilyTodoId);
+          if (!editFamilyTodo) return null;
+          return (
+            <Suspense fallback={null}>
+              <TodoEditModal
+                categories={personalCategories}
+                currentMember={currentMember}
+                fixedTodoTimes={fixedTodoTimes}
+                members={members}
+                onClose={() => setEditFamilyTodoId(null)}
+                onCreateCategory={onCreateCategory}
+                onCreateTaskTemplate={onCreateTaskTemplate}
+                onDeleteTodo={onSoftDeleteTodo}
+                onRefreshRoutine={onRefreshRoutine}
+                onUpdateTodo={onUpdateTodo}
+                roles={roles}
+                todo={editFamilyTodo}
+                todos={todos}
+              />
+            </Suspense>
+          );
+        })()}
     </>
   );
 }

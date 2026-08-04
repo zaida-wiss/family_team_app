@@ -100,10 +100,28 @@ export function getDueRecurringTodoOccurrences(
       template.timeWindows && template.timeWindows.length > 0
         ? template.timeWindows
         : [{ visibleFrom: template.visibleFrom, expiresAt: template.expiresAt }];
+    const expectedIds = windows.map((_, i) => occurrenceId(template.id, dateKey, windows.length > 1 ? i : null));
+    const existingForToday = todos.filter((t) => t.recurringSourceId === template.id && t.occurrenceDate === dateKey);
+
+    // En mall vars fönsterantal ändrats SEDAN dagens occurrence(r) redan
+    // genererades (2026-08-04, Zaidas fynd: "kvällsrutiner och tvätt blir
+    // dubletter") hoppas över helt för idag — id:n byggs utifrån mallens
+    // NUVARANDE fönsterantal (windows.length > 1 ? index : null), så en
+    // redan existerande occurrence som INTE matchar något av de förväntade
+    // id:na (t.ex. en gammal osuffigerad occurrence, kvar sedan innan en
+    // CSV-import lade till "Fler tidsrutor" på samma mall) betyder att
+    // dagens läge redan är "täckt" på ett sätt koden inte längre känner
+    // igen — generera INGET nytt då, annars får den gamla occurrencen
+    // sällskap av en helt ny per tidsruta istället för att kännas igen.
+    // Fönsterändringen syns först nästa dag, samma "varje dag är en
+    // fristående ögonblicksbild"-princip som redan gäller andra mall-
+    // ändringar (se Återanvänd-kommentaren i ParentTodoThreadView.tsx).
+    const hasStaleMismatch = existingForToday.some((t) => !expectedIds.includes(t.id));
+    if (hasStaleMismatch) continue;
 
     windows.forEach((window, index) => {
-      const id = occurrenceId(template.id, dateKey, windows.length > 1 ? index : null);
-      if (todos.some((t) => t.id === id)) return;
+      const id = expectedIds[index];
+      if (existingForToday.some((t) => t.id === id)) return;
       occurrences.push(createOccurrence(template, dateKey, window, id, fixedTodoTimes));
     });
   }

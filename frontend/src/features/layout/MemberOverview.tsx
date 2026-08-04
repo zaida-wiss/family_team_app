@@ -15,7 +15,7 @@ import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
   Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
-  Todo, TodoCategory
+  Todo, TodoCategory, TodoThreadRange
 } from "@shared/types";
 import styles from "./MemberOverview.module.css";
 
@@ -89,6 +89,9 @@ type Props = {
   onReorderBubbles?: (threadId: Id, order: Id[]) => void;
   todoThreadGap?: number;
   todoBubbleSize?: number;
+  // Tidsspann (2026-08-04, Zaidas fynd) — samma Inställningar → Utseende-
+  // inställning som redan gäller den personliga Todos-panelens trådar.
+  todoThreadRange?: TodoThreadRange;
   // Ny inköpslista, förinställd på familjen (2026-08-01) — ENDAST mitt eget
   // konto eller Mina familjekonton (Zaidas rättelse: "man ska inte kunna
   // göra inköpslistor i familjer man inte är medlem i").
@@ -151,6 +154,7 @@ export function MemberOverview({
   onReorderBubbles = () => {},
   todoThreadGap,
   todoBubbleSize,
+  todoThreadRange = "today",
   onCreateFamilyShoppingList,
   shoppingCreatableFamilyAccountIds,
   members = [],
@@ -445,6 +449,7 @@ export function MemberOverview({
               onDeleteTodo={onDeleteTodo}
               onUpdateTodo={onUpdateTodo}
               result={todoImportResult ?? null}
+              roles={roles}
               scope="family"
               setLastImportUndo={onSetTodoImportUndo ?? (() => {})}
               setResult={onSetTodoImportResult ?? (() => {})}
@@ -457,6 +462,7 @@ export function MemberOverview({
           ) : (
             <FamilyTodoThreads
               onReorderBubbles={onReorderBubbles}
+              range={todoThreadRange}
               searchQuery={todoSearchQuery}
               sources={filteredThreadSources}
               todoBubbleOrder={todoBubbleOrder}

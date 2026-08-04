@@ -286,6 +286,7 @@ export function TodosView({
         {todoViewMode === "thread" && personalSignedUpThreadSources.length > 0 && (
           <FamilyTodoThreads
             onReorderBubbles={onReorderBubbles}
+            range={todoThreadRange}
             sources={personalSignedUpThreadSources}
             todoBubbleOrder={todoBubbleOrder}
             todoBubbleSize={todoBubbleSize}

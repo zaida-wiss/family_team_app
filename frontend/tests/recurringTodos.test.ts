@@ -187,6 +187,62 @@ describe("recurringTodos", () => {
     expect(occurrences[0]?.id).toBe("todo-brush-teeth-occurrence-2026-06-08-1");
   });
 
+  // 2026-08-04, Zaidas fynd: "kvällsrutiner och tvätt blir dubletter" — en
+  // mall som redan hunnit generera dagens (osuffigerade, enda) occurrence
+  // fick sedan "Fler tidsrutor" tillagt (t.ex. via CSV-import), vilket
+  // ändrade mallens fönsterantal SAMMA DAG. De nya, omräknade id:na
+  // (nu suffigerade) matchade aldrig den gamla occurrencen, som fick
+  // sällskap av två helt nya istället för att kännas igen — tre bubblor för
+  // en uppgift. Rätt beteende: generera INGET nytt för idag när ett
+  // fönsterantal-byte upptäcks, fönsterändringen syns först nästa dag.
+  test("a template whose window count changed AFTER today's occurrence was already generated does not pile on new ones", () => {
+    const template = createTodo({
+      id: "todo-laundry",
+      recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+      visibleFrom: "2026-06-01T07:00:00.000Z",
+      // Mallen har NU två tidsrutor — men den befintliga occurrencen nedan
+      // skapades INNAN den andra tidsrutan lades till (osuffigerat id).
+      timeWindows: [
+        { visibleFrom: "2026-06-08T07:00:00.000Z", expiresAt: "2026-06-08T07:15:00.000Z" },
+        { visibleFrom: "2026-06-08T19:00:00.000Z", expiresAt: "2026-06-08T19:15:00.000Z" }
+      ]
+    });
+    const staleSingleWindowOccurrence = createTodo({
+      id: "todo-laundry-occurrence-2026-06-08",
+      recurrence: { type: "none" },
+      recurringSourceId: template.id,
+      occurrenceDate: "2026-06-08"
+    });
+
+    const occurrences = getDueRecurringTodoOccurrences([template, staleSingleWindowOccurrence], monday);
+    expect(occurrences).toEqual([]);
+  });
+
+  test("a template whose window count DECREASED (multi→single) after today's occurrences already existed does not pile on a new one either", () => {
+    const template = createTodo({
+      id: "todo-evening-routine",
+      recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+      visibleFrom: "2026-06-01T07:00:00.000Z"
+      // Mallen har nu bara ETT implicit fönster (ingen timeWindows) — men de
+      // två befintliga occurrencerna nedan skapades när mallen hade två.
+    });
+    const existingWindow0 = createTodo({
+      id: "todo-evening-routine-occurrence-2026-06-08-0",
+      recurrence: { type: "none" },
+      recurringSourceId: template.id,
+      occurrenceDate: "2026-06-08"
+    });
+    const existingWindow1 = createTodo({
+      id: "todo-evening-routine-occurrence-2026-06-08-1",
+      recurrence: { type: "none" },
+      recurringSourceId: template.id,
+      occurrenceDate: "2026-06-08"
+    });
+
+    const occurrences = getDueRecurringTodoOccurrences([template, existingWindow0, existingWindow1], monday);
+    expect(occurrences).toEqual([]);
+  });
+
   test("a template without timeWindows behaves exactly as before (single implicit window)", () => {
     const template = createTodo({
       id: "todo-single",

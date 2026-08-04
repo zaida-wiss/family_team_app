@@ -375,6 +375,61 @@ test("Todos-import/export: 'Ångra senaste import' tar bort en nyskapad uppgift"
   await expect.poll(() => deletedId).toBe(createdTodo?.id as string);
 });
 
+// 2026-08-04, Zaidas fynd: "kvällsrutiner och tvätt blir dubletter" efter
+// Ångra senaste import → ny import i snabb följd. Grundorsaken: skapande-
+// anropen var "skicka och glöm" (aldrig inväntade), så ett snabbt Ångra-
+// klick kunde skicka sin radering INNAN skapandet ens hunnit sparas på
+// servern — raderingen missade sitt mål, uppgiften "återuppstod" vid nästa
+// hämtning. Verifierar att POST för rad 2 inte skickas förrän POST för rad
+// 1 faktiskt svarat (sekventiellt, inte parallellt/skicka-och-glöm).
+test("Todos-import/export: en stor import väntar in varje rads POST innan nästa påbörjas (ingen skicka-och-glöm-race)", async ({ page }) => {
+  const postOrder: string[] = [];
+  let resolveFirstPost: (() => void) | null = null;
+  const firstPostStarted = new Promise<void>((resolve) => {
+    resolveFirstPost = resolve;
+  });
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as { title: string };
+      postOrder.push(body.title);
+      if (body.title === "Kvällsrutiner") {
+        resolveFirstPost?.();
+        // Fördröjd svar — om rad 2:s POST skickas INNAN denna hunnit svara
+        // (den gamla skicka-och-glöm-buggen) skulle postOrder redan
+        // innehålla "Tvätt" när vi kollar det nedan.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      return route.fulfill({ status: 201, json: { id: `todo-${body.title}` } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openImportExportSettings(page);
+
+  const csv = [
+    "Titel,Tilldelad,Id",
+    "Kvällsrutiner,Mig själv,",
+    "Tvätt,Mig själv,"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await firstPostStarted;
+  // Precis efter att första POST:en skickats (men INNAN dess 300ms-fördröjda
+  // svar), ska den andra raden ännu INTE ha skickat sin POST.
+  expect(postOrder).toEqual(["Kvällsrutiner"]);
+
+  await expect(page.getByText("2 uppgifter importerade.")).toBeVisible();
+  expect(postOrder).toEqual(["Kvällsrutiner", "Tvätt"]);
+});
+
 // 2026-07-08 (Zaidas fynd: "ångra senaste import måste vara kvar även om jag
 // växlar vy, eftersom jag behöver upptäcka eventuella fel") — resultatet och
 // Ångra-knappen låg tidigare som lokal state i TodoImportExport.tsx, vilket
