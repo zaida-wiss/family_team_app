@@ -122,6 +122,37 @@ describe("todoCsv", () => {
     expect(errors[0]).toContain("Titel");
   });
 
+  // 2026-08-05, Zaidas fynd: en fil redigerad i ett externt program hade fått
+  // å/ä/ö i rubrikraden förvanskade ("Ãterkommer" istället för "Återkommer",
+  // "StjÃ¤rnor" istället för "Stjärnor") — de ENDA två rubrikerna med å/ä/ö i
+  // sitt korrekta namn, exakt matchning mot rätt stavning missar dem då
+  // alltid. Utan denna varning hade raderna importerats ändå, bara tyst som
+  // engångsuppgifter (fel enstaka datum) istället för återkommande.
+  test("parseTodoCsv: förvanskad teckenkodning i rubrikraden (Ã-tecken) ger ett tydligt fel istället för att tyst tappa Återkommer/Stjärnor", () => {
+    const csv = [
+      "Titel,Emoji,Tilldelad,Egen kategori,StjÃ¤rnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Ãterkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Radera",
+      "Daglig Tvätt,🧺,Familjen,,,,,2026-08-04 16:30,2026-08-04 17:00,,Dag,1,,,,,,"
+    ].join("\r\n");
+    const { rows, errors } = parseTodoCsv(csv, [], [], "mem-1");
+    expect(rows).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("teckenkodning");
+    expect(errors[0]).toContain("Återkommer");
+  });
+
+  test("parseTodoCsv: en vanlig, oskadad fil med korrekta å/ä/ö-rubriker påverkas inte av mojibake-kontrollen", () => {
+    const members = [createMember("mem-child-1", { name: "Nova", isChild: true })];
+    const csv = [
+      "Titel,Tilldelad,Stjärnor,Startdatum,Återkommer,Intervall",
+      "Läxor,Nova,3,2026-08-04,Dag,1"
+    ].join("\r\n");
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].starValue).toBe(3);
+    expect(rows[0].recurrence).toEqual({ type: "recurring", unit: "day", every: 1, daysOfWeek: null });
+  });
+
   // 2026-08-04, Zaidas önskemål: "ladda ner alla todos, uppdatera, lägga till
   // nya och radera de jag inte vill ha kvar längre, sedan importera" — en
   // Radera-kolumn med "Ja" och ett Id markerar raden för radering istället

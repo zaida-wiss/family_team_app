@@ -486,6 +486,26 @@ export function parseTodoCsv(
   const weekdaysCol = col("Veckodagar");
   const recurrenceEndCol = col("Slutar");
   const subtasksCol = col("Delmoment");
+
+  // Teckenkodningsfel (2026-08-05, Zaidas fynd — en fil redigerad i ett
+  // externt program hade fått å/ä/ö förvanskade, t.ex. "Ãterkommer" istället
+  // för "Återkommer") — "Stjärnor"/"Återkommer" är de ENDA två rubrikerna
+  // med å/ä/ö i sitt korrekta namn, så en sådan förvanskning missar ALLTID
+  // exakt dessa två kolumner (exakt matchning mot rätt stavning), medan alla
+  // andra (rent ASCII) rubriker fortsätter fungera — vilket gör felet
+  // förrädiskt tyst: raderna importeras ändå, bara som engångsuppgifter med
+  // fel enstaka datum istället för återkommande, utan någon synlig varning.
+  // Kan INTE alltid repareras automatiskt (stora Å/Ä/Ö tappar ofta hela
+  // bytet vid en sådan skada, inte bara ett reversibelt teckenfel) — varnar
+  // tydligt istället för att gissa.
+  if ((starsCol === undefined || recurrenceCol === undefined) && headerRow.join(",").includes("Ã")) {
+    return {
+      rows: [],
+      errors: [
+        `Filens teckenkodning verkar skadad — å/ä/ö i rubrikraden visas fel (t.ex. "Ãterkommer" istället för "Återkommer"). Det gör att kolumnen "Återkommer" och/eller "Stjärnor" inte kan hittas, vilket i sin tur gör att återkommande uppgifter tyst blir engångsuppgifter istället. Ladda ner en NY mall och klistra in dina rader i den istället för att spara om en redan exporterad fil i ett annat program.`
+      ]
+    };
+  }
   const notesCol = col("Anteckningar");
   const idCol = col("Id");
   const deleteCol = col("Radera");
