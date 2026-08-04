@@ -139,12 +139,18 @@ export function FamilyTodoThreads({
   const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
   const [bubbleDragOverKey, setBubbleDragOverKey] = useState<Id | null>(null);
 
-  const hasSharedTimer = sources.some((s) => s.todos.some((t) => (t.inProgressBy?.length ?? 0) >= 2));
+  // Tickar alltid nu (2026-08-04) — tidigare bara när en delad "någon håller
+  // på med den här"-klocka faktiskt behövde den (hasSharedTimer), en
+  // medveten optimering mot onödiga omrenderingar. Men "idag"-tidsspannets
+  // exakta klockslags-gating (isTodoVisibleNow nedan) behöver nowTick
+  // uppdateras KONTINUERLIGT för att en uppgift ska dyka upp automatiskt när
+  // dess klockslag inträffar — annars fryser nowTick vid sidladdningens
+  // tidpunkt och en uppgift som borde dölja sig (eller visa sig) förblir i
+  // det tillstånd den hade vid mount tills sidan laddas om.
   useEffect(() => {
-    if (!hasSharedTimer) return;
     const id = window.setInterval(() => setNowTick(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [hasSharedTimer]);
+  }, []);
 
   useEffect(
     () => () => {

@@ -77,6 +77,48 @@ test("Hem-vyns Todos-flik: signar upp sig på en Familjen-todo via dubbeltryck, 
   await expect(page.getByRole("button", { name: /Hemlig grej/ })).toBeVisible();
 });
 
+// 2026-08-04, Zaidas fynd: "kvällsrutiner syns fortfarande" — Hem-vyns
+// familjetrådar (FamilyTodoThreads.tsx) visade tidigare en "idag"-uppgift
+// hela dagen oavsett exakt klockslag (dag-baserad isDueWithinRange). Nu
+// krävs att NU faktiskt ligger mellan visibleFrom/expiresAt (isTodoVisibleNow),
+// och nowTick tickar KONTINUERLIGT (inte bara när en delad "någon håller på
+// med"-klocka behövs, en bugg i den första versionen av fixen) så uppgiften
+// dyker upp automatiskt i realtid utan omladdning.
+test("Hem-vyns familjetodo: en kvällsuppgift döljs innan sitt klockslag, dyker upp automatiskt i realtid utan omladdning", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-08-04T14:00:00") });
+
+  const EVENING_TODO = {
+    ...FAMILY_TODO,
+    id: "todo-evening",
+    title: "Kvällsrutiner",
+    visibleFrom: "2026-08-04T19:00:00",
+    expiresAt: "2026-08-04T23:55:00"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: route.request().method() === "GET" ? [EVENING_TODO] : {} })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Visa todos" }).click();
+
+  const homeTodosCard = page.locator("article.dashboard").filter({ hasText: "Uppgifter" });
+  await expect(homeTodosCard.getByText("Kvällsrutiner")).toHaveCount(0);
+
+  // Klockan slår 19:01 — ingen omladdning, uppgiften ska dyka upp av sig
+  // själv (nowTick tickar varje sekund).
+  await page.clock.setSystemTime(new Date("2026-08-04T19:01:00"));
+  await page.clock.runFor(2000);
+  await expect(homeTodosCard.getByText("Kvällsrutiner")).toBeVisible();
+
+  // Efter expiresAt (23:55) försvinner den igen.
+  await page.clock.setSystemTime(new Date("2026-08-05T00:01:00"));
+  await page.clock.runFor(2000);
+  await expect(homeTodosCard.getByText("Kvällsrutiner")).toHaveCount(0);
+});
+
 test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställningar visar den igen", async ({ page }) => {
   const CHILD_MEMBER = {
     id: "mem-child", accountId: "acc-1", userId: null, name: "Barnet", roleId: "role-child", isChild: true,
