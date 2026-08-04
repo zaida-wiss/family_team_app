@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckSquare, Plus, Search, ShoppingCart, Upload, UtensilsCrossed } from "lucide-react";
+import { CalendarDays, CheckSquare, Plus, ShoppingCart, Upload, UtensilsCrossed } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -54,7 +54,6 @@ type Props = {
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   fixedCalendarTimes?: boolean;
   canSeeTodos?: boolean;
-  onOpenTodos?: () => void;
   shoppingLists?: ShoppingList[];
   canSeeShopping?: boolean;
   onOpenShopping?: () => void;
@@ -138,7 +137,6 @@ export function MemberOverview({
   onLoadEventsForMonth,
   fixedCalendarTimes,
   canSeeTodos = false,
-  onOpenTodos,
   shoppingLists = [],
   canSeeShopping = false,
   onOpenShopping,
@@ -173,9 +171,8 @@ export function MemberOverview({
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
   const [activeTab, setActiveTab] = useState<HomeTab>("calendar");
   const [newListName, setNewListName] = useState("");
-  // Sökruta + "+"-knapp (ny familjekategori) + import/export-panel
-  // (2026-08-03) — se Props-kommentaren ovan.
-  const [todoSearchQuery, setTodoSearchQuery] = useState("");
+  // "+"-knapp (ny familjekategori) + import/export-panel (2026-08-03) — se
+  // Props-kommentaren ovan.
   const [addingFamilyCategory, setAddingFamilyCategory] = useState(false);
   const [newFamilyCategoryName, setNewFamilyCategoryName] = useState("");
   const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
@@ -223,10 +220,6 @@ export function MemberOverview({
         ? familyThreadSources
         : familyThreadSources.filter((s) => s.accountId === selectedFamilyId),
     [familyThreadSources, selectedFamilyId]
-  );
-  const pendingTodoCount = filteredThreadSources.reduce(
-    (sum, s) => sum + s.todos.filter((t) => t.status === "pending").length,
-    0
   );
   // Massimport/export (2026-08-03) — bara MITT EGET kontos familje-trådar
   // (Familjen-poolen + egna familjekategorier), oavsett vilket familjeval
@@ -368,28 +361,14 @@ export function MemberOverview({
 
       {effectiveTab === "todos" && canSeeTodos && (
         <article className="dashboard">
-          <header className="section-header">
-            <div><p className="eyebrow">Uppgifter</p><h2>{pendingTodoCount} väntar</h2></div>
-            {onOpenTodos && (
-              <button className="secondary-button" onClick={onOpenTodos} type="button">Öppna</button>
-            )}
-          </header>
-
-          {/* Sökruta + "+" (ny familjekategori) + import/export (2026-08-03)
-              — bara för mitt EGET konto, aldrig en annan familj jag bara
-              tittar på via filtret ovan. */}
+          {/* "+" (ny familjekategori) + import/export (2026-08-03, sökruta/
+              titel/väntar-antal/Öppna-knapp borttagna 2026-08-04, Zaidas
+              önskemål: "lägg ikonerna... och knapparna... bredvid varandra.
+              Ta bort filtreringen och öppnasektionen") — bara för mitt EGET
+              konto, aldrig en annan familj jag bara tittar på via filtret
+              ovan. */}
           {isOwnFamilySelected && onCreateCategory && (
             <div className={styles.homeQuickAdd}>
-              <label aria-label="Sök bland familjens uppgifter" className={styles.todoSearchLabel}>
-                <Search aria-hidden="true" size={16} />
-                <input
-                  className="text-input"
-                  onChange={(e) => setTodoSearchQuery(e.target.value)}
-                  placeholder="Sök bland familjens uppgifter…"
-                  type="search"
-                  value={todoSearchQuery}
-                />
-              </label>
               <button
                 aria-label="Ny familjekategori"
                 className="icon-button"
@@ -463,7 +442,6 @@ export function MemberOverview({
             <FamilyTodoThreads
               onReorderBubbles={onReorderBubbles}
               range={todoThreadRange}
-              searchQuery={todoSearchQuery}
               sources={filteredThreadSources}
               todoBubbleOrder={todoBubbleOrder}
               todoBubbleSize={todoBubbleSize}

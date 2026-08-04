@@ -25,7 +25,6 @@ type Props = {
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
   fixedCalendarTimes?: boolean;
   canSeeTodos?: boolean;
-  onOpenTodos?: () => void;
   shoppingLists?: ShoppingList[];
   canSeeShopping?: boolean;
   onOpenShopping?: () => void;
@@ -73,7 +72,7 @@ type Props = {
 export function HomePage({
   currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onAddEvent, onUpdateEvent, onDeleteEvent,
-  onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, onOpenTodos, shoppingLists, canSeeShopping,
+  onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
   familyThreadSources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize, todoThreadRange,
@@ -100,7 +99,6 @@ export function HomePage({
       onLoadEventsForMonth={onLoadEventsForMonth}
       fixedCalendarTimes={fixedCalendarTimes}
       canSeeTodos={canSeeTodos}
-      onOpenTodos={onOpenTodos}
       shoppingLists={shoppingLists}
       canSeeShopping={canSeeShopping}
       onOpenShopping={onOpenShopping}

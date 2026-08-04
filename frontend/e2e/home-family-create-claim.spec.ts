@@ -108,7 +108,7 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   // Bollen syns i familjevyn (samma stil som Todos-panelen, se
   // .todo-thread__ball--home). Dubbeltryck öppnar "vem håller på med den
   // här"-väljaren (samma gest som lokalt) — klick på sig själv signar upp.
-  const todosCard = page.locator("article.dashboard").filter({ hasText: "Uppgifter" });
+  const todosCard = page.locator("article.dashboard").filter({ has: page.locator(".todo-thread-view") });
   const bubble = todosCard.locator(".todo-thread__ball--home");
   await expect(bubble).toBeVisible();
   await bubble.dblclick();

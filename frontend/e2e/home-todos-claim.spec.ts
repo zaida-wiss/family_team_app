@@ -56,7 +56,7 @@ test("Hem-vyns Todos-flik: signar upp sig på en Familjen-todo via dubbeltryck, 
   await page.getByRole("button", { name: "Visa todos" }).click();
 
   // Hem: Familjen-todon syns som en boll, den privata gör det inte.
-  const homeTodosCard = page.locator("article.dashboard").filter({ hasText: "Uppgifter" });
+  const homeTodosCard = page.locator("article.dashboard").filter({ has: page.locator(".todo-thread-view") });
   await expect(homeTodosCard.getByText("Handla mat")).toBeVisible();
   await expect(homeTodosCard.getByText("Hemlig grej")).toHaveCount(0);
 
@@ -136,7 +136,7 @@ test("Hem-vyns familjetodo: en kvällsuppgift döljs innan sitt klockslag, dyker
   await page.goto("/");
   await page.getByRole("button", { name: "Visa todos" }).click();
 
-  const homeTodosCard = page.locator("article.dashboard").filter({ hasText: "Uppgifter" });
+  const homeTodosCard = page.locator("article.dashboard").filter({ has: page.locator(".todo-thread-view") });
   await expect(homeTodosCard.getByText("Kvällsrutiner")).toHaveCount(0);
 
   // Klockan slår 19:01 — ingen omladdning, uppgiften ska dyka upp av sig

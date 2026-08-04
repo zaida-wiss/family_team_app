@@ -888,7 +888,6 @@ export function MemberShellContent({
         onLoadEventsForMonth={onLoadEventsForMonth}
         fixedCalendarTimes={fixedCalendarTimes}
         canSeeTodos={canSeeTodos}
-        onOpenTodos={() => onNavigate("todos")}
         shoppingLists={homeAllShoppingLists}
         canSeeShopping={canSeeShopping}
         onOpenShopping={() => onNavigate("shopping")}
