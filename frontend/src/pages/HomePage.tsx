@@ -10,7 +10,6 @@ import type {
 
 type Props = {
   currentMember: Member;
-  accountName: string;
   roles: Role[];
   activeMembers: Member[];
   selectedMemberId: string;
@@ -70,7 +69,7 @@ type Props = {
 };
 
 export function HomePage({
-  currentMember, accountName, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
+  currentMember, roles, activeMembers, selectedMemberId, calendars, canSeeCalendar,
   calendarSettings, calendarFilter, onSelectMember, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
@@ -84,7 +83,6 @@ export function HomePage({
   return (
     <MemberOverview
       currentMember={currentMember}
-      accountName={accountName}
       roles={roles}
       activeMembers={activeMembers}
       selectedMemberId={selectedMemberId}

@@ -4,13 +4,29 @@
   gap: 12px;
 }
 
-/* Familjefilter + flikikoner på samma rad (2026-07-31, Zaidas önskemål:
-   "bredvid den väljaren på samma rad skall ikoner visas"). */
+/* Familjefilter + medlemmar + flikikoner på samma rad (2026-07-31, Zaidas
+   önskemål: "bredvid den väljaren på samma rad skall ikoner visas",
+   utökat 2026-08-04: "Medlemmar skall visas tillsammans med familj och
+   knappar, tänk minimalistiskt" — Medlemmar-kortet med egen rubrik
+   borttaget, avatarerna ligger nu i samma rad).
+   Sticky (2026-08-04, Zaidas önskemål: "Familjevyns navbar skall placeras
+   ovanför befintlig navbar när man är på den vyn") — fäster raden i
+   toppen av Hem-vyns EGET scrollande innehåll (samma effekt oavsett om
+   HeroBar.tsx:s huvudnavigering ligger som en fast rad längst ner på
+   mobil eller en fast vänsterspalt på desktop — den här raden konkurrerar
+   aldrig om samma yta, ligger bara alltid synlig överst i just Hem-vyns
+   scroll). z-index lägre än HeroBar (999) så den aldrig hamnar ovanpå den.
+   background matchar sidan så innehåll inte skiner igenom när man scrollat. */
 .controlRow {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--background);
+  padding: 6px 0;
 }
 
 .tabRow {
@@ -108,27 +124,21 @@
   gap: 8px;
 }
 
+/* Avatar-bara (2026-08-04, "tänk minimalistiskt") — namnet finns kvar som
+   title/aria-label, ingen synlig textrad längre (samma ikon-bara princip
+   som HeroBar.tsx:s egen medlemsväljare). */
 .memberButton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 4px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: none;
+  border-radius: 50%;
   background: none;
   cursor: pointer;
   font: inherit;
   color: var(--foreground);
-}
-
-.memberButton span {
-  font-size: 0.72rem;
-  max-width: 64px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Hem-vyns familjefilter (2026-07-31) — en annan familjs medlem går inte
@@ -136,15 +146,6 @@
    pekar-affordance. */
 .memberButton--static {
   cursor: default;
-}
-
-.memberButton--static small {
-  font-size: 0.62rem;
-  color: var(--muted-fg);
-  max-width: 64px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Lägg till en uppgift, förinställd på den valda familjen (2026-08-01). */

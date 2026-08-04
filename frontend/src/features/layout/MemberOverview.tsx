@@ -39,7 +39,6 @@ type HomeTab = "calendar" | "shopping" | "todos" | "mealplan";
 
 type Props = {
   currentMember: Member;
-  accountName: string;
   roles: Role[];
   activeMembers: Member[];
   selectedMemberId: string;
@@ -123,7 +122,6 @@ type Props = {
 
 export function MemberOverview({
   currentMember,
-  accountName,
   roles,
   activeMembers,
   calendars,
@@ -263,78 +261,84 @@ export function MemberOverview({
   // återanvändas, se `key`-propen i MemberShellContent.tsx).
   const effectiveTab = enableTabs ? activeTab : "calendar";
 
+  // Medlemmar (2026-08-04, Zaidas önskemål: "Medlemmar skall visas
+  // tillsammans med familj och knappar, tänk minimalistiskt") — bara
+  // avatar (ingen synlig namn-text) i den kombinerade raden, samma
+  // ikon-bara princip som HeroBar.tsx:s egen medlemsväljare redan
+  // använder. Namnet finns kvar för alla (title/aria-label), en annan
+  // familjs medlem visar familjenamnet i title:n istället för en egen
+  // synlig rad text.
+  const memberRow = canSeeMembers && filteredMembers.length > 0 && (
+    <div aria-label="Medlemmar" className={styles.memberRow} role="group">
+      {filteredMembers.map((m) =>
+        m.isOwn ? (
+          <button
+            aria-label={m.name}
+            className={styles.memberButton}
+            key={m.id}
+            onClick={() => onSelectMember(m.id)}
+            title={m.name}
+            type="button"
+          >
+            <MemberAvatar member={m} size="small" />
+          </button>
+        ) : (
+          <div
+            aria-label={m.name}
+            className={`${styles.memberButton} ${styles["memberButton--static"]}`}
+            key={`${m.accountId}-${m.id}`}
+            title={
+              selectedFamilyId === "all"
+                ? `${m.name} (${familyNameById.get(m.accountId) ?? "Okänd familj"})`
+                : m.name
+            }
+          >
+            <MemberAvatar member={m} size="small" />
+          </div>
+        )
+      )}
+    </div>
+  );
+
   return (
     <div className={styles.home}>
-      {enableTabs && (
-      <div className={styles.controlRow}>
-        {showFamilyFilter && (
-          <label className="field-label" htmlFor="home-family-select" style={{ maxWidth: 220 }}>
-            Familj
-            <select
-              className="text-input"
-              id="home-family-select"
-              onChange={(e) => setSelectedFamilyId(e.target.value as Id | "all")}
-              value={selectedFamilyId}
-            >
-              <option value="all">Alla familjer</option>
-              {familyOptions.map((f) => (
-                <option key={f.accountId} value={f.accountId}>{f.accountName}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <div className={styles.tabRow} role="tablist">
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <button
-              aria-label={label}
-              aria-pressed={activeTab === key}
-              className={`${styles.tabButton} ${activeTab === key ? styles.tabButtonActive : ""}`}
-              key={key}
-              onClick={() => setActiveTab(key)}
-              title={label}
-              type="button"
-            >
-              <Icon size={20} />
-            </button>
-          ))}
-        </div>
-      </div>
-      )}
-
-      {canSeeMembers && filteredMembers.length > 0 && (
-        <article className="dashboard">
-          <header className="section-header">
-            <div><p className="eyebrow">{accountName}</p><h2>Medlemmar</h2></div>
-          </header>
-          <div className={styles.memberRow}>
-            {filteredMembers.map((m) =>
-              m.isOwn ? (
-                <button
-                  className={styles.memberButton}
-                  key={m.id}
-                  onClick={() => onSelectMember(m.id)}
-                  title={m.name}
-                  type="button"
-                >
-                  <MemberAvatar member={m} size="small" />
-                  <span>{m.name}</span>
-                </button>
-              ) : (
-                <div
-                  className={`${styles.memberButton} ${styles["memberButton--static"]}`}
-                  key={`${m.accountId}-${m.id}`}
-                  title={m.name}
-                >
-                  <MemberAvatar member={m} size="small" />
-                  <span>{m.name}</span>
-                  {selectedFamilyId === "all" && (
-                    <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
-                  )}
-                </div>
-              )
-            )}
+      {enableTabs ? (
+        <div className={styles.controlRow}>
+          {showFamilyFilter && (
+            <label className="field-label" htmlFor="home-family-select" style={{ maxWidth: 220 }}>
+              Familj
+              <select
+                className="text-input"
+                id="home-family-select"
+                onChange={(e) => setSelectedFamilyId(e.target.value as Id | "all")}
+                value={selectedFamilyId}
+              >
+                <option value="all">Alla familjer</option>
+                {familyOptions.map((f) => (
+                  <option key={f.accountId} value={f.accountId}>{f.accountName}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {memberRow}
+          <div className={styles.tabRow} role="tablist">
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <button
+                aria-label={label}
+                aria-pressed={activeTab === key}
+                className={`${styles.tabButton} ${activeTab === key ? styles.tabButtonActive : ""}`}
+                key={key}
+                onClick={() => setActiveTab(key)}
+                title={label}
+                type="button"
+              >
+                <Icon size={20} />
+              </button>
+            ))}
           </div>
-        </article>
+        </div>
+      ) : (
+        memberRow
       )}
 
       {effectiveTab === "calendar" && canSeeCalendar && (

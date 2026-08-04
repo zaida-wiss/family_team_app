@@ -62,9 +62,10 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
 
   await page.goto("/");
 
-  // Medlemmar-kortet skopas separat — huvudnavets medlemsväljare i headern
-  // visar också "Förälder A" (med "Byt vy"), en strict-mode-krock annars.
-  const membersCard = page.locator("article.dashboard").filter({ hasText: "Medlemmar" });
+  // Medlemmar-raden (2026-08-04: avatar-bara, inget synligt namn längre) —
+  // namnet finns bara kvar som title-attribut, se MemberOverview.tsx.
+  // getByTitle är unikt (huvudnavets egen "Byt vy"-knapp har inget eget
+  // namn i sin accessible name, ingen strict-mode-krock).
 
   // Todos ligger bakom en flik (2026-07-31) — inte synligt förrän man
   // klickar ikonen bredvid familjeväljaren.
@@ -72,8 +73,8 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
 
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
-  await expect(membersCard.getByText("Förälder A")).toBeVisible();
-  await expect(membersCard.getByText("Nova")).toBeVisible();
+  await expect(page.getByTitle("Förälder A")).toBeVisible();
+  await expect(page.getByTitle("Nova")).toBeVisible();
 
   const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
@@ -85,16 +86,16 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
   // egna finns kvar.
   await familyFilter.selectOption({ label: "Familjen B" });
   await expect(page.getByText("Klippa gräset")).toBeVisible();
-  await expect(membersCard.getByText("Nova")).toBeVisible();
+  await expect(page.getByTitle("Nova")).toBeVisible();
   await expect(page.getByText("Handla mjölk")).not.toBeVisible();
-  await expect(membersCard.getByText("Förälder A")).not.toBeVisible();
+  await expect(page.getByTitle("Förälder A")).not.toBeVisible();
 
   // Bara Familjen A (mitt eget konto) — omvänt.
   await familyFilter.selectOption({ label: "Familjen A" });
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(membersCard.getByText("Förälder A")).toBeVisible();
+  await expect(page.getByTitle("Förälder A")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).not.toBeVisible();
-  await expect(membersCard.getByText("Nova")).not.toBeVisible();
+  await expect(page.getByTitle("Nova")).not.toBeVisible();
 
   // Tillbaka till Alla familjer — allt syns igen.
   await familyFilter.selectOption({ label: "Alla familjer" });

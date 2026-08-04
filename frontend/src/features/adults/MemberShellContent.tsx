@@ -801,7 +801,6 @@ export function MemberShellContent({
       <HomePage
         key={selectedDashboardMember.id}
         currentMember={selectedDashboardMember}
-        accountName={accountName}
         roles={roles}
         activeMembers={activeMembers}
         selectedMemberId={selectedDashboardMember.id}
@@ -873,7 +872,6 @@ export function MemberShellContent({
     <>
       <HomePage
         currentMember={currentMember}
-        accountName={accountName}
         roles={roles}
         activeMembers={activeMembers}
         selectedMemberId=""
