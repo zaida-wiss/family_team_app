@@ -50,7 +50,9 @@
     flex-wrap: nowrap;
     overflow-x: auto;
     gap: 10px;
-    padding: 6px 10px;
+    /* Halverad vertikal marginal (2026-08-04, Zaidas fynd: "marginalen upp
+       och ner bara hälften") — var 6px, nu 3px. */
+    padding: 3px 10px;
     background: var(--theme-nav-fg, var(--foreground));
     color: var(--theme-nav-bg, var(--sidebar));
     box-shadow: 0 -1px 0 var(--border);
@@ -93,6 +95,32 @@
   background: var(--primary);
   color: var(--primary-fg);
   border-color: var(--primary);
+}
+
+/* Familjeväljaren (2026-08-04, Zaidas fynd: "centrera familjeväxlaren så
+   att allt är i en snygg rad") — .field-label (components.css) är
+   display:grid med en textrad ("Familj") ovanför själva <select>:en, vilket
+   gjorde etiketten högre än de 44px-höga ikonknapparna bredvid och den såg
+   därför omcentrerad/ojämn ut i raden. "Familj"-texten döljs nu visuellt
+   (kvar för skärmläsare, samma teknik som redan finns i
+   RewardShopSettings.css) — kvar blir bara <select>:en, som då blir lika
+   hög som knapparna och centreras jämnt av .controlRow:s align-items:center.
+*/
+.familyLabel {
+  display: flex;
+  align-items: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .shoppingLists {

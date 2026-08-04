@@ -75,7 +75,7 @@ async function mockCommon(page: import("@playwright/test").Page) {
 
 async function selectChild(page: import("@playwright/test").Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
   await page.getByRole("button", { name: /Nova/ }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 }
@@ -95,7 +95,7 @@ test("Medlemmar-ikonen 채r den enda markerade s책 l채nge man tittar p책 en vald 
   await mockCommon(page);
   await selectChild(page);
 
-  const membersBtn = page.getByRole("button", { name: "Medlemmar" });
+  const membersBtn = page.getByRole("button", { name: "Medlemmar", exact: true });
   await expect(membersBtn).toHaveClass(/active/);
 
   const homeBtn = page.getByRole("button", { name: "Hem" });
@@ -106,7 +106,7 @@ test("Ett andra klick p책 Medlemmar-ikonen tar tillbaka till medlemslistan (avv�
   await mockCommon(page);
   await selectChild(page);
 
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
 
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Nova/ })).toBeVisible();

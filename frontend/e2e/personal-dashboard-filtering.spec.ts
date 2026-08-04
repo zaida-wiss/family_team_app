@@ -81,7 +81,7 @@ test("PersonalDashboard visar bara riktigt tilldelade, synliga uppgifter — int
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
   // Skopat till innehållsytan (2026-07-31) — headerns "Byt vy"-knapp fick
   // samma dag en aria-label som råkar innehålla medlemmens namn, en
   // strict-mode-krock mot ett bart sidövergripande sök annars.

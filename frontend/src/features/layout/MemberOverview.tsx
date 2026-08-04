@@ -321,14 +321,14 @@ export function MemberOverview({
     <>
       <button
         aria-expanded={memberPickerOpen}
-        aria-label="Medlemmar"
+        aria-label="Visa medlemmar"
         className={styles.tabButton}
         onClick={toggleMemberPicker}
         ref={memberIconRef}
-        title="Medlemmar"
+        title="Visa medlemmar"
         type="button"
       >
-        <Users size={20} />
+        <Users size={18} />
       </button>
       {memberPickerOpen &&
         createPortal(
@@ -373,8 +373,8 @@ export function MemberOverview({
       {enableTabs ? (
         <div className={styles.controlRow}>
           {showFamilyFilter && (
-            <label className="field-label" htmlFor="home-family-select" style={{ maxWidth: 220 }}>
-              Familj
+            <label className={`field-label ${styles.familyLabel}`} htmlFor="home-family-select" style={{ maxWidth: 220 }}>
+              <span className={styles.srOnly}>Familj</span>
               <select
                 className="text-input"
                 id="home-family-select"
@@ -400,7 +400,7 @@ export function MemberOverview({
                 title={label}
                 type="button"
               >
-                <Icon size={20} />
+                <Icon size={18} />
               </button>
             ))}
           </div>

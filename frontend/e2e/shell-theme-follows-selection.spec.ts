@@ -63,7 +63,7 @@ test("app-skalets tema följer den valda medlemmen på Medlemmar-panelen", async
   await page.goto("/");
   await expect(page.locator("main.app-shell")).toHaveClass(/theme-clear/);
 
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
   await page.getByRole("button", { name: /Nova/ }).click();
 
   await expect(page.locator("main.app-shell")).toHaveClass(/theme-ocean/);

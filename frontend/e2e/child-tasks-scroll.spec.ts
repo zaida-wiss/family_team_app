@@ -67,7 +67,7 @@ test("uppdragskorten går att scrolla när fler uppgifter finns än vad som får
 
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
   // Skopat till innehållsytan (2026-07-31) — headerns "Byt vy"-knapp fick
   // samma dag en aria-label som råkar innehålla medlemmens namn, en
   // strict-mode-krock mot ett bart sidövergripande sök annars.

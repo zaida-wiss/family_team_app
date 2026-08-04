@@ -108,7 +108,7 @@ test("Mörkt läge: växeln finns bara för vuxenteman, sätter dark-mode-klasse
 
   // Ett barns dashboard (space-temat) har ingen mörkt läge-växel alls —
   // ren barnvy, opåverkad av vuxnas mörka-läge-val.
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
   await page.getByRole("button", { name: /Nova/ }).click();
   await expect(shell).toHaveClass(/theme-space/);
   await expect(shell).not.toHaveClass(/dark-mode/);

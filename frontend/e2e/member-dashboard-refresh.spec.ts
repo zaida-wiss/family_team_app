@@ -102,5 +102,5 @@ test("lastActivePanel=members + ett medlemsval stannar kvar på barnets dashboar
   await page.goto("/");
 
   await expect(page.getByText(`Hej ${CHILD.name}!`)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Medlemmar" })).toHaveClass(/active/);
+  await expect(page.getByRole("button", { name: "Medlemmar", exact: true })).toHaveClass(/active/);
 });

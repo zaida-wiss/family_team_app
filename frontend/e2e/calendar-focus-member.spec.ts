@@ -123,7 +123,7 @@ test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar mi
 
   // Hem → Medlemmar → klicka på Lars — visas nu i Medlemmar-panelen själv,
   // navigerar inte längre bort.
-  await page.getByRole("button", { name: "Medlemmar" }).click();
+  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
   await page.getByRole("button", { name: /Lars/ }).click();
 
   // Klicket på Kalender-ikonen rensar valet (useAppState.ts:s setActivePanel)
