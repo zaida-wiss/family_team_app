@@ -186,14 +186,33 @@ export function useTodosState(fixedTodoTimes = false) {
   // fortfarande felet internt (aldrig en avvisad promise) så inget annat
   // anropsställe som redan ignorerar returvärdet plötsligt får en ohanterad
   // avvisning i konsolen.
-  function createTodo(todo: Todo) {
-    const request = todosApi.create(todo).catch(console.error);
+  // Resultatet avslöjar nu lyckat/misslyckat (2026-08-04, Zaidas fynd: en
+  // stor CSV-import verkade lyckas — kategorier skapades — men uppgifterna
+  // syntes aldrig, troligen ett tyst misslyckat serversvar som `.catch(console.error)`
+  // dolde helt) — bara `TodoImportExport.tsx`:s `runImport` väntar in och
+  // läser resultatet (verifierat, enda anroparen), så detta ändrar ingen
+  // annan plats i appen; en obevakad (fire-and-forget) anropare påverkas
+  // inte, promisen förkastas fortfarande aldrig.
+  function createTodo(todo: Todo): Promise<{ ok: true } | { ok: false; error: unknown }> {
+    const request = todosApi.create(todo).then(
+      () => ({ ok: true as const }),
+      (error: unknown) => {
+        console.error(error);
+        return { ok: false as const, error };
+      }
+    );
     setTodos((current) => [...current, todo]);
     return request;
   }
 
-  function updateTodo(todoId: Id, patch: Partial<Todo>) {
-    const request = todosApi.update(todoId, patch).catch(console.error);
+  function updateTodo(todoId: Id, patch: Partial<Todo>): Promise<{ ok: true } | { ok: false; error: unknown }> {
+    const request = todosApi.update(todoId, patch).then(
+      () => ({ ok: true as const }),
+      (error: unknown) => {
+        console.error(error);
+        return { ok: false as const, error };
+      }
+    );
     setTodos((current) =>
       current.map((todo) => (todo.id === todoId ? { ...todo, ...patch } : todo))
     );

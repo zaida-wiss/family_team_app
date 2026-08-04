@@ -437,6 +437,17 @@ export type TodoCsvParseResult = {
 // Matchar "Tilldelad"-kolumnen mot ett kontonamn (skiftlägesokänsligt), "Mig
 // själv" eller "Familjen" — tvetydiga eller okända namn hoppas inte över,
 // utan flaggas som olösta (TodoImportExport.tsx frågar importören).
+// En del externa verktyg (kalkylarksappar, AI-redigering av en exporterad
+// fil) fyller tomma celler med ett bindestreck "-" istället för att lämna
+// dem tomma (2026-08-04, Zaidas fynd — en stor import gav "okänt värde"/
+// "ogiltig"-fel på nästan varje rad i Slutar/Fler tidsrutor/Återkommer/
+// Startdatum/Slutdatum, alla med "-" som cellvärde). Tolkas nu som exakt
+// samma sak som en tom cell överallt i importen.
+function cellValue(cells: string[], col: number | undefined): string {
+  const raw = (col !== undefined ? cells[col] : "")?.trim() ?? "";
+  return raw === "-" ? "" : raw;
+}
+
 // defaultAssignee (2026-08-03) styr vad en TOM cell betyder — importörens
 // eget id vid en vanlig import (oförändrat), null (Familjen) vid en
 // familje-import, se TodoImportExport.tsx:s scope-prop.
@@ -491,7 +502,7 @@ export function parseTodoCsv(
       return;
     }
 
-    const sourceId = (idCol !== undefined ? cells[idCol] : "")?.trim() || null;
+    const sourceId = cellValue(cells, idCol) || null;
 
     // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos, uppdatera,
     // lägga till nya och radera de jag inte vill ha kvar längre, sedan
@@ -500,7 +511,7 @@ export function parseTodoCsv(
     // valideras, de är irrelevanta för en radering och skulle bara kunna ge
     // missvisande fel på en rad som ändå ska bort. Kräver ett Id — utan ett
     // sådant finns ingen befintlig todo att matcha mot och radera.
-    const deleteRaw = (deleteCol !== undefined ? cells[deleteCol] : "")?.trim() ?? "";
+    const deleteRaw = cellValue(cells, deleteCol);
     if (deleteRaw.toLowerCase() === YES_LABEL.toLowerCase()) {
       if (!sourceId) {
         errors.push(`Rad ${rowNumber} ("${title}"): Radera är ikryssad men raden saknar ett Id, ingenting kan raderas.`);
@@ -528,10 +539,10 @@ export function parseTodoCsv(
       return;
     }
 
-    const emojiRaw = (emojiCol !== undefined ? cells[emojiCol] : "")?.trim() ?? "";
+    const emojiRaw = cellValue(cells, emojiCol);
     const emoji = emojiRaw && EMOJI_PATTERN.test(emojiRaw) ? emojiRaw : DEFAULT_EMOJI;
 
-    const assignedLabel = (assignedCol !== undefined ? cells[assignedCol] : "")?.trim() ?? "";
+    const assignedLabel = cellValue(cells, assignedCol);
     let assignedTo: Id | null = defaultAssignee;
     let unresolvedAssigneeLabel: string | null = null;
     if (assignedLabel && assignedLabel.toLowerCase() === FAMILY_LABEL.toLowerCase()) {
@@ -566,7 +577,7 @@ export function parseTodoCsv(
     // Zaidas beslut: "kategorierna kan vara samma, vi behöver ingen
     // rutinkategori, det räcker med kategori") — tidigare gällde det bara
     // Mig själv-rader.
-    const categoryLabel = (categoryCol !== undefined ? cells[categoryCol] : "")?.trim() ?? "";
+    const categoryLabel = cellValue(cells, categoryCol);
     let personalCategoryId: Id | null = null;
     let newCategoryName: string | null = null;
     if (categoryLabel) {
@@ -578,19 +589,19 @@ export function parseTodoCsv(
       }
     }
 
-    const starsRaw = (starsCol !== undefined ? cells[starsCol] : "")?.trim() ?? "";
+    const starsRaw = cellValue(cells, starsCol);
     const starValue = starsRaw ? Math.max(0, parseInt(starsRaw, 10) || 0) : 0;
 
-    const timerRaw = (timerCol !== undefined ? cells[timerCol] : "")?.trim() ?? "";
+    const timerRaw = cellValue(cells, timerCol);
     const timerEnabled = timerRaw.toLowerCase() === YES_LABEL.toLowerCase();
 
-    const timerMinutesRaw = (timerMinutesCol !== undefined ? cells[timerMinutesCol] : "")?.trim() ?? "";
+    const timerMinutesRaw = cellValue(cells, timerMinutesCol);
     const plannedDurationMinutes = timerMinutesRaw
       ? Math.max(1, Math.min(480, parseInt(timerMinutesRaw, 10) || 1))
       : null;
 
-    const startRaw = (startCol !== undefined ? cells[startCol] : "")?.trim() ?? "";
-    const endRaw = (endCol !== undefined ? cells[endCol] : "")?.trim() ?? "";
+    const startRaw = cellValue(cells, startCol);
+    const endRaw = cellValue(cells, endCol);
     const visibleFrom = dateTimeDisplayToISO(startRaw, false);
     const expiresAt = dateTimeDisplayToISO(endRaw, true);
     if (startRaw && !visibleFrom) {
@@ -600,7 +611,7 @@ export function parseTodoCsv(
       errors.push(`Rad ${rowNumber} ("${title}"): ogiltigt slutdatum "${endRaw}" (vänta ÅÅÅÅ-MM-DD eller ÅÅÅÅ-MM-DD TT:MM), ignoreras.`);
     }
 
-    const recurrenceLabel = (recurrenceCol !== undefined ? cells[recurrenceCol] : "")?.trim() ?? "";
+    const recurrenceLabel = cellValue(cells, recurrenceCol);
     let recurrence: RecurrenceRule = { type: "none" };
     if (recurrenceLabel && recurrenceLabel.toLowerCase() !== NONE_LABEL.toLowerCase()) {
       const unit = RECURRENCE_LABEL_TO_UNIT.get(recurrenceLabel.toLowerCase());
@@ -609,12 +620,12 @@ export function parseTodoCsv(
           `Rad ${rowNumber} ("${title}"): okänt värde "${recurrenceLabel}" i Återkommer (vänta Dag/Vecka/Månad/År/Nej), behandlas som engångsuppgift.`
         );
       } else {
-        const intervalRaw = (intervalCol !== undefined ? cells[intervalCol] : "")?.trim() ?? "";
+        const intervalRaw = cellValue(cells, intervalCol);
         const every = intervalRaw ? Math.max(1, parseInt(intervalRaw, 10) || 1) : 1;
 
         let daysOfWeek: Weekday[] | null = null;
         if (unit === "week") {
-          const weekdaysRaw = (weekdaysCol !== undefined ? cells[weekdaysCol] : "")?.trim() ?? "";
+          const weekdaysRaw = cellValue(cells, weekdaysCol);
           const labels = weekdaysRaw.split(",").map((s) => s.trim()).filter(Boolean);
           const parsedDays = labels
             .map((label) => WEEKDAY_SHORT_TO_KEY.get(label.toLowerCase()))
@@ -637,7 +648,7 @@ export function parseTodoCsv(
     // Slutar (2026-08-03, ADR-0017/RecurrenceEnd) — bara meningsfullt för en
     // återkommande rad, ignoreras tyst annars (samma "irrelevant för den här
     // radtypen"-hållning som Stjärnor/Timer redan har för icke-Mig-själv-rader).
-    const recurrenceEndRaw = (recurrenceEndCol !== undefined ? cells[recurrenceEndCol] : "")?.trim() ?? "";
+    const recurrenceEndRaw = cellValue(cells, recurrenceEndCol);
     if (recurrenceEndRaw && recurrence.type === "recurring") {
       const end = parseRecurrenceEnd(recurrenceEndRaw, rowNumber, title, errors);
       if (end) {
@@ -669,7 +680,7 @@ export function parseTodoCsv(
     // exakt hur TodoCreatorModal.tsx redan bygger en recurring+timeWindows-
     // uppgift, se dess kommentar "de faktiska klockslagen kommer från
     // timeWindows").
-    const extraWindowsRaw = (extraWindowsCol !== undefined ? cells[extraWindowsCol] : "")?.trim() ?? "";
+    const extraWindowsRaw = cellValue(cells, extraWindowsCol);
     let timeWindows: TodoTimeWindow[] | undefined;
     let finalVisibleFrom = visibleFrom;
     let finalExpiresAt = expiresAt;
@@ -691,14 +702,14 @@ export function parseTodoCsv(
       }
     }
 
-    const subtasksRaw = (subtasksCol !== undefined ? cells[subtasksCol] : "")?.trim() ?? "";
+    const subtasksRaw = cellValue(cells, subtasksCol);
     const subtasks: TodoSubtask[] = csvToSubtaskTitles(subtasksRaw).map((subtaskTitle) => ({
       id: `subtask-${generateId()}`,
       title: subtaskTitle,
       done: false
     }));
 
-    const notes = (notesCol !== undefined ? cells[notesCol] : "")?.trim() || null;
+    const notes = cellValue(cells, notesCol) || null;
 
     rows.push({
       sourceId,

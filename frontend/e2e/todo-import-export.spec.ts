@@ -623,6 +623,41 @@ test("Todos-import/export: en stor import väntar in varje rads POST innan näst
   expect(postOrder).toEqual(["Kvällsrutiner", "Tvätt"]);
 });
 
+// 2026-08-04, Zaidas fynd: en stor import verkade lyckas (kategorin skapades)
+// men uppgifterna syntes aldrig — grundorsak: ett misslyckat POST-svar
+// tystades helt (`.catch(console.error)`), räknades ändå som "skapad".
+// createTodo/updateTodo avslöjar nu lyckat/misslyckat, och runImport räknar
+// inte en misslyckad rad som skapad — den får ett tydligt fel i resultatet
+// istället, så en riktig server-misslyckning aldrig ser ut att ha lyckats.
+test("Todos-import/export: en rad vars POST misslyckas räknas inte som skapad, ger ett tydligt fel", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as { title: string };
+      if (body.title === "Trasig rad") {
+        return route.fulfill({ status: 500, json: { error: "Serverfel" } });
+      }
+      return route.fulfill({ status: 201, json: { id: `todo-${body.title}` } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Id", "Trasig rad,Mig själv,", "Fungerande rad,Mig själv,"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  // Bara EN rad lyckades faktiskt sparas — den trasiga räknas inte med.
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  await expect(page.getByText(/Trasig rad.*kunde inte sparas/)).toBeVisible();
+});
+
 // 2026-07-08 (Zaidas fynd: "ångra senaste import måste vara kvar även om jag
 // växlar vy, eftersom jag behöver upptäcka eventuella fel") — resultatet och
 // Ångra-knappen låg tidigare som lokal state i TodoImportExport.tsx, vilket

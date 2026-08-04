@@ -331,6 +331,10 @@ export function TodoImportExport({
     );
   }
 
+  function isFailure(result: unknown): result is { ok: false; error: unknown } {
+    return typeof result === "object" && result !== null && "ok" in result && (result as { ok: unknown }).ok === false;
+  }
+
   async function runImport(
     rows: ParsedTodoRow[],
     parseErrors: string[],
@@ -346,29 +350,19 @@ export function TodoImportExport({
       let deleted = 0;
       const undoUpdated: ImportUndo["updated"] = [];
       const undoCreatedIds: Id[] = [];
+      const errors = [...parseErrors];
 
-      // Bunta i grupper om 4 rader, samma mönster/orsak som ADR-0023
-      // (2026-07-16, ett konto delar ofta en enda hem-IP över flera
-      // medlemmar). onCreateTodo/onUpdateTodo väntas numera in per rad
-      // (2026-08-04) — requesterna kan alltså inte längre komma i en enda
-      // burst, men en kort paus var 4:e rad kvarstår ändå som extra marginal
-      // mot rate-limiten utan att göra importen märkbart segare.
-      const BATCH_SIZE = 4;
-      let rowsSinceBatchPause = 0;
-
+      // Steg 1: radera-rader och assignee-olösta hoppas över/hanteras
+      // direkt (sekventiellt, ingen anledning att parallellisera radering).
+      // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos,
+      // uppdatera, lägga till nya och radera de jag inte vill ha kvar
+      // längre, sedan importera") — samma matchningsregel som en vanlig
+      // uppdatering (Id + ägarskap/scope), men raderar istället för att
+      // patcha. Ingen Ångra-spårning (se ImportResult-kommentaren i
+      // useTodosState.ts) — landar i den vanliga papperskorgen.
+      type PreparedRow = { row: ParsedTodoRow; assignedTo: Id | null };
+      const prepared: PreparedRow[] = [];
       for (const row of rows) {
-        rowsSinceBatchPause++;
-        if (rowsSinceBatchPause > BATCH_SIZE) {
-          rowsSinceBatchPause = 1;
-          await new Promise((resolve) => setTimeout(resolve, 250));
-        }
-
-        // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos,
-        // uppdatera, lägga till nya och radera de jag inte vill ha kvar
-        // längre, sedan importera") — samma matchningsregel som en vanlig
-        // uppdatering (Id + ägarskap/scope), men raderar istället för att
-        // patcha. Ingen Ångra-spårning (se ImportResult-kommentaren i
-        // useTodosState.ts) — landar i den vanliga papperskorgen.
         if (row.deleteRow) {
           const existing = row.sourceId
             ? todos.find(
@@ -382,7 +376,7 @@ export function TodoImportExport({
             onDeleteTodo(existing.id);
             deleted++;
           } else {
-            parseErrors.push(
+            errors.push(
               `Rad markerad Radera ("${row.title}"): hittade ingen egen uppgift med Id "${row.sourceId}", ingenting raderades.`
             );
           }
@@ -395,26 +389,55 @@ export function TodoImportExport({
           if (!resolution || resolution === SKIP_RESOLUTION) continue;
           assignedTo = resolution;
         }
+        prepared.push({ row, assignedTo });
+      }
 
-        let categoryId = row.personalCategoryId;
-        if (!categoryId && row.newCategoryName) {
+      // Steg 2: alla NYA kategorinamn löses/skapas sekventiellt, FÖRE någon
+      // uppgift skapas — måste ske i tur och ordning (inte i steg 3:s
+      // parallella buntar) så inte två rader med samma nya kategorinamn
+      // råkar skapa varsin dubblettkategori av misstag.
+      for (const { row } of prepared) {
+        if (!row.personalCategoryId && row.newCategoryName) {
           const key = row.newCategoryName.toLowerCase();
-          const cached = createdCategoryIds.get(key);
-          if (cached) {
-            categoryId = cached;
-          } else {
+          if (!createdCategoryIds.has(key)) {
             const category = await onCreateCategory(row.newCategoryName, isFamilyScope);
             createdCategoryIds.set(key, category.id);
-            categoryId = category.id;
           }
         }
+      }
 
-        // Matchar mot en egen, ej raderad todo med samma Id — annars skapas en
-        // ny (samma fallback som om Id-kolumnen saknas helt, t.ex. en mall).
-        // I familje-scope är `todos`-propen redan familje-scopad av
-        // anroparen (2026-08-03) — ingen extra assignedTo/createdBy-koll
-        // behövs där, till skillnad från den personliga varianten, vars
-        // `todos`-prop är HELA kontots lista.
+      // Steg 3: skapa/uppdatera EN RAD I TAGET, väntar in varje POST/PATCH
+      // innan nästa påbörjas (bevarat oförändrat, 2026-08-04 tidigare samma
+      // dag — se e2e-testet "en stor import väntar in varje rads POST innan
+      // nästa påbörjas" — ett övergångsförsök till parallella buntar om 4
+      // konstaterades bryta EXAKT det testet, som avsiktligt verifierar att
+      // rad 2:s POST inte ens SKICKAS förrän rad 1:s svar landat, för att
+      // förhindra en tidigare verklig produktionsbugg där "Ångra senaste
+      // import" + en snabb ny import racade mot en ännu inte bekräftad
+      // föregående rad). Den tidigare periodiska 250ms-pausen var 4:e rad
+      // (ADR-0023) togs däremot bort — den skyddade mot en BURST av
+      // SAMTIDIGA anrop, men sedan sekventiell väntan infördes finns ingen
+      // sådan burst längre (bara ett anrop i taget, redan självreglerande
+      // via nätverkets egen svarstid) — pausen bidrog bara ren väntetid utan
+      // kvarvarande skyddsvärde (Zaidas fynd samma dag: "om de laddar
+      // såhär länge måste vi göra någonting åt det för att det skall gå
+      // snabbt"). onCreateTodo/onUpdateTodo avslöjar nu lyckat/misslyckat
+      // (se useTodosState.ts) — ett annat fynd samma dag: en import kunde se
+      // ut att lyckas (kategorin skapades) medan själva uppgifterna aldrig
+      // sparades, eftersom ett misslyckat serversvar tidigare tystades helt.
+      // En rad som faktiskt misslyckas räknas inte som skapad/uppdaterad,
+      // utan får ett tydligt fel i resultatet istället.
+      for (const { row, assignedTo } of prepared) {
+        const categoryId =
+          row.personalCategoryId ??
+          (row.newCategoryName ? createdCategoryIds.get(row.newCategoryName.toLowerCase()) ?? null : null);
+
+        // Matchar mot en egen, ej raderad todo med samma Id — annars
+        // skapas en ny (samma fallback som om Id-kolumnen saknas helt,
+        // t.ex. en mall). I familje-scope är `todos`-propen redan
+        // familje-scopad av anroparen (2026-08-03) — ingen extra
+        // assignedTo/createdBy-koll behövs där, till skillnad från den
+        // personliga varianten, vars `todos`-prop är HELA kontots lista.
         const existing = row.sourceId
           ? todos.find(
               (t) =>
@@ -426,18 +449,25 @@ export function TodoImportExport({
 
         if (existing) {
           undoUpdated.push({ id: existing.id, previous: extractPatchFields(existing) });
-          // Inväntad (2026-08-04) — se Props-kommentaren ovan.
-          await onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId));
-          updated++;
+          const result = await onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId));
+          if (isFailure(result)) {
+            errors.push(`Rad ("${row.title}"): kunde inte sparas (uppdatering) — försök igen.`);
+          } else {
+            updated++;
+          }
         } else {
           const newTodo = buildNewTodo(row, currentMember.id, categoryId, assignedTo);
-          undoCreatedIds.push(newTodo.id);
-          await onCreateTodo(newTodo);
-          created++;
+          const result = await onCreateTodo(newTodo);
+          if (isFailure(result)) {
+            errors.push(`Rad ("${row.title}"): kunde inte sparas — försök igen.`);
+          } else {
+            undoCreatedIds.push(newTodo.id);
+            created++;
+          }
         }
       }
 
-      setResult({ created, updated, deleted, errors: parseErrors });
+      setResult({ created, updated, deleted, errors });
       setLastImportUndo({ updated: undoUpdated, createdIds: undoCreatedIds });
       setPendingImport(null);
       setResolutions({});

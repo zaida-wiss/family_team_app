@@ -598,4 +598,30 @@ describe("todoCsv", () => {
       expect(rows[0].recurrence).toEqual({ type: "none" });
     });
   });
+
+  // 2026-08-04, Zaidas fynd: en stor import gav "okänt värde"/"ogiltig"-fel
+  // på nästan varje rad — ett externt verktyg hade fyllt tomma celler med
+  // "-" istället för att lämna dem tomma. "-" tolkas nu som en tom cell
+  // överallt (cellValue-hjälparen i todoCsv.ts), ingen varning, ingen
+  // skillnad i resultat mot om cellen vore genuint tom.
+  test("parseTodoCsv: ett bindestreck '-' i en valfri cell tolkas som tom, ingen varning", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Anteckningar",
+      "Borsta tänderna,-,Mig själv,-,-,-,-,2026-08-04 07:00,2026-08-04 07:15,-,Dag,-,-,-,-"
+    ].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].emoji).toBe("⭐"); // fallback, "-" är inte en giltig emoji
+    expect(rows[0].personalCategoryId).toBeNull();
+    expect(rows[0].newCategoryName).toBeNull();
+    expect(rows[0].starValue).toBe(0);
+    expect(rows[0].timerEnabled).toBe(false);
+    expect(rows[0].plannedDurationMinutes).toBeNull();
+    expect(rows[0].timeWindows).toBeUndefined();
+    expect(rows[0].recurrence).toEqual({ type: "recurring", unit: "day", every: 1, daysOfWeek: null });
+    expect(rows[0].notes).toBeNull();
+  });
 });
