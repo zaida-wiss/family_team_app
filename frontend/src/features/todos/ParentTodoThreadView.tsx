@@ -603,44 +603,56 @@ export function ParentTodoThreadView({
     // Familjekategorier (2026-08-03, isFamily:true) hör hemma i Hem-vyn
     // (FamilyTodoThreads.tsx), aldrig här — annars skulle de dyka upp dubbelt.
     const myCategories = categories.filter((c) => c.memberId === currentMember.id && !c.isFamily);
-    const categoryThreads: Thread[] = myCategories.filter((c) => !c.hidden).map((category, index) => {
-      const showExpired = showExpiredThreadIds.has(category.id);
-      const categoryBaseTodos = visibleTodos.filter(
-        (t) =>
-          t.personalCategoryId === category.id &&
-          (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
-          // Barnens uppgifter hör alltid hemma i Barn-tråden, aldrig i en
-          // personlig kategori-tråd — även om jag skapat uppgiften åt
-          // barnet och satt en av mina egna kategorier på den
-          // (2026-07-08, Zaidas fynd/rättelse). Samma princip för Familjen-
-          // tråden (2026-07-23) — en otilldelad todo hör bara hemma där.
-          t.assignedTo !== null &&
-          !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
-          (t.status !== "expired" || showExpired)
-      );
-      const categoryAllTodos = applyAssigneeFilter(
-        category.id,
-        allDueTodos.filter(
+    const categoryThreads: Thread[] = myCategories
+      .filter((c) => !c.hidden)
+      .map((category, index): Thread | null => {
+        const showExpired = showExpiredThreadIds.has(category.id);
+        const categoryBaseTodos = visibleTodos.filter(
           (t) =>
             t.personalCategoryId === category.id &&
             (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+            // Barnens uppgifter hör alltid hemma i Barn-tråden, aldrig i en
+            // personlig kategori-tråd — även om jag skapat uppgiften åt
+            // barnet och satt en av mina egna kategorier på den
+            // (2026-07-08, Zaidas fynd/rättelse). Samma princip för Familjen-
+            // tråden (2026-07-23) — en otilldelad todo hör bara hemma där.
             t.assignedTo !== null &&
-            !isChildMember(members.find((m) => m.id === t.assignedTo), roles)
-        )
-      );
-      return {
-        id: category.id,
-        label: category.name,
-        deletable: true,
-        accentColor: accentColorForIndex(index),
-        assignees: uniqueAssignees(categoryBaseTodos, members),
-        todos: applyBubbleOrder(
-          sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
-          todoBubbleOrder[category.id]
-        ),
-        completedPercent: computeCompletedPercent(categoryAllTodos)
-      };
-    });
+            !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
+            (t.status !== "expired" || showExpired)
+        );
+        const categoryAllTodos = applyAssigneeFilter(
+          category.id,
+          allDueTodos.filter(
+            (t) =>
+              t.personalCategoryId === category.id &&
+              (t.assignedTo === currentMember.id || t.createdBy === currentMember.id) &&
+              t.assignedTo !== null &&
+              !isChildMember(members.find((m) => m.id === t.assignedTo), roles)
+          )
+        );
+        // Tomma kategorier döljs (2026-08-04, Zaidas önskemål: "tomma
+        // kategorier skall inte visas") — MEN en helt nyskapad kategori (0
+        // uppgifter någonsin, inget spår alls i allTodos) syns kvar tills
+        // den fått sin FÖRSTA uppgift, annars fanns ingen väg att nå tråden
+        // för att lägga till den (Zaidas val bland två alternativ). En
+        // kategori som haft uppgifter men är tömd just nu döljs direkt.
+        const isEmpty = categoryBaseTodos.length === 0 && categoryAllTodos.length === 0;
+        const everHadTodos = allTodos.some((t) => t.personalCategoryId === category.id);
+        if (isEmpty && everHadTodos) return null;
+        return {
+          id: category.id,
+          label: category.name,
+          deletable: true,
+          accentColor: accentColorForIndex(index),
+          assignees: uniqueAssignees(categoryBaseTodos, members),
+          todos: applyBubbleOrder(
+            sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
+            todoBubbleOrder[category.id]
+          ),
+          completedPercent: computeCompletedPercent(categoryAllTodos)
+        };
+      })
+      .filter((thread): thread is Thread => thread !== null);
 
     // Mina uppgifter (2026-07-31, Zaidas önskemål: "de todos som är
     // assignade på mig skall visas i todovyn") — en uppgift tilldelad mig

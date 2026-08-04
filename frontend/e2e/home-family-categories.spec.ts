@@ -154,3 +154,44 @@ test("Hem-vyns Todos-flik: massradering av familjens uppgifter kräver en tvåst
   await page.getByRole("button", { name: "Bekräfta radering" }).click();
   await expect.poll(() => deletedIds.length).toBe(2);
 });
+
+// 2026-08-04, Zaidas önskemål: "tomma kategorier skall inte visas" — samma
+// regel som den personliga Todos-panelen (parent-todo-thread-view.spec.ts),
+// nu även för familjekategorier i Hem-vyn. En kategori som haft uppgifter men
+// just nu inte har något att visa döljs, en helt ny (aldrig använd) kategori
+// syns kvar tills den fått sin första uppgift.
+test("Hem-vyns Todos-flik: en tom-men-tidigare-använd familjekategori döljs, en helt ny syns kvar", async ({ page }) => {
+  const categories: Category[] = [
+    { id: "cat-cleared", accountId: "acc-1", memberId: "mem-1", name: "Tömd", isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" },
+    { id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: "Ny", isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" }
+  ];
+  // Historiskt bevis på att "Tömd" använts — godkänd (inte längre väntande)
+  // och långt utanför alla rimliga tidsspann, så den inte räknas som
+  // "aktuell" men finns ändå kvar i den ofiltrerade todos-listan.
+  const oldTodoInClearedCategory = {
+    id: "todo-old", accountId: "acc-1", title: "Gammal uppgift", assignedTo: null, createdBy: "mem-1",
+    personalCategoryId: "cat-cleared", status: "approved", starValue: 0,
+    visual: { type: "lucide-icon", value: "⭐" }, recurrence: { type: "none" }, recurringSourceId: null,
+    visibleFrom: "2020-01-01T00:00:00.000Z", expiresAt: "2020-01-01T01:00:00.000Z",
+    deletedAt: null, inProgressBy: []
+  };
+
+  await mockDataAPIs(page);
+  await page.route("**/api/auth/refresh", (route) =>
+    route.fulfill({
+      json: {
+        accessToken: "fake-access-token",
+        user: { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" },
+        memberships: [{ member: MEMBER, account: { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null } }]
+      }
+    })
+  );
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: categories }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [oldTodoInClearedCategory] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Visa todos" }).click();
+
+  await expect(page.getByRole("button", { name: /^Ny\./ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Tömd\./ })).toHaveCount(0);
+});

@@ -1238,6 +1238,40 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
 });
 
+// 2026-08-04, Zaidas önskemål: "tomma kategorier skall inte visas" — en
+// kategori som haft uppgifter men just nu inte har något att visa döljs
+// helt, MEN en helt nyskapad kategori (aldrig haft en enda uppgift) syns
+// kvar tills den fått sin första, annars fanns ingen väg att nå tråden för
+// att lägga till den (Zaidas val mellan de två alternativen).
+test("Bollar i tråd: en tom-men-tidigare-använd kategori döljs, en helt ny (aldrig använd) kategori syns kvar", async ({ page }) => {
+  const CLEARED_CATEGORY = {
+    id: "cat-cleared", accountId: "acc-1", memberId: "mem-1", name: "Tömd",
+    createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  const NEW_CATEGORY = {
+    id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: "Ny",
+    createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  // Historiskt bevis på att "Tömd" faktiskt använts — långt utanför alla
+  // rimliga tidsspann (idag/vecka/månad), så den inte längre räknas som
+  // "aktuell" (categoryBaseTodos/categoryAllTodos blir tomma), men den finns
+  // ändå kvar i den ofiltrerade allTodos-listan (everHadTodos).
+  const OLD_TODO_IN_CLEARED_CATEGORY = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-old", title: "Gammal uppgift", status: "approved",
+    personalCategoryId: "cat-cleared",
+    visibleFrom: "2020-01-01T00:00:00.000Z", expiresAt: "2020-01-01T01:00:00.000Z"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CLEARED_CATEGORY, NEW_CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [OLD_TODO_IN_CLEARED_CATEGORY] }));
+
+  await openThreadView(page);
+  await expect(page.getByRole("region", { name: "Tråd: Ny" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Tråd: Tömd" })).toHaveCount(0);
+});
+
 test("Bollar i tråd: 'Ladda ner' i kategorimenyn exporterar bara den kategorins uppgifter som CSV", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));

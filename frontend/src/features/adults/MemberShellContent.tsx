@@ -306,23 +306,37 @@ export function MemberShellContent({
     // rename/radera/göm (kategori-hanteringen, delad med den personliga
     // Todos-panelen via samma onRenameCategory/onRemoveCategory/
     // onSetCategoryHidden-funktioner).
-    const familyCategoryThreads = familyCategories.map((category) => ({
-      id: category.id,
-      accountId: currentMember.accountId,
-      label: category.name,
-      todos: homeVisibleTodos.filter((t) => t.personalCategoryId === category.id),
-      members: activeMembers,
-      onComplete: completeOwnFamilyTodo,
-      onToggleInProgress: onToggleTodoInProgress,
-      onToggleSubtask,
-      onCreateTodo: (title: string, visual: string | null) =>
-        handleCreateFamilyTodo(currentMember.accountId, title, visual, category.id),
-      onDeleteTodo: onSoftDeleteTodo,
-      onRenameCategory: (name: string) => onRenameCategory(category.id, name),
-      onDeleteCategory: () => onRemoveCategory(category.id),
-      onHideCategory: () => onSetCategoryHidden(category.id, true),
-      onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id)
-    }));
+    // Tomma kategorier döljs (2026-08-04, Zaidas önskemål: "tomma kategorier
+    // skall inte visas") — samma "brand ny kategori syns kvar tills första
+    // uppgiften läggs till"-undantag som ParentTodoThreadView.tsx (annars
+    // fanns ingen väg att nå den nya kategorins "Lägg till uppgift"-meny).
+    // "hasPending" kollar RAKT mot todos (inte homeVisibleTodos/
+    // getFamilyViewTodos, som inte filtrerar på status/datum alls — en
+    // gammal "approved"-uppgift hade annars räknats som "aktuell" trots att
+    // FamilyTodoThreads.tsx själv aldrig visar den som en bubbla).
+    const familyCategoryThreads = familyCategories
+      .filter((category) => {
+        const categoryTodos = todos.filter((t) => t.personalCategoryId === category.id && t.deletedAt === null);
+        if (categoryTodos.length === 0) return true; // brand ny, aldrig använd
+        return categoryTodos.some((t) => t.status === "pending");
+      })
+      .map((category) => ({
+        id: category.id,
+        accountId: currentMember.accountId,
+        label: category.name,
+        todos: homeVisibleTodos.filter((t) => t.personalCategoryId === category.id),
+        members: activeMembers,
+        onComplete: completeOwnFamilyTodo,
+        onToggleInProgress: onToggleTodoInProgress,
+        onToggleSubtask,
+        onCreateTodo: (title: string, visual: string | null) =>
+          handleCreateFamilyTodo(currentMember.accountId, title, visual, category.id),
+        onDeleteTodo: onSoftDeleteTodo,
+        onRenameCategory: (name: string) => onRenameCategory(category.id, name),
+        onDeleteCategory: () => onRemoveCategory(category.id),
+        onHideCategory: () => onSetCategoryHidden(category.id, true),
+        onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id)
+      }));
     const cross = crossAccountFamilyThreads.map((t) => ({
       id: `crossAccount:${t.accountId}`,
       accountId: t.accountId,
