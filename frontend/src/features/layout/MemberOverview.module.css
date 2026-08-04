@@ -9,14 +9,18 @@
    utökat 2026-08-04: "Medlemmar skall visas tillsammans med familj och
    knappar, tänk minimalistiskt" — Medlemmar-kortet med egen rubrik
    borttaget, avatarerna ligger nu i samma rad).
-   Sticky (2026-08-04, Zaidas önskemål: "Familjevyns navbar skall placeras
-   ovanför befintlig navbar när man är på den vyn") — fäster raden i
-   toppen av Hem-vyns EGET scrollande innehåll (samma effekt oavsett om
-   HeroBar.tsx:s huvudnavigering ligger som en fast rad längst ner på
-   mobil eller en fast vänsterspalt på desktop — den här raden konkurrerar
-   aldrig om samma yta, ligger bara alltid synlig överst i just Hem-vyns
-   scroll). z-index lägre än HeroBar (999) så den aldrig hamnar ovanpå den.
-   background matchar sidan så innehåll inte skiner igenom när man scrollat. */
+   Desktop: fäst i toppen av Hem-vyns EGET scrollande innehåll — HeroBar
+   är en vänsterspalt där, ingen bottennav att ligga ovanför.
+   Mobil (2026-08-04, Zaidas rättelse med skärmdump av bottennaven: "kläm
+   ihop allt ovanför denna navbar istället... en andra navbar i motsatt
+   färgkombination") — en egen, fast, kompakt navbar-rad som ligger
+   FYSISKT ovanför HeroBar.tsx:s fasta bottennav (64px hög), inte bara
+   scroll-fäst. z-index lägre än HeroBar (999) så den aldrig hamnar ovanpå
+   den. Färgerna är ett medvetet SWAP av samma två temavariabler HeroBar
+   själv använder (bakgrund↔text) — "motsatt färgkombination", inte en ny
+   hårdkodad kulör, håller sig därför korrekt genom alla ljusa/mörka/
+   barn-teman. .home:s egen bottenpadding (nedan) kompenserar så
+   scrollat innehåll aldrig hamnar bakom den. */
 .controlRow {
   display: flex;
   align-items: center;
@@ -27,6 +31,46 @@
   z-index: 5;
   background: var(--background);
   padding: 6px 0;
+}
+
+@media (max-width: 1023px) {
+  .home {
+    /* Rymmer den fasta controlRow-baren (se nedan) ovanför HeroBars
+       egna 64px — annars döljs scrollat innehålls sista bit bakom den. */
+    padding-bottom: 60px;
+  }
+
+  .controlRow {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 64px;
+    top: auto;
+    z-index: 900;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 6px 10px;
+    background: var(--theme-nav-fg, var(--foreground));
+    color: var(--theme-nav-bg, var(--sidebar));
+    box-shadow: 0 -1px 0 var(--border);
+  }
+
+  .tabButton,
+  .memberButton {
+    color: inherit;
+  }
+
+  .tabButton {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .tabButtonActive {
+    background: var(--theme-nav-active-bg, var(--primary));
+    color: var(--theme-nav-active-fg, var(--primary-fg));
+    border-color: transparent;
+  }
 }
 
 .tabRow {
