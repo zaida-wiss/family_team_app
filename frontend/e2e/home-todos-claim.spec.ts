@@ -77,6 +77,38 @@ test("Hem-vyns Todos-flik: signar upp sig på en Familjen-todo via dubbeltryck, 
   await expect(page.getByRole("button", { name: /Hemlig grej/ })).toBeVisible();
 });
 
+// 2026-08-04, Zaidas fynd: "bubblorna i familjens todo-vy är mycket mindre
+// i min egen todovy" — FamilyTodoThreads.tsx satte ovillkorligt klassen
+// todo-thread__ball--small (Barn-trådens halva storlek i den personliga
+// Todos-panelen) på ALLA sina bubblor, trots att den här komponenten aldrig
+// visar barn-tilldelade uppgifter (getFamilyViewTodos utesluter dem helt).
+// Uppmätt: 128×128px i den personliga vyn, bara 60×60px i Hem innan fixen.
+test("Hem-vyns familjebubblor är samma storlek som Todos-panelens egna, inte den mindre Barn-storleken", async ({ page }) => {
+  const FAMILY_CATEGORY = {
+    id: "cat-fam", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
+    isFamily: true, hidden: false, createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  const PERSONAL_TODO = { ...FAMILY_TODO, id: "todo-personal", title: "Personlig uppgift", assignedTo: "mem-1" };
+  const FAMILY_CATEGORY_TODO = { ...FAMILY_TODO, id: "todo-family-cat", title: "Familje-uppgift", personalCategoryId: "cat-fam" };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [FAMILY_CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: route.request().method() === "GET" ? [PERSONAL_TODO, FAMILY_CATEGORY_TODO] : {} })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
+  const personalBox = await page.locator(".todo-thread__ball").first().boundingBox();
+
+  await page.getByRole("button", { name: "Hem", exact: true }).click();
+  await page.getByRole("button", { name: "Visa todos" }).click();
+  const familyBox = await page.locator(".todo-thread__ball").first().boundingBox();
+
+  expect(familyBox?.width).toBe(personalBox?.width);
+  expect(familyBox?.height).toBe(personalBox?.height);
+});
+
 // 2026-08-04, Zaidas fynd: "kvällsrutiner syns fortfarande" — Hem-vyns
 // familjetrådar (FamilyTodoThreads.tsx) visade tidigare en "idag"-uppgift
 // hela dagen oavsett exakt klockslag (dag-baserad isDueWithinRange). Nu

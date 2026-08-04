@@ -581,7 +581,16 @@ export function FamilyTodoThreads({
                         }
                         aria-pressed={isSelecting ? selectedTodoIds.has(todo.id) : undefined}
                         className={
-                          "todo-thread__ball todo-thread__ball--home todo-thread__ball--small" +
+                          // 2026-08-04, Zaidas fynd: "bubblorna i familjens
+                          // todo-vy är mycket mindre än i min egen todovy" —
+                          // --small (Barn-trådens halva storlek, ParentTodoThreadView.tsx)
+                          // satt HÄR ovillkorligt på ALLA bubblor, trots att
+                          // FamilyTodoThreads.tsx aldrig visar barn-tilldelade
+                          // uppgifter alls (getFamilyViewTodos utesluter dem,
+                          // de hör bara hemma i den personliga Todos-panelens
+                          // egen Barn-tråd). Ingen legitim anledning att någon
+                          // bubbel här ska vara mindre — borttaget.
+                          "todo-thread__ball todo-thread__ball--home" +
                           (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                           (isDissolving ? " todo-thread__ball--dissolving" : "") +
                           (inProgressColor ? " todo-thread__ball--in-progress" : "") +
