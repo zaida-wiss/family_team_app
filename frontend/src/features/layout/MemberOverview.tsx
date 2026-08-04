@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { CalendarDays, CheckSquare, Plus, ShoppingCart, Upload, UtensilsCrossed } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { CalendarDays, CheckSquare, Plus, ShoppingCart, Upload, UtensilsCrossed, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -174,6 +175,54 @@ export function MemberOverview({
   const [addingFamilyCategory, setAddingFamilyCategory] = useState(false);
   const [newFamilyCategoryName, setNewFamilyCategoryName] = useState("");
   const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
+  // Medlemsikonen (2026-08-04, Zaidas fynd: "medlemmarna tar för stor plats
+  // i hemvyn") — ersätter den tidigare alltid-synliga raden av avatarer med
+  // EN ikon (samma dropdown-framför-lång-lista-princip som CLAUDE.md redan
+  // föreskriver) som öppnar en portalad lista, samma mönster som
+  // ParentTodoThreadView.tsx:s kategorimeny (fixed position, stängs vid
+  // klick utanför).
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const [memberPickerPos, setMemberPickerPos] = useState({ top: 0, left: 0 });
+  const memberIconRef = useRef<HTMLButtonElement>(null);
+  const memberPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!memberPickerOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (memberPickerRef.current?.contains(e.target as Node)) return;
+      if (memberIconRef.current?.contains(e.target as Node)) return;
+      setMemberPickerOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMemberPickerOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [memberPickerOpen]);
+
+  function toggleMemberPicker() {
+    if (!memberPickerOpen && memberIconRef.current) {
+      const rect = memberIconRef.current.getBoundingClientRect();
+      const POPUP_WIDTH = 220;
+      // Uppskattad höjd (ingen exakt känd innan render) — räcker för att
+      // avgöra om popupen ska öppnas neråt eller uppåt. På mobil ligger
+      // ikonen numera i den fasta bottenraden (se .controlRow ovanför HeroBar,
+      // 2026-08-04) — under-plats saknas då nästan alltid, precis som
+      // HeroBar.tsx:s egen NavMemberPicker redan hanterar samma problem
+      // genom att öppna uppåt på mobil.
+      const ESTIMATED_HEIGHT = Math.min(filteredMembers.length * 48 + 12, 300);
+      const openUpward = window.innerHeight - rect.bottom < ESTIMATED_HEIGHT + 8;
+      setMemberPickerPos({
+        top: openUpward ? Math.max(8, rect.top - ESTIMATED_HEIGHT - 4) : rect.bottom + 4,
+        left: Math.min(rect.left, window.innerWidth - POPUP_WIDTH - 8)
+      });
+    }
+    setMemberPickerOpen((v) => !v);
+  }
 
   function setSelectedFamilyId(id: Id | "all") {
     setSelectedFamilyIdState(id);
@@ -262,42 +311,61 @@ export function MemberOverview({
   const effectiveTab = enableTabs ? activeTab : "calendar";
 
   // Medlemmar (2026-08-04, Zaidas önskemål: "Medlemmar skall visas
-  // tillsammans med familj och knappar, tänk minimalistiskt") — bara
-  // avatar (ingen synlig namn-text) i den kombinerade raden, samma
-  // ikon-bara princip som HeroBar.tsx:s egen medlemsväljare redan
-  // använder. Namnet finns kvar för alla (title/aria-label), en annan
-  // familjs medlem visar familjenamnet i title:n istället för en egen
-  // synlig rad text.
+  // tillsammans med familj och knappar, tänk minimalistiskt", utökat samma
+  // dag efter fynd: "medlemmarna tar för stor plats i hemvyn, ska vi sätta
+  // en ikon för medlemmar där istället?") — EN ikon (samma tabButton-stil
+  // som flikarna) öppnar en portalad lista istället för att visa varje
+  // avatar inline hela tiden. Egna medlemmar väljbara, andra familjers
+  // (cross-account/Familjeanslutning) statiska med familjenamn under.
   const memberRow = canSeeMembers && filteredMembers.length > 0 && (
-    <div aria-label="Medlemmar" className={styles.memberRow} role="group">
-      {filteredMembers.map((m) =>
-        m.isOwn ? (
-          <button
-            aria-label={m.name}
-            className={styles.memberButton}
-            key={m.id}
-            onClick={() => onSelectMember(m.id)}
-            title={m.name}
-            type="button"
-          >
-            <MemberAvatar member={m} size="small" />
-          </button>
-        ) : (
+    <>
+      <button
+        aria-expanded={memberPickerOpen}
+        aria-label="Medlemmar"
+        className={styles.tabButton}
+        onClick={toggleMemberPicker}
+        ref={memberIconRef}
+        title="Medlemmar"
+        type="button"
+      >
+        <Users size={20} />
+      </button>
+      {memberPickerOpen &&
+        createPortal(
           <div
-            aria-label={m.name}
-            className={`${styles.memberButton} ${styles["memberButton--static"]}`}
-            key={`${m.accountId}-${m.id}`}
-            title={
-              selectedFamilyId === "all"
-                ? `${m.name} (${familyNameById.get(m.accountId) ?? "Okänd familj"})`
-                : m.name
-            }
+            aria-label="Medlemslista"
+            className={styles.memberPopup}
+            ref={memberPickerRef}
+            role="group"
+            style={{ position: "fixed", top: memberPickerPos.top, left: memberPickerPos.left }}
           >
-            <MemberAvatar member={m} size="small" />
-          </div>
-        )
-      )}
-    </div>
+            {filteredMembers.map((m) =>
+              m.isOwn ? (
+                <button
+                  className={styles.memberPopupRow}
+                  key={m.id}
+                  onClick={() => { onSelectMember(m.id); setMemberPickerOpen(false); }}
+                  type="button"
+                >
+                  <MemberAvatar member={m} size="small" />
+                  <span>{m.name}</span>
+                </button>
+              ) : (
+                <div className={`${styles.memberPopupRow} ${styles["memberPopupRow--static"]}`} key={`${m.accountId}-${m.id}`}>
+                  <MemberAvatar member={m} size="small" />
+                  <span>
+                    {m.name}
+                    {selectedFamilyId === "all" && (
+                      <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
+                    )}
+                  </span>
+                </div>
+              )
+            )}
+          </div>,
+          document.body
+        )}
+    </>
   );
 
   return (

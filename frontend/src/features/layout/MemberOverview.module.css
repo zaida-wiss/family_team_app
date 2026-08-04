@@ -56,8 +56,7 @@
     box-shadow: 0 -1px 0 var(--border);
   }
 
-  .tabButton,
-  .memberButton {
+  .tabButton {
     color: inherit;
   }
 
@@ -162,33 +161,58 @@
   color: var(--muted-fg);
 }
 
-.memberRow {
+/* Medlemsikonen (2026-08-04, Zaidas fynd: "medlemmarna tar för stor plats i
+   hemvyn") — knappen själv återanvänder .tabButton, bara popupen är egen.
+   Portalad till document.body (samma mönster som ParentTodoThreadView.tsx:s
+   kategorimeny) så den aldrig klipps av controlRow:s egen overflow. */
+.memberPopup {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  max-width: 260px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  z-index: 950;
 }
 
-/* Avatar-bara (2026-08-04, "tänk minimalistiskt") — namnet finns kvar som
-   title/aria-label, ingen synlig textrad längre (samma ikon-bara princip
-   som HeroBar.tsx:s egen medlemsväljare). */
-.memberButton {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
+.memberPopupRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: none;
-  cursor: pointer;
   font: inherit;
   color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
 }
 
-/* Hem-vyns familjefilter (2026-07-31) — en annan familjs medlem går inte
-   att klicka på (ingen dashboard att växla till), samma layout men utan
-   pekar-affordance. */
-.memberButton--static {
+.memberPopupRow:hover {
+  background: var(--muted);
+}
+
+.memberPopupRow span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.memberPopupRow small {
+  color: var(--muted-fg);
+  font-size: 0.75rem;
+}
+
+/* En annan familjs medlem går inte att klicka på (ingen dashboard att växla
+   till), samma layout men utan pekar-affordance. */
+.memberPopupRow--static {
   cursor: default;
 }
 
