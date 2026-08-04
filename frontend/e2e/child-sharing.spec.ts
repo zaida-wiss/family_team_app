@@ -345,6 +345,42 @@ test("Todos-panelen: en delad barn-tråd visas med visnings-läge när access ä
   await expect(sharedThread.getByRole("button", { name: /Endast visning/ })).toBeDisabled();
 });
 
+// 2026-08-04, Zaidas önskemål: "ta bort koden om att alla todos är
+// avklarade... det ska bara vara tomt i fältet" — samma text ("Allt
+// avklarat här 🎉") som redan togs bort ur ParentTodoThreadView.tsx
+// 2026-07-24 fanns kvar oförändrad här, en nyare, separat komponent.
+// Samtidigt fixat: bubblornas storlek/avstånd (Inställningar → Utseende)
+// sattes aldrig på den här komponentens .todo-thread-view-container.
+test("Todos-panelen: delad barn-tråd visar inget 'Allt avklarat'-meddelande när allt är klart, och respekterar bubbelstorleks-inställningen", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [{ ...MEMBER, todoBubbleSize: 140 }] }));
+  await page.route("**/api/todos/shared-children", (route) =>
+    route.fulfill({
+      json: [
+        {
+          child: {
+            id: "mem-other-child", accountId: "acc-2", name: "Wilma",
+            avatarUrl: null, color: null, dashboardTheme: null
+          },
+          access: "view",
+          todos: [],
+          calendarEvents: [], purchasedRewards: [], stars: { approved: 0, spent: 0 }, timedTasks: []
+        }
+      ]
+    })
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Visa todos" }).click();
+
+  const sharedThread = page.getByRole("region", { name: "Delad tråd: Wilma" });
+  await expect(sharedThread).toBeVisible();
+  await expect(page.getByText("Allt avklarat")).toHaveCount(0);
+
+  const container = sharedThread.locator("xpath=ancestor::div[contains(@class, 'todo-thread-view')]");
+  await expect(container).toHaveAttribute("style", /--todo-bubble-size-override:\s*140px/);
+});
+
 // 2026-07-27, Zaidas önskemål: "en förälder som tillhör en annan familj ska
 // få åtkomst till allt som är kopplat till barnets konto" — kalender/
 // belöningar/Medaljer visas nu också, bakom en egen info-knapp (progressiv

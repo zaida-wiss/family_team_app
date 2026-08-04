@@ -669,9 +669,7 @@ export function FamilyTodoThreads({
                   );
                 })}
               </ul>
-            ) : (
-              <p className="todo-thread__empty">Allt avklarat här 🎉</p>
-            )}
+            ) : null}
 
             {addingToThreadId === source.id && (
               <form

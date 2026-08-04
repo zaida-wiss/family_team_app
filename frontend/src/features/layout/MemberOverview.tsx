@@ -477,7 +477,7 @@ export function MemberOverview({
               ANNAN vuxen (i din familj eller en helt annan) delat med dig
               — visas oavsett vald familj i filtret ovan (en delning är inte
               knuten till ett specifikt familjekonto-val på samma sätt). */}
-          <SharedChildrenThreads />
+          <SharedChildrenThreads todoBubbleSize={todoBubbleSize} todoThreadGap={todoThreadGap} />
         </article>
       )}
 

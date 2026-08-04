@@ -37,7 +37,19 @@ function formatDuration(ms: number) {
 // läsbart i denna version, ingen mutation på kalender/belöningar/Medaljer
 // härifrån — samma "godkännande/stjärnor sker bara i barnets eget konto"-
 // princip som redan gäller för todos.
-export function SharedChildrenThreads() {
+type Props = {
+  // Bubblornas storlek/avstånd (2026-08-04, Zaidas fynd: "todo-bubblorna
+  // skall vara samma storlek som jag ställt in i inställningar på
+  // utseende") — den här komponenten satte tidigare ALDRIG
+  // --todo-bubble-size-override/--todo-thread-gap på sin egen .todo-thread-
+  // view-container (till skillnad från FamilyTodoThreads.tsx/
+  // ParentTodoThreadView.tsx, som redan gjorde det), så bubblorna föll
+  // alltid tillbaka på standardformeln oavsett medlemmens val.
+  todoBubbleSize?: number;
+  todoThreadGap?: number;
+};
+
+export function SharedChildrenThreads({ todoBubbleSize, todoThreadGap }: Props) {
   // approveSharedTodo/rejectSharedTodo (2026-07-29, Zaidas beslut: "full
   // åtkomst, som en riktig förälder") — en edit-mottagare kan nu även
   // godkänna (delar ut stjärnor i barnets EGET konto) och neka en uppgift i
@@ -49,7 +61,15 @@ export function SharedChildrenThreads() {
   if (sharedChildren.length === 0) return null;
 
   return (
-    <div className="todo-thread-view">
+    <div
+      className="todo-thread-view"
+      style={
+        {
+          ...(todoThreadGap != null ? { "--todo-thread-gap": `${todoThreadGap}px` } : {}),
+          ...(todoBubbleSize != null ? { "--todo-bubble-size-override": `${todoBubbleSize}px` } : {})
+        } as React.CSSProperties
+      }
+    >
       {sharedChildren.map(({ child, access, todos, calendarEvents, purchasedRewards, stars, timedTasks }) => {
         const pending = todos.filter((t) => t.status === "pending");
         const awaitingApproval = todos.filter((t) => t.status === "done");
@@ -117,9 +137,7 @@ export function SharedChildrenThreads() {
               </div>
             )}
 
-            {pending.length === 0 ? (
-              <p className="todo-thread__empty">Allt avklarat här 🎉</p>
-            ) : (
+            {pending.length === 0 ? null : (
               <ul className="todo-thread__list">
                 {pending.map((todo) => (
                   <li className="todo-thread__item" key={todo.id}>
