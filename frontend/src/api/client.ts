@@ -131,7 +131,18 @@ async function fetchEventStream(path: string, signal: AbortSignal) {
     return response;
   }
 
-  await refreshSession();
+  // Deduped (2026-08-04, Zaidas fynd: 401 på /api/reward-shop/events) —
+  // anropade tidigare refreshSession() direkt, till skillnad från den
+  // vanliga request()-vägens redan deduplicerade refreshSessionOnce(). Tre
+  // separata SSE-kanaler (todos/members/reward-shop) återansluter alla mot
+  // SAMMA access-token — går token ut (15 min) medan fliken är öppen kan
+  // alla tre få 401 nästan samtidigt och tidigare triggat TRE oberoende
+  // /api/auth/refresh-anrop parallellt. Roterande refresh-tokens ogiltigförklarar
+  // sig själva efter första användningen, så en andra/tredje samtidig
+  // refresh-förfrågan (med samma, redan-om-att-roteras cookie) kan då
+  // nekas — exakt det race:et deduped-varianten redan förhindrar för
+  // vanliga API-anrop.
+  await refreshSessionOnce();
   return fetch(path, { headers: buildHeaders(), credentials: "include", signal });
 }
 
