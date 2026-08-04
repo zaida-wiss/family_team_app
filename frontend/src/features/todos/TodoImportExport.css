@@ -72,3 +72,50 @@
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* Samlad visa+redigera-tabell (2026-08-04) — egen lokal klass istället för
+   att återanvända OneOffTodosSettings.css (en annan, oberoende laddad
+   Inställningar-underkategori) — samma cross-chunk-CSS-fälla som redan
+   dokumenterats flera gånger denna session (HouseholdSecretsSettings.tsx,
+   receptmodalerna), en delad klass mellan två olika lazy-chunks kan råka
+   fungera bara av en slump beroende på laddningsordning. */
+.todo-import-export__browse-groups {
+  display: grid;
+  gap: 16px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.todo-import-export__browse-heading {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted-fg);
+}
+
+.todo-import-export__browse-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.todo-import-export__browse-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.todo-import-export__browse-info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-import-export__browse-info small {
+  color: var(--muted-fg);
+}

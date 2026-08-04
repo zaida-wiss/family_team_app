@@ -1,10 +1,15 @@
 import "./TodoImportExport.css";
 import { useRef, useState } from "react";
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
-import type { Id, Member, Role, Todo, TodoCategory } from "@shared/types";
+import { Download, FileSpreadsheet, Pencil, Trash2, Upload } from "lucide-react";
+import type { Id, Member, Role, Todo, TodoCategory, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { generateId } from "../../utils/uuid";
 import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type ParsedTodoRow } from "./todoCsv";
-import { isChildMember } from "./selectors";
+import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
+import { getAssigneeName, getVisibleTodos, groupByChildAssignee, isChildMember } from "./selectors";
+import { describeRecurrence, describeRecurrenceEnd } from "./recurringTodos";
+import { TodoEditModal } from "./TodoEditModal";
+import { useCrossAccountFamilyTodos } from "./useCrossAccountFamilyState";
+import { useConnectionTodos } from "../accounts/useFamilyConnectionsState";
 import type { ImportResult, ImportUndo } from "./useTodosState";
 
 type Props = {
@@ -28,6 +33,15 @@ type Props = {
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => Promise<unknown> | void;
   onDeleteTodo: (todoId: Id) => void;
   onCreateCategory: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
+  // Behövs bara för den samlade visa+redigera-tabellen nedan (2026-08-04,
+  // Zaidas önskemål: "se alla samlade todos som jag både kan visa och
+  // redigera utifrån mina behörigheter") — samma TodoEditModal som
+  // RecurringTodosSettings.tsx/OneOffTodosSettings.tsx redan öppnar. Valfria
+  // eftersom tabellen bara visas i personlig scope (Inställningar); i
+  // familje-scope (Hem-vyn) saknas de än så länge, ingen ny tråd genom
+  // MemberOverview.tsx behövdes för just den ytan.
+  onCreateTaskTemplate?: (task: TodoTemplateTask) => Promise<TodoTemplate>;
+  onRefreshRoutine?: (routineId: Id) => void;
   // "family" (2026-08-03, Zaidas önskemål: massimport/export av familjens
   // uppgifter i Hem-vyn) — samma komponent, tre skillnader: kryssrutelistan
   // visar familjekategorier istället för mina egna (ingen Barn-kryssruta,
@@ -143,6 +157,8 @@ export function TodoImportExport({
   onUpdateTodo,
   onDeleteTodo,
   onCreateCategory,
+  onCreateTaskTemplate,
+  onRefreshRoutine,
   result,
   setResult,
   lastImportUndo,
@@ -157,6 +173,112 @@ export function TodoImportExport({
   // export/import inom samma familj).
   const [pendingImport, setPendingImport] = useState<{ rows: ParsedTodoRow[]; errors: string[] } | null>(null);
   const [resolutions, setResolutions] = useState<Record<string, Id | typeof SKIP_RESOLUTION>>({});
+  // Samlad visa+redigera-tabell (2026-08-04, Zaidas önskemål: "se alla
+  // samlade todos som jag både kan visa och redigera utifrån mina
+  // behörigheter... den mallen ska jag först kunna exportera") — samma
+  // permissions-scopade selector (getVisibleTodos) som RecurringTodosSettings/
+  // OneOffTodosSettings.tsx redan använder (canSeeAllTodos ser allt inkl.
+  // barnens, canSeeOwnTodos en snävare mängd), bara ENDA gången kombinerad
+  // (mallar OCH engångsuppgifter tillsammans i en enda lista istället för två
+  // separata sektioner) — motsvarar exakt samma mängd som todosToCsv()
+  // exporterar (recurringSourceId===null, dagens genererade occurrences
+  // exkluderade). Bara i personlig scope — familje-scope (Hem-vyn) har redan
+  // sin egen tvåstegsbekräftade massa-hantering (FamilyTodoThreads.tsx).
+  const [editingId, setEditingId] = useState<Id | null>(null);
+  const allBrowsableTodos = isFamilyScope
+    ? []
+    : getVisibleTodos(currentMember, roles, todos).filter((t) => t.recurringSourceId === null);
+  const editingTodo = allBrowsableTodos.find((t) => t.id === editingId) ?? null;
+  const { childItems: browsableChildTodos, otherItems: browsableOtherTodos } = groupByChildAssignee(
+    allBrowsableTodos,
+    members,
+    roles
+  );
+
+  function describeBrowsableRow(todo: Todo): string {
+    if (todo.recurrence.type === "recurring") {
+      const end = describeRecurrenceEnd(todo.recurrence);
+      return end ? `${describeRecurrence(todo.recurrence)} (${end})` : describeRecurrence(todo.recurrence);
+    }
+    if (todo.visibleFrom && todo.expiresAt) {
+      return `${fmtFullDate(todo.visibleFrom)} · ${fmtTime(todo.visibleFrom)}–${fmtTime(todo.expiresAt)}`;
+    }
+    if (todo.visibleFrom) return `Syns från ${fmtFullDate(todo.visibleFrom)} ${fmtTime(todo.visibleFrom)}`;
+    if (todo.expiresAt) return `Försvinner ${fmtFullDate(todo.expiresAt)} ${fmtTime(todo.expiresAt)}`;
+    return "Inget schema";
+  }
+
+  // Andra familjer (2026-08-04, Zaidas önskemål: "i inställningar skall jag
+  // se todos som tillhör dess familjenamn... jag skall även kunna skapa
+  // todos därifrån till familjen, eller till flera familjer") — samma två
+  // cross-account-hookar som Hem-vyns familjefilter (MemberShellContent.tsx)
+  // redan använder, anropade en gång till HÄR (egen, oberoende SSE-
+  // prenumeration/hämtning bara medan denna Inställningar-flik är öppen,
+  // medvetet inte lyft till ett delat ställe — samma "duplicering hellre än
+  // en riskabel cross-cutting refaktor"-avvägning som redan gjorts för andra
+  // saker denna session). Mina familjekonton är ALLTID skapningsbara (samma
+  // "genuint medlemskap"-regel som redan gäller i Hem-vyn); en
+  // Familjeanslutning bara om den har redigera-åtkomst.
+  const { threads: crossAccountThreads, createCrossAccountTodo } = useCrossAccountFamilyTodos();
+  const { threads: connectionThreads, createConnectionTodo } = useConnectionTodos();
+  const otherFamilies = [
+    ...crossAccountThreads.map((t) => ({ accountId: t.accountId, accountName: t.accountName, todos: t.todos, creatable: true })),
+    ...connectionThreads.map((t) => ({ accountId: t.accountId, accountName: t.accountName, todos: t.todos, creatable: t.access === "edit" }))
+  ];
+  const [newFamilyTodoTitle, setNewFamilyTodoTitle] = useState("");
+  const [newFamilyTodoTargets, setNewFamilyTodoTargets] = useState<Set<string>>(new Set(["__own__"]));
+
+  function toggleFamilyTodoTarget(id: string) {
+    setNewFamilyTodoTargets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function submitNewFamilyTodo() {
+    const title = newFamilyTodoTitle.trim();
+    if (!title || newFamilyTodoTargets.size === 0) return;
+    if (newFamilyTodoTargets.has("__own__")) {
+      onCreateTodo({
+        id: `todo-${generateId()}`,
+        title,
+        createdBy: currentMember.id,
+        assignedTo: null,
+        isShared: false,
+        status: "pending",
+        starValue: 0,
+        visual: { type: "lucide-icon", value: "⭐" },
+        recurrence: { type: "none" },
+        recurringSourceId: null,
+        occurrenceDate: null,
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        rejectedReason: null,
+        deletedAt: null,
+        deletedBy: null,
+        personalCategoryId: null,
+        subtasks: undefined,
+        notes: null
+      });
+    }
+    for (const family of otherFamilies) {
+      if (!family.creatable || !newFamilyTodoTargets.has(family.accountId)) continue;
+      if (crossAccountThreads.some((t) => t.accountId === family.accountId)) {
+        createCrossAccountTodo(family.accountId, title, "⭐");
+      } else {
+        createConnectionTodo(family.accountId, title, "⭐");
+      }
+    }
+    setNewFamilyTodoTitle("");
+    setNewFamilyTodoTargets(new Set(["__own__"]));
+  }
 
   // Gömda kategorier (redan tomma trådar i tråd-vyn) hålls utanför export-
   // filtret också — annars listas de dubbelt (t.ex. bredvid "🙈 Gömda
@@ -378,6 +500,177 @@ export function TodoImportExport({
           ? "Exportera familjens uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. En tom \"Tilldelad\"-cell betyder Familjen. Skriv \"Ja\" i Radera-kolumnen på en rad med ett Id för att ta bort den uppgiften istället för att uppdatera den."
           : "Exportera dina egna uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. Både engångsuppgifter och återkommande mallar (med sina scheman) räknas med. Importerar du en fil som redan innehåller Id:n för dina egna uppgifter uppdateras de istället för att skapas som nya — skriv \"Ja\" i Radera-kolumnen på en rad med ett Id för att ta bort den uppgiften istället."}
       </p>
+
+      {!isFamilyScope && (
+        <>
+          {allBrowsableTodos.length === 0 ? (
+            <p className="empty-note">Inga uppgifter att visa än.</p>
+          ) : (
+            <div className="todo-import-export__browse-groups">
+              {browsableChildTodos.length > 0 && (
+                <div>
+                  <h4 className="todo-import-export__browse-heading">👶 Barn</h4>
+                  <ul className="todo-import-export__browse-list">
+                    {browsableChildTodos.map((todo) => (
+                      <li className="todo-import-export__browse-row" key={todo.id}>
+                        <div className="todo-import-export__browse-info">
+                          <strong>
+                            {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+                            {todo.title}
+                          </strong>
+                          <small>
+                            {getAssigneeName(todo, members)} · {describeBrowsableRow(todo)}
+                          </small>
+                        </div>
+                        <button
+                          aria-label={`Redigera ${todo.title}`}
+                          className="icon-button"
+                          onClick={() => setEditingId(todo.id)}
+                          title="Redigera"
+                          type="button"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          aria-label={`Ta bort ${todo.title}`}
+                          className="icon-button danger"
+                          onClick={() => onDeleteTodo(todo.id)}
+                          title="Ta bort"
+                          type="button"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {browsableOtherTodos.length > 0 && (
+                <div>
+                  <h4 className="todo-import-export__browse-heading">Övriga</h4>
+                  <ul className="todo-import-export__browse-list">
+                    {browsableOtherTodos.map((todo) => (
+                      <li className="todo-import-export__browse-row" key={todo.id}>
+                        <div className="todo-import-export__browse-info">
+                          <strong>
+                            {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+                            {todo.title}
+                          </strong>
+                          <small>
+                            {todo.assignedTo !== currentMember.id && `${getAssigneeName(todo, members)} · `}
+                            {describeBrowsableRow(todo)}
+                          </small>
+                        </div>
+                        <button
+                          aria-label={`Redigera ${todo.title}`}
+                          className="icon-button"
+                          onClick={() => setEditingId(todo.id)}
+                          title="Redigera"
+                          type="button"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          aria-label={`Ta bort ${todo.title}`}
+                          className="icon-button danger"
+                          onClick={() => onDeleteTodo(todo.id)}
+                          title="Ta bort"
+                          type="button"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {editingTodo && onCreateTaskTemplate && onRefreshRoutine && (
+            <TodoEditModal
+              currentMember={currentMember}
+              members={members}
+              roles={roles}
+              categories={categories}
+              todos={todos}
+              onCreateCategory={onCreateCategory}
+              onCreateTaskTemplate={onCreateTaskTemplate}
+              onDeleteTodo={onDeleteTodo}
+              onRefreshRoutine={onRefreshRoutine}
+              onClose={() => setEditingId(null)}
+              onUpdateTodo={onUpdateTodo}
+              todo={editingTodo}
+            />
+          )}
+
+          {otherFamilies.length > 0 && (
+            <div className="todo-import-export__browse-groups">
+              <h4 className="todo-import-export__browse-heading">🏠 Andra familjer</h4>
+              {otherFamilies.map((family) => (
+                <div key={family.accountId}>
+                  <h4 className="todo-import-export__browse-heading">{family.accountName}</h4>
+                  {family.todos.length === 0 ? (
+                    <p className="empty-note">Inga uppgifter just nu.</p>
+                  ) : (
+                    <ul className="todo-import-export__browse-list">
+                      {family.todos.map((todo) => (
+                        <li className="todo-import-export__browse-row" key={todo.id}>
+                          <div className="todo-import-export__browse-info">
+                            <strong>
+                              {todo.visual.value && <span aria-hidden="true">{todo.visual.value} </span>}
+                              {todo.title}
+                            </strong>
+                            <small>{describeBrowsableRow(todo)}</small>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={(e) => { e.preventDefault(); submitNewFamilyTodo(); }}>
+            <fieldset className="todo-import-export__filter">
+              <legend>Lägg till en uppgift åt familjen/familjer</legend>
+              <input
+                aria-label="Titel på ny familjeuppgift"
+                className="text-input"
+                onChange={(e) => setNewFamilyTodoTitle(e.target.value)}
+                placeholder="Ny uppgift…"
+                value={newFamilyTodoTitle}
+              />
+              <label>
+                <input
+                  checked={newFamilyTodoTargets.has("__own__")}
+                  onChange={() => toggleFamilyTodoTarget("__own__")}
+                  type="checkbox"
+                />
+                Min egen familj
+              </label>
+              {otherFamilies.filter((f) => f.creatable).map((family) => (
+                <label key={family.accountId}>
+                  <input
+                    checked={newFamilyTodoTargets.has(family.accountId)}
+                    onChange={() => toggleFamilyTodoTarget(family.accountId)}
+                    type="checkbox"
+                  />
+                  {family.accountName}
+                </label>
+              ))}
+              <button
+                className="secondary-button"
+                disabled={!newFamilyTodoTitle.trim() || newFamilyTodoTargets.size === 0}
+                type="submit"
+              >
+                Lägg till
+              </button>
+            </fieldset>
+          </form>
+        </>
+      )}
 
       <fieldset className="todo-import-export__filter">
         <legend>Vad ska exporteras?</legend>

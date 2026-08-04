@@ -416,6 +416,117 @@ test("Todos-import/export: avmarkerar Barn i exportfiltret utesluter barnens upp
   expect(titles).toEqual(["Min egen uppgift"]);
 });
 
+// 2026-08-04, Zaidas önskemål: "se alla samlade todos som jag både kan visa
+// och redigera utifrån mina behörigheter... den mallen ska jag först kunna
+// exportera och sedan redigera raderna och sedan importera" — en samlad
+// visa+redigera-tabell (mallar OCH engångsuppgifter, grupperat Barn/Övriga)
+// ovanför export/import-knapparna, samma canSeeAllTodos-scopade
+// getVisibleTodos-selector som Återkommande uppgifter/Engångsuppgifter redan
+// använder.
+test("Todos-import/export: en samlad tabell visar barnens och egna uppgifter, redigerbar och raderbar direkt", async ({ page }) => {
+  const MY_TODO = {
+    id: "todo-mine", accountId: "acc-1", title: "Handla mat", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  const CHILD_TODO = {
+    id: "todo-child", accountId: "acc-1", title: "Läxor", createdBy: "mem-1",
+    assignedTo: "mem-child-1", isShared: false, status: "pending", starValue: 1,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  let deletedId: string | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [{ id: "mem-1", accountId: "acc-1", userId: "user-1", name: "Testförälder", roleId: "role-1", isChild: false, avatarUrl: null, color: null, dashboardTheme: null, spentStars: 0, deletedAt: null, deletedBy: null }, CHILD_MEMBER] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [MY_TODO, CHILD_TODO] }));
+  await page.route("**/api/todos/todo-mine", (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedId = "todo-mine";
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  const childGroup = page.getByRole("heading", { name: "👶 Barn" }).locator("..");
+  await expect(childGroup.getByText("Läxor")).toBeVisible();
+  const otherGroup = page.getByRole("heading", { name: "Övriga" }).locator("..");
+  await expect(otherGroup.getByText("Handla mat")).toBeVisible();
+  await expect(otherGroup.getByText("Läxor")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Redigera Läxor" }).click();
+  await expect(page.getByRole("dialog", { name: "Redigera uppgift" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Ta bort Handla mat" }).click();
+  await expect.poll(() => deletedId).toBe("todo-mine");
+});
+
+// 2026-08-04, Zaidas önskemål: "i inställningar skall jag se todos som
+// tillhör dess familjenamn... jag skall även kunna skapa todos därifrån till
+// familjen, eller till flera familjer" — Mina familjekonton (genuint
+// medlemskap, alltid skapningsbart) OCH Familjeanslutningar (bara om
+// redigera-åtkomst) grupperade under sitt kontonamn.
+test("Todos-import/export: andra familjer visas grupperat på kontonamn, går att skapa uppgifter i flera samtidigt", async ({ page }) => {
+  const OTHER_FAMILY_TODO = {
+    id: "todo-other", accountId: "acc-2", title: "Städa hos mormor", createdBy: "mem-x",
+    assignedTo: null, isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🧹" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  let crossAccountPostBody: Record<string, unknown> | null = null;
+  let connectionPostBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todos/family-across-accounts", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        json: [{ accountId: "acc-2", accountName: "Familjen Andersson", myMemberId: "mem-x", todos: [OTHER_FAMILY_TODO], categoryNames: {} }]
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/family-across-accounts/acc-2", (route) => {
+    crossAccountPostBody = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({ status: 201, json: { id: "todo-new-1" } });
+  });
+  await page.route("**/api/todos/connections", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: [{ accountId: "acc-3", accountName: "Familjen Berg", access: "edit", todos: [] }] });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/connections/acc-3", (route) => {
+    connectionPostBody = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({ status: 201, json: { id: "todo-new-2" } });
+  });
+  await openImportExportSettings(page);
+
+  await expect(page.getByRole("heading", { name: "Familjen Andersson" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Familjen Berg" })).toBeVisible();
+  await expect(page.getByText("Städa hos mormor")).toBeVisible();
+
+  await page.getByLabel("Titel på ny familjeuppgift").fill("Handla present");
+  await page.getByLabel("Min egen familj").uncheck();
+  await page.getByLabel("Familjen Andersson").check();
+  await page.getByLabel("Familjen Berg").check();
+  await page.getByRole("button", { name: "Lägg till" }).click();
+
+  await expect.poll(() => crossAccountPostBody?.title).toBe("Handla present");
+  await expect.poll(() => connectionPostBody?.title).toBe("Handla present");
+});
+
 // 2026-07-08 (Zaidas önskemål efter att ha ångrat en import: "vi behöver en
 // knapp för att ångra senaste import") — en NYSKAPAD uppgift tas bort (mjukt)
 // om man ångrar.

@@ -607,6 +607,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onUpdateTodo={onUpdateTodo}
               onDeleteTodo={onDeleteTodo}
               onCreateCategory={onCreateCategory}
+              onCreateTaskTemplate={onCreateTaskTemplate}
+              onRefreshRoutine={settingsProps.onRefreshRoutine}
               result={todoImportResult}
               setResult={onSetTodoImportResult}
               lastImportUndo={todoImportUndo}
