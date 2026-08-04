@@ -164,6 +164,48 @@ export function TodosView({
   const [editTodoId, setEditTodoId] = useState<Id | null>(null);
   const editTodo = todos.find((t) => t.id === editTodoId) ?? null;
 
+  // Massradering i listläget (2026-08-04, Zaidas önskemål: "gör det möjligt
+  // att massradera genom att kryssa i rader på todos som skall tas bort") —
+  // samma tvåstegsbekräftade "Ta bort"→"Bekräfta radering"-mönster som
+  // redan finns i Hem-vyns FamilyTodoThreads.tsx (striktare än tråd-vyns
+  // "Mina uppgifter", som saknar ett andra steg — listläget kan visa MÅNGA
+  // rader på en gång, mer utrymme för ett missklick). Anropar samma
+  // onSoftDeleteTodo som varje rads egen enskilda radera-knapp redan gör,
+  // utan extra ägarskaps-gren (till skillnad från tråd-vyns "Mina
+  // uppgifter"-massradering, som avassignerar andras uppgifter istället för
+  // att radera dem) — listläget har aldrig haft den distinktionen för sin
+  // enskilda radera-knapp heller, backend (canEditTodo/canDeleteTodo,
+  // ADR-0016) avgör redan om anropet faktiskt får verkan.
+  const [selectedListTodoIds, setSelectedListTodoIds] = useState<Set<Id>>(new Set());
+  const [confirmingBulkDeleteList, setConfirmingBulkDeleteList] = useState(false);
+
+  function toggleListTodoSelected(todoId: Id) {
+    setSelectedListTodoIds((current) => {
+      const next = new Set(current);
+      if (next.has(todoId)) next.delete(todoId);
+      else next.add(todoId);
+      return next;
+    });
+    setConfirmingBulkDeleteList(false);
+  }
+
+  function cancelListSelection() {
+    setSelectedListTodoIds(new Set());
+    setConfirmingBulkDeleteList(false);
+  }
+
+  function handleBulkDeleteListTodos() {
+    if (selectedListTodoIds.size === 0) return;
+    if (!confirmingBulkDeleteList) {
+      setConfirmingBulkDeleteList(true);
+      return;
+    }
+    for (const todoId of selectedListTodoIds) {
+      onSoftDeleteTodo(todoId);
+    }
+    cancelListSelection();
+  }
+
   function openCreateModalForCategory(categoryId: Id | null) {
     setCreateDefaultCategoryId(categoryId);
     setIsCreateModalOpen(true);
@@ -295,9 +337,30 @@ export function TodosView({
         )}
         </div>
 
+        {todoViewMode === "list" && selectedListTodoIds.size > 0 && (
+          <div className="todo-thread__select-bar">
+            <span className="todo-thread__select-count">{selectedListTodoIds.size} valda</span>
+            <button
+              className="todo-thread__select-remove danger-button"
+              onClick={handleBulkDeleteListTodos}
+              type="button"
+            >
+              {confirmingBulkDeleteList ? "Bekräfta radering" : "Radera valda"}
+            </button>
+            <button onClick={cancelListSelection} type="button">
+              Avbryt
+            </button>
+          </div>
+        )}
+
         {todoViewMode === "list" && rangeFilteredTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>
-            <CheckCircle2 size={18} />
+            <input
+              aria-label={`Välj ${todo.title} för massradering`}
+              checked={selectedListTodoIds.has(todo.id)}
+              onChange={() => toggleListTodoSelected(todo.id)}
+              type="checkbox"
+            />
             <span>
               {todo.title}
               <small>{getAssigneeName(todo, allMembers)}</small>

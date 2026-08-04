@@ -36,8 +36,9 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   // 2026-08-03: Fler tidsrutor (Todo.timeWindows) + Slutar (RecurrenceEnd)
   // tillagda — tidsbegränsade återkommande uppgifter helt från kalkylark.
+  // 2026-08-04: Radera tillagd — massradera via en ifylld kolumn i mallen.
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id"
+    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Radera"
   );
 });
 
@@ -132,9 +133,10 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
   const lines = text.split(/\r?\n/);
   // 2026-08-03: två nya tomma kolumner (Fler tidsrutor/Slutar) tillkom mellan
-  // Slutdatum/Återkommer respektive Veckodagar/Delmoment.
+  // Slutdatum/Återkommer respektive Veckodagar/Delmoment. 2026-08-04: en ny
+  // tom Radera-kolumn sist (aldrig förifylld vid export).
   expect(lines[1]).toBe(
-    ["Min uppgift", "Star", "Mig själv", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-1"].join(",")
+    ["Min uppgift", "Star", "Mig själv", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-1", ""].join(",")
   );
 });
 
@@ -189,10 +191,11 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
   const pad = (n: number) => String(n).padStart(2, "0");
   const expectedStart = `${localStart.getFullYear()}-${pad(localStart.getMonth() + 1)}-${pad(localStart.getDate())} ${pad(localStart.getHours())}:${pad(localStart.getMinutes())}`;
   // 2026-08-03: två nya tomma kolumner (Fler tidsrutor/Slutar) tillkom mellan
-  // Slutdatum/Återkommer respektive Veckodagar/Delmoment.
+  // Slutdatum/Återkommer respektive Veckodagar/Delmoment. 2026-08-04: en ny
+  // tom Radera-kolumn sist (aldrig förifylld vid export).
   expect(exportedCsv.split(/\r?\n/)[1]).toBe(
     [
-      "Träna", "Star", "Mig själv", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "", "todo-1"
+      "Träna", "Star", "Mig själv", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "", "todo-1", ""
     ].join(",")
   );
 
@@ -255,6 +258,85 @@ test("Todos-import/export: en rad med ett okänt/tomt Id skapar en ny uppgift, r
   await expect.poll(() => createdTodo?.title).toBe("Ny uppgift");
   expect(patchCalled).toBe(false);
 });
+
+// 2026-08-04, Zaidas önskemål: "jag behöver även en kolumn i mallen där kan
+// kan radera uppgifter... ladda ner alla todos, uppdatera, lägga till nya
+// och radera de jag inte vill ha kvar längre, sedan importera" — en rad med
+// "Ja" i Radera-kolumnen och ett matchande Id raderar (mjukt) den befintliga
+// uppgiften istället för att skapa/uppdatera den, i SAMMA import som vanliga
+// skapa/uppdatera-rader.
+test("Todos-import/export: en rad med Radera=Ja och ett matchande Id raderar uppgiften, andra rader skapas/uppdateras som vanligt", async ({ page }) => {
+  const TO_DELETE = {
+    id: "todo-delete-me", accountId: "acc-1", title: "Gammal uppgift", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  let deletedId: string | null = null;
+  let createdTodo: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TO_DELETE] });
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-delete-me", (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedId = "todo-delete-me";
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  const csv = [
+    "Titel,Tilldelad,Id,Radera",
+    "Gammal uppgift,Mig själv,todo-delete-me,Ja",
+    "Ny uppgift,Mig själv,,"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("1 uppgift importerade, 1 uppgift raderade.")).toBeVisible();
+  await expect.poll(() => deletedId).toBe("todo-delete-me");
+  await expect.poll(() => createdTodo?.title).toBe("Ny uppgift");
+});
+
+test("Todos-import/export: Radera=Ja utan ett matchande Id visar ett tydligt fel, raderar ingenting", async ({ page }) => {
+  let deleteCalled = false;
+  await mockAuthAndData(page);
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: route.request().method() === "GET" ? [] : {} })
+  );
+  await page.route("**/api/todos/**", (route) => {
+    if (route.request().method() === "DELETE") deleteCalled = true;
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Id,Radera", "Okänd uppgift,Mig själv,todo-finns-inte,Ja"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("0 uppgifter importerade.")).toBeVisible();
+  await expect(page.getByText(/hittade ingen egen uppgift med Id/)).toBeVisible();
+  expect(deleteCalled).toBe(false);
+});
+
 // 2026-07-07 (Zaidas resonemang om att dela listor mellan familjer): ett
 // okänt namn kan mappas till en RIKTIG medlem i importörens egen familj,
 // istället för att bara hoppas över.

@@ -15,6 +15,11 @@ import { generateId } from "../../utils/uuid";
 // exakta önskemål: tidsbegränsade återkommande uppgifter (synlig kl. X,
 // försvinner kl. Y om ogjord, nästa dags kopia oberoende) ska gå att sätta
 // upp HELT från kalkylark, inte bara via appens UI efteråt.
+//
+// 2026-08-04 tillagd "Radera" (Zaidas önskemål: "ladda ner alla todos,
+// uppdatera, lägga till nya och radera de jag inte vill ha kvar längre,
+// sedan importera") — samma "Ja"-värde som Timer-kolumnen redan använder.
+// Kräver ett ifyllt Id (annars finns inget att radera) — se parseTodoCsv.
 export const TODO_CSV_HEADERS = [
   "Titel",
   "Emoji",
@@ -32,7 +37,8 @@ export const TODO_CSV_HEADERS = [
   "Slutar",
   "Delmoment",
   "Anteckningar",
-  "Id"
+  "Id",
+  "Radera"
 ] as const;
 
 // "HH:MM-HH:MM, HH:MM-HH:MM, ..." — ytterligare tidsrutor UTÖVER den första
@@ -158,24 +164,32 @@ export function downloadCsv(filename: string, csv: string) {
 
 export function buildTemplateCsv(): string {
   const oneOff =
-    ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", ""];
+    ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", "", ""];
   // Enkel återkommande, en tidsruta per dag (synlig kl./försvinner kl.) —
   // det vanligaste fallet, ingen "Fler tidsrutor" eller "Slutar" behövs.
   const recurringSimple =
-    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", "2026-08-04 10:00", "2026-08-04 10:30", "", "Dag", "1", "", "", "", "", ""];
+    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", "2026-08-04 10:00", "2026-08-04 10:30", "", "Dag", "1", "", "", "", "", "", ""];
   // Flera tidsrutor på SAMMA mall (morgon OCH kväll) — Startdatum/Slutdatum
   // är den FÖRSTA rutan, "Fler tidsrutor" lägger till resten (samma ankardag).
   const recurringMultiWindow =
-    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-08-04 07:00", "2026-08-04 07:15", "19:00-19:15", "Dag", "1", "", "", "", "", ""];
+    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-08-04 07:00", "2026-08-04 07:15", "19:00-19:15", "Dag", "1", "", "", "", "", "", ""];
   // Slutar efter ett visst antal gånger (eller sätt ett datum i ÅÅÅÅ-MM-DD).
   const recurringWithEnd =
-    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", "2026-08-04 17:00", "2026-08-04 17:20", "", "Dag", "1", "", "30", "", "", ""];
+    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", "2026-08-04 17:00", "2026-08-04 17:20", "", "Dag", "1", "", "30", "", "", "", ""];
+  // Radera (2026-08-04) — kräver ett riktigt Id från en tidigare export, en
+  // helt ny rad utan Id kan aldrig raderas (det finns inget att matcha mot).
+  // Den här exempelraden fungerar alltså bara som illustration i just mallen,
+  // inte i en faktisk import — vid en RIKTIG radering fyller man i "Ja" på en
+  // rad man redan hämtat via "Exportera mina uppgifter", med det Id:t kvar.
+  const deleteExample =
+    ["Gammal uppgift (exempel)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-x-från-en-export", "Ja"];
   return [
     toCsvRow([...TODO_CSV_HEADERS]),
     toCsvRow(oneOff),
     toCsvRow(recurringSimple),
     toCsvRow(recurringMultiWindow),
-    toCsvRow(recurringWithEnd)
+    toCsvRow(recurringWithEnd),
+    toCsvRow(deleteExample)
   ].join("\r\n");
 }
 
@@ -349,7 +363,10 @@ export function todosToCsv(
       formatRecurrenceEnd(end),
       subtasksToCsv(todo.subtasks),
       todo.notes ?? "",
-      todo.id
+      todo.id,
+      // Aldrig förifylld vid export — en radering är alltid ett aktivt val
+      // importören gör i kalkylarket efteråt, inte något exporten gissar.
+      ""
     ]);
   });
 
@@ -387,6 +404,11 @@ export type ParsedTodoRow = {
   timeWindows: TodoTimeWindow[] | undefined;
   subtasks: TodoSubtask[];
   notes: string | null;
+  // Radera-kolumnen ikryssad ("Ja", 2026-08-04) — kräver ett matchande Id
+  // (sourceId), TodoImportExport.tsx raderar den befintliga todon istället
+  // för att skapa/uppdatera. Övriga fält på raden är då oanvända defaults,
+  // aldrig lästa.
+  deleteRow: boolean;
 };
 
 export type TodoCsvParseResult = {
@@ -437,6 +459,7 @@ export function parseTodoCsv(
   const subtasksCol = col("Delmoment");
   const notesCol = col("Anteckningar");
   const idCol = col("Id");
+  const deleteCol = col("Radera");
 
   const rows: ParsedTodoRow[] = [];
   const errors: string[] = [];
@@ -447,6 +470,43 @@ export function parseTodoCsv(
     if (!title) {
       if (cells.every((c) => c.trim() === "")) return; // tom rad, hoppa tyst
       errors.push(`Rad ${rowNumber}: saknar en titel, hoppas över.`);
+      return;
+    }
+
+    const sourceId = (idCol !== undefined ? cells[idCol] : "")?.trim() || null;
+
+    // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos, uppdatera,
+    // lägga till nya och radera de jag inte vill ha kvar längre, sedan
+    // importera") — kort-slutar hela raden HÄR, ingen av de övriga
+    // kolumnerna (kategori/datum/återkommelse/delmoment osv) tolkas eller
+    // valideras, de är irrelevanta för en radering och skulle bara kunna ge
+    // missvisande fel på en rad som ändå ska bort. Kräver ett Id — utan ett
+    // sådant finns ingen befintlig todo att matcha mot och radera.
+    const deleteRaw = (deleteCol !== undefined ? cells[deleteCol] : "")?.trim() ?? "";
+    if (deleteRaw.toLowerCase() === YES_LABEL.toLowerCase()) {
+      if (!sourceId) {
+        errors.push(`Rad ${rowNumber} ("${title}"): Radera är ikryssad men raden saknar ett Id, ingenting kan raderas.`);
+        return;
+      }
+      rows.push({
+        sourceId,
+        title,
+        emoji: DEFAULT_EMOJI,
+        assignedTo: null,
+        unresolvedAssigneeLabel: null,
+        personalCategoryId: null,
+        newCategoryName: null,
+        starValue: 0,
+        timerEnabled: false,
+        plannedDurationMinutes: null,
+        visibleFrom: null,
+        expiresAt: null,
+        recurrence: { type: "none" },
+        timeWindows: undefined,
+        subtasks: [],
+        notes: null,
+        deleteRow: true
+      });
       return;
     }
 
@@ -619,7 +679,6 @@ export function parseTodoCsv(
     }));
 
     const notes = (notesCol !== undefined ? cells[notesCol] : "")?.trim() || null;
-    const sourceId = (idCol !== undefined ? cells[idCol] : "")?.trim() || null;
 
     rows.push({
       sourceId,
@@ -637,7 +696,8 @@ export function parseTodoCsv(
       recurrence,
       timeWindows,
       subtasks,
-      notes
+      notes,
+      deleteRow: false
     });
   });
 

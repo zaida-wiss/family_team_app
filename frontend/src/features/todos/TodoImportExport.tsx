@@ -221,6 +221,7 @@ export function TodoImportExport({
       const createdCategoryIds = new Map<string, Id>();
       let created = 0;
       let updated = 0;
+      let deleted = 0;
       const undoUpdated: ImportUndo["updated"] = [];
       const undoCreatedIds: Id[] = [];
 
@@ -238,6 +239,32 @@ export function TodoImportExport({
         if (rowsSinceBatchPause > BATCH_SIZE) {
           rowsSinceBatchPause = 1;
           await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+
+        // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos,
+        // uppdatera, lägga till nya och radera de jag inte vill ha kvar
+        // längre, sedan importera") — samma matchningsregel som en vanlig
+        // uppdatering (Id + ägarskap/scope), men raderar istället för att
+        // patcha. Ingen Ångra-spårning (se ImportResult-kommentaren i
+        // useTodosState.ts) — landar i den vanliga papperskorgen.
+        if (row.deleteRow) {
+          const existing = row.sourceId
+            ? todos.find(
+                (t) =>
+                  t.id === row.sourceId &&
+                  t.deletedAt === null &&
+                  (isFamilyScope || t.assignedTo === currentMember.id || t.createdBy === currentMember.id)
+              )
+            : undefined;
+          if (existing) {
+            onDeleteTodo(existing.id);
+            deleted++;
+          } else {
+            parseErrors.push(
+              `Rad markerad Radera ("${row.title}"): hittade ingen egen uppgift med Id "${row.sourceId}", ingenting raderades.`
+            );
+          }
+          continue;
         }
 
         let assignedTo = row.assignedTo;
@@ -288,7 +315,7 @@ export function TodoImportExport({
         }
       }
 
-      setResult({ created, updated, errors: parseErrors });
+      setResult({ created, updated, deleted, errors: parseErrors });
       setLastImportUndo({ updated: undoUpdated, createdIds: undoCreatedIds });
       setPendingImport(null);
       setResolutions({});
@@ -348,8 +375,8 @@ export function TodoImportExport({
     <div className="todo-import-export">
       <p className="todo-import-export__intro">
         {isFamilyScope
-          ? "Exportera familjens uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. En tom \"Tilldelad\"-cell betyder Familjen."
-          : "Exportera dina egna uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. Både engångsuppgifter och återkommande mallar (med sina scheman) räknas med. Importerar du en fil som redan innehåller Id:n för dina egna uppgifter uppdateras de istället för att skapas som nya."}
+          ? "Exportera familjens uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. En tom \"Tilldelad\"-cell betyder Familjen. Skriv \"Ja\" i Radera-kolumnen på en rad med ett Id för att ta bort den uppgiften istället för att uppdatera den."
+          : "Exportera dina egna uppgifter till ett kalkylark, eller ladda ner en tom mall att fylla i och importera tillbaka. Både engångsuppgifter och återkommande mallar (med sina scheman) räknas med. Importerar du en fil som redan innehåller Id:n för dina egna uppgifter uppdateras de istället för att skapas som nya — skriv \"Ja\" i Radera-kolumnen på en rad med ett Id för att ta bort den uppgiften istället."}
       </p>
 
       <fieldset className="todo-import-export__filter">
@@ -472,6 +499,8 @@ export function TodoImportExport({
             {result.created} {result.created === 1 ? "uppgift" : "uppgifter"} importerade
             {result.updated > 0 &&
               `, ${result.updated} ${result.updated === 1 ? "uppgift" : "uppgifter"} uppdaterade`}
+            {result.deleted > 0 &&
+              `, ${result.deleted} ${result.deleted === 1 ? "uppgift" : "uppgifter"} raderade`}
             .
           </p>
           {result.errors.length > 0 && (

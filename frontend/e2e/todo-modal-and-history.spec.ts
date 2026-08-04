@@ -137,6 +137,58 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
     await expect(dialog.getByLabel("Försvinner")).toBeVisible();
   });
 
+  // 2026-08-04, Zaidas önskemål: "gör det möjligt att massradera genom att
+  // kryssa i rader på todos som skall tas bort" — checkboxar per rad i
+  // listläget, ett tvåstegsbekräftat "Radera valda"→"Bekräfta radering".
+  test("Listläget: kryssa i flera rader och massradera med tvåstegsbekräftelse", async ({ page }) => {
+    const SECOND_TODO = { ...PENDING_TODO, id: "todo-pending-2", title: "Städa köket" };
+    const deletedIds: string[] = [];
+    await page.route("**/api/todos", (route) =>
+      route.fulfill({ json: route.request().method() === "GET" ? [PENDING_TODO, SECOND_TODO] : {} })
+    );
+    await page.route("**/api/todos/todo-pending", (route) => {
+      if (route.request().method() === "DELETE") {
+        deletedIds.push("todo-pending");
+        return route.fulfill({ json: { ok: true } });
+      }
+      return route.fulfill({ json: {} });
+    });
+    await page.route("**/api/todos/todo-pending-2", (route) => {
+      if (route.request().method() === "DELETE") {
+        deletedIds.push("todo-pending-2");
+        return route.fulfill({ json: { ok: true } });
+      }
+      return route.fulfill({ json: {} });
+    });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Utseende" }).click();
+    await page.getByLabel("Todos-vy").selectOption("list");
+    await page.getByRole("button", { name: "Todos", exact: true }).click();
+
+    await expect(page.getByText("Dammsuga")).toBeVisible();
+    await expect(page.getByText("Städa köket")).toBeVisible();
+
+    // Inget markerat än — ingen massradera-rad synlig.
+    await expect(page.getByText("valda")).toHaveCount(0);
+
+    await page.getByLabel("Välj Dammsuga för massradering").check();
+    await page.getByLabel("Välj Städa köket för massradering").check();
+    await expect(page.getByText("2 valda")).toBeVisible();
+
+    const bulkDeleteButton = page.getByRole("button", { name: "Radera valda" });
+    await bulkDeleteButton.click();
+    // Första klicket bekräftar bara, raderar inget än.
+    await expect.poll(() => deletedIds.length).toBe(0);
+    await expect(page.getByRole("button", { name: "Bekräfta radering" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Bekräfta radering" }).click();
+    await expect.poll(() => deletedIds.sort()).toEqual(["todo-pending", "todo-pending-2"]);
+    // Väljläget rensas efter en lyckad massradering.
+    await expect(page.getByText("valda")).toHaveCount(0);
+  });
+
   // 2026-07-08 (Zaidas fråga: "jag verkar inte kunna se todos som inte är
   // återkommande i Inställningar") — en aktiv engångsuppgift gick tidigare
   // bara att hitta i tråd-vyn/listläget (kräver att man vet vilken kategori

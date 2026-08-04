@@ -23,13 +23,14 @@ describe("todoCsv", () => {
   // 2026-08-03: mallen fick två nya kolumner (Fler tidsrutor/Slutar) och två
   // nya exempelrader som visar dem — Zaidas exakta önskemål om tidsbegränsade
   // återkommande uppgifter (synlig kl. X, försvinner kl. Y, nästa dags kopia
-  // oberoende av gårdagens).
-  test("buildTemplateCsv innehåller alla rubriker plus exempel för engångs-, enkel återkommande, flera-tidsrutor- och slutar-uppgifter", () => {
+  // oberoende av gårdagens). 2026-08-04: en tredje ny kolumn (Radera) och en
+  // femte exempelrad som visar den.
+  test("buildTemplateCsv innehåller alla rubriker plus exempel för engångs-, enkel återkommande, flera-tidsrutor-, slutar- och radera-uppgifter", () => {
     const csv = buildTemplateCsv();
     const table = parseCsvText(csv);
     const headerIndex = new Map(table[0].map((h, i) => [h, i]));
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
-    expect(table.length).toBe(5);
+    expect(table.length).toBe(6);
     expect(table[1][0]).toBe("Handla mat");
     expect(table[2][0]).toBe("Andningsövning");
     expect(table[2][headerIndex.get("Återkommer")!]).toBe("Dag");
@@ -37,6 +38,8 @@ describe("todoCsv", () => {
     expect(table[3][headerIndex.get("Fler tidsrutor")!]).toBe("19:00-19:15");
     expect(table[4][0]).toBe("Öva piano");
     expect(table[4][headerIndex.get("Slutar")!]).toBe("30");
+    expect(table[5][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
+    expect(table[5][headerIndex.get("Radera")!]).toBe("Ja");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -117,6 +120,35 @@ describe("todoCsv", () => {
     const { rows, errors } = parseTodoCsv("Namn,Övrigt\r\nnågot,annat", [], [], "mem-1");
     expect(rows).toEqual([]);
     expect(errors[0]).toContain("Titel");
+  });
+
+  // 2026-08-04, Zaidas önskemål: "ladda ner alla todos, uppdatera, lägga till
+  // nya och radera de jag inte vill ha kvar längre, sedan importera" — en
+  // Radera-kolumn med "Ja" och ett Id markerar raden för radering istället
+  // för skapande/uppdatering, kort-slutar all annan kolumntolkning.
+  test("parseTodoCsv: Radera=Ja med ett Id ger en deleteRow-markerad rad, övriga fält oanvända defaults", () => {
+    const csv = ["Titel,Startdatum,Id,Radera", "Gammal uppgift,2026-01-01,todo-123,Ja"].join("\r\n");
+    const { rows, errors } = parseTodoCsv(csv, [], [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ deleteRow: true, sourceId: "todo-123", title: "Gammal uppgift" });
+  });
+
+  test("parseTodoCsv: Radera=Ja utan ett Id ger ett tydligt fel, raden hoppas över", () => {
+    const csv = ["Titel,Radera", "Gammal uppgift,Ja"].join("\r\n");
+    const { rows, errors } = parseTodoCsv(csv, [], [], "mem-1");
+    expect(rows).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("Id");
+  });
+
+  test("parseTodoCsv: en tom eller annan Radera-cell behandlas som en vanlig rad (deleteRow: false)", () => {
+    const csv = ["Titel,Id,Radera", "Handla mat,todo-1,", "Städa,todo-2,Nej"].join("\r\n");
+    const { rows, errors } = parseTodoCsv(csv, [], [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].deleteRow).toBe(false);
+    expect(rows[1].deleteRow).toBe(false);
   });
 
   test("todosToCsv → parseTodoCsv tur och retur bevarar lokalt datum oavsett tidszon", () => {

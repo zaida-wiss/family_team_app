@@ -16,7 +16,11 @@ export type ImportUndo = {
   createdIds: Id[];
 };
 
-export type ImportResult = { created: number; updated: number; errors: string[] };
+// deleted (2026-08-04, Zaidas önskemål: en Radera-kolumn i CSV:n) — raderade
+// rader spåras MEDVETET inte i ImportUndo (ovan), en mjuk-raderad todo landar
+// redan i den vanliga papperskorgen (TrashView.tsx) och kan återställas
+// därifrån om en import raderade fel rad.
+export type ImportResult = { created: number; updated: number; deleted: number; errors: string[] };
 
 export function useTodosState(fixedTodoTimes = false) {
   // Stale-while-revalidate (2026-07-17, Zaidas önskemål: "allt ska vara i
