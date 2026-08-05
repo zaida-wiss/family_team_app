@@ -654,6 +654,28 @@ export async function createTodo(data: unknown) {
   }
 
   const input = data as Partial<Todo> & { accountId: string; title: string };
+
+  // Spärrar "spök-occurrences" vid källan (2026-08-05, Zaidas önskemål:
+  // "spökkod till borttagna mallar alltid försvinner med mallen") — en
+  // klient kan generera en dagens-occurrence utifrån en TILLFÄLLIGT
+  // inaktuell lokal kopia av todo-listan (t.ex. en mall som just skapats via
+  // CSV-import och sedan tagits bort igen via "Ångra senaste import" i en
+  // ANNAN flik/session innan occurrence-genereringen hunnit köra klart där,
+  // eller en mall raderad på ett annat håll). Occurrensen hinner då sparas
+  // till servern trots att mallen redan är borta eller mjuk-raderad —
+  // permanent föräldralös, ingen mall kvar att cascade-radera den
+  // tillsammans med. Ett konkret exempel hittades och städades manuellt
+  // samma dag: 54+48 sådana spöken för två barn, skapade under loppet av en
+  // enda session. Denna kontroll gäller BARA occurrences (recurringSourceId
+  // satt) — mallar och engångsuppgifter (recurringSourceId===null) berörs
+  // inte, de har inget "källdokument" att sakna.
+  if (input.recurringSourceId) {
+    const source = await TodoModel.findOne({ id: input.recurringSourceId }, { _id: 0, deletedAt: 1 });
+    if (!source || source.deletedAt !== null) {
+      throw new AppError(404, "Mallen för denna återkommande uppgift finns inte längre");
+    }
+  }
+
   const now = new Date().toISOString();
   const encrypted = {
     ...input,

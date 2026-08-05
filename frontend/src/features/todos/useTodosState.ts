@@ -337,8 +337,18 @@ export function useTodosState(fixedTodoTimes = false) {
 
       return current.map((todo) => {
         const isTarget = todo.id === todoId;
+        // "done"/"approved" occurrences cascade-raderas MEDVETET INTE
+        // (2026-08-05, Zaidas önskemål) — de ska finnas kvar så ikonen syns
+        // i barnets tidslinje (ChildTimeline.tsx:s completedTodos-filter
+        // läser exakt dessa två statusar). En mall som tas bort tar alltså
+        // bara med sig sina ännu OavgJorda (pending/rejected/expired)
+        // occurrences, inte redan avklarad historik.
         const isActiveOccurrenceOfTarget =
-          isRecurringTemplate && todo.recurringSourceId === todoId && todo.deletedAt === null;
+          isRecurringTemplate &&
+          todo.recurringSourceId === todoId &&
+          todo.deletedAt === null &&
+          todo.status !== "done" &&
+          todo.status !== "approved";
         if ((!isTarget && !isActiveOccurrenceOfTarget) || !canDeleteTodo(member, roles, todo)) {
           return todo;
         }
