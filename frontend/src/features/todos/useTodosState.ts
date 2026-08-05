@@ -5,7 +5,6 @@ import { applyTemplateToOccurrence, getDateKey, getDueRecurringTodoOccurrences }
 import type { Id, Member, Role, Todo } from "@shared/types";
 import { trackEvent } from "../../utils/analytics";
 import { readCache, writeCache } from "../../utils/localCache";
-import { deferToIdle } from "../../utils/deferToIdle";
 
 const TODOS_CACHE_KEY = "todos_v1";
 
@@ -63,10 +62,15 @@ export function useTodosState(fixedTodoTimes = false) {
   const syncInFlightRef = useRef(false);
 
   useEffect(() => {
-    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
-    // S1a) — se deferToIdle.ts. Bara den INLEDANDE hämtningen, inte SSE/
-    // visibilitychange/intervallet nedan, som redan är händelsestyrda.
-    deferToIdle(() => { refreshTodos().catch(console.error); });
+    // INTE längre uppskjuten till idle (2026-08-05, uppföljning av S1a) —
+    // en Lighthouse-körning mot produktion visade att todos (45 KB) är en
+    // av tio hookar vars idle-uppskjutna förstahämtning alla konkurrerar om
+    // webbläsarens begränsade antal parallella anslutningar under en trög
+    // uppkoppling, vilket fastnade i LCP:s kritiska nätverkskedja (3,7s) —
+    // samma "trängsel"-mönster som redan lösts för /api/calendars samma
+    // dag. Todos-datan renderas direkt i Hem-vyns familjeflikar, precis som
+    // kalenderns egna händelser, så den bör inte vänta på idle heller.
+    refreshTodos().catch(console.error);
   }, []);
 
   useEffect(() => {
