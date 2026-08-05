@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BarChart3, Info, Plus, X } from "lucide-react";
 import { TodoStatsModal } from "./TodoStatsModal";
+import { NEW_CATEGORY_VALUE } from "./TodoCreatorModal";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
@@ -376,70 +377,71 @@ export function ParentTodoThreadView({
   const [showStats, setShowStats] = useState(false);
 
   // Ny kategori-knapp (+) längst till höger (2026-07-25, Zaidas önskemål:
-  // "lägga till en ny kategori eller hämta en från mall") — samma logik som
-  // submitCategoryFromTemplate i TodoCreatorModal.tsx, flyttad hit så den går
-  // att nå direkt från tråd-vyn utan att öppna hela uppgifts-skapa-flödet.
+  // "lägga till en ny kategori eller hämta en från mall"). 2026-08-05,
+  // Zaidas rättelse: "aldrig bara en kategori" — det tidigare "Tom
+  // kategori"-läget (skapade en kategori helt utan uppgift) togs bort. Vill
+  // man INTE använda en sparad kategorimall öppnas nu hela Ny uppgift-
+  // modalen direkt i "+Ny kategori…"-läge (samma onAddTodoToCategory-prop
+  // som redan används av kategorimenyns "Lägg till uppgift", bara med
+  // NEW_CATEGORY_VALUE istället för ett riktigt kategori-id eller null) —
+  // kategori och första uppgift skapas då alltid i samma steg. Finns inga
+  // sparade kategorimallar alls hoppar "+"-knappen över den här minimodalen
+  // helt och öppnar Ny uppgift-modalen direkt, se knappens onClick nedan.
   const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newCategoryMode, setNewCategoryMode] = useState<"empty" | "template">("empty");
-  const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryTemplateId, setNewCategoryTemplateId] = useState("");
   const [newCategoryTemplateStartDate, setNewCategoryTemplateStartDate] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
 
-  const canSubmitNewCategory =
-    newCategoryMode === "template"
-      ? Boolean(newCategoryTemplateId && newCategoryTemplateStartDate)
-      : newCategoryName.trim().length > 0;
+  const canSubmitNewCategory = Boolean(newCategoryTemplateId && newCategoryTemplateStartDate);
 
   function closeNewCategoryModal() {
     setShowNewCategory(false);
-    setNewCategoryMode("empty");
-    setNewCategoryName("");
     setNewCategoryTemplateId("");
     setNewCategoryTemplateStartDate("");
+  }
+
+  function openCreateModalForNewCategory() {
+    closeNewCategoryModal();
+    onAddTodoToCategory(NEW_CATEGORY_VALUE);
   }
 
   async function submitNewCategory() {
     if (!canSubmitNewCategory || creatingCategory) return;
     setCreatingCategory(true);
     try {
-      if (newCategoryMode === "template") {
-        const template = categoryTemplates.find((t) => t.id === newCategoryTemplateId);
-        if (!template) return;
-        const category = await onCreateCategory(template.name);
-        for (const task of template.tasks) {
-          onCreateTodo({
-            id: `todo-${generateId()}`,
-            title: task.title,
-            createdBy: currentMember.id,
-            assignedTo: currentMember.id,
-            isShared: false,
-            status: "pending",
-            starValue: task.starValue,
-            visual: task.visual,
-            recurrence: task.recurrence,
-            recurringSourceId: null,
-            occurrenceDate: null,
-            visibleFrom: dateOnlyToISO(newCategoryTemplateStartDate),
-            expiresAt: null,
-            completedAt: null,
-            approvedBy: null,
-            approvedAt: null,
-            rejectedBy: null,
-            rejectedAt: null,
-            rejectedReason: null,
-            deletedAt: null,
-            deletedBy: null,
-            personalCategoryId: category.id,
-            notes: null,
-            subtasks: task.subtasks.map((s) => ({ id: generateId(), title: s.title, done: false })),
-            timerEnabled: false,
-            plannedDurationMinutes: null,
-            elapsedMs: null
-          });
-        }
-      } else {
-        await onCreateCategory(newCategoryName.trim());
+      const template = categoryTemplates.find((t) => t.id === newCategoryTemplateId);
+      if (!template) return;
+      const category = await onCreateCategory(template.name);
+      for (const task of template.tasks) {
+        onCreateTodo({
+          id: `todo-${generateId()}`,
+          title: task.title,
+          createdBy: currentMember.id,
+          assignedTo: currentMember.id,
+          isShared: false,
+          status: "pending",
+          starValue: task.starValue,
+          visual: task.visual,
+          recurrence: task.recurrence,
+          recurringSourceId: null,
+          occurrenceDate: null,
+          visibleFrom: dateOnlyToISO(newCategoryTemplateStartDate),
+          expiresAt: null,
+          completedAt: null,
+          approvedBy: null,
+          approvedAt: null,
+          rejectedBy: null,
+          rejectedAt: null,
+          rejectedReason: null,
+          deletedAt: null,
+          deletedBy: null,
+          personalCategoryId: category.id,
+          notes: null,
+          subtasks: task.subtasks.map((s) => ({ id: generateId(), title: s.title, done: false })),
+          timerEnabled: false,
+          plannedDurationMinutes: null,
+          elapsedMs: null
+        });
       }
     } finally {
       setCreatingCategory(false);
@@ -630,15 +632,14 @@ export function ParentTodoThreadView({
               !isChildMember(members.find((m) => m.id === t.assignedTo), roles)
           )
         );
-        // Tomma kategorier döljs (2026-08-04, Zaidas önskemål: "tomma
-        // kategorier skall inte visas") — MEN en helt nyskapad kategori (0
-        // uppgifter någonsin, inget spår alls i allTodos) syns kvar tills
-        // den fått sin FÖRSTA uppgift, annars fanns ingen väg att nå tråden
-        // för att lägga till den (Zaidas val bland två alternativ). En
-        // kategori som haft uppgifter men är tömd just nu döljs direkt.
+        // Tomma kategorier döljs alltid (2026-08-04, Zaidas önskemål: "tomma
+        // kategorier skall inte visas" — 2026-08-05, Zaidas rättelse: gäller
+        // ÄVEN en helt ny, aldrig använd kategori. Det ursprungliga
+        // undantaget fanns för att kunna NÅ en ny kategoris "Lägg till
+        // uppgift"-meny, men den vägen behövs inte längre — "+"-knappen
+        // öppnar redan skapa-kategori-flödet direkt).
         const isEmpty = categoryBaseTodos.length === 0 && categoryAllTodos.length === 0;
-        const everHadTodos = allTodos.some((t) => t.personalCategoryId === category.id);
-        if (isEmpty && everHadTodos) return null;
+        if (isEmpty) return null;
         return {
           id: category.id,
           label: category.name,
@@ -1055,8 +1056,17 @@ export function ParentTodoThreadView({
           <button
             aria-label="Ny kategori"
             className="icon-button"
-            onClick={() => setShowNewCategory(true)}
-            title="Ny kategori — tom eller från mall"
+            onClick={() => {
+              // Inget att välja mellan utan sparade kategorimallar — hoppa
+              // rakt till Ny uppgift-modalens "+Ny kategori…"-läge istället
+              // för att visa en minimodal utan reellt innehåll.
+              if (categoryTemplates.length === 0) {
+                onAddTodoToCategory(NEW_CATEGORY_VALUE);
+                return;
+              }
+              setShowNewCategory(true);
+            }}
+            title="Ny kategori — från mall, eller som en del av en ny uppgift"
             type="button"
           >
             <Plus size={16} />
@@ -1078,71 +1088,46 @@ export function ParentTodoThreadView({
             role="dialog"
           >
             <div className="todo-thread-view__info-header">
-              <h3 id="new-category-title">Ny kategori</h3>
+              <h3 id="new-category-title">Ny kategori från mall</h3>
               <button aria-label="Stäng" className="icon-button" onClick={closeNewCategoryModal} type="button">
                 <X size={16} />
               </button>
             </div>
 
-            {categoryTemplates.length > 0 && (
-              <div aria-label="Ny kategori: tom eller från mall" className="todo-assignee-picker" role="group">
-                <button
-                  aria-pressed={newCategoryMode === "empty"}
-                  className={"todo-assignee-picker__btn" + (newCategoryMode === "empty" ? " todo-assignee-picker__btn--on" : "")}
-                  onClick={() => setNewCategoryMode("empty")}
-                  type="button"
-                >
-                  Tom kategori
-                </button>
-                <button
-                  aria-pressed={newCategoryMode === "template"}
-                  className={"todo-assignee-picker__btn" + (newCategoryMode === "template" ? " todo-assignee-picker__btn--on" : "")}
-                  onClick={() => setNewCategoryMode("template")}
-                  type="button"
-                >
-                  Från mall
-                </button>
-              </div>
-            )}
+            <label className="field-label">
+              Mall
+              <select
+                className="text-input"
+                onChange={(e) => setNewCategoryTemplateId(e.target.value)}
+                value={newCategoryTemplateId}
+              >
+                <option disabled value="">Välj en mall…</option>
+                {categoryTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.tasks.length} uppgifter)</option>
+                ))}
+              </select>
+            </label>
+            <label className="field-label">
+              Startdatum för uppgifterna
+              <input
+                className="text-input"
+                onChange={(e) => setNewCategoryTemplateStartDate(e.target.value)}
+                type="date"
+                value={newCategoryTemplateStartDate}
+              />
+            </label>
 
-            {newCategoryMode === "empty" ? (
-              <label className="field-label">
-                Namn på ny kategori
-                <input
-                  autoFocus
-                  className="text-input"
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canSubmitNewCategory) void submitNewCategory(); }}
-                  placeholder="Till exempel Träning"
-                  value={newCategoryName}
-                />
-              </label>
-            ) : (
-              <>
-                <label className="field-label">
-                  Mall
-                  <select
-                    className="text-input"
-                    onChange={(e) => setNewCategoryTemplateId(e.target.value)}
-                    value={newCategoryTemplateId}
-                  >
-                    <option disabled value="">Välj en mall…</option>
-                    {categoryTemplates.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name} ({t.tasks.length} uppgifter)</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field-label">
-                  Startdatum för uppgifterna
-                  <input
-                    className="text-input"
-                    onChange={(e) => setNewCategoryTemplateStartDate(e.target.value)}
-                    type="date"
-                    value={newCategoryTemplateStartDate}
-                  />
-                </label>
-              </>
-            )}
+            {/* "Tom kategori" borttagen (2026-08-05, Zaidas beslut: "aldrig
+                bara en kategori") — vill man inte använda en mall öppnas
+                istället Ny uppgift-modalen direkt i "+Ny kategori…"-läge,
+                kategori och första uppgift skapas då i samma steg. */}
+            <button
+              className="secondary-button"
+              onClick={openCreateModalForNewCategory}
+              type="button"
+            >
+              Skapa istället via en ny uppgift…
+            </button>
 
             <div className="todo-thread-view__reuse-actions">
               <button className="secondary-button" onClick={closeNewCategoryModal} type="button">

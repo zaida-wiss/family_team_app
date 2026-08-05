@@ -12,6 +12,7 @@ import { SharedChildrenThreads } from "../todos/SharedChildrenThreads";
 import { SharedShoppingLists } from "../shopping/SharedShoppingLists";
 import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import { TodoImportExport } from "../todos/TodoImportExport";
+import { generateId } from "../../utils/uuid";
 import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
@@ -174,6 +175,12 @@ export function MemberOverview({
   // Props-kommentaren ovan.
   const [addingFamilyCategory, setAddingFamilyCategory] = useState(false);
   const [newFamilyCategoryName, setNewFamilyCategoryName] = useState("");
+  // Uppgiftens titel (2026-08-05, Zaidas beslut: "aldrig bara en kategori")
+  // — en ny familjekategori skapas nu alltid TILLSAMMANS med sin första
+  // uppgift, i samma litet formulär (ingen egen stor Ny uppgift-modal finns
+  // för familjeflödet att öppna direkt in i, till skillnad från den
+  // personliga tråd-vyn).
+  const [newFamilyCategoryTaskTitle, setNewFamilyCategoryTaskTitle] = useState("");
   const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
   // Medlemsikonen (2026-08-04, Zaidas fynd: "medlemmarna tar för stor plats
   // i hemvyn") — ersätter den tidigare alltid-synliga raden av avatarer med
@@ -463,15 +470,42 @@ export function MemberOverview({
             </div>
           )}
 
-          {addingFamilyCategory && onCreateCategory && (
+          {addingFamilyCategory && onCreateCategory && onCreateTodo && (
             <form
               className={styles.homeQuickAdd}
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const trimmed = newFamilyCategoryName.trim();
-                if (!trimmed) return;
-                onCreateCategory(trimmed, true);
+                const categoryName = newFamilyCategoryName.trim();
+                const taskTitle = newFamilyCategoryTaskTitle.trim();
+                if (!categoryName || !taskTitle) return;
+                const category = await onCreateCategory(categoryName, true);
+                onCreateTodo({
+                  id: `todo-${generateId()}`,
+                  title: taskTitle,
+                  createdBy: currentMember.id,
+                  assignedTo: null,
+                  isShared: false,
+                  status: "pending",
+                  starValue: 0,
+                  visual: { type: "lucide-icon", value: "⭐" },
+                  recurrence: { type: "none" },
+                  recurringSourceId: null,
+                  occurrenceDate: null,
+                  visibleFrom: null,
+                  expiresAt: null,
+                  completedAt: null,
+                  approvedBy: null,
+                  approvedAt: null,
+                  rejectedBy: null,
+                  rejectedAt: null,
+                  rejectedReason: null,
+                  deletedAt: null,
+                  deletedBy: null,
+                  personalCategoryId: category.id,
+                  notes: null
+                });
                 setNewFamilyCategoryName("");
+                setNewFamilyCategoryTaskTitle("");
                 setAddingFamilyCategory(false);
               }}
             >
@@ -480,10 +514,22 @@ export function MemberOverview({
                 autoFocus
                 className="text-input"
                 onChange={(e) => setNewFamilyCategoryName(e.target.value)}
-                placeholder="Namn på ny familjekategori…"
+                placeholder="Namn på kategorin…"
                 value={newFamilyCategoryName}
               />
-              <button aria-label="Skapa familjekategori" className="icon-button" type="submit">
+              <input
+                aria-label="Namn på första uppgiften"
+                className="text-input"
+                onChange={(e) => setNewFamilyCategoryTaskTitle(e.target.value)}
+                placeholder="Namn på första uppgiften…"
+                value={newFamilyCategoryTaskTitle}
+              />
+              <button
+                aria-label="Skapa familjekategori och uppgift"
+                className="icon-button"
+                disabled={!newFamilyCategoryName.trim() || !newFamilyCategoryTaskTitle.trim()}
+                type="submit"
+              >
                 <Plus size={18} />
               </button>
             </form>

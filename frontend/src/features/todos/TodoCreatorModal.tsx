@@ -14,7 +14,12 @@ import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoCategory
 
 const DEFAULT_EMOJI = "⭐";
 
-const NEW_CATEGORY_VALUE = "__new__";
+// Exporterad (2026-08-05, Zaidas beslut: "aldrig bara en kategori" — en ny
+// kategori ska alltid skapas TILLSAMMANS med en uppgift) — låter anropare
+// (t.ex. ParentTodoThreadView.tsx:s "+"-knapp) öppna den här modalen direkt
+// i "+Ny kategori…"-läge via defaultCategoryId, istället för att ha en egen,
+// separat "skapa en tom kategori"-väg.
+export const NEW_CATEGORY_VALUE = "__new__";
 const NO_CATEGORY_VALUE = "__none__";
 const SELF_VALUE = "__self__";
 // Familjen (2026-07-23, Zaidas önskemål: "just nu så går det inte att välja

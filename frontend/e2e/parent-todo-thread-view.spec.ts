@@ -898,7 +898,7 @@ test("Ny uppgift-modalen: lägger till en uppgift i en befintlig kategori via v�
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
     if (route.request().method() === "POST") {
       createdTodo = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({ status: 201, json: { id: createdTodo.id } });
@@ -924,7 +924,7 @@ test("Ny uppgift-modalen: skapar en återkommande uppgift med veckodagar och int
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
     if (route.request().method() === "POST") {
       createdTodo = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({ status: 201, json: { id: createdTodo.id } });
@@ -973,7 +973,7 @@ test("Ny uppgift-modalen: återkommande var N:e år, med ett slutdatum", async (
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
     if (route.request().method() === "POST") {
       createdTodo = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({ status: 201, json: { id: createdTodo.id } });
@@ -1010,7 +1010,7 @@ test("Ny uppgift-modalen: återkommande med ett antal gånger som slutvillkor, s
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
     if (route.request().method() === "POST") {
       createdTodo = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({ status: 201, json: { id: createdTodo.id } });
@@ -1053,7 +1053,7 @@ test("Ny uppgift-modalen: en återkommande uppgift kan få flera tidsintervall s
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
     if (route.request().method() === "POST") {
       createdTodo = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({ status: 201, json: { id: createdTodo.id } });
@@ -1183,7 +1183,7 @@ test("Ny uppgift-modalen: skapar en ny kategori via +Ny kategori-valet när kate
     }
     return route.fulfill({ json: {} });
   });
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
 
   await openThreadView(page);
   await openCreateModalFromCategoryThread(page, "Träning");
@@ -1213,7 +1213,7 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
     }
     return route.fulfill({ json: {} });
   });
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
 
   await openThreadView(page);
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
@@ -1238,12 +1238,14 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
 });
 
-// 2026-08-04, Zaidas önskemål: "tomma kategorier skall inte visas" — en
-// kategori som haft uppgifter men just nu inte har något att visa döljs
-// helt, MEN en helt nyskapad kategori (aldrig haft en enda uppgift) syns
-// kvar tills den fått sin första, annars fanns ingen väg att nå tråden för
-// att lägga till den (Zaidas val mellan de två alternativen).
-test("Bollar i tråd: en tom-men-tidigare-använd kategori döljs, en helt ny (aldrig använd) kategori syns kvar", async ({ page }) => {
+// 2026-08-04, Zaidas önskemål: "tomma kategorier skall inte visas". 2026-08-05,
+// Zaidas rättelse: gäller ALLTID, även en helt nyskapad kategori (aldrig
+// haft en enda uppgift) — det tidigare undantaget (syns kvar tills första
+// uppgiften läggs till) togs bort, eftersom "+"-knappen nu alltid öppnar Ny
+// uppgift-modalen (eller kräver en uppgiftstitel i familjeflödet) för en
+// helt ny kategori — det finns alltså aldrig ett läge där en genuint tom
+// kategori behöver vara nåbar som egen tråd.
+test("Bollar i tråd: en tom kategori döljs alltid, oavsett om den haft uppgifter tidigare eller aldrig använts", async ({ page }) => {
   const CLEARED_CATEGORY = {
     id: "cat-cleared", accountId: "acc-1", memberId: "mem-1", name: "Tömd",
     createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
@@ -1268,7 +1270,7 @@ test("Bollar i tråd: en tom-men-tidigare-använd kategori döljs, en helt ny (a
   await page.route("**/api/todos", (route) => route.fulfill({ json: [OLD_TODO_IN_CLEARED_CATEGORY] }));
 
   await openThreadView(page);
-  await expect(page.getByRole("region", { name: "Tråd: Ny" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Tråd: Ny" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Tråd: Tömd" })).toHaveCount(0);
 });
 
@@ -1304,7 +1306,7 @@ test("Bollar i tråd: 'Göm' i kategorimenyn döljer tråden, 'Visa igen' i Inst
     hiddenValue = (route.request().postDataJSON() as { hidden: boolean }).hidden;
     return route.fulfill({ json: { ok: true } });
   });
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
 
   await openThreadView(page);
   const thread = page.getByRole("region", { name: "Tråd: Träning" });
@@ -1330,7 +1332,7 @@ test("Bollar i tråd: 'Lägg till uppgift' i kategorimenyn öppnar skapa-modalen
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] });
     if (route.request().method() === "POST") {
       createdTodo = route.request().postDataJSON() as Record<string, unknown>;
       return route.fulfill({ status: 201, json: { id: createdTodo.id } });
@@ -1715,7 +1717,7 @@ test("Bollar i tråd: 'Visa utgångna' i kategorimenyn visar/döljer utgångna u
 test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
 
   await openThreadView(page);
 
@@ -2352,6 +2354,9 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
     id: "cat-2", accountId: "acc-1", memberId: "mem-1", name: "Hushåll",
     createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
   };
+  // Tomma kategorier döljs alltid (2026-08-05) — båda trådarna behöver
+  // minst en aktiv uppgift var för att synas och gå att dra.
+  const TODO_IN_CATEGORY_2 = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-cat2", title: "Dammsuga", personalCategoryId: "cat-2" };
 
   await mockAuthAndData(page);
   // Barn-tråden döljs som standard (2026-07-31) — påslagen här specifikt
@@ -2359,7 +2364,7 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   // MEMBER_WITH_CHILD_TOGGLE-kommentaren ovan.
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_WITH_CHILD_TOGGLE] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY, CATEGORY_2] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS, TODO_IN_CATEGORY_2] }));
   await page.route("**/api/members/mem-1", (route) => {
     const body = route.request().postDataJSON() as { todoThreadOrder?: string[] };
     if (body.todoThreadOrder) savedOrder = body.todoThreadOrder;
@@ -2463,7 +2468,7 @@ test("Bollar i tråd: tre snabba tryck på ett kategorinamn växlar flyttläge, 
 test("Bollar i tråd: ett stillastående 2s-håll på kategorinamnet markerar inte texten, öppnar menyn", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
 
   await openThreadView(page);
   const btn = page.getByRole("button", { name: /^Träning\./ });

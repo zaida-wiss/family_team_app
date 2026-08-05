@@ -12,7 +12,10 @@ import { mockDataAPIs, MEMBER } from "./helpers";
 
 type Category = { id: string; accountId: string; memberId: string; name: string; isFamily?: boolean; hidden?: boolean; deletedAt: null; deletedBy: null; createdAt: string };
 
-test("Hem-vyns Todos-flik: skapa en familjekategori via +, lägg till en uppgift i den, byt namn", async ({ page }) => {
+// 2026-08-05, Zaidas beslut: "aldrig bara en kategori" — en ny
+// familjekategori skapas nu alltid TILLSAMMANS med sin första uppgift, i
+// samma litet formulär (ingen egen "skapa tom kategori"-väg finns kvar).
+test("Hem-vyns Todos-flik: skapa en familjekategori och dess första uppgift i samma steg via +, byt namn", async ({ page }) => {
   const categories: Category[] = [];
   const todos: Record<string, unknown>[] = [];
   let lastTodoPost: Record<string, unknown> | null = null;
@@ -81,24 +84,26 @@ test("Hem-vyns Todos-flik: skapa en familjekategori via +, lägg till en uppgift
   await page.goto("/");
   await page.getByRole("button", { name: "Visa todos" }).click();
 
-  // Skapa en ny familjekategori via "+"-knappen.
+  // Skapa en ny familjekategori OCH dess första uppgift i samma formulär
+  // via "+"-knappen — knappen är avstängd tills båda fälten är ifyllda.
   await page.getByRole("button", { name: "Ny familjekategori" }).click();
+  const submitButton = page.getByRole("button", { name: "Skapa familjekategori och uppgift" });
+  await expect(submitButton).toBeDisabled();
   await page.getByLabel("Namn på ny familjekategori").fill("Hushåll");
-  await page.getByRole("button", { name: "Skapa familjekategori" }).click();
+  await expect(submitButton).toBeDisabled();
+  await page.getByLabel("Namn på första uppgiften").fill("Dammsuga");
+  await expect(submitButton).toBeEnabled();
+  await submitButton.click();
+
   await expect.poll(() => categories.length).toBe(1);
   expect(categories[0].isFamily).toBe(true);
-
-  // Kategorin dyker upp som en egen tråd — lägg till en uppgift i DEN,
-  // inte i den okategoriserade Familjen-poolen.
-  const categoryThreadHeader = page.getByRole("button", { name: /^Hushåll\./ });
-  await expect(categoryThreadHeader).toBeVisible();
-  await categoryThreadHeader.click();
-  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
-  await page.getByLabel("Lägg till en uppgift").fill("Dammsuga");
-  await page.getByRole("button", { name: "Lägg till", exact: true }).click();
   await expect.poll(() => lastTodoPost?.title).toBe("Dammsuga");
   expect(lastTodoPost?.personalCategoryId).toBe("cat-family-1");
   expect(lastTodoPost?.assignedTo).toBeNull();
+
+  // Kategorin dyker upp som en egen tråd, redan med sin första uppgift.
+  const categoryThreadHeader = page.getByRole("button", { name: /^Hushåll\./ });
+  await expect(categoryThreadHeader).toBeVisible();
 
   // Byt namn på kategorin.
   await categoryThreadHeader.click();
@@ -157,10 +162,13 @@ test("Hem-vyns Todos-flik: massradering av familjens uppgifter kräver en tvåst
 
 // 2026-08-04, Zaidas önskemål: "tomma kategorier skall inte visas" — samma
 // regel som den personliga Todos-panelen (parent-todo-thread-view.spec.ts),
-// nu även för familjekategorier i Hem-vyn. En kategori som haft uppgifter men
-// just nu inte har något att visa döljs, en helt ny (aldrig använd) kategori
-// syns kvar tills den fått sin första uppgift.
-test("Hem-vyns Todos-flik: en tom-men-tidigare-använd familjekategori döljs, en helt ny syns kvar", async ({ page }) => {
+// nu även för familjekategorier i Hem-vyn. 2026-08-05, Zaidas rättelse:
+// gäller ALLTID, även en kategori som ALDRIG haft en uppgift — det
+// ursprungliga undantaget (en helt ny kategori syns kvar tills första
+// uppgiften läggs till) togs bort, eftersom kategori och första uppgift nu
+// alltid skapas tillsammans i samma steg (se testet ovan) — det finns
+// alltså aldrig ett läge där en riktigt tom kategori behöver vara nåbar.
+test("Hem-vyns Todos-flik: en tom familjekategori döljs alltid, oavsett om den haft uppgifter tidigare eller aldrig använts", async ({ page }) => {
   const categories: Category[] = [
     { id: "cat-cleared", accountId: "acc-1", memberId: "mem-1", name: "Tömd", isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" },
     { id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: "Ny", isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" }
@@ -192,6 +200,6 @@ test("Hem-vyns Todos-flik: en tom-men-tidigare-använd familjekategori döljs, e
   await page.goto("/");
   await page.getByRole("button", { name: "Visa todos" }).click();
 
-  await expect(page.getByRole("button", { name: /^Ny\./ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Ny\./ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Tömd\./ })).toHaveCount(0);
 });

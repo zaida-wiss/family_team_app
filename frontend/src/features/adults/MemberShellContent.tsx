@@ -306,10 +306,11 @@ export function MemberShellContent({
     // rename/radera/göm (kategori-hanteringen, delad med den personliga
     // Todos-panelen via samma onRenameCategory/onRemoveCategory/
     // onSetCategoryHidden-funktioner).
-    // Tomma kategorier döljs (2026-08-04, Zaidas önskemål: "tomma kategorier
-    // skall inte visas") — samma "brand ny kategori syns kvar tills första
-    // uppgiften läggs till"-undantag som ParentTodoThreadView.tsx (annars
-    // fanns ingen väg att nå den nya kategorins "Lägg till uppgift"-meny).
+    // Tomma kategorier döljs alltid (2026-08-04, Zaidas önskemål: "tomma
+    // kategorier skall inte visas" — 2026-08-05, Zaidas rättelse: ÄVEN en
+    // helt ny, aldrig använd kategori, samma ändring som
+    // ParentTodoThreadView.tsx. "+"-knappen öppnar redan skapa-kategori-
+    // flödet direkt, ingen egen tom tråd behövs som "väg in" längre.
     // "hasPending" kollar RAKT mot todos (inte homeVisibleTodos/
     // getFamilyViewTodos, som inte filtrerar på status/datum alls — en
     // gammal "approved"-uppgift hade annars räknats som "aktuell" trots att
@@ -317,7 +318,6 @@ export function MemberShellContent({
     const familyCategoryThreads = familyCategories
       .filter((category) => {
         const categoryTodos = todos.filter((t) => t.personalCategoryId === category.id && t.deletedAt === null);
-        if (categoryTodos.length === 0) return true; // brand ny, aldrig använd
         return categoryTodos.some((t) => t.status === "pending");
       })
       .map((category) => ({
