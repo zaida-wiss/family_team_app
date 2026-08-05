@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
 import { HeroBar } from "./HeroBar";
-import { SettingsContent } from "./SettingsContent";
 import { ThemePicker } from "../../components/ThemePicker";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
@@ -24,6 +23,18 @@ const MemberShellContent = lazy(() =>
 );
 const MembersView = lazy(() =>
   import("../members/MembersView").then((m) => ({ default: m.MembersView }))
+);
+// SettingsContent (2026-08-05, bundle-analys efter Lighthouse-rapporten) —
+// var tidigare det ENDA av PanelRouters fyra grenar som importerades
+// statiskt, trots att Shell.tsx alltid renderas oavsett vilken panel man
+// faktiskt tittar på. Eftersom SettingsContent i sin tur statiskt importerar
+// flera tunga underpaneler (TodoImportExport/TodoCreatorModal/TodoEditModal/
+// RecurringTodosSettings/TemplatesSettings/RewardShopSettings m.fl., ~200KB
+// okomprimerat) drogs hela den kedjan in i huvud-bundeln som måste laddas
+// för att appen överhuvudtaget ska starta — även för en session som aldrig
+// öppnar Inställningar. Samma lazy-mönster som de tre andra grenarna ovan.
+const SettingsContent = lazy(() =>
+  import("./SettingsContent").then((m) => ({ default: m.SettingsContent }))
 );
 
 type ShellState = ReturnType<typeof useShellState>;
