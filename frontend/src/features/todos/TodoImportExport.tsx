@@ -341,6 +341,49 @@ export function TodoImportExport({
     return typeof result === "object" && result !== null && "ok" in result && (result as { ok: unknown }).ok === false;
   }
 
+  // Klockslaget, oberoende av vilket ankardatum ISO-strängen råkar bära
+  // (2026-08-05, Zaidas fynd: samma rutin importerad om och om igen — varje
+  // gång utan ett matchande Id — skapade en helt NY, exakt likadan mall
+  // istället för att matcha den redan befintliga, så dubbletterna byggdes
+  // på för varje ny import). Jämförs i LOKAL tid (getHours/getMinutes), INTE
+  // UTC — ett första försök med UTC missade matchningar konsekvent med
+  // exakt en timme: äldre mallar ankrar ofta på 2000-01-01 (vintertid,
+  // UTC+1), medan en färsk import typiskt bär dagens datum (kan vara
+  // sommartid, UTC+2) — samma lokala klockslag (t.ex. 09:31) blir då OLIKA
+  // UTC-klockslag beroende på vilket datum som råkar bäras, trots att en
+  // människa ser dem som exakt samma tid. Lokal tid är DST-säker per
+  // definition (samma sätt "isoToTimeInput" i recurringTodos.ts redan löser
+  // motsvarande problem för occurrence-generering).
+  function sameWallClockTime(isoA: string | null, isoB: string | null): boolean {
+    if (!isoA || !isoB) return isoA === isoB;
+    const a = new Date(isoA);
+    const b = new Date(isoB);
+    return a.getHours() === b.getHours() && a.getMinutes() === b.getMinutes();
+  }
+
+  // Innehålls-baserad dubblettmatchning — sista utväg när raden saknar ett
+  // Id, eller har ett Id som inte matchar något (en fil delad/omgenererad av
+  // ett externt verktyg saknar ofta Id helt, eller får NYA slumpade Id:n vid
+  // varje omgenerering, se todoCsv.ts:s filhuvud). En mall matchas mot en
+  // annan mall med SAMMA titel, SAMMA mottagare och SAMMA klockslag (inte
+  // datum — en mall lever på ett oberoende ankardatum). En engångsuppgift
+  // matchas bara mot en annan engångsuppgift på EXAKT samma datum+tid (ett
+  // specifikt, unikt tillfälle, inte bara samma titel). Förhindrar att en
+  // upprepad import av "samma" rad bygger på ÄNNU en dubblett varje gång.
+  function findContentMatch(row: ParsedTodoRow, assignedTo: Id | null): Todo | undefined {
+    const isTemplateRow = row.recurrence.type !== "none";
+    return todos.find((t) => {
+      if (t.deletedAt !== null || t.title !== row.title || t.assignedTo !== assignedTo) return false;
+      if (!(isFamilyScope || canEditTodo(currentMember, roles, t))) return false;
+      if (isTemplateRow) {
+        const tIsTemplate = t.recurringSourceId === null && t.recurrence.type !== "none";
+        return tIsTemplate && sameWallClockTime(t.visibleFrom, row.visibleFrom);
+      }
+      const tIsOneOff = t.recurringSourceId === null && t.recurrence.type === "none";
+      return tIsOneOff && t.visibleFrom === row.visibleFrom && t.expiresAt === row.expiresAt;
+    });
+  }
+
   async function runImport(
     rows: ParsedTodoRow[],
     parseErrors: string[],
@@ -479,7 +522,7 @@ export function TodoImportExport({
         // familje-scope är `todos`-propen redan familje-scopad av anroparen
         // (2026-08-03) — ingen extra koll behövs där, till skillnad från den
         // personliga varianten, vars `todos`-prop är HELA kontots lista.
-        const existing = row.sourceId
+        const existingById = row.sourceId
           ? todos.find(
               (t) =>
                 t.id === row.sourceId &&
@@ -487,6 +530,11 @@ export function TodoImportExport({
                 (isFamilyScope || canEditTodo(currentMember, roles, t))
             )
           : undefined;
+        // Innehålls-matchning som sista utväg (2026-08-05, se
+        // findContentMatch ovan) — bara när Id-matchningen inte gav något,
+        // så en rad med ett REDAN KÄNT, korrekt Id aldrig av misstag matchas
+        // mot fel post.
+        const existing = existingById ?? findContentMatch(row, assignedTo);
 
         if (existing) {
           undoUpdated.push({ id: existing.id, previous: extractPatchFields(existing) });

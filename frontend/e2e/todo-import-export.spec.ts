@@ -264,6 +264,77 @@ test("Todos-import/export: en rad med ett okänt/tomt Id skapar en ny uppgift, r
   expect(patchCalled).toBe(false);
 });
 
+// 2026-08-05, Zaidas fynd: "varför är det återigen så många dubletter för
+// barnen?" — samma rutin importerad om och om igen (t.ex. en fil delad eller
+// regenererad av ett externt verktyg, ofta utan Id-kolumnen ifylld) skapade
+// tidigare en helt NY, exakt likadan mall vid VARJE import, istället för att
+// känna igen den redan befintliga — en riktig dubblett (samma titel, SAMMA
+// klockslag) byggdes på för varje ny import. En rad utan matchande Id
+// matchas nu ÄVEN mot en redan befintlig mall med samma titel och samma
+// klockslag (oavsett datum — mallar lever på ett oberoende ankardatum) innan
+// den skapar en ny.
+test("Todos-import/export: en rad utan matchande Id men samma titel+klockslag som en befintlig mall uppdaterar den, skapar ingen dubblett", async ({ page }) => {
+  // Byggd via LOKAL tid (new Date utan "Z"), precis som CSV-parserns egen
+  // dateTimeDisplayToISO — annars kan ett hårdkodat UTC-ankare (2000-01-01)
+  // råka hamna på ett annat klockslag än "09:31" beroende på testmiljöns
+  // tidszon, och matchningen missar av ett testfel, inte ett kodfel.
+  const templateVisibleFrom = new Date("2000-01-01T09:31:00").toISOString();
+  const templateExpiresAt = new Date("2000-01-01T13:00:00").toISOString();
+  const EXISTING_TEMPLATE = {
+    id: "todo-template-existing", accountId: "acc-1", title: "duka undan", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 1,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: templateVisibleFrom, expiresAt: templateExpiresAt,
+    deletedAt: null, deletedBy: null, personalCategoryId: null, notes: null
+  };
+  // En separat, HELT LEGITIM POST kan hända oberoende av importen — klienten
+  // genererar automatiskt dagens occurrence för den redan existerande,
+  // förfallna mallen (samma bakgrundssynk som alltid körs). Den posten har
+  // recurringSourceId satt till mallens id; en FELAKTIGT duplicerad NY MALL
+  // hade istället haft recurringSourceId: null. Skiljer på de två istället
+  // för att bara räkna "någon POST hände".
+  let templatePostCreated = false;
+  let patchedBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [EXISTING_TEMPLATE] });
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      if (body.recurringSourceId === null) templatePostCreated = true;
+      return route.fulfill({ status: 201, json: { id: body.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-template-existing", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedBody = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  // Nytt datum (2026, inte 2000) men SAMMA klockslag (09:31) och SAMMA titel
+  // — precis det mönster ett omgenererat kalkylark ger, utan Id ifyllt.
+  const csv = [
+    "Titel,Tilldelad,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar",
+    "duka undan,Mig själv,2026-08-05 09:31,2026-08-05 13:00,Dag,1,"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect.poll(() => patchedBody?.title).toBe("duka undan");
+  expect(templatePostCreated).toBe(false);
+});
+
 // 2026-08-04, Zaidas önskemål: "jag behöver även en kolumn i mallen där kan
 // kan radera uppgifter... ladda ner alla todos, uppdatera, lägga till nya
 // och radera de jag inte vill ha kvar längre, sedan importera" — en rad med
