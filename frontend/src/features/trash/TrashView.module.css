@@ -33,3 +33,12 @@
 .trashRow small {
   color: var(--muted-fg);
 }
+
+/* Återställ + Radera permanent sida vid sida (2026-08-05) — högre
+   specificitet än .trashRow div ovan (som annars staplar dem vertikalt). */
+.trashRow .trashRowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}

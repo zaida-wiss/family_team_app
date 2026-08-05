@@ -366,6 +366,15 @@ export function useTodosState(fixedTodoTimes = false) {
     setTodos((current) => current.filter((todo) => todo.deletedAt === null));
   }
 
+  // Samma ADR-0025-undantag, per rad (2026-08-05, Zaidas önskemål: "möjlighet
+  // att ångra eller att göra en hard delete" per uppgift i TrashView.tsx).
+  // Rör inte den centrala todos-listan — mjuk-raderade todos finns inte kvar
+  // där sedan pagineringen 2026-07-26 (TrashView.tsx:s egen
+  // useTodosHistoryState äger den listan och tar bort raden lokalt själv).
+  async function purgeTodo(todoId: Id) {
+    await todosApi.purge(todoId);
+  }
+
   async function approveTodo(todoId: Id, approverId: Id) {
     // Eligibiliteten avgörs mot todosRef.current (en vanlig ref, alltid synkront
     // läsbar) — INTE genom att läsa tillbaka en yttre variabel som muterats inuti
@@ -547,6 +556,7 @@ export function useTodosState(fixedTodoTimes = false) {
     softDeleteTodo,
     restoreTodo,
     purgeTodosTrash,
+    purgeTodo,
     approveTodo,
     rejectTodo,
     dismissRejectedTodo,

@@ -220,3 +220,154 @@ describe.skipIf(!RUN)("purge-trash: server-side behörighetskontroll + faktisk h
     expect(todoIds).toContain(activeTodoId);
   });
 });
+
+/**
+ * Per-rad hard delete (2026-08-05, Zaidas önskemål: "möjlighet att ångra
+ * eller att göra en hard delete" i TrashView.tsx — bulk-tömningen ovan var
+ * tidigare allt-eller-inget). Samma ADR-0025-undantag, men scopat till EN
+ * specifik redan mjuk-raderad todo.
+ */
+describe.skipIf(!RUN)("DELETE /api/todos/:id/purge — per-rad hard delete", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.db?.dropDatabase();
+    await mongoose.disconnect();
+  });
+
+  let accessToken: string;
+  let ownerMemberId: string;
+  let restrictedMemberId: string;
+  let deletedTodoId: string;
+  let otherDeletedTodoId: string;
+  let activeTodoId: string;
+
+  it("sätter upp konto, en behörighetslös medlem, två soft-deletade todos och en aktiv", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "todo-purge-row-int@bmad.test", password: "Lösenord1!", name: "Radtömningstest" });
+    expect(register.status).toBe(201);
+    accessToken = register.body.accessToken as string;
+
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: "Radtömningsfamiljen" });
+    ownerMemberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
+
+    const noPermissions = {
+      canManageMembers: false, canManageRoles: false, canSeeAllTodos: false, canSeeOwnTodos: true,
+      canCreateTodos: true, canScheduleRecurringTodos: false, canCompleteAssignedTodos: false,
+      canEditAnyTodos: false, canDeleteAnyTodos: false, canApproveTodos: false, canSeeAllCalendar: false,
+      canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
+      canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
+      canEditShoppingLists: false, canViewTrash: true, canRestoreFromTrash: false,
+      canCreateChildAccounts: false, canManageChildTodos: false, canSeeMembers: false
+    };
+    const restrictedRole = await request(app)
+      .post("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: `role-rowpurge-${crypto.randomUUID()}`, name: "Utan papperskorgsbehörighet",
+        isChildRole: false, permissions: noPermissions
+      });
+    expect(restrictedRole.status).toBe(201);
+
+    const restricted = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        name: "Begränsad medlem", roleId: (restrictedRole.body as { id: string }).id, isChild: false,
+        avatarUrl: null, color: null, dashboardTheme: null
+      });
+    expect(restricted.status).toBe(201);
+    restrictedMemberId = (restricted.body as { id: string }).id;
+
+    deletedTodoId = `todo-rowpurge-del-${crypto.randomUUID()}`;
+    const createDel = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: deletedTodoId, title: "Ska raderas permanent", createdBy: ownerMemberId, assignedTo: ownerMemberId,
+        ...todoPayload({})
+      });
+    expect(createDel.status).toBe(201);
+    const del1 = await request(app)
+      .delete(`/api/todos/${deletedTodoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(del1.status).toBe(200);
+
+    otherDeletedTodoId = `todo-rowpurge-other-${crypto.randomUUID()}`;
+    const createOther = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: otherDeletedTodoId, title: "Ska ligga kvar i papperskorgen", createdBy: ownerMemberId,
+        assignedTo: ownerMemberId, ...todoPayload({})
+      });
+    expect(createOther.status).toBe(201);
+    const del2 = await request(app)
+      .delete(`/api/todos/${otherDeletedTodoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(del2.status).toBe(200);
+
+    activeTodoId = `todo-rowpurge-active-${crypto.randomUUID()}`;
+    const createActive = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId)
+      .send({
+        id: activeTodoId, title: "Aldrig raderad", createdBy: ownerMemberId, assignedTo: ownerMemberId,
+        ...todoPayload({})
+      });
+    expect(createActive.status).toBe(201);
+  });
+
+  it("nekar radering av en AKTIV (icke-raderad) todo — 404, skyddar mot att permanent radera fel post", async () => {
+    const res = await request(app)
+      .delete(`/api/todos/${activeTodoId}/purge`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(res.status).toBe(404);
+  });
+
+  it("nekar radering utan canRestoreFromTrash", async () => {
+    const res = await request(app)
+      .delete(`/api/todos/${deletedTodoId}/purge`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", restrictedMemberId);
+    expect(res.status).toBe(403);
+  });
+
+  it("tillåter ägaren att permanent radera EN specifik rad — den är verkligen borta, andra raderade/aktiva rader rörs inte", async () => {
+    const res = await request(app)
+      .delete(`/api/todos/${deletedTodoId}/purge`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    expect(res.status).toBe(200);
+
+    const history = await request(app)
+      .get("/api/todos/history?page=1&pageSize=100")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    const historyIds = (history.body as { items: Array<{ id: string }> }).items.map((t) => t.id);
+    expect(historyIds).not.toContain(deletedTodoId);
+    // Den ANDRA raderade todon ligger fortfarande kvar i papperskorgen.
+    expect(historyIds).toContain(otherDeletedTodoId);
+
+    const active = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", ownerMemberId);
+    const activeIds = (active.body as Array<{ id: string }>).map((t) => t.id);
+    expect(activeIds).toContain(activeTodoId);
+  });
+});

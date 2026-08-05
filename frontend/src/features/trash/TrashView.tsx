@@ -18,6 +18,8 @@ type TrashViewProps = {
   onRestoreTodo: (todoId: Id) => void;
   // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
   onPurgeAllTrash: () => Promise<void>;
+  // Samma ADR-0025-undantag, per rad (2026-08-05) — se handlePurgeTodo nedan.
+  onPurgeTodo: (todoId: Id) => Promise<void>;
 };
 
 export function TrashView({
@@ -30,13 +32,22 @@ export function TrashView({
   roles,
   shoppingLists,
   onRestoreMember,
-  onPurgeAllTrash
+  onPurgeAllTrash,
+  onPurgeTodo
 }: TrashViewProps) {
   const canViewTrash = hasPermission(currentMember, roles, "canViewTrash");
   const canRestore = hasPermission(currentMember, roles, "canRestoreFromTrash");
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [purging, setPurging] = useState(false);
   const [purgeError, setPurgeError] = useState<string | null>(null);
+  // Radera permanent per todo-rad (2026-08-05, Zaidas önskemål: "möjlighet
+  // att ångra eller att göra en hard delete" — bulk-tömningen ovan var
+  // tidigare allt-eller-inget, ingen väg att permanent radera EN specifik
+  // rad). Samma tvåstegs-bekräftelsemönster som bulk-knappen, men bara EN
+  // rad kan vara i bekräftelseläge åt gången.
+  const [confirmPurgeTodoId, setConfirmPurgeTodoId] = useState<Id | null>(null);
+  const [purgingTodoId, setPurgingTodoId] = useState<Id | null>(null);
+  const [purgeTodoError, setPurgeTodoError] = useState<string | null>(null);
   // Todos-delen av papperskorgen är paginerad (2026-07-26) — samma nya
   // GET /api/todos/history som Todo-historik-fliken använder, filtrerad
   // till bara mjuk-raderade nedan. Medlemmar/inköpslistor/kalendrar är
@@ -81,6 +92,25 @@ export function TrashView({
     // todos-listan — ett refetch() här hade kunnat racea mot ett anrop som
     // inte hunnit landa, tas bort optimistiskt lokalt istället.
     removeTodoTrashItem(todoId);
+  }
+
+  async function handlePurgeTodo(todoId: Id) {
+    if (confirmPurgeTodoId !== todoId) {
+      setConfirmPurgeTodoId(todoId);
+      setPurgeTodoError(null);
+      return;
+    }
+    setPurgeTodoError(null);
+    setPurgingTodoId(todoId);
+    try {
+      await onPurgeTodo(todoId);
+      removeTodoTrashItem(todoId);
+      setConfirmPurgeTodoId(null);
+    } catch (err) {
+      setPurgeTodoError(err instanceof Error ? err.message : "Något gick fel");
+    } finally {
+      setPurgingTodoId(null);
+    }
   }
 
   const deletedMembers = getDeletedItemsForTrash(members, currentMember, roles);
@@ -201,24 +231,46 @@ export function TrashView({
           ))}
 
           {deletedTodos.map((todo) => (
-            <div className={styles.trashRow} key={todo.id}>
+            <div aria-label={todo.title} className={styles.trashRow} key={todo.id} role="group">
               <div>
                 <strong>{todo.title}</strong>
                 <small>
                   Todo raderad {formatDeletedAt(todo.deletedAt)} av{" "}
                   {getMemberName(todo.deletedBy, members)}
                 </small>
+                {confirmPurgeTodoId === todo.id && purgeTodoError && (
+                  <p className="field-hint" role="alert">{purgeTodoError}</p>
+                )}
               </div>
 
-              <button
-                className="secondary-button"
-                disabled={!canRestore}
-                onClick={() => handleRestoreTodo(todo.id)}
-                type="button"
-              >
-                <RotateCcw size={16} />
-                Återställ
-              </button>
+              <div className={styles.trashRowActions}>
+                <button
+                  className="secondary-button"
+                  disabled={!canRestore}
+                  onClick={() => handleRestoreTodo(todo.id)}
+                  type="button"
+                >
+                  <RotateCcw size={16} />
+                  Återställ
+                </button>
+                {/* Per-rad hard delete (2026-08-05, Zaidas önskemål: "möjlighet
+                    att ångra eller att göra en hard delete") — samma
+                    tvåstegs-bekräftelse som bulk-tömningen ovan, men bara
+                    denna rad. */}
+                <button
+                  className={`secondary-button danger-action${confirmPurgeTodoId === todo.id ? " confirming" : ""}`}
+                  disabled={!canRestore || purgingTodoId === todo.id}
+                  onClick={() => handlePurgeTodo(todo.id)}
+                  type="button"
+                >
+                  <Trash2 size={16} />
+                  {purgingTodoId === todo.id
+                    ? "…"
+                    : confirmPurgeTodoId === todo.id
+                      ? "Bekräfta"
+                      : "Radera permanent"}
+                </button>
+              </div>
             </div>
           ))}
           </div>

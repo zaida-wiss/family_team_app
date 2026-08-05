@@ -230,6 +230,13 @@ todosRouter.post("/purge-trash", requireAuth, attachAccountId, async (req, res) 
   res.json({ ok: true });
 });
 
+// Samma ADR-0025-undantag, per rad (2026-08-05) — se todosService.ts:s
+// purgeTodo-kommentar.
+todosRouter.delete("/:id/purge", requireAuth, attachAccountId, async (req, res) => {
+  await todos.purgeTodo(req.params.id, req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});
+
 todosRouter.patch("/:id/in-progress", requireAuth, attachAccountId, async (req, res) => {
   const { targetMemberId } = ToggleInProgressBodySchema.parse(req.body ?? {});
   const result = await todos.toggleInProgress(req.params.id, req.accountId!, req.memberId ?? null, targetMemberId);

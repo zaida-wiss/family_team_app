@@ -94,6 +94,8 @@ export const todosApi = {
   // ADR-0025 (2026-07-23) — permanent, oåterkallelig tömning av papperskorgen.
   purgeTrash: () =>
     request<{ ok: boolean }>(api("todos/purge-trash"), { method: "POST", body: JSON.stringify({}) }),
+  // Samma ADR-0025-undantag, per rad (2026-08-05) — se TrashView.tsx.
+  purge: (id: string) => request<{ ok: boolean }>(api(`todos/${id}/purge`), { method: "DELETE" }),
   // Historik/papperskorg, paginerad (2026-07-26) — se todosService.ts:s
   // getTodosHistoryPage. GET /api/todos ovan returnerar inte längre
   // mjuk-raderade todos alls (var tidigare kvar 30 dagar).

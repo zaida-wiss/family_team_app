@@ -131,3 +131,65 @@ test("Töm papperskorgen permanent: dubbel bekräftelse, anropar alla fyra endpo
   await expect(page.getByText("Papperskorgen är tom.")).toBeVisible();
   expect(purgeCalls.sort()).toEqual(["calendars", "members", "shopping", "todos"]);
 });
+
+// 2026-08-05, Zaidas önskemål: "möjlighet att ångra eller att göra en hard
+// delete" per uppgift — bulk-tömningen ovan var tidigare allt-eller-inget.
+// En egen "Radera permanent"-knapp per raderad todo-rad, samma
+// tvåstegsbekräftelse som bulk-knappen men bara den EN raden.
+test("Radera permanent (per rad): dubbel bekräftelse, anropar bara den valda radens purge-endpoint, andra rader rörs inte", async ({ page }) => {
+  const DELETED_TODO_2 = {
+    ...DELETED_TODO, id: "todo-2", title: "En annan raderad todo"
+  };
+  const purgedIds: string[] = [];
+  let items = [DELETED_TODO, DELETED_TODO_2];
+
+  await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
+  await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/todos/history**", (route) =>
+    route.fulfill({ json: { items, page: 1, pageSize: 25, total: items.length } })
+  );
+  await page.route("**/api/todos/*/purge", (route) => {
+    const id = route.request().url().split("/").at(-2)!;
+    purgedIds.push(id);
+    items = items.filter((t) => t.id !== id);
+    route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/shopping", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: { items: [], requireApprovalForCategories: false } }));
+  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
+  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
+  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto", exact: true }).click();
+  await page.getByRole("button", { name: "Papperskorg" }).click();
+
+  await expect(page.getByText("Raderad todo", { exact: true })).toBeVisible();
+  await expect(page.getByText("En annan raderad todo")).toBeVisible();
+
+  const todoOneRow = page.getByRole("group", { name: "Raderad todo", exact: true });
+  const purgeButton = todoOneRow.getByRole("button", { name: "Radera permanent" });
+  await purgeButton.click();
+
+  // Första klicket bekräftar bara — inget anrop ännu.
+  expect(purgedIds).toHaveLength(0);
+  await expect(todoOneRow.getByRole("button", { name: "Bekräfta" })).toBeVisible();
+  await todoOneRow.getByRole("button", { name: "Bekräfta" }).click();
+
+  await expect(page.getByText("Raderad todo", { exact: true })).not.toBeVisible();
+  // Den ANDRA raderade todon ligger fortfarande kvar — bara en enda rad
+  // raderades, inte hela papperskorgen.
+  await expect(page.getByText("En annan raderad todo")).toBeVisible();
+  expect(purgedIds).toEqual(["todo-1"]);
+});

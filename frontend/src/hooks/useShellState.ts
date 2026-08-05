@@ -35,7 +35,7 @@ export function useShellState(
     activePanel, setActivePanel, settingsNavResetKey, apiError
   } = useAppState(activeMembership);
 
-  const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, approveTodo, rejectTodo,
+  const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, purgeTodo, approveTodo, rejectTodo,
     dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, unassignSelf, refreshRoutineOccurrence,
     lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo } = todosState;
 
@@ -395,6 +395,9 @@ export function useShellState(
       Promise.all([purgeMembersTrash(), purgeShoppingTrash(), purgeCalendarsTrash(), purgeTodosTrash()]).then(
         () => undefined
       ),
+    // Samma ADR-0025-undantag, per rad (2026-08-05, Zaidas önskemål: "en
+    // möjlighet att ångra eller att göra en hard delete" per uppgift).
+    onPurgeTodo: purgeTodo,
     onDeleteAccount: deleteAccount,
     onCreateWish: createWish,
     onCreateTodo: createTodo,
