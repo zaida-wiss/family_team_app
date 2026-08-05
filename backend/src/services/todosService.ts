@@ -1026,6 +1026,37 @@ export async function toggleSubtask(id: string, accountId: string, subtaskId: st
 // uppgiftsmall om man vill bevara dem). Gäller bara avslutade tillstånd
 // (approved/rejected/expired) — pending/done (väntar på godkännande) rörs
 // aldrig, de är fortfarande aktiva.
+// Allvarligt fynd (2026-08-05, Zaidas fynd om ansamlade dubblettkort i
+// Nathaniels vy): status:"expired" har ALDRIG faktiskt skrivits till
+// databasen — useTodosState.ts:s expirePendingTodos() räknar bara om det
+// KLIENTSIDIGT vid visning (rent lokal React-state), skickar aldrig något
+// PATCH-anrop. Konsekvens: en obesvarad återkommande occurrence ligger kvar
+// som "pending" i all evighet — pruneOldTodoOccurrences nedan (ADR-0022)
+// filtrerar bara på status IN (approved/rejected/expired), och getAllTodos
+// (30-dagarsfönstret för "expired") gör samma antagande — båda blir alltså
+// verkningslösa mot en aldrig-godkänd rutin, som istället ackumulerar EN NY
+// occurrence PER DAG utan gräns (ett bekräftat exempel: 30 obesvarade
+// occurrences från samma mall, sedan 25 juni). Detta jobb stänger den
+// luckan — kör var 5:e minut (server.ts), samma intervall som
+// kalendersynken. Rör ALDRIG mallar (recurringSourceId===null &&
+// recurrence.type!=="none") — mallens egen expiresAt är bara ankaret för
+// dagens tidsfönster, inte "när mallen upphör"; mallen ska finnas kvar för
+// evigt (samma princip som pruneOldTodoOccurrences redan följer).
+export async function expireOverdueTodos() {
+  const nowIso = new Date().toISOString();
+
+  const result = await TodoModel.updateMany(
+    {
+      status: "pending",
+      deletedAt: null,
+      expiresAt: { $ne: null, $lt: nowIso },
+      $or: [{ recurringSourceId: { $ne: null } }, { "recurrence.type": "none" }]
+    },
+    { $set: { status: "expired" } }
+  );
+  return { expiredCount: result.modifiedCount };
+}
+
 export async function pruneOldTodoOccurrences() {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 7);

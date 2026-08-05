@@ -7,7 +7,7 @@ import { ShoppingListModel } from "./db/models/ShoppingList.js";
 import { RewardModel } from "./db/models/Reward.js";
 import { syncSubscription } from "./services/calendarSubscriptionsService.js";
 import { pullConnection } from "./services/appleCalDavService.js";
-import { pruneOldTodoOccurrences } from "./services/todosService.js";
+import { expireOverdueTodos, pruneOldTodoOccurrences } from "./services/todosService.js";
 import { logger } from "./utils/logger.js";
 
 const PORT = process.env.PORT ?? 3000;
@@ -77,6 +77,16 @@ async function start() {
     logger.info(`Servern lyssnar på port ${PORT}`);
   });
   setInterval(() => { syncAllSubscriptions().catch((e) => logger.error(e)); }, 5 * 60 * 1000);
+  // Samma intervall som kalendersynken (2026-08-05) — stänger luckan där
+  // status:"expired" annars ALDRIG skrivs till databasen (se
+  // expireOverdueTodos:s kommentar i todosService.ts), vilket gjorde
+  // pruneOldTodoOccurrences nedan verkningslös mot obesvarade återkommande
+  // uppgifter — de ackumulerade istället en ny occurrence per dag utan
+  // gräns. Måste köras FÖRE pruning nedan i tur och ordning varje gång
+  // (annars är det inget för pruning att hitta), men eftersom båda körs
+  // periodiskt oberoende av varandra spelar den relativa timingen dem
+  // emellan ingen roll i praktiken.
+  setInterval(() => { expireOverdueTodos().catch((e) => logger.error(e)); }, 5 * 60 * 1000);
   // Dagligen räcker gott och väl för en 1-veckas-gräns (2026-07-08).
   setInterval(() => { pruneOldTodoOccurrences().catch((e) => logger.error(e)); }, 24 * 60 * 60 * 1000);
 }
