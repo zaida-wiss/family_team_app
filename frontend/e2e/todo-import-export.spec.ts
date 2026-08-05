@@ -398,6 +398,70 @@ test("Todos-import/export: flera Radera=Ja-rader raderas en i taget, inte alla s
   expect(peakInFlight).toBe(1);
 });
 
+// 2026-08-05, Zaidas fynd: "varför fungerar det inte att radera med hjälp av
+// CSV-kolumnen?" — en allvarlig bugg i gårdagens fix (useTodosState.ts:s
+// softDeleteTodo): om målet HITTADES men canDeleteTodo (shared/permissions.ts
+// — kräver createdBy===mig ELLER canDeleteAnyTodos, INTE bara att uppgiften
+// är tilldelad mig) blockerade raderingen, pushades inget nätverksanrop alls
+// — Promise.all([]).every(Boolean) på en TOM array är sant via "vacuous
+// truth", så funktionen ljög och rapporterade lyckat trots att NOLL rader
+// faktiskt raderades. Verifierar att en uppgift skapad av NÅGON ANNAN (bara
+// tilldelad mig, utan canDeleteAnyTodos) korrekt rapporteras som misslyckad
+// — inte tyst räknad som raderad.
+test("Todos-import/export: Radera=Ja på en uppgift jag INTE skapat (bara tilldelad mig, ingen canDeleteAnyTodos) rapporteras som misslyckad, inte tyst som lyckad", async ({ page }) => {
+  const RESTRICTED_ROLE = {
+    id: "role-restricted", name: "Utan raderingsbehörighet", isChildRole: false,
+    permissions: {
+      canManageMembers: false, canManageRoles: false, canSeeAllTodos: true, canSeeOwnTodos: true,
+      canCreateTodos: true, canScheduleRecurringTodos: false, canCompleteAssignedTodos: true,
+      canEditAnyTodos: false, canDeleteAnyTodos: false, canApproveTodos: false, canSeeAllCalendar: false,
+      canSeeOwnCalendar: false, canCreateCalendar: false, canEditCalendar: false, canImportCalendar: false,
+      canExportCalendar: false, canSeeShoppingLists: true, canCreateShoppingLists: false,
+      canEditShoppingLists: false, canViewTrash: false, canRestoreFromTrash: false,
+      canCreateChildAccounts: false, canManageChildTodos: false
+    }
+  };
+  // Skapad av "mem-annan" — INTE av mig (mem-1) — men tilldelad mig, så den
+  // syns i min vy och runImport:s egen (bredare) matchningsregel hittar den.
+  const NOT_MY_TODO = {
+    id: "todo-not-mine", accountId: "acc-1", title: "Skapad av någon annan", createdBy: "mem-annan",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  let deleteCalled = false;
+
+  await mockAuthAndData(page);
+  // Registrerad EFTER mockAuthAndData (som redan satt upp en bredare
+  // behörig roll) — ersätter den med en roll UTAN canDeleteAnyTodos.
+  await page.route("**/api/roles", (route) => route.fulfill({ json: [RESTRICTED_ROLE] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [NOT_MY_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-not-mine", (route) => {
+    if (route.request().method() === "DELETE") deleteCalled = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Id,Radera", "Skapad av någon annan,Mig själv,todo-not-mine,Ja"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  // Behörigheten blockerar INNAN något nätverksanrop görs.
+  expect(deleteCalled).toBe(false);
+  await expect(page.getByText("0 uppgifter importerade.")).toBeVisible();
+  await expect(page.getByText(/Skapad av någon annan.*kunde inte raderas/)).toBeVisible();
+});
+
 // 2026-07-07 (Zaidas resonemang om att dela listor mellan familjer): ett
 // okänt namn kan mappas till en RIKTIG medlem i importörens egen familj,
 // istället för att bara hoppas över.

@@ -384,7 +384,9 @@ export function TodoImportExport({
           if (existing) {
             const result = await onDeleteTodo(existing.id);
             if (isFailure(result)) {
-              errors.push(`Rad markerad Radera ("${row.title}"): kunde inte raderas — försök igen.`);
+              errors.push(
+                `Rad markerad Radera ("${row.title}"): kunde inte raderas — antingen ett serverfel (försök igen), eller så har du inte behörighet (du kan bara radera uppgifter du själv skapat, om inte en admin gett dig utökad behörighet).`
+              );
               continue;
             }
             deleted++;

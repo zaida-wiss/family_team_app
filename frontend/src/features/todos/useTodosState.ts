@@ -315,8 +315,23 @@ export function useTodosState(fixedTodoTimes = false) {
   // väntar in alla, `ok` är sant bara om SAMTLIGA lyckades.
   function softDeleteTodo(todoId: Id, member: Member, roles: Role[]): Promise<{ ok: boolean }> {
     const requests: Promise<boolean>[] = [];
+    // Måste avgöras INNAN setTodos-uppdateraren körs (2026-08-05, Zaidas
+    // fynd: "varför fungerar det inte att radera... vad gör jag för fel?")
+    // — en riktig, allvarlig bugg i gårdagens fix: om targetTodo:n hittas
+    // men canDeleteTodo (shared/permissions.ts — kräver createdBy===member.id
+    // ELLER canDeleteAnyTodos, INTE bara assignedTo) blockerar den, pushades
+    // ALDRIG något till requests — Promise.all([]).every(Boolean) på en TOM
+    // array är sant genom "vacuous truth", så funktionen rapporterade
+    // {ok:true} trots att NOLL todos faktiskt raderades. TodoImportExport.tsx:s
+    // runImport räknade då raden som lyckad ("N raderade" i resultatet) trots
+    // att uppgiften låg orörd kvar — en tyst lögn, exakt matchande symptomet.
+    // Avgör nu explicit om målet HITTADES ALLS (oavsett behörighet), så en
+    // permissions-blockerad radering korrekt rapporteras som misslyckad
+    // istället för att smygas in som "lyckad" via en tom array.
+    let targetFound = false;
     setTodos((current) => {
       const target = current.find((t) => t.id === todoId);
+      targetFound = !!target;
       const isRecurringTemplate =
         !!target && target.recurringSourceId === null && target.recurrence.type !== "none";
 
@@ -344,7 +359,13 @@ export function useTodosState(fixedTodoTimes = false) {
         };
       });
     });
-    return Promise.all(requests).then((results) => ({ ok: results.every(Boolean) }));
+    if (targetFound && requests.length === 0) {
+      // Hittades, men canDeleteTodo blockerade den — t.ex. en uppgift skapad
+      // av någon annan, tilldelad mig men inte skapad av mig (assignedTo
+      // räcker INTE för radering, bara createdBy eller canDeleteAnyTodos).
+      return Promise.resolve({ ok: false });
+    }
+    return Promise.all(requests).then((results) => ({ ok: requests.length > 0 && results.every(Boolean) }));
   }
 
   function restoreTodo(todoId: Id) {
