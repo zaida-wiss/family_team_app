@@ -80,6 +80,8 @@ type Props = {
   onReorderThreads: (order: Id[]) => void;
   todoBubbleOrder: Record<Id, Id[]>;
   onReorderBubbles: (threadId: Id, order: Id[]) => void;
+  familyThreadOrder: Id[];
+  onReorderFamilyThreads: (order: Id[]) => void;
   todoThreadRange: TodoThreadRange;
   todoThreadGap?: number;
   todoBubbleSize?: number;
@@ -92,7 +94,6 @@ type Props = {
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
-  onUnassignSelf: (todoId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   personalCategories: TodoCategory[];
@@ -159,9 +160,10 @@ export function MemberShellContent({
   onListTimedAttempts, onDeleteTimedAttempt,
   canSeeCalendar, canSeeTodos, canSeeShopping, canApproveTodos, canManageMembers,
   wishStars, todoViewMode,
-  todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, todoThreadRange, todoThreadGap, todoBubbleSize,
+  todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
+  todoThreadRange, todoThreadGap, todoBubbleSize,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
-  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUnassignSelf, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
+  onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
   taskTemplates, categoryTemplates, onCreateTaskTemplate, onCreateCategoryTemplate, onUpdateCategoryTemplate,
@@ -290,8 +292,8 @@ export function MemberShellContent({
       label: "Familjen",
       // Bara okategoriserade familje-uppgifter — kategoriserade ligger i
       // sin egen tråd nedan (familyCategoryThreads), annars skulle de synas
-      // dubbelt (2026-08-03, samma princip som Mina uppgifter/kategori-
-      // trådarna i den personliga Todos-panelen).
+      // dubbelt (2026-08-03, samma princip som kategori-trådarna i den
+      // personliga Todos-panelen).
       todos: homeVisibleTodos.filter((t) => t.personalCategoryId === null),
       members: activeMembers,
       onComplete: completeOwnFamilyTodo,
@@ -375,12 +377,12 @@ export function MemberShellContent({
 
   // Todos-panelens EGNA "signade familjeuppgifter"-trådar (2026-08-01,
   // Zaidas rättelse: "det skall inte stå 'mina uppgifter'... det skall stå
-  // familjens namn... som kategori i min todovy") — helt separat från
-  // homeFamilyThreadSources (Hem-vyns fulla familjepooler): visar bara
-  // uppgifter jag faktiskt SIGNAT UPP på (inProgressBy), en egen tråd per
-  // familj, namngiven efter familjen — INTE inblandat i "Mina uppgifter"
-  // (som bara gäller direkt tilldelade uppgifter, oförändrat sedan
-  // 2026-07-31). Ingen "Lägg till uppgift" här — skapande hör hemma i Hem.
+  // familjens namn... som kategori i min todovy", bekräftat 2026-08-05
+  // "bra som det är nu... om man är med i flera familjer blir det
+  // tydligt") — helt separat från homeFamilyThreadSources (Hem-vyns fulla
+  // familjepooler): visar bara uppgifter jag faktiskt SIGNAT UPP på
+  // (inProgressBy), en egen tråd per familj, namngiven efter familjen.
+  // Ingen "Lägg till uppgift" här — skapande hör hemma i Hem.
   const personalSignedUpThreadSources = useMemo(() => {
     if (!canSeeTodos) return [];
     const ownSignedUp = homeVisibleTodos.filter((t) => t.inProgressBy?.includes(currentMember.id));
@@ -747,7 +749,6 @@ export function MemberShellContent({
           onCreateTodo={onCreateTodo}
           onToggleSubtask={onToggleSubtask}
           onToggleTodoInProgress={onToggleTodoInProgress}
-          onUnassignSelf={onUnassignSelf}
           onUpdateTodo={onUpdateTodo}
           onRefreshRoutine={onRefreshRoutine}
           onCompleteTodo={(todoId) => {
@@ -913,6 +914,8 @@ export function MemberShellContent({
         familyThreadSources={homeFamilyThreadSources}
         todoBubbleOrder={todoBubbleOrder}
         onReorderBubbles={onReorderBubbles}
+        familyThreadOrder={familyThreadOrder}
+        onReorderFamilyThreads={onReorderFamilyThreads}
         todoThreadGap={todoThreadGap}
         todoBubbleSize={todoBubbleSize}
         todoThreadRange={todoThreadRange}

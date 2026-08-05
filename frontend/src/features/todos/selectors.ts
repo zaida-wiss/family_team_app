@@ -80,10 +80,10 @@ export function getVisibleTodos(
 // (Member.showChildTodosInOwnView), av som standard.
 //
 // 2026-08-01, Zaidas rättelse (samma dag som ett kort försök att lägga
-// signade Familjen-todos i "Mina uppgifter" här) — signade uppgifter ska
-// INTE blandas in i "Mina uppgifter", utan visas i en EGEN tråd per familj
-// (namngiven efter familjen), se TodosView.tsx/FamilyTodoThreads.tsx. Den
-// här funktionen rör alltså bara det som är DIREKT tilldelat mig, oförändrad
+// signade Familjen-todos i denna funktions resultat) — en signad uppgift
+// ska INTE blandas in här, utan visas i en EGEN tråd per familj (namngiven
+// efter familjen), se TodosView.tsx/FamilyTodoThreads.tsx. Den här
+// funktionen rör alltså bara det som är DIREKT tilldelat mig, oförändrad
 // sedan 2026-07-31.
 export function getMyTodosViewTodos(
   currentMember: Member,

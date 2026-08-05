@@ -69,10 +69,11 @@ test.describe("Todos: skapa-modal och historik i Inställningar", () => {
 
     await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toHaveCount(0);
     // Den fristående +-knappen togs bort 2026-07-06 — nya uppgifter skapas via
-    // en trådens "Lägg till uppgift"-menyval, "Mina uppgifter" (alltid
-    // närvarande) som fallback utan egna kategorier.
-    await page.getByRole("region", { name: "Tråd: Mina uppgifter" }).getByRole("button", { name: /Mina uppgifter/ }).click();
-    await page.getByRole("button", { name: "Lägg till uppgift" }).click();
+    // en trådens "Lägg till uppgift"-menyval. Inga trådar alls finns här
+    // (ingen kategori, Barn-tråden dold som standard, "Mina uppgifter" som
+    // tidigare fyllde fallback-rollen borttagen 2026-08-05) — verktygsfältets
+    // "Ny kategori"-knapp hoppar då rakt till Ny uppgift-modalen.
+    await page.getByRole("button", { name: "Ny kategori" }).click();
     await expect(page.getByRole("dialog", { name: "Ny uppgift" })).toBeVisible();
 
     await page.keyboard.press("Escape");

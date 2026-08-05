@@ -36,7 +36,7 @@ export function useShellState(
   } = useAppState(activeMembership);
 
   const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, purgeTodo, approveTodo, rejectTodo,
-    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, unassignSelf, refreshRoutineOccurrence,
+    dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, refreshRoutineOccurrence,
     lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, updateCalendarShareAcrossMyAccounts, addCalendarEvent, updateCalendarEvent,
@@ -181,7 +181,6 @@ export function useShellState(
     onCreateTodo: createTodo,
     onToggleSubtask: toggleSubtask,
     onToggleTodoInProgress: toggleTodoInProgress,
-    onUnassignSelf: unassignSelf,
     onUpdateTodo: updateTodo,
     onRefreshRoutine: refreshRoutineOccurrence,
     personalCategories: personalTodoCategories,
@@ -216,6 +215,14 @@ export function useShellState(
       updateMemberNavigation(currentMember.id, {
         todoBubbleOrder: { ...(currentMember.todoBubbleOrder ?? {}), [threadId]: order }
       }),
+    // Drag-and-drop-ordning på Hem-vyns familjetrådar (2026-08-05, Zaidas
+    // önskemål: "familjens todovy kan flytta uppgifter och kolumner med tre
+    // tryck") — samma mönster som todoThreadOrder ovan, egen fält eftersom
+    // familjetrådarnas id:n (kategori-id/"__familyHome__"/"crossAccount:…")
+    // är en helt annan mängd än den personliga tråd-vyns.
+    familyThreadOrder: currentMember.familyThreadOrder ?? [],
+    onReorderFamilyThreads: (order: Id[]) =>
+      updateMemberNavigation(currentMember.id, { familyThreadOrder: order }),
     // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
     // Inställningar, se settingsProps nedan.
     todoThreadRange: currentMember.todoThreadRange ?? "today",

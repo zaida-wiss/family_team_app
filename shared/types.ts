@@ -301,6 +301,12 @@ export type Member = {
   // (TemplatesSettings.tsx, 2026-07-29, Zaidas önskemål: "flytta ordningen
   // snabbt i uppgiftsmallarna").
   taskTemplateOrder?: Id[];
+  // Samma princip, för Hem-vyns familjetrådar (FamilyTodoThreads.tsx,
+  // 2026-08-05, Zaidas önskemål: "familjens todovy [ska] kunna flytta
+  // uppgifter och kolumner med tre tryck", parity med den personliga
+  // Todos-panelens todoThreadOrder ovan) — tråd-id:n är kategori-id:n eller
+  // "__familyHome__"/"crossAccount:<accountId>"/"connection:<accountId>".
+  familyThreadOrder?: Id[];
   // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
   // Inställningar, samma mönster som todoViewMode. Standard "today" om osatt.
   todoThreadRange?: TodoThreadRange;

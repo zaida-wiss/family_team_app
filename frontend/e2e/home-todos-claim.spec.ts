@@ -88,11 +88,18 @@ test("Hem-vyns familjebubblor är samma storlek som Todos-panelens egna, inte de
     id: "cat-fam", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
     isFamily: true, hidden: false, createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
   };
-  const PERSONAL_TODO = { ...FAMILY_TODO, id: "todo-personal", title: "Personlig uppgift", assignedTo: "mem-1" };
+  const PERSONAL_CATEGORY = {
+    id: "cat-personal", accountId: "acc-1", memberId: "mem-1", name: "Träning",
+    createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  const PERSONAL_TODO = {
+    ...FAMILY_TODO, id: "todo-personal", title: "Personlig uppgift", assignedTo: "mem-1",
+    personalCategoryId: "cat-personal"
+  };
   const FAMILY_CATEGORY_TODO = { ...FAMILY_TODO, id: "todo-family-cat", title: "Familje-uppgift", personalCategoryId: "cat-fam" };
 
   await mockAuthAndData(page);
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [FAMILY_CATEGORY] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [FAMILY_CATEGORY, PERSONAL_CATEGORY] }));
   await page.route("**/api/todos", (route) =>
     route.fulfill({ json: route.request().method() === "GET" ? [PERSONAL_TODO, FAMILY_CATEGORY_TODO] : {} })
   );
@@ -190,9 +197,20 @@ test("Todos-panelen: Barn-tråden döljs som standard, en toggle i Inställninga
 // enda tråd per familj, och den nya tråd-raden ligger sida vid sida med
 // mina egna trådar istället för i en egen rad under.
 test("Todos-panelen: signade uppgifter från en annan familj grupperas per kategori, etiketten visar '(Familjenamn)', samma rad som mina egna trådar", async ({ page }) => {
+  const MY_TODO = {
+    id: "todo-mine", accountId: "acc-1", title: "Löpning", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: "cat-1"
+  };
   await mockAuthAndData(page);
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({
+    json: [{ id: "cat-1", accountId: "acc-1", memberId: "mem-1", name: "Träning", createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null }]
+  }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [MY_TODO] }));
   await page.route("**/api/members/cross-account", (route) =>
     route.fulfill({
       json: [{ accountId: "acc-b", accountName: "Familjen B", members: [{ id: "mem-b-a", name: "Förälder B", avatarUrl: null, color: null, isChild: false }] }]
@@ -240,12 +258,12 @@ test("Todos-panelen: signade uppgifter från en annan familj grupperas per kateg
   await expect(categoryThread.getByText("Handla mjölk")).toHaveCount(0);
   await expect(poolThread.getByText("Dammsuga")).toHaveCount(0);
 
-  // Samma rad som mina egna trådar (Mina uppgifter) — en gemensam
-  // .todo-threads-row omsluter BÅDE ParentTodoThreadView.tsx:s
-  // .todo-thread-view-wrapper OCH FamilyTodoThreads.tsx:s bara
-  // .todo-thread-view, istället för att de staplas som två separata rader.
+  // Samma rad som mina egna trådar — en gemensam .todo-threads-row omsluter
+  // BÅDE ParentTodoThreadView.tsx:s .todo-thread-view-wrapper OCH
+  // FamilyTodoThreads.tsx:s bara .todo-thread-view, istället för att de
+  // staplas som två separata rader.
   const row = page.locator(".todo-threads-row");
   await expect(row).toBeVisible();
-  await expect(row.getByRole("region", { name: "Tråd: Mina uppgifter" })).toBeVisible();
+  await expect(row.getByRole("region", { name: "Tråd: Träning" })).toBeVisible();
   await expect(row.getByRole("region", { name: "Tråd: Städning (Familjen B)" })).toBeVisible();
 });

@@ -19,11 +19,6 @@ const HOLD_DURATION_MS = 2000;
 // faktiskt tas bort ur listan.
 const DISSOLVE_DURATION_MS = 500;
 const CHILDREN_THREAD_ID = "__children__";
-// Mina uppgifter (2026-07-31, Zaidas önskemål) — en alltid-synlig, icke-
-// döpbar/raderbar tråd för todos tilldelade mig direkt men utanför en av
-// mina egna personliga kategorier. Familjen-tråden (assignedTo: null)
-// flyttade samma dag helt till Hem-vyn, se selectors.ts:s getFamilyViewTodos.
-const MY_TASKS_THREAD_ID = "__mine__";
 
 // Exporterad (2026-08-01) för återanvändning i FamilyTodoThreads.tsx — Hem-
 // vyns familjebubblor ska ha "samma gester och kategorimenyer som todovyn"
@@ -49,10 +44,6 @@ type Props = {
   categories: TodoCategory[];
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
-  // Massradering i "Mina uppgifter" (2026-08-03) — en uppgift som INTE är min
-  // egen (någon annan skapade/tilldelade den) ska bara sluta vara tilldelad
-  // mig i bulk, inte raderas, se handleBulkRemoveSelected nedan.
-  onUnassignSelf: (todoId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
@@ -238,7 +229,6 @@ export function ParentTodoThreadView({
   categories,
   onToggleSubtask,
   onToggleTodoInProgress,
-  onUnassignSelf,
   onUpdateTodo,
   onRefreshRoutine,
   onCompleteTodo,
@@ -356,12 +346,6 @@ export function ParentTodoThreadView({
   // långtryck-gester stängs medvetet AV i flyttläge — annars skulle de
   // krocka med drag-gesten.
   const [editingThreadId, setEditingThreadId] = useState<Id | null>(null);
-  // Massradering i "Mina uppgifter" (2026-08-03, Zaidas önskemål) — en egen,
-  // separat lägesstate (inte editingThreadId, som styr drag-omordning) så de
-  // två aldrig krockar. Bara MY_TASKS_THREAD_ID erbjuder "Välj flera" i
-  // kategorimenyn, men state:t är generellt hållet ifall det utökas senare.
-  const [selectingThreadId, setSelectingThreadId] = useState<Id | null>(null);
-  const [selectedTodoIds, setSelectedTodoIds] = useState<Set<Id>>(new Set());
   // Trippel-tryck-detektion (samma standardmönster som dubbeltryck-
   // avatarväljaren nedan, bara utökat till tre tryck): varje tryck inom
   // CATEGORY_TAP_MS av föregående räknas till samma "serie", tredje trycket
@@ -655,37 +639,7 @@ export function ParentTodoThreadView({
       })
       .filter((thread): thread is Thread => thread !== null);
 
-    // Mina uppgifter (2026-07-31, Zaidas önskemål: "de todos som är
-    // assignade på mig skall visas i todovyn") — en uppgift tilldelad mig
-    // direkt men UTANFÖR en av mina egna kategorier (ingen kategori alls,
-    // eller en ANNAN vuxens kategori — tidigare osynlig här, tråd-vyns
-    // kolumner visar bara ägarens egna kategorier). Familjen (assignedTo:
-    // null) hör numera bara hemma i Hem-vyn (se selectors.ts:s
-    // getFamilyViewTodos), även de jag själv skapat. En uppgift jag signat
-    // upp på därifrån (inProgressBy) blandas MEDVETET INTE in här (Zaidas
-    // rättelse 2026-08-01) — visas istället i en egen tråd per familj, se
-    // TodosView.tsx:s familySignedUpSources/FamilyTodoThreads.tsx.
-    const myCategoryIds = new Set(myCategories.map((c) => c.id));
-    const isMyTask = (t: Todo) =>
-      t.assignedTo === currentMember.id && !(t.personalCategoryId && myCategoryIds.has(t.personalCategoryId));
-    const showMyTasksExpired = showExpiredThreadIds.has(MY_TASKS_THREAD_ID);
-    const myTasksBaseTodos = visibleTodos.filter(
-      (t) => isMyTask(t) && (t.status !== "expired" || showMyTasksExpired)
-    );
-    const myTasksAllTodos = applyAssigneeFilter(MY_TASKS_THREAD_ID, allDueTodos.filter(isMyTask));
-    const myTasksThread: Thread = {
-      id: MY_TASKS_THREAD_ID,
-      label: "Mina uppgifter",
-      deletable: false,
-      assignees: uniqueAssignees(myTasksBaseTodos, members),
-      todos: applyBubbleOrder(
-        sortByEndThenStartTime(applyAssigneeFilter(MY_TASKS_THREAD_ID, myTasksBaseTodos)),
-        todoBubbleOrder[MY_TASKS_THREAD_ID]
-      ),
-      completedPercent: computeCompletedPercent(myTasksAllTodos)
-    };
-
-    return [...(showChildTodos ? [childThread] : []), myTasksThread, ...categoryThreads];
+    return [...(showChildTodos ? [childThread] : []), ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters, todoBubbleOrder, showChildTodos]);
 
@@ -873,49 +827,6 @@ export function ParentTodoThreadView({
   function handleFilterFromMenu(threadId: Id) {
     setMenuCategoryId(null);
     setFilterThreadId(threadId);
-  }
-
-  // Massradering i "Mina uppgifter" (2026-08-03, Zaidas önskemål: "hur kan
-  // jag massradera todos smidigt i Mina uppgifter?"). Bara MY_TASKS_THREAD_ID
-  // erbjuder valet i menyn (se JSX nedan) — logiken här är generell.
-  function handleSelectMultipleFromMenu(threadId: Id) {
-    setMenuCategoryId(null);
-    setEditingThreadId(null); // flyttläge och väljläge ska aldrig vara aktiva samtidigt
-    setSelectedTodoIds(new Set());
-    setSelectingThreadId(threadId);
-  }
-
-  function toggleTodoSelected(todoId: Id) {
-    setSelectedTodoIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(todoId)) next.delete(todoId);
-      else next.add(todoId);
-      return next;
-    });
-  }
-
-  function handleCancelSelecting() {
-    setSelectingThreadId(null);
-    setSelectedTodoIds(new Set());
-  }
-
-  // Zaidas exakta regel: en uppgift som INTE är min egen (någon annan
-  // skapade/tilldelade den till mig) ska bara sluta vara tilldelad mig, inte
-  // raderas — "familjens todon skall endast gå att tas bort från
-  // familjevyn" (Hem-vyns familjeflik). MY_TASKS_THREAD_ID innehåller bara
-  // uppgifter tilldelade mig (assignedTo===mig), så createdBy är den enda
-  // kvarvarande signalen på vem uppgiften egentligen "tillhör".
-  function handleBulkRemoveSelected() {
-    for (const todoId of selectedTodoIds) {
-      const todo = todos.find((t) => t.id === todoId);
-      if (!todo) continue;
-      if (todo.createdBy === currentMember.id) {
-        onDeleteTodo(todoId);
-      } else {
-        onUnassignSelf(todoId);
-      }
-    }
-    handleCancelSelecting();
   }
 
   function toggleAssigneeFilter(threadId: Id, assigneeId: Id, allAssignees: { id: Id }[]) {
@@ -1276,11 +1187,6 @@ export function ParentTodoThreadView({
                       Filtrera efter person
                     </button>
                   )}
-                  {thread.id === MY_TASKS_THREAD_ID && (
-                    <button onClick={() => handleSelectMultipleFromMenu(thread.id)} type="button">
-                      Välj flera
-                    </button>
-                  )}
                   {thread.deletable && (
                     <>
                       <button onClick={() => handleDownloadFromMenu(thread.id)} type="button">
@@ -1311,23 +1217,6 @@ export function ParentTodoThreadView({
               )}
           </div>
 
-          {selectingThreadId === thread.id && (
-            <div className="todo-thread__select-bar">
-              <span className="todo-thread__select-count">{selectedTodoIds.size} valda</span>
-              <button
-                className="todo-thread__select-remove danger-button"
-                disabled={selectedTodoIds.size === 0}
-                onClick={handleBulkRemoveSelected}
-                type="button"
-              >
-                Ta bort
-              </button>
-              <button onClick={handleCancelSelecting} type="button">
-                Avbryt
-              </button>
-            </div>
-          )}
-
           {thread.todos.length > 0 && (
             <ul className="todo-thread__list">
               {thread.todos.map((todo) => {
@@ -1353,7 +1242,6 @@ export function ParentTodoThreadView({
                     ? formatElapsed(nowTick - new Date(todo.inProgressSince).getTime())
                     : null;
                 const bubbleKey = stableBubbleKey(todo);
-                const isSelecting = selectingThreadId === thread.id;
                 return (
                   <li
                     key={todo.id}
@@ -1375,44 +1263,35 @@ export function ParentTodoThreadView({
                   >
                     <button
                       type="button"
-                      aria-pressed={isSelecting ? selectedTodoIds.has(todo.id) : undefined}
                       className={
                         "todo-thread__ball" +
                         (isChildrenThread ? " todo-thread__ball--small" : "") +
                         (heldId === todo.id ? " todo-thread__ball--holding" : "") +
                         (isDissolving ? " todo-thread__ball--dissolving" : "") +
                         (inProgressColor ? " todo-thread__ball--in-progress" : "") +
-                        ((editingThreadId === thread.id) ? " todo-thread__ball--edit" : "") +
-                        (isSelecting ? " todo-thread__ball--selecting" : "") +
-                        (isSelecting && selectedTodoIds.has(todo.id) ? " todo-thread__ball--selected" : "")
+                        ((editingThreadId === thread.id) ? " todo-thread__ball--edit" : "")
                       }
                       disabled={isDissolving}
                       onClick={(e) => {
-                        if (isSelecting) { toggleTodoSelected(todo.id); return; }
                         if (!(editingThreadId === thread.id)) handleBallClick(todo, e);
                       }}
                       onPointerDown={(e) => {
-                        if (isSelecting) return;
                         if ((editingThreadId === thread.id)) { handleBubblePointerDown(e, thread.id, bubbleKey); return; }
                         startHold(todo.id, () => handleConfirmComplete(todo));
                       }}
-                      onPointerMove={(!isSelecting && editingThreadId === thread.id) ? handleBubblePointerMove : undefined}
+                      onPointerMove={(editingThreadId === thread.id) ? handleBubblePointerMove : undefined}
                       onPointerUp={() => {
-                        if (isSelecting) return;
                         if ((editingThreadId === thread.id)) { handleBubblePointerUp(thread.todos); return; }
                         clearHold();
                       }}
-                      onPointerLeave={(!isSelecting && editingThreadId !== thread.id) ? clearHold : undefined}
+                      onPointerLeave={editingThreadId !== thread.id ? clearHold : undefined}
                       onPointerCancel={() => {
-                        if (isSelecting) return;
                         if ((editingThreadId === thread.id)) { handleBubblePointerUp(thread.todos); return; }
                         clearHold();
                       }}
                       title={todo.title}
                       aria-label={
-                        isSelecting
-                          ? `${todo.title}${selectedTodoIds.has(todo.id) ? ", vald" : ""}. Tryck för att välja/avmarkera.`
-                          : (editingThreadId === thread.id)
+                        (editingThreadId === thread.id)
                           ? `${todo.title}. Håll och dra för att flytta ordningen inom ${thread.label}.`
                           : `${todo.title}, tilldelad ${assignee}` +
                             (progress !== null ? `, ${progress} procent av delmomenten avklarade` : "") +

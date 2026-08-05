@@ -43,14 +43,14 @@ type Props = {
   // Todos-panelens EGNA "signade familjeuppgifter"-trådar (2026-08-01,
   // Zaidas rättelse: "andra familjers todo" hörde inte hemma i Todos-
   // panelen alls — bara det jag faktiskt SIGNAT UPP på från Hem-vyn, en
-  // egen tråd per familj namngiven efter familjen, inte inblandat i
-  // "Mina uppgifter"). Redan hopkopplad med rätt mutationer per familj,
-  // se MemberShellContent.tsx/FamilyTodoThreads.tsx.
+  // egen tråd per familj namngiven efter familjen (2026-08-05, Zaidas
+  // bekräftelse: "bra som det är nu att kategorin heter familjenamnet, om
+  // man är med i flera familjer blir det tydligt"). Redan hopkopplad med
+  // rätt mutationer per familj, se MemberShellContent.tsx/FamilyTodoThreads.tsx.
   personalSignedUpThreadSources?: FamilyThreadSource[];
   onCreateTodo: (todo: Todo) => void;
   onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
-  onUnassignSelf: (todoId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
   onCompleteTodo: (todoId: Id) => void;
@@ -104,7 +104,6 @@ export function TodosView({
   onCreateTodo,
   onToggleSubtask,
   onToggleTodoInProgress,
-  onUnassignSelf,
   onUpdateTodo,
   onRefreshRoutine,
   onCompleteTodo,
@@ -167,14 +166,9 @@ export function TodosView({
   // Massradering i listläget (2026-08-04, Zaidas önskemål: "gör det möjligt
   // att massradera genom att kryssa i rader på todos som skall tas bort") —
   // samma tvåstegsbekräftade "Ta bort"→"Bekräfta radering"-mönster som
-  // redan finns i Hem-vyns FamilyTodoThreads.tsx (striktare än tråd-vyns
-  // "Mina uppgifter", som saknar ett andra steg — listläget kan visa MÅNGA
-  // rader på en gång, mer utrymme för ett missklick). Anropar samma
+  // redan finns i Hem-vyns FamilyTodoThreads.tsx. Anropar samma
   // onSoftDeleteTodo som varje rads egen enskilda radera-knapp redan gör,
-  // utan extra ägarskaps-gren (till skillnad från tråd-vyns "Mina
-  // uppgifter"-massradering, som avassignerar andras uppgifter istället för
-  // att radera dem) — listläget har aldrig haft den distinktionen för sin
-  // enskilda radera-knapp heller, backend (canEditTodo/canDeleteTodo,
+  // ingen extra ägarskaps-gren — backend (canEditTodo/canDeleteTodo,
   // ADR-0016) avgör redan om anropet faktiskt får verkan.
   const [selectedListTodoIds, setSelectedListTodoIds] = useState<Set<Id>>(new Set());
   const [confirmingBulkDeleteList, setConfirmingBulkDeleteList] = useState(false);
@@ -293,7 +287,6 @@ export function TodosView({
             showChildTodos={showChildTodosInOwnView}
             onToggleSubtask={onToggleSubtask}
             onToggleTodoInProgress={onToggleTodoInProgress}
-            onUnassignSelf={onUnassignSelf}
             onUpdateTodo={onUpdateTodo}
             onRefreshRoutine={onRefreshRoutine}
             onCompleteTodo={onCompleteTodo}

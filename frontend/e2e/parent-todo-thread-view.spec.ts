@@ -93,12 +93,18 @@ async function switchToListViewInSettings(page: import("@playwright/test").Page)
 
 // Den fristående +-knappen togs bort 2026-07-06 (Zaidas beslut) — nya
 // uppgifter skapas nu enbart via en trådens egen "Lägg till uppgift"-
-// menyval. "Mina uppgifter" (alltid närvarande, även utan personliga
-// kategorier — ersatte Barn-tråden i denna roll 2026-07-31 när Barn-tråden
-// gjordes dold som standard) är fallbacket när inga kategorier finns än.
+// menyval, ELLER via verktygsfältets "Ny kategori"-knapp (hoppar rakt till
+// Ny uppgift-modalens "+Ny kategori…"-läge när inga kategorimallar finns,
+// se ParentTodoThreadView.tsx). Den sistnämnda är fallbacket när inga
+// kategorier/trådar finns än att klicka på — "Mina uppgifter"-tråden som
+// tidigare fyllde den rollen (2026-07-31–2026-08-05) är borttagen (Zaidas
+// önskemål: "den behövs inte"). Väljaren nollställs direkt till "Ingen
+// kategori" här — de allra flesta anropare bryr sig bara om att öppna en
+// blank modal, inte om att också skapa en kategori (det enda testet som
+// vill det gör ett eget selectOption tillbaka till "+ Ny kategori…").
 async function openCreateModalFromMyTasksThread(page: import("@playwright/test").Page) {
-  await page.getByRole("region", { name: "Tråd: Mina uppgifter" }).getByRole("button", { name: /Mina uppgifter/ }).click();
-  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
+  await page.getByRole("button", { name: "Ny kategori" }).click();
+  await page.getByRole("dialog").getByRole("combobox", { name: "Kategori" }).selectOption({ label: "Ingen kategori" });
 }
 
 async function openCreateModalFromCategoryThread(page: import("@playwright/test").Page, categoryLabel: string) {
@@ -866,21 +872,20 @@ test("Ny uppgift-modalen: skapar en ny uppgift OCH kategori samtidigt när inga 
   });
 
   await openThreadView(page);
-  // "Mina uppgifter" (alltid närvarande) ersatte Barn-tråden i rollen som
-  // fallback-ingång när inga kategorier finns än (2026-07-31, Barn-tråden
-  // döljs numera som standard).
-  await expect(page.getByRole("region", { name: "Tråd: Mina uppgifter" })).toBeVisible();
-
-  await openCreateModalFromMyTasksThread(page);
+  // Inga trådar alls finns än (ingen kategori, Barn-tråden dold som standard
+  // sedan 2026-07-31) — enda ingången är verktygsfältets "Ny kategori"-knapp,
+  // som hoppar rakt till Ny uppgift-modalens "+Ny kategori…"-läge när inga
+  // kategorimallar finns (2026-08-05, samma dag "Mina uppgifter" togs bort).
+  await page.getByRole("button", { name: "Ny kategori" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  // Ingen kategori finns än — väljaren visar ändå "Ingen kategori" som förval
-  // (tvingar inte fram en kategori), men "+ Ny kategori…" går att välja direkt.
+  // Ingen kategori finns än — väljaren visar ändå "+ Ny kategori…" som
+  // förval (den enda vägen hit när inga trådar finns), men "Ingen kategori"
+  // går att välja istället om man inte vill skapa en.
   const categorySelect = dialog.getByRole("combobox", { name: "Kategori" });
-  await expect(categorySelect).toHaveValue("__none__");
+  await expect(categorySelect).toHaveValue("__new__");
 
   await dialog.getByLabel("Titel").fill("Handla mat");
-  await categorySelect.selectOption({ label: "+ Ny kategori…" });
   await dialog.getByLabel("Namn på ny kategori").fill("Hushåll");
   await dialog.getByRole("button", { name: "Skapa" }).click();
 
@@ -1665,10 +1670,20 @@ test("Ny uppgift-modalen: 'Från mall' vid Ny kategori skapar kategorin och alla
   });
 
   await openThreadView(page);
-  await openCreateModalFromMyTasksThread(page);
+  // Inga kategori-trådar finns (bara en sparad kategori-MALL, ingen riktig
+  // kategori) — "Ny kategori"-knappen hoppar rakt till Ny uppgift-modalen i
+  // "+Ny kategori…"-läge NÄR mallistan (deferToIdle, 2026-07-26) redan hunnit
+  // laddas, annars visas minimodalen "Ny kategori från mall" först (samma
+  // race oavsett — "Skapa istället via en ny uppgift…" tar oss vidare dit).
+  // Testet hanterar båda utfallen istället för att anta ett specifikt.
+  await page.getByRole("button", { name: "Ny kategori" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Ny uppgift" });
-  await dialog.getByRole("combobox", { name: "Kategori" }).selectOption({ label: "+ Ny kategori…" });
+  const viaNewTaskShortcut = page.getByRole("button", { name: "Skapa istället via en ny uppgift…" });
+  await viaNewTaskShortcut.or(dialog).first().waitFor();
+  if (await viaNewTaskShortcut.isVisible()) {
+    await viaNewTaskShortcut.click();
+  }
   await dialog.getByRole("button", { name: "Från mall" }).click();
   await dialog.getByRole("combobox", { name: "Mall" }).selectOption({ label: "Packa (2 uppgifter)" });
   await dialog.getByLabel("Startdatum för uppgifterna").fill("2026-08-01");
@@ -1715,22 +1730,28 @@ test("Bollar i tråd: 'Visa utgångna' i kategorimenyn visar/döljer utgångna u
 });
 
 test("Bollar i tråd: trådarna ligger sida vid sida, inte staplade", async ({ page }) => {
+  const CATEGORY_2 = {
+    id: "cat-2", accountId: "acc-1", memberId: "mem-1", name: "Hushåll",
+    createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  const TODO_IN_CATEGORY_2 = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-cat2", title: "Dammsuga", personalCategoryId: "cat-2" };
   await mockAuthAndData(page);
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY, CATEGORY_2] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [PERSONAL_TODO_NO_SUBTASKS, TODO_IN_CATEGORY_2] }));
 
   await openThreadView(page);
 
-  // "Mina uppgifter" (alltid närvarande) istället för Barn-tråden (dold som
-  // standard sedan 2026-07-31) — layout-kontrollen bryr sig bara om att
-  // TVÅ trådar ligger sida vid sida, oavsett vilka.
-  const mineBox = await page.getByRole("region", { name: "Tråd: Mina uppgifter" }).boundingBox();
+  // Två kategori-trådar (Barn-tråden dold som standard sedan 2026-07-31) —
+  // layout-kontrollen bryr sig bara om att TVÅ trådar ligger sida vid sida,
+  // oavsett vilka.
+  const hushallBox = await page.getByRole("region", { name: "Tråd: Hushåll" }).boundingBox();
   const categoryBox = await page.getByRole("region", { name: "Tråd: Träning" }).boundingBox();
-  expect(mineBox).not.toBeNull();
+  expect(hushallBox).not.toBeNull();
   expect(categoryBox).not.toBeNull();
   // Sida vid sida: ungefär samma Y-position (topp), men olika X-position.
-  expect(Math.abs(mineBox!.y - categoryBox!.y)).toBeLessThan(5);
-  expect(categoryBox!.x).toBeGreaterThan(mineBox!.x + mineBox!.width - 5);
+  // Träning (cat-1) står först i mockdatan, alltså till vänster om Hushåll (cat-2).
+  expect(Math.abs(hushallBox!.y - categoryBox!.y)).toBeLessThan(5);
+  expect(hushallBox!.x).toBeGreaterThan(categoryBox!.x + categoryBox!.width - 5);
 });
 
 // Listläget väljs i Inställningar (2026-07-05, Zaidas beslut) — panelen har
@@ -2378,14 +2399,13 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await expect(traningBtn).toBeVisible();
   await expect(hushallBtn).toBeVisible();
 
-  // Utgångsordning (ingen sparad ordning ännu): Barn, Mina uppgifter,
-  // Träning, Hushåll — Familjen-tråden flyttade helt till Hem-vyn
-  // (2026-07-31), ersatt här av den alltid-närvarande "Mina uppgifter".
-  await expect(page.locator(".todo-thread")).toHaveCount(4);
+  // Utgångsordning (ingen sparad ordning ännu): Barn, Träning, Hushåll —
+  // Familjen-tråden flyttade helt till Hem-vyn (2026-07-31).
+  await expect(page.locator(".todo-thread")).toHaveCount(3);
   const idsBefore = await page.locator(".todo-thread").evaluateAll((els) =>
     els.map((el) => el.getAttribute("data-thread-id"))
   );
-  expect(idsBefore).toEqual(["__children__", "__mine__", "cat-1", "cat-2"]);
+  expect(idsBefore).toEqual(["__children__", "cat-1", "cat-2"]);
 
   const traningBox = (await traningBtn.boundingBox())!;
   const hushallBox = (await hushallBtn.boundingBox())!;
@@ -2398,12 +2418,12 @@ test("Bollar i tråd: kategorier (och Barn-tråden) går att flytta med drag-and
   await page.mouse.up();
 
   await expect.poll(() => savedOrder).not.toBeNull();
-  expect(savedOrder).toEqual(["__children__", "__mine__", "cat-2", "cat-1"]);
+  expect(savedOrder).toEqual(["__children__", "cat-2", "cat-1"]);
 
   const idsAfter = await page.locator(".todo-thread").evaluateAll((els) =>
     els.map((el) => el.getAttribute("data-thread-id"))
   );
-  expect(idsAfter).toEqual(["__children__", "__mine__", "cat-2", "cat-1"]);
+  expect(idsAfter).toEqual(["__children__", "cat-2", "cat-1"]);
 
   // Kategorimenyn ska INTE ha öppnats av draget (bara ett vanligt klick ska
   // göra det).
@@ -2699,77 +2719,4 @@ test("Redigera uppgift: cyklar ett delmoments tilldelning, autosparas", async ({
 
   await expect.poll(() => (updatedPatch?.subtasks as Array<{ assignedTo: string | null }> | undefined)?.[0]?.assignedTo)
     .toBe("mem-1");
-});
-
-// 2026-08-03 (Zaidas önskemål: "hur kan jag massradera todos smidigt i Mina
-// uppgifter? Todos som inte tillhör mig skall då sluta assignas på mig, utan
-// att uppgiften försvinner. Familjens todon skall endast gå att tas bort
-// från familjevyn.") — en genuint egen uppgift (createdBy===mig) raderas på
-// riktigt vid massradering, medan en uppgift NÅGON ANNAN skapat och tilldelat
-// mig bara slutar vara tilldelad mig (unassign-self), aldrig raderas.
-const MY_OWN_TODO = {
-  id: "todo-mine-1", accountId: "acc-1", title: "Egen sak", createdBy: "mem-1",
-  assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
-  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
-  recurringSourceId: null, occurrenceDate: null, completedAt: null,
-  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
-  rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-  personalCategoryId: null
-};
-
-const ASSIGNED_BY_OTHER_TODO = {
-  id: "todo-assigned-1", accountId: "acc-1", title: "Handla mjölk", createdBy: "mem-2",
-  assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
-  visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
-  recurringSourceId: null, occurrenceDate: null, completedAt: null,
-  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
-  rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
-  personalCategoryId: null
-};
-
-test("Mina uppgifter: Välj flera + Ta bort raderar egna uppgifter men bara avassignerar andras", async ({ page }) => {
-  let deletedId: string | null = null;
-  let unassignedId: string | null = null;
-  await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, OTHER_ADULT_MEMBER] }));
-  await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [MY_OWN_TODO, ASSIGNED_BY_OTHER_TODO] });
-    return route.fulfill({ json: {} });
-  });
-  await page.route(`**/api/todos/${MY_OWN_TODO.id}`, (route) => {
-    if (route.request().method() === "DELETE") deletedId = MY_OWN_TODO.id;
-    return route.fulfill({ json: { ok: true } });
-  });
-  await page.route(`**/api/todos/${ASSIGNED_BY_OTHER_TODO.id}/unassign-self`, (route) => {
-    unassignedId = ASSIGNED_BY_OTHER_TODO.id;
-    return route.fulfill({ json: { ok: true } });
-  });
-
-  await openThreadView(page);
-  const thread = page.getByRole("region", { name: "Tråd: Mina uppgifter" });
-  await expect(thread.getByText("Egen sak")).toBeVisible();
-  await expect(thread.getByText("Handla mjölk")).toBeVisible();
-
-  await thread.getByRole("button", { name: /^Mina uppgifter\./ }).click();
-  await page.getByRole("button", { name: "Välj flera" }).click();
-
-  await expect(thread.getByText("0 valda")).toBeVisible();
-  const removeBtn = page.getByRole("button", { name: "Ta bort" });
-  await expect(removeBtn).toBeDisabled();
-
-  await page.getByRole("button", { name: /Egen sak.*Tryck för att välja/ }).click();
-  await page.getByRole("button", { name: /Handla mjölk.*Tryck för att välja/ }).click();
-  await expect(thread.getByText("2 valda")).toBeVisible();
-  await expect(removeBtn).toBeEnabled();
-
-  await removeBtn.click();
-
-  await expect.poll(() => deletedId).toBe(MY_OWN_TODO.id);
-  await expect.poll(() => unassignedId).toBe(ASSIGNED_BY_OTHER_TODO.id);
-  // Väljläget stängs av och båda bollarna är borta ur "Mina uppgifter" —
-  // den ena riktigt raderad, den andra bara avassignerad (assignedTo blir
-  // null lokalt, vilket flyttar den ut ur MY_TASKS_THREAD_ID:s filter).
-  await expect(thread.getByText("Egen sak")).toHaveCount(0);
-  await expect(thread.getByText("Handla mjölk")).toHaveCount(0);
-  await expect(page.getByText("valda")).toHaveCount(0);
 });

@@ -360,13 +360,9 @@
   touch-action: none;
 }
 
-/* Massradering i "Mina uppgifter" (2026-08-03). En vald bubbla får en tydlig
-   ring + en liten bock uppe i hörnet, samma etablerade "ring runt bollen"-
-   mönster som redan används för --in-progress/--holding. */
-.todo-thread__ball--selecting {
-  cursor: pointer;
-}
-
+/* Massradering (2026-08-03, Hem-vyns FamilyTodoThreads.tsx). En vald bubbla
+   får en tydlig ring + en liten bock uppe i hörnet, samma etablerade "ring
+   runt bollen"-mönster som redan används för --in-progress/--holding. */
 .todo-thread__ball--selected {
   outline: 3px solid var(--primary);
   outline-offset: 2px;
@@ -390,8 +386,8 @@
 }
 
 /* Bulk-åtgärdsfältet under trådens rubrik (2026-08-03, Zaidas önskemål: en
-   smidig massradering i "Mina uppgifter"). Samma knappmönster/touch-mål som
-   kategorimenyn. */
+   smidig massradering — nu Hem-vyns FamilyTodoThreads.tsx). Samma
+   knappmönster/touch-mål som kategorimenyn. */
 .todo-thread__select-bar {
   display: flex;
   align-items: center;

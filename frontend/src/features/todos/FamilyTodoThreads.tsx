@@ -81,10 +81,17 @@ type Props = {
   // uppgifter i olika tidsspann, men inte mina egna todos... varken i min
   // personliga eller i familjens todo") — samma Inställningar → Utseende-
   // inställning som redan gäller ParentTodoThreadView.tsx:s trådar
-  // (Barn/Mina uppgifter/kategorier), bara aldrig trådad hit. Default
+  // (Barn/kategorier), bara aldrig trådad hit. Default
   // "today" matchar det tidigare, ograviterade beteendet om en anropare
   // inte skickar med värdet.
   range?: TodoThreadRange;
+  // Drag-and-drop-ordning på trådarna/kolumnerna själva (2026-08-05, Zaidas
+  // önskemål: "familjens todovy [ska] kunna flytta uppgifter och kolumner
+  // med tre tryck", parity med ParentTodoThreadView.tsx:s todoThreadOrder).
+  // Osatt = ingen anpassad ordning (t.ex. TodosView.tsx:s personliga
+  // signade-familjeuppgifter-rad, som inte erbjuder omordning av trådarna).
+  threadOrder?: Id[];
+  onReorderThreads?: (order: Id[]) => void;
 };
 
 export function FamilyTodoThreads({
@@ -94,7 +101,9 @@ export function FamilyTodoThreads({
   todoThreadGap,
   todoBubbleSize,
   searchQuery = "",
-  range = "today"
+  range = "today",
+  threadOrder = [],
+  onReorderThreads = () => {}
 }: Props) {
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
@@ -119,8 +128,7 @@ export function FamilyTodoThreads({
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
   // Massradering (2026-08-03) — egen, separat lägesstate (inte
-  // editingThreadId, som styr drag-omordning) så de två aldrig krockar,
-  // samma mönster som ParentTodoThreadView.tsx:s "Mina uppgifter"-tråd.
+  // editingThreadId, som styr drag-omordning) så de två aldrig krockar.
   const [selectingThreadId, setSelectingThreadId] = useState<Id | null>(null);
   const [selectedTodoIds, setSelectedTodoIds] = useState<Set<Id>>(new Set());
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
@@ -138,6 +146,16 @@ export function FamilyTodoThreads({
   const bubbleDragStateRef = useRef<{ threadId: Id; key: Id; x: number; y: number } | null>(null);
   const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
   const [bubbleDragOverKey, setBubbleDragOverKey] = useState<Id | null>(null);
+
+  // Drag-and-drop på TRÅDARNA/kolumnerna själva (2026-08-05), samma mönster
+  // som ParentTodoThreadView.tsx:s handleThreadPointerDown/Move/Up — separat
+  // från bubbel-draget ovan (som flyttar uppgifter INOM en tråd, kräver
+  // editingThreadId/tre-tryck). Ett tröskelvärde (8px) skiljer drag från ett
+  // vanligt klick, som annars öppnar kategorimenyn (handleThreadHeaderClick).
+  const threadDragStateRef = useRef<{ id: Id; x: number; y: number } | null>(null);
+  const [draggingThreadId, setDraggingThreadId] = useState<Id | null>(null);
+  const [dragOverThreadId, setDragOverThreadId] = useState<Id | null>(null);
+  const suppressThreadClickRef = useRef(false);
 
   // Tickar alltid nu (2026-08-04) — tidigare bara när en delad "någon håller
   // på med den här"-klocka faktiskt behövde den (hasSharedTimer), en
@@ -277,7 +295,52 @@ export function FamilyTodoThreads({
     dissolveTimersRef.current.set(todo.id, timer);
   }
 
+  function reorderThreads(orderedIds: Id[], draggedId: Id, targetId: Id) {
+    const from = orderedIds.indexOf(draggedId);
+    const to = orderedIds.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    const next = [...orderedIds];
+    next.splice(from, 1);
+    next.splice(to, 0, draggedId);
+    onReorderThreads(next);
+  }
+
+  function handleThreadPointerDown(e: React.PointerEvent<HTMLButtonElement>, threadId: Id) {
+    threadDragStateRef.current = { id: threadId, x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleThreadPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const start = threadDragStateRef.current;
+    if (!start) return;
+    if (draggingThreadId === null) {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      setDraggingThreadId(start.id);
+      suppressThreadClickRef.current = true;
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const section = el instanceof Element ? el.closest<HTMLElement>("[data-thread-id]") : null;
+    setDragOverThreadId((section?.dataset.threadId as Id | undefined) ?? null);
+  }
+
+  function handleThreadPointerUp(orderedIds: Id[]) {
+    const wasDragging = draggingThreadId;
+    const target = dragOverThreadId;
+    threadDragStateRef.current = null;
+    if (wasDragging && target && wasDragging !== target) {
+      reorderThreads(orderedIds, wasDragging, target);
+    }
+    setDraggingThreadId(null);
+    setDragOverThreadId(null);
+  }
+
   function handleThreadHeaderClick(source: FamilyThreadSource, event: React.MouseEvent<HTMLButtonElement>) {
+    if (suppressThreadClickRef.current) {
+      suppressThreadClickRef.current = false;
+      return;
+    }
     const now = Date.now();
     const last = categoryTapRef.current;
     const count = last && last.id === source.id && now - last.time < CATEGORY_TAP_MS ? last.count + 1 : 1;
@@ -398,6 +461,21 @@ export function FamilyTodoThreads({
 
   const today = new Date();
 
+  // Egen sparad ordning (drag-and-drop, 2026-08-05) — trådar som saknas i
+  // listan (t.ex. en nyskapad kategori, eller en cross-account-tråd) hamnar
+  // sist, i sin vanliga ordning. Samma princip som ParentTodoThreadView.tsx:s
+  // orderedThreads.
+  const orderedSources =
+    threadOrder.length === 0
+      ? sources
+      : [...sources].sort((a, b) => {
+          const ai = threadOrder.indexOf(a.id);
+          const bi = threadOrder.indexOf(b.id);
+          const aIndex = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
+          const bIndex = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
+          return aIndex - bIndex;
+        });
+
   return (
     <div
       className="todo-thread-view"
@@ -408,7 +486,7 @@ export function FamilyTodoThreads({
         } as React.CSSProperties
       }
     >
-      {sources.map((source) => {
+      {orderedSources.map((source) => {
         const showExpired = showExpiredThreadIds.has(source.id);
         const query = searchQuery.trim().toLowerCase();
         // Utgångna (missade) uppgifter är medvetet UTANFÖR range-filtret,
@@ -428,6 +506,20 @@ export function FamilyTodoThreads({
             (!query || t.title.toLowerCase().includes(query))
         );
         const threadTodos = applyBubbleOrder(sortByEndThenStartTime(baseTodos), todoBubbleOrder[source.id]);
+
+        // Tomma kategorier döljs, samma princip som ParentTodoThreadView.tsx
+        // (2026-08-05, Zaidas önskemål: parity med den personliga Todos-vyn
+        // — "familjens todovys tomma kategorier skall gömmas, precis som i
+        // min egen todo-vy"). Bara riktiga familjekategorier (onDeleteCategory
+        // satt) är hideable, aldrig "Familjen"-poolen eller cross-account/
+        // anslutna trådar. En kategori med NÅGON uppgift (oavsett status)
+        // inom samma dagsfönster räknas inte som tom — visar t.ex. en redan
+        // avklarad kategori med 100% istället för att gömma den helt.
+        if (source.onDeleteCategory) {
+          const hasAnyToday = source.todos.some((t) => isDueWithinRange(t, today, range));
+          if (threadTodos.length === 0 && !hasAnyToday) return null;
+        }
+
         const isEditing = editingThreadId === source.id;
         const isSelecting = selectingThreadId === source.id;
         const isRenaming = renamingThreadId === source.id;
@@ -435,7 +527,12 @@ export function FamilyTodoThreads({
         return (
           <section
             aria-label={`Tråd: ${source.label}`}
-            className={"todo-thread" + (isEditing ? " todo-thread--editing" : "")}
+            className={
+              "todo-thread" +
+              (isEditing ? " todo-thread--editing" : "") +
+              (draggingThreadId === source.id ? " todo-thread--dragging" : "") +
+              (dragOverThreadId === source.id && draggingThreadId !== source.id ? " todo-thread--drop-target" : "")
+            }
             data-thread-id={source.id}
             key={source.id}
           >
@@ -461,10 +558,17 @@ export function FamilyTodoThreads({
                 <h3 className="todo-thread__category">
                   <button
                     aria-expanded={menuThreadId === source.id}
-                    aria-label={`${source.label}. Klicka för fler val, tre snabba tryck för att växla flyttläge.`}
+                    aria-label={`${source.label}. Klicka för fler val, håll och dra för att flytta tråden, tre snabba tryck för att växla flyttläge.`}
                     aria-pressed={isEditing}
-                    className="todo-thread__category-button"
+                    className={
+                      "todo-thread__category-button" +
+                      (draggingThreadId === source.id ? " todo-thread__category-button--dragging" : "")
+                    }
                     onClick={(e) => handleThreadHeaderClick(source, e)}
+                    onPointerCancel={() => handleThreadPointerUp(orderedSources.map((s) => s.id))}
+                    onPointerDown={(e) => handleThreadPointerDown(e, source.id)}
+                    onPointerMove={handleThreadPointerMove}
+                    onPointerUp={() => handleThreadPointerUp(orderedSources.map((s) => s.id))}
                     type="button"
                   >
                     {source.label}

@@ -44,6 +44,8 @@ type Props = {
   familyThreadSources?: FamilyThreadSource[];
   todoBubbleOrder?: Record<Id, Id[]>;
   onReorderBubbles?: (threadId: Id, order: Id[]) => void;
+  familyThreadOrder?: Id[];
+  onReorderFamilyThreads?: (order: Id[]) => void;
   todoThreadGap?: number;
   todoBubbleSize?: number;
   // Tidsspann (2026-08-04, Zaidas fynd) — se MemberOverview.tsx.
@@ -74,7 +76,8 @@ export function HomePage({
   onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
-  familyThreadSources, todoBubbleOrder, onReorderBubbles, todoThreadGap, todoBubbleSize, todoThreadRange,
+  familyThreadSources, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
+  todoThreadGap, todoBubbleSize, todoThreadRange,
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
   members, categories, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
@@ -110,6 +113,8 @@ export function HomePage({
       familyThreadSources={familyThreadSources}
       todoBubbleOrder={todoBubbleOrder}
       onReorderBubbles={onReorderBubbles}
+      familyThreadOrder={familyThreadOrder}
+      onReorderFamilyThreads={onReorderFamilyThreads}
       todoThreadGap={todoThreadGap}
       todoBubbleSize={todoBubbleSize}
       todoThreadRange={todoThreadRange}

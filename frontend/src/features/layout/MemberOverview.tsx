@@ -87,6 +87,10 @@ type Props = {
   familyThreadSources?: FamilyThreadSource[];
   todoBubbleOrder?: Record<Id, Id[]>;
   onReorderBubbles?: (threadId: Id, order: Id[]) => void;
+  // Drag-and-drop-ordning på trådarna/kolumnerna själva (2026-08-05, Zaidas
+  // önskemål om parity med den personliga Todos-panelen).
+  familyThreadOrder?: Id[];
+  onReorderFamilyThreads?: (order: Id[]) => void;
   todoThreadGap?: number;
   todoBubbleSize?: number;
   // Tidsspann (2026-08-04, Zaidas fynd) — samma Inställningar → Utseende-
@@ -150,6 +154,8 @@ export function MemberOverview({
   familyThreadSources = [],
   todoBubbleOrder = {},
   onReorderBubbles = () => {},
+  familyThreadOrder = [],
+  onReorderFamilyThreads = () => {},
   todoThreadGap,
   todoBubbleSize,
   todoThreadRange = "today",
@@ -562,8 +568,10 @@ export function MemberOverview({
           ) : (
             <FamilyTodoThreads
               onReorderBubbles={onReorderBubbles}
+              onReorderThreads={onReorderFamilyThreads}
               range={todoThreadRange}
               sources={filteredThreadSources}
+              threadOrder={familyThreadOrder}
               todoBubbleOrder={todoBubbleOrder}
               todoBubbleSize={todoBubbleSize}
               todoThreadGap={todoThreadGap}
