@@ -10,6 +10,16 @@ const todoSchema = new Schema<Todo>({
   isShared: { type: Boolean, required: true },
   status: { type: String, enum: ["pending", "done", "approved", "rejected", "expired"], required: true },
   starValue: { type: Number, required: true },
+  // Revisionsstämplar (2026-08-05) — createdAt sätts explicit i createTodo
+  // (todosService.ts), default här är bara en självläkande reservlösning för
+  // redan existerande dokument (samma mönster som Recipe.ts:s createdAt-fix
+  // 2026-07-26 — Mongoose applicerar defaulten vid HYDRERING också, inte bara
+  // create()). updatedAt hålls alltid aktuell via pre("save") nedan — täcker
+  // samtliga ~18 .save()-anrop i todosService.ts utan att behöva sätta den
+  // manuellt i varje enskild funktion (samma klass av "glömdes i en av flera
+  // funktioner"-bugg som todoThreadGap-incidenten redan visat risken med).
+  createdAt: { type: String, default: () => new Date().toISOString() },
+  updatedAt: { type: String, default: () => new Date().toISOString() },
   visual: {
     type: { type: String, enum: ["lucide-icon", "image"], required: true },
     value: { type: String, required: true }
@@ -79,5 +89,15 @@ const todoSchema = new Schema<Todo>({
 // getAllTodos() filtrerar alltid på accountId högst upp i frågan — utan
 // index scannar MongoDB annars hela collection:en (alla konton) varje gång.
 todoSchema.index({ accountId: 1 });
+
+// Sätter updatedAt på VARJE save() — täcker complete/approve/reject/update/
+// toggleSubtask/toggleInProgress/unassignSelf/softDelete/restore m.fl. i ett
+// enda ställe, istället för att riskera att missa en (se kommentar ovan).
+// Skriver alltid över — även om ett patch-anrop av misstag skulle innehålla
+// updatedAt (går inte idag, TodoPatchSchema exkluderar det) vinner hooken.
+todoSchema.pre("save", function (next) {
+  this.updatedAt = new Date().toISOString();
+  next();
+});
 
 export const TodoModel = model<Todo>("Todo", todoSchema);

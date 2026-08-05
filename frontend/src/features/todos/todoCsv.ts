@@ -20,6 +20,12 @@ import { generateId } from "../../utils/uuid";
 // uppdatera, lägga till nya och radera de jag inte vill ha kvar längre,
 // sedan importera") — samma "Ja"-värde som Timer-kolumnen redan använder.
 // Kräver ett ifyllt Id (annars finns inget att radera) — se parseTodoCsv.
+//
+// 2026-08-05 tillagda "Skapad"/"Ändrad" (Zaidas önskemål) — RENT INFORMATIVA,
+// serverstyrda revisionsstämplar (Todo.createdAt/updatedAt). Läses ALDRIG av
+// parseTodoCsv (ingen col()-uppslagning för dem alls, se längre ner) — precis
+// som vilken okänd extra-kolumn som helst ignoreras de tyst vid import, ett
+// klistrat-in värde där kan alltså aldrig påverka en skapad/uppdaterad todo.
 export const TODO_CSV_HEADERS = [
   "Titel",
   "Emoji",
@@ -38,6 +44,8 @@ export const TODO_CSV_HEADERS = [
   "Delmoment",
   "Anteckningar",
   "Id",
+  "Skapad",
+  "Ändrad",
   "Radera"
 ] as const;
 
@@ -164,25 +172,27 @@ export function downloadCsv(filename: string, csv: string) {
 
 export function buildTemplateCsv(): string {
   const oneOff =
-    ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", "", ""];
+    ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", "", "", "", ""];
   // Enkel återkommande, en tidsruta per dag (synlig kl./försvinner kl.) —
   // det vanligaste fallet, ingen "Fler tidsrutor" eller "Slutar" behövs.
   const recurringSimple =
-    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", "2026-08-04 10:00", "2026-08-04 10:30", "", "Dag", "1", "", "", "", "", "", ""];
+    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", "2026-08-04 10:00", "2026-08-04 10:30", "", "Dag", "1", "", "", "", "", "", "", "", ""];
   // Flera tidsrutor på SAMMA mall (morgon OCH kväll) — Startdatum/Slutdatum
   // är den FÖRSTA rutan, "Fler tidsrutor" lägger till resten (samma ankardag).
   const recurringMultiWindow =
-    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-08-04 07:00", "2026-08-04 07:15", "19:00-19:15", "Dag", "1", "", "", "", "", "", ""];
+    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-08-04 07:00", "2026-08-04 07:15", "19:00-19:15", "Dag", "1", "", "", "", "", "", "", "", ""];
   // Slutar efter ett visst antal gånger (eller sätt ett datum i ÅÅÅÅ-MM-DD).
   const recurringWithEnd =
-    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", "2026-08-04 17:00", "2026-08-04 17:20", "", "Dag", "1", "", "30", "", "", "", ""];
+    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", "2026-08-04 17:00", "2026-08-04 17:20", "", "Dag", "1", "", "30", "", "", "", "", "", ""];
   // Radera (2026-08-04) — kräver ett riktigt Id från en tidigare export, en
   // helt ny rad utan Id kan aldrig raderas (det finns inget att matcha mot).
   // Den här exempelraden fungerar alltså bara som illustration i just mallen,
   // inte i en faktisk import — vid en RIKTIG radering fyller man i "Ja" på en
   // rad man redan hämtat via "Exportera mina uppgifter", med det Id:t kvar.
+  // "Skapad"/"Ändrad" (2026-08-05) tomma i mallen — de finns bara på riktiga,
+  // redan exporterade rader, en ny mall-rad har ingen historik än.
   const deleteExample =
-    ["Gammal uppgift (exempel)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-x-från-en-export", "Ja"];
+    ["Gammal uppgift (exempel)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-x-från-en-export", "", "", "Ja"];
   return [
     toCsvRow([...TODO_CSV_HEADERS]),
     toCsvRow(oneOff),
@@ -382,6 +392,10 @@ export function todosToCsv(
       subtasksToCsv(todo.subtasks),
       todo.notes ?? "",
       todo.id,
+      // Serverstyrda, rent informativa (2026-08-05) — saknas de (redan
+      // existerande, ej ommigrerade todos) blir cellen bara tom, ingen krasch.
+      isoToDateTimeDisplay(todo.createdAt ?? null),
+      isoToDateTimeDisplay(todo.updatedAt ?? null),
       // Aldrig förifylld vid export — en radering är alltid ett aktivt val
       // importören gör i kalkylarket efteråt, inte något exporten gissar.
       ""

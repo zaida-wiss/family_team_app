@@ -743,6 +743,15 @@ export type Todo = {
   accountId?: Id;
   title: string;
   createdBy: Id;
+  // Serverstyrda revisionsstämplar (2026-08-05, Zaidas önskemål: kolumner i
+  // CSV:n för när en uppgift skapades/ändrades). Valfria i typen — saknas på
+  // redan existerande, ej ommigrerade dokument tills de sparas om (Mongoose-
+  // default vid hydrering, samma självläkande mönster som Recipe.createdAt).
+  // Klienten kan aldrig sätta/ändra dem (uteslutna ur TodoPatchSchema,
+  // updatedAt skrivs alltid över servrigt vid varje .save() via ett
+  // pre("save")-hook i Todo.ts).
+  createdAt?: string;
+  updatedAt?: string;
   assignedTo: Id | null;
   isShared: boolean;
   status: TodoStatus;

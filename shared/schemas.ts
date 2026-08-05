@@ -343,7 +343,14 @@ export const TodoSchema = z.object({
   timeWindows: z.array(TodoTimeWindowSchema).optional(),
   timerEnabled: z.boolean().optional(),
   plannedDurationMinutes: z.number().int().min(1).max(480).nullable().optional(),
-  elapsedMs: z.number().int().min(0).nullable().optional()
+  elapsedMs: z.number().int().min(0).nullable().optional(),
+  // Serverstyrda, se Todo i shared/types.ts — optional() så en klient som
+  // INTE skickar dem (normalfallet) fortfarande validerar, servern sätter
+  // dem alltid själv i createTodo/via Mongoose-hooken (Todo.ts). Medvetet
+  // UTESLUTNA ur TodoPatchSchema.pick() nedan — en patch kan alltså aldrig
+  // innehålla dem.
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional()
 });
 
 // Fält en klient får patcha på en befintlig todo (titelredigering, rutinredigering via

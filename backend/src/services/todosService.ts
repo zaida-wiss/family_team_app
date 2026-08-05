@@ -654,8 +654,15 @@ export async function createTodo(data: unknown) {
   }
 
   const input = data as Partial<Todo> & { accountId: string; title: string };
+  const now = new Date().toISOString();
   const encrypted = {
     ...input,
+    // Alltid server-satta (2026-08-05) — skriver över vad klienten än må ha
+    // skickat, samma "servern äger sina egna revisionsstämplar"-princip som
+    // createdBy redan följer (ADR-0008-mönstret). updatedAt får dessutom
+    // Mongoose-hooken (Todo.ts) som ett andra skyddsnät vid varje senare save().
+    createdAt: now,
+    updatedAt: now,
     title: encryptField(input.accountId, input.title),
     rejectedReason: encryptNullable(input.accountId, input.rejectedReason) ?? null,
     notes: encryptNullable(input.accountId, input.notes) ?? null,

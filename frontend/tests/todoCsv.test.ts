@@ -231,6 +231,45 @@ describe("todoCsv", () => {
     expect(table[1][assignedCol]).toBe("Familjen");
   });
 
+  // 2026-08-05, Zaidas önskemål: "en kolumn med datum då todon skapats, samt
+  // datum då todon ändrats" — rent informativa, serverstyrda revisionsstämplar
+  // (Todo.createdAt/updatedAt), i lokal tid via samma isoToDateTimeDisplay som
+  // Startdatum/Slutdatum redan använder.
+  test("todosToCsv skriver Skapad/Ändrad i lokal tid, tomma om fälten saknas (ej ommigrerad todo)", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const withTimestamps = createTodo({
+      id: "t1", title: "Handla mat", createdBy: "mem-1",
+      createdAt: "2026-08-01T09:15:00.000Z", updatedAt: "2026-08-03T18:30:00.000Z"
+    });
+    const withoutTimestamps = createTodo({ id: "t2", title: "Städa", createdBy: "mem-1" });
+    const csv = todosToCsv([withTimestamps, withoutTimestamps], members, "mem-1", []);
+    const table = parseCsvText(csv);
+    const createdCol = table[0].indexOf("Skapad");
+    const updatedCol = table[0].indexOf("Ändrad");
+
+    const created = new Date("2026-08-01T09:15:00.000Z");
+    const updated = new Date("2026-08-03T18:30:00.000Z");
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    expect(table[1][createdCol]).toBe(fmt(created));
+    expect(table[1][updatedCol]).toBe(fmt(updated));
+    expect(table[2][createdCol]).toBe("");
+    expect(table[2][updatedCol]).toBe("");
+  });
+
+  // Skapad/Ändrad är rent informativa vid export — en importerad/klistrad-in
+  // cell där ska ALDRIG kunna påverka den skapade/uppdaterade todon, samma
+  // "okänd extra kolumn ignoreras tyst"-princip som gäller vilken annan
+  // ovan definierad kolumn som helst.
+  test("parseTodoCsv: Skapad/Ändrad-kolumnerna ignoreras helt vid import, oavsett innehåll", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = "Titel,Skapad,Ändrad\r\nDiska,2020-01-01 00:00,vad-som-helst\r\n";
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe("Diska");
+  });
+
   test("parseTodoCsv: en tom Tilldelad-cell använder defaultAssignee (null för familje-import)", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = "Titel,Tilldelad\r\nDiska,\r\n";
