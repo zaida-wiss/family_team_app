@@ -39,6 +39,7 @@ describe.skipIf(!RUN)("createTodo: spärrar spök-occurrences", () => {
     createdBy: "mem-1",
     assignedTo: "mem-1",
     isShared: false,
+    status: "pending" as const,
     starValue: 0,
     visual: { type: "lucide-icon" as const, value: "Star" },
     occurrenceDate: "2026-08-05",
