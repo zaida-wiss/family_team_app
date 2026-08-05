@@ -106,7 +106,7 @@ test("Inköp-panelen: ett delat listkort visas med endast-visning-läge när acc
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
   await expect(page.getByText("Annans familjelista")).toBeVisible();
   await expect(page.getByText("Mjölk")).toBeVisible();
@@ -138,7 +138,7 @@ test("Inköp-panelen: lägger till en vara i en delad lista med edit-åtkomst", 
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
   await expect(page.getByText("Delad lista")).toBeVisible();
   await page.getByPlaceholder("Lägg till vara").fill("Ost");

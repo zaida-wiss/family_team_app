@@ -396,14 +396,17 @@ export function MemberOverview({
             </label>
           )}
           {memberRow}
-          <div className={styles.tabRow} role="tablist">
+          <div aria-label="Hem-vyns sektioner" className={styles.tabRow} role="tablist">
             {tabs.map(({ key, label, icon: Icon }) => (
               <button
+                aria-controls={`home-panel-${key}`}
                 aria-label={label}
-                aria-pressed={activeTab === key}
+                aria-selected={activeTab === key}
                 className={`${styles.tabButton} ${activeTab === key ? styles.tabButtonActive : ""}`}
+                id={`home-tab-${key}`}
                 key={key}
                 onClick={() => setActiveTab(key)}
+                role="tab"
                 title={label}
                 type="button"
               >
@@ -417,7 +420,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "calendar" && canSeeCalendar && (
-        <div className={styles.calendarWrap}>
+        <div aria-labelledby="home-tab-calendar" className={styles.calendarWrap} id="home-panel-calendar" role="tabpanel" tabIndex={0}>
           <div className={styles.calendarToolbar}>
             <span className={styles.calendarLabel}>Familjens kalender</span>
           </div>
@@ -439,7 +442,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "todos" && canSeeTodos && (
-        <article className="dashboard">
+        <article aria-labelledby="home-tab-todos" className="dashboard" id="home-panel-todos" role="tabpanel" tabIndex={0}>
           {/* "+" (ny familjekategori) + import/export (2026-08-03, sökruta/
               titel/väntar-antal/Öppna-knapp borttagna 2026-08-04, Zaidas
               önskemål: "lägg ikonerna... och knapparna... bredvid varandra.
@@ -578,7 +581,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "shopping" && canSeeShopping && (
-        <article className="dashboard">
+        <article aria-labelledby="home-tab-shopping" className="dashboard" id="home-panel-shopping" role="tabpanel" tabIndex={0}>
           <header className="section-header">
             <div><p className="eyebrow">Inköp</p><h2>{activeLists.length} listor</h2></div>
             {onOpenShopping && (
@@ -655,7 +658,7 @@ export function MemberOverview({
 
       {effectiveTab === "mealplan" && (
         isOwnFamilySelected ? (
-          <article className="dashboard">
+          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" role="tabpanel" tabIndex={0}>
             <header className="section-header">
               <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
             </header>
@@ -671,7 +674,7 @@ export function MemberOverview({
           // Todos-flikens signa-upp-gest. ALDRIG en Familjeanslutning (Zaidas
           // rättelse: "man måste först göra en familj med dessa familjer
           // som medlemmar").
-          <article className="dashboard">
+          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" role="tabpanel" tabIndex={0}>
             <header className="section-header">
               <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
             </header>
@@ -681,7 +684,7 @@ export function MemberOverview({
             />
           </article>
         ) : (
-          <article className="dashboard">
+          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" role="tabpanel" tabIndex={0}>
             <header className="section-header">
               <div><p className="eyebrow">Måltidsplanering</p><h2>Inte tillgängligt</h2></div>
             </header>

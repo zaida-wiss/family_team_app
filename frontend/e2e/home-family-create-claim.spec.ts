@@ -80,7 +80,7 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
@@ -150,7 +150,7 @@ test("Hem-vyns Inköp-flik: ny lista, förinställd på vald familj — bara ege
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
   const familyFilter = page.locator("#home-family-select");
   await familyFilter.selectOption({ label: "Familjen A" });

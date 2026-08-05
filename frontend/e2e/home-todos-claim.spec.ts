@@ -53,7 +53,7 @@ test("Hem-vyns Todos-flik: signar upp sig på en Familjen-todo via dubbeltryck, 
   await page.goto("/");
   // Todos ligger bakom en flik i Hem (2026-07-31) — inte synligt förrän man
   // klickar ikonen bredvid familjeväljaren.
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   // Hem: Familjen-todon syns som en boll, den privata gör det inte.
   const homeTodosCard = page.locator("article.dashboard").filter({ has: page.locator(".todo-thread-view") });
@@ -102,7 +102,7 @@ test("Hem-vyns familjebubblor är samma storlek som Todos-panelens egna, inte de
   const personalBox = await page.locator(".todo-thread__ball").first().boundingBox();
 
   await page.getByRole("button", { name: "Hem", exact: true }).click();
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
   const familyBox = await page.locator(".todo-thread__ball").first().boundingBox();
 
   expect(familyBox?.width).toBe(personalBox?.width);
@@ -134,7 +134,7 @@ test("Hem-vyns familjetodo: en kvällsuppgift döljs innan sitt klockslag, dyker
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   const homeTodosCard = page.locator("article.dashboard").filter({ has: page.locator(".todo-thread-view") });
   await expect(homeTodosCard.getByText("Kvällsrutiner")).toHaveCount(0);

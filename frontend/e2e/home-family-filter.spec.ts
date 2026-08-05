@@ -85,7 +85,7 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
 
   // Todos ligger bakom en flik (2026-07-31) — inte synligt förrän man
   // klickar ikonen bredvid familjeväljaren.
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
@@ -130,7 +130,7 @@ test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", a
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.locator("#home-family-select")).toHaveCount(0);
 });

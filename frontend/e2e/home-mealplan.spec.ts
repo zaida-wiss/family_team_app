@@ -26,7 +26,7 @@ test("Måltidsplanering: lägga till och ta bort ett recept för en dag+måltid"
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa måltidsplanering" }).click();
+  await page.getByRole("tab", { name: "Visa måltidsplanering" }).click();
 
   await expect(page.getByText("Inga recept ännu")).toHaveCount(0);
 
@@ -68,7 +68,7 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa måltidsplanering" }).click();
+  await page.getByRole("tab", { name: "Visa måltidsplanering" }).click();
   const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
 

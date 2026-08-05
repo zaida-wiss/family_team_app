@@ -145,11 +145,11 @@ test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett kontob
   await page.goto("/");
 
   // Todos/Inköp ligger var sin flik (2026-07-31) — inte synliga samtidigt.
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).not.toBeVisible();
 
-  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
   await expect(page.getByText("Veckohandling A")).toBeVisible();
 
   await page.getByRole("button", { name: /Byt vy/ }).click();
@@ -158,14 +158,14 @@ test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett kontob
   // Hela Shell remountas vid ett kontobyte (key={member.id}) — Hem-vyns
   // fliksval är lokal state och återgår till standard (kalender), måste
   // väljas igen.
-  await page.getByRole("button", { name: "Visa inköpslista" }).click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
   // Ingen kvarbliven cache från Familjen A — den gamla listan ska inte
   // synas efter bytet, ens innan den färska hämtningen landar.
   await expect(page.getByText("Veckohandling B")).toBeVisible();
   await expect(page.getByText("Veckohandling A")).not.toBeVisible();
 
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expect(page.getByText("Handla mjölk")).not.toBeVisible();
 });

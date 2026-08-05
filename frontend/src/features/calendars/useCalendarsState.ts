@@ -62,14 +62,20 @@ export function useCalendarsState() {
   const loadedUntil = useRef<string>("");
 
   useEffect(() => {
-    // Skjuts upp till efter första målningen (2026-07-26, prestandaomgången
-    // S1a) — se deferToIdle.ts.
+    // Egna kalendrar hämtas OMEDELBART, inte uppskjutet (2026-08-05,
+    // uppföljning av S1a: en produktions-Lighthouse-körning visade LCP-
+    // elementet — kalenderns händelsetext på Hem-vyns förvalda flik —
+    // fördröjt 4,6s eftersom `getAll` konkurrerade jämnt om
+    // requestIdleCallback med tio andra, inte förstamålning-kritiska
+    // hämtningar (recept/mallar/roller/belöningar m.fl.). Cross-account/
+    // Familjeanslutnings-kalendrar är fortsatt uppskjutna — kompletterande
+    // data, aldrig ensamma källan till det synliga förstaintrycket.
     const now = new Date();
     const { from, until } = monthWindow(now.getFullYear(), now.getMonth());
     loadedFrom.current = from;
     loadedUntil.current = until;
+    calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
     deferToIdle(() => {
-      calendarsApi.getAll(from, until).then(setCalendars).catch(console.error);
       calendarsApi.getCrossAccount(from, until).then(setCrossAccountCalendars).catch(console.error);
       calendarsApi.getConnectionCalendars(from, until).then(setConnectionCalendars).catch(console.error);
     });

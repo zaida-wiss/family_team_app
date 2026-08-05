@@ -82,7 +82,7 @@ test("Hem-vyns Todos-flik: skapa en familjekategori och dess första uppgift i s
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   // Skapa en ny familjekategori OCH dess första uppgift i samma formulär
   // via "+"-knappen — knappen är avstängd tills båda fälten är ifyllda.
@@ -141,7 +141,7 @@ test("Hem-vyns Todos-flik: massradering av familjens uppgifter kräver en tvåst
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   const familyThreadHeader = page.getByRole("button", { name: /^Familjen\./ });
   await familyThreadHeader.click();
@@ -198,7 +198,7 @@ test("Hem-vyns Todos-flik: en tom familjekategori döljs alltid, oavsett om den 
   await page.route("**/api/todos", (route) => route.fulfill({ json: [oldTodoInClearedCategory] }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa todos" }).click();
+  await page.getByRole("tab", { name: "Visa todos" }).click();
 
   await expect(page.getByRole("button", { name: /^Ny\./ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Tömd\./ })).toHaveCount(0);
