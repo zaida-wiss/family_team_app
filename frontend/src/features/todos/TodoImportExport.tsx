@@ -7,6 +7,7 @@ import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type ParsedTod
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { getAssigneeName, getVisibleTodos, groupByChildAssignee, isChildMember } from "./selectors";
 import { describeRecurrence, describeRecurrenceEnd } from "./recurringTodos";
+import { canDeleteTodo, canEditTodo } from "../../utils/permissions";
 import { TodoEditModal } from "./TodoEditModal";
 import { useCrossAccountFamilyTodos } from "./useCrossAccountFamilyState";
 import { useConnectionTodos } from "../accounts/useFamilyConnectionsState";
@@ -373,12 +374,21 @@ export function TodoImportExport({
       const prepared: PreparedRow[] = [];
       for (const row of rows) {
         if (row.deleteRow) {
+          // Matchar mot canDeleteTodo (samma funktion servern/softDeleteTodo
+          // faktiskt använder, @shared/permissions) istället för ett eget,
+          // för snävt villkor (2026-08-05, Zaidas fynd: en admin med
+          // canDeleteAnyTodos kunde ändå inte radera andra familjemedlemmars
+          // uppgifter via CSV — bara EGNA/tilldelade-mig matchade tidigare,
+          // så raden hittades aldrig ens innan behörighetskontrollen fick
+          // chansen att godkänna den). Familje-scope (isFamilyScope) förbi
+          // rakt av, precis som tidigare — todos-propen är redan
+          // familje-scopad av anroparen där.
           const existing = row.sourceId
             ? todos.find(
                 (t) =>
                   t.id === row.sourceId &&
                   t.deletedAt === null &&
-                  (isFamilyScope || t.assignedTo === currentMember.id || t.createdBy === currentMember.id)
+                  (isFamilyScope || canDeleteTodo(currentMember, roles, t))
               )
             : undefined;
           if (existing) {
@@ -411,11 +421,22 @@ export function TodoImportExport({
       // uppgift skapas — måste ske i tur och ordning (inte i steg 3:s
       // parallella buntar) så inte två rader med samma nya kategorinamn
       // råkar skapa varsin dubblettkategori av misstag.
-      for (const { row } of prepared) {
+      //
+      // isFamily avgörs PER RAD (2026-08-05, Zaidas fynd: 163 av 176
+      // Familjen-tilldelade uppgifter var osynliga i familjevyn eftersom en
+      // ny kategori skapad via DEN PERSONLIGA importen alltid blev
+      // isFamily:false, oavsett att raden själv var tilldelad "Familjen")
+      // — inte bara isFamilyScope (som bara är sant i Hem-vyns EGEN
+      // familje-import). Ett nytt kategorinamn som FÖRSTA gången används av
+      // en Familjen-rad blir alltså en familjekategori även i den personliga
+      // importen; används samma namn av flera rader med olika mottagare
+      // vinner den FÖRSTA radens val (samma "en gång per namn"-princip som
+      // redan gäller för själva skapandet).
+      for (const { row, assignedTo } of prepared) {
         if (!row.personalCategoryId && row.newCategoryName) {
           const key = row.newCategoryName.toLowerCase();
           if (!createdCategoryIds.has(key)) {
-            const category = await onCreateCategory(row.newCategoryName, isFamilyScope);
+            const category = await onCreateCategory(row.newCategoryName, isFamilyScope || assignedTo === null);
             createdCategoryIds.set(key, category.id);
           }
         }
@@ -447,18 +468,23 @@ export function TodoImportExport({
           row.personalCategoryId ??
           (row.newCategoryName ? createdCategoryIds.get(row.newCategoryName.toLowerCase()) ?? null : null);
 
-        // Matchar mot en egen, ej raderad todo med samma Id — annars
-        // skapas en ny (samma fallback som om Id-kolumnen saknas helt,
-        // t.ex. en mall). I familje-scope är `todos`-propen redan
-        // familje-scopad av anroparen (2026-08-03) — ingen extra
-        // assignedTo/createdBy-koll behövs där, till skillnad från den
+        // Matchar mot en egen, redigerbar, ej raderad todo med samma Id —
+        // annars skapas en ny (samma fallback som om Id-kolumnen saknas
+        // helt, t.ex. en mall). Använder canEditTodo (samma funktion servern
+        // faktiskt kontrollerar, @shared/permissions) istället för ett eget,
+        // för snävt villkor (2026-08-05, samma fynd/fix som radera-raden
+        // ovan) — en admin med canEditAnyTodos kunde annars inte uppdatera
+        // en annan familjemedlems uppgift via CSV; rad matchades aldrig,
+        // skapade tyst en DUBBLETT istället för att uppdatera originalet. I
+        // familje-scope är `todos`-propen redan familje-scopad av anroparen
+        // (2026-08-03) — ingen extra koll behövs där, till skillnad från den
         // personliga varianten, vars `todos`-prop är HELA kontots lista.
         const existing = row.sourceId
           ? todos.find(
               (t) =>
                 t.id === row.sourceId &&
                 t.deletedAt === null &&
-                (isFamilyScope || t.assignedTo === currentMember.id || t.createdBy === currentMember.id)
+                (isFamilyScope || canEditTodo(currentMember, roles, t))
             )
           : undefined;
 

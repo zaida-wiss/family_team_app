@@ -37,8 +37,10 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   // 2026-08-03: Fler tidsrutor (Todo.timeWindows) + Slutar (RecurrenceEnd)
   // tillagda — tidsbegränsade återkommande uppgifter helt från kalkylark.
   // 2026-08-04: Radera tillagd — massradera via en ifylld kolumn i mallen.
+  // 2026-08-05: Skapad/Ändrad tillagda — rent informativa, serverstyrda
+  // revisionsstämplar (Todo.createdAt/updatedAt), aldrig lästa vid import.
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Radera"
+    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Skapad,Ändrad,Radera"
   );
 });
 
@@ -134,9 +136,11 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   const lines = text.split(/\r?\n/);
   // 2026-08-03: två nya tomma kolumner (Fler tidsrutor/Slutar) tillkom mellan
   // Slutdatum/Återkommer respektive Veckodagar/Delmoment. 2026-08-04: en ny
-  // tom Radera-kolumn sist (aldrig förifylld vid export).
+  // tom Radera-kolumn sist (aldrig förifylld vid export). 2026-08-05: Skapad/
+  // Ändrad — TODO-fixturen saknar createdAt/updatedAt (gammal mock utan de
+  // nya fälten), blir alltså tomma celler precis som en ej ommigrerad todo.
   expect(lines[1]).toBe(
-    ["Min uppgift", "Star", "Mig själv", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-1", ""].join(",")
+    ["Min uppgift", "Star", "Mig själv", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-1", "", "", ""].join(",")
   );
 });
 
@@ -192,10 +196,11 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
   const expectedStart = `${localStart.getFullYear()}-${pad(localStart.getMonth() + 1)}-${pad(localStart.getDate())} ${pad(localStart.getHours())}:${pad(localStart.getMinutes())}`;
   // 2026-08-03: två nya tomma kolumner (Fler tidsrutor/Slutar) tillkom mellan
   // Slutdatum/Återkommer respektive Veckodagar/Delmoment. 2026-08-04: en ny
-  // tom Radera-kolumn sist (aldrig förifylld vid export).
+  // tom Radera-kolumn sist (aldrig förifylld vid export). 2026-08-05: Skapad/
+  // Ändrad — fixturen saknar createdAt/updatedAt, blir tomma celler.
   expect(exportedCsv.split(/\r?\n/)[1]).toBe(
     [
-      "Träna", "Star", "Mig själv", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "", "todo-1", ""
+      "Träna", "Star", "Mig själv", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "", "todo-1", "", "", ""
     ].join(",")
   );
 
@@ -456,10 +461,151 @@ test("Todos-import/export: Radera=Ja på en uppgift jag INTE skapat (bara tillde
     buffer: Buffer.from(csv, "utf-8")
   });
 
-  // Behörigheten blockerar INNAN något nätverksanrop görs.
+  // Behörigheten blockerar INNAN något nätverksanrop görs — matchar nu mot
+  // canDeleteTodo redan i existing-uppslagningen (2026-08-05, samma dags
+  // uppföljande fix), inte bara i onDeleteTodo/softDeleteTodo — så raden
+  // hamnar i "hittade ingen"-grenen, inte "kunde inte raderas"-grenen.
   expect(deleteCalled).toBe(false);
   await expect(page.getByText("0 uppgifter importerade.")).toBeVisible();
-  await expect(page.getByText(/Skapad av någon annan.*kunde inte raderas/)).toBeVisible();
+  await expect(page.getByText(/Skapad av någon annan.*hittade ingen egen uppgift/)).toBeVisible();
+});
+
+// 2026-08-05, Zaidas fynd (uppföljning av testet ovan): en ADMIN med
+// canDeleteAnyTodos/canEditAnyTodos kunde ändå inte radera/uppdatera en
+// annan familjemedlems uppgift via CSV — existing-uppslagningen i
+// TodoImportExport.tsx krävde tidigare ALLTID assignedTo===mig ELLER
+// createdBy===mig, oavsett behörighet. Fixat till att återanvända
+// canDeleteTodo/canEditTodo (samma funktion servern faktiskt kontrollerar).
+// mockAuthAndData:s default-roll har redan canDeleteAnyTodos/canEditAnyTodos
+// satta till true, så inget rollöverskrivande behövs här (till skillnad från
+// testet ovan).
+test("Todos-import/export: en admin med canDeleteAnyTodos kan radera en annan familjemedlems uppgift via CSV", async ({ page }) => {
+  const NOT_MY_TODO = {
+    id: "todo-not-mine", accountId: "acc-1", title: "Skapad av Lars", createdBy: "mem-lars",
+    assignedTo: "mem-lars", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  let deleteCalled = false;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [NOT_MY_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-not-mine", (route) => {
+    if (route.request().method() === "DELETE") deleteCalled = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await openImportExportSettings(page);
+
+  // "Mig själv" i Tilldelad-kolumnen (inte "Lars") — mockAuthAndData:s
+  // standardmock har bara EN medlem, och deleteRow-grenen läser ändå aldrig
+  // assignedTo (kortsluter innan den når fram) — det avgörande är att
+  // NOT_MY_TODO:s createdBy är någon ANNAN, inte vad raden själv anger.
+  const csv = ["Titel,Tilldelad,Id,Radera", "Skapad av Lars,Mig själv,todo-not-mine,Ja"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect.poll(() => deleteCalled).toBe(true);
+  await expect(page.getByText("0 uppgifter importerade, 1 uppgift raderade.")).toBeVisible();
+});
+
+// Samma bugg fanns i uppdaterings-matchningen (canEditTodo istället för
+// canDeleteTodo) — en admin kunde inte uppdatera en annan familjemedlems
+// uppgift via ett matchande Id, skapade tyst en DUBBLETT istället.
+test("Todos-import/export: en admin med canEditAnyTodos uppdaterar (inte duplicerar) en annan familjemedlems uppgift via CSV", async ({ page }) => {
+  const NOT_MY_TODO = {
+    id: "todo-not-mine", accountId: "acc-1", title: "Gammal titel", createdBy: "mem-lars",
+    assignedTo: "mem-lars", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  };
+  let patchedBody: Record<string, unknown> | null = null;
+  let postCalled = false;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [NOT_MY_TODO] });
+    if (route.request().method() === "POST") {
+      postCalled = true;
+      return route.fulfill({ status: 201, json: { id: "todo-should-not-be-created" } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-not-mine", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedBody = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  // "Mig själv" (inte "Lars") — mockAuthAndData:s standardmock har bara EN
+  // medlem, och Tilldelad-cellens värde här påverkar bara vad PATCH:en
+  // sätter, inte om existing hittas (det avgörs av NOT_MY_TODO:s createdBy).
+  const csv = ["Titel,Tilldelad,Id,Radera", "Ny titel,Mig själv,todo-not-mine,"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect.poll(() => patchedBody?.title).toBe("Ny titel");
+  expect(postCalled).toBe(false);
+  // "importerade" räknar bara NYSKAPADE rader (result.created) — en ren
+  // uppdatering visar "0 uppgifter importerade, 1 uppgift uppdaterade."
+  await expect(page.getByText("0 uppgifter importerade, 1 uppgift uppdaterade.")).toBeVisible();
+});
+
+// 2026-08-05, Zaidas fynd: en ny kategori skapad av en Familjen-tilldelad
+// rad, via den PERSONLIGA importen (Inställningar, isFamilyScope=false),
+// blev tidigare alltid en personlig kategori — 163 av hennes 176 Familjen-
+// uppgifter var osynliga i familjevyn av just det skälet. Ny kategori
+// skapad av en Familjen-rad ska bli en familjekategori även här.
+test("Todos-import/export: en ny kategori skapad av en Familjen-rad (personlig import) blir en familjekategori, inte personlig", async ({ page }) => {
+  let createdIsFamily: boolean | undefined;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as { name: string; isFamily?: boolean };
+      createdIsFamily = body.isFamily;
+      return route.fulfill({
+        status: 201,
+        json: { id: "cat-new", accountId: "acc-1", memberId: "mem-1", name: body.name, isFamily: body.isFamily ?? false, createdAt: new Date().toISOString(), deletedAt: null, deletedBy: null }
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    return route.fulfill({ status: 201, json: { id: "todo-new" } });
+  });
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Egen kategori", "Städa köket,Familjen,Hushåll"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  expect(createdIsFamily).toBe(true);
 });
 
 // 2026-07-07 (Zaidas resonemang om att dela listor mellan familjer): ett
