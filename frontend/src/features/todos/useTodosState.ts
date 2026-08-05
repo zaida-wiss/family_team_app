@@ -304,7 +304,17 @@ export function useTodosState(fixedTodoTimes = false) {
   // men ingen hade kopplat det till radering tidigare. Raderar man mallen
   // (recurringSourceId===null, recurrence.type!=="none") tas nu även alla
   // dess ännu ej raderade occurrences bort i samma svep.
-  function softDeleteTodo(todoId: Id, member: Member, roles: Role[]) {
+  // Returnerar nu ett promise som avslöjar lyckat/misslyckat (2026-08-05,
+  // Zaidas fynd: en stor CSV-massradering via Radera-kolumnen gav
+  // "net::ERR_INSUFFICIENT_RESOURCES" — den anropande koden (TodoImportExport.tsx:s
+  // runImport) körde tidigare denna funktion helt osynkroniserat rad för
+  // rad, samma "skicka-och-glöm"-fälla som redan fixades för skapande/
+  // uppdatering 2026-08-04, men aldrig applicerad på radering. En radering
+  // kan påverka FLERA todos samtidigt (en återkommande mall + dess redan
+  // genererade dagens-occurrence, cascade-raderas ihop) — Promise.all
+  // väntar in alla, `ok` är sant bara om SAMTLIGA lyckades.
+  function softDeleteTodo(todoId: Id, member: Member, roles: Role[]): Promise<{ ok: boolean }> {
+    const requests: Promise<boolean>[] = [];
     setTodos((current) => {
       const target = current.find((t) => t.id === todoId);
       const isRecurringTemplate =
@@ -318,7 +328,15 @@ export function useTodosState(fixedTodoTimes = false) {
           return todo;
         }
 
-        todosApi.remove(todo.id).catch(console.error);
+        requests.push(
+          todosApi.remove(todo.id).then(
+            () => true,
+            (error) => {
+              console.error(error);
+              return false;
+            }
+          )
+        );
         return {
           ...todo,
           deletedAt: new Date().toISOString(),
@@ -326,6 +344,7 @@ export function useTodosState(fixedTodoTimes = false) {
         };
       });
     });
+    return Promise.all(requests).then((results) => ({ ok: results.every(Boolean) }));
   }
 
   function restoreTodo(todoId: Id) {

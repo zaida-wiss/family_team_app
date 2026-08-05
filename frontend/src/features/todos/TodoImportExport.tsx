@@ -31,7 +31,12 @@ type Props = {
   // skapandet/uppdateringen den ska ångra ens sparats där.
   onCreateTodo: (todo: Todo) => Promise<unknown> | void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => Promise<unknown> | void;
-  onDeleteTodo: (todoId: Id) => void;
+  // Returnerar nu också ett promise (2026-08-05, Zaidas fynd: en stor
+  // massradering via CSV:ns Radera-kolumn gav "net::ERR_INSUFFICIENT_RESOURCES"
+  // — samma skicka-och-glöm-fälla som redan fixades för skapande/uppdatering
+  // 2026-08-04, missad för radering. runImport väntar nu in varje
+  // Radera-rad också, precis som skapande/uppdatering.
+  onDeleteTodo: (todoId: Id) => Promise<unknown> | void;
   onCreateCategory: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
   // Behövs bara för den samlade visa+redigera-tabellen nedan (2026-08-04,
   // Zaidas önskemål: "se alla samlade todos som jag både kan visa och
@@ -353,13 +358,17 @@ export function TodoImportExport({
       const errors = [...parseErrors];
 
       // Steg 1: radera-rader och assignee-olösta hoppas över/hanteras
-      // direkt (sekventiellt, ingen anledning att parallellisera radering).
-      // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos,
-      // uppdatera, lägga till nya och radera de jag inte vill ha kvar
-      // längre, sedan importera") — samma matchningsregel som en vanlig
-      // uppdatering (Id + ägarskap/scope), men raderar istället för att
-      // patcha. Ingen Ångra-spårning (se ImportResult-kommentaren i
-      // useTodosState.ts) — landar i den vanliga papperskorgen.
+      // direkt, ETT I TAGET (2026-08-05, Zaidas fynd: en stor massradering
+      // gav "net::ERR_INSUFFICIENT_RESOURCES" — onDeleteTodo anropades
+      // tidigare oväntat, alla rader på en gång i en synkron loop, samma
+      // skicka-och-glöm-fälla som redan fixades för skapande/uppdatering
+      // 2026-08-04 men missades här). Radera (2026-08-04, Zaidas önskemål:
+      // "ladda ner alla todos, uppdatera, lägga till nya och radera de jag
+      // inte vill ha kvar längre, sedan importera") — samma matchningsregel
+      // som en vanlig uppdatering (Id + ägarskap/scope), men raderar
+      // istället för att patcha. Ingen Ångra-spårning (se
+      // ImportResult-kommentaren i useTodosState.ts) — landar i den vanliga
+      // papperskorgen.
       type PreparedRow = { row: ParsedTodoRow; assignedTo: Id | null };
       const prepared: PreparedRow[] = [];
       for (const row of rows) {
@@ -373,7 +382,11 @@ export function TodoImportExport({
               )
             : undefined;
           if (existing) {
-            onDeleteTodo(existing.id);
+            const result = await onDeleteTodo(existing.id);
+            if (isFailure(result)) {
+              errors.push(`Rad markerad Radera ("${row.title}"): kunde inte raderas — försök igen.`);
+              continue;
+            }
             deleted++;
           } else {
             errors.push(

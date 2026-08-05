@@ -337,6 +337,67 @@ test("Todos-import/export: Radera=Ja utan ett matchande Id visar ett tydligt fel
   expect(deleteCalled).toBe(false);
 });
 
+// 2026-08-05, Zaidas fynd: en stor massradering via Radera-kolumnen gav
+// "net::ERR_INSUFFICIENT_RESOURCES" — onDeleteTodo anropades tidigare helt
+// osynkroniserat (skicka-och-glöm), så en fil med många Radera=Ja-rader
+// sköt iväg lika många parallella DELETE-anrop på en gång i en synkron
+// loop, exakt samma buggklass som redan fixats för skapande/uppdatering
+// 2026-08-04. Verifierar att rad 2:s DELETE inte skickas förrän rad 1:s
+// svar faktiskt landat (sekventiellt, samma mönster som den redan
+// existerande "en stor import väntar in varje rads POST"-testet).
+test("Todos-import/export: flera Radera=Ja-rader raderas en i taget, inte alla samtidigt", async ({ page }) => {
+  const makeTodo = (id: string, title: string) => ({
+    id, accountId: "acc-1", title, createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null
+  });
+  const TODOS = [makeTodo("todo-a", "Uppgift A"), makeTodo("todo-b", "Uppgift B")];
+
+  // Mäter TOPPEN av samtidiga in-flight DELETE-anrop direkt (istället för
+  // att bara jämföra ankomstordning, som visade sig opålitligt — Playwrights
+  // egen CDP-baserade route-hantering kan i sig introducera tillräcklig
+  // fördröjning mellan två i praktiken SAMTIDIGT avfyrade anrop för att en
+  // ordningsbaserad koll av misstag ska se "sekventiellt" ut även i den
+  // trasiga, oväntade koden — en direkt räknare av hur många som var
+  // PÅGÅENDE samtidigt är ett robustare, tidsoberoende mått).
+  let inFlight = 0;
+  let peakInFlight = 0;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: route.request().method() === "GET" ? TODOS : {} }));
+  await page.route("**/api/todos/*", async (route) => {
+    if (route.request().method() !== "DELETE") return route.fulfill({ json: {} });
+    inFlight++;
+    peakInFlight = Math.max(peakInFlight, inFlight);
+    // En liten, riktig fördröjning ger den trasiga (skicka-och-glöm) koden
+    // gott om tid att hinna avfyra rad 2:s anrop INNAN rad 1:s svar landar,
+    // om den skulle göra det — annars kunde ett race missas av en slump.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    inFlight--;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await openImportExportSettings(page);
+
+  const csv = [
+    "Titel,Tilldelad,Id,Radera",
+    "Uppgift A,Mig själv,todo-a,Ja",
+    "Uppgift B,Mig själv,todo-b,Ja"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("0 uppgifter importerade, 2 uppgifter raderade.")).toBeVisible();
+  expect(peakInFlight).toBe(1);
+});
+
 // 2026-07-07 (Zaidas resonemang om att dela listor mellan familjer): ett
 // okänt namn kan mappas till en RIKTIG medlem i importörens egen familj,
 // istället för att bara hoppas över.
