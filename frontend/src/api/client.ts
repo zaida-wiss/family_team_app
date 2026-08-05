@@ -142,7 +142,24 @@ async function fetchEventStream(path: string, signal: AbortSignal) {
   // refresh-förfrågan (med samma, redan-om-att-roteras cookie) kan då
   // nekas — exakt det race:et deduped-varianten redan förhindrar för
   // vanliga API-anrop.
-  await refreshSessionOnce();
+  //
+  // Loggar ut vid en GENUINT misslyckad refresh (2026-08-05, Zaidas fynd:
+  // todos/events fortsatte visa 401 om och om igen, aldrig återhämtad) —
+  // den vanliga request()-vägens retryAfterRefresh gör redan detta (fångar
+  // ett fel från refreshSessionOnce(), returnerar null, vilket får
+  // handleUnauthorized att logga ut via onUnauthorized()). Denna SSE-väg
+  // saknade helt motsvarande fallback — ett äkta ogiltigt/utgånget
+  // refresh-token (inte bara ett race mot ett annat samtidigt anrop) fick
+  // reconnect-loopen (connect() nedan) att bara fortsätta försöka om och om
+  // igen i all evighet med exponentiell backoff, utan att någonsin trigga
+  // samma utloggning som ett vanligt API-anrop redan hade gjort — appen
+  // "hängde" tyst istället för att visa inloggningsformuläret igen.
+  try {
+    await refreshSessionOnce();
+  } catch {
+    onUnauthorized?.();
+    throw new Error("Sessionen kunde inte förnyas");
+  }
   return fetch(path, { headers: buildHeaders(), credentials: "include", signal });
 }
 
