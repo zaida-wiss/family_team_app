@@ -467,7 +467,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Ikonen fyller toppen av bubblan (2026-08-07, Zaidas önskemål) — ankrad
+     uppåt istället för vertikalt centrerad som ett helt block, gäller min
+     egen todo OCH familjens todo (samma delade klass, .todo-thread__ball
+     resp. --home). Barnens bubblor (--small, Barn-tråden) undantagna
+     nedan — "perfekt och skall inte ändras". En bubbla helt utan ikon
+     (:not(:has(...))) förblir centrerad, annars hade titeln själv
+     hamnat överst istället. */
+  justify-content: flex-start;
   gap: 1px;
   /* Skalar med --ball-size (se .todo-thread-view), golvat på 80px — klart
      över minsta tillåtna touch-mål (44px), se touch-first-principen i
@@ -506,6 +513,13 @@
   -webkit-user-select: none;
 }
 
+/* En bubbla utan vald ikon (todo.visual.value tomt) har ingen
+   .todo-thread__ball-icon-span alls — då ska titeln fortsatt vara
+   vertikalt centrerad som tidigare, inte hamna klistrad överst. */
+.todo-thread__ball:not(:has(.todo-thread__ball-icon)) {
+  justify-content: center;
+}
+
 /* Hem-vyns familjefliks bubblor (2026-08-01, Zaidas önskemål: "bollar i
    familjevyns todo, precis som i min egen, men andra färger i temat") —
    samma såpbubbel-mekanik som huvudbollen ovan, men blandad ur den ANDRA
@@ -542,6 +556,10 @@
   width: var(--ball-size-small);
   height: var(--ball-size-small);
   padding: 2px;
+  /* Barnens bubblor (Barn-tråden) är "perfekt och skall inte ändras"
+     (2026-08-07) — behåller sin ursprungliga centrerade layout, inte den
+     nya "ikonen fyller toppen"-ankringen ovan. */
+  justify-content: center;
 }
 
 .todo-thread__ball--small .todo-thread__ball-title {
@@ -651,7 +669,10 @@
    kontext). Golv/tak-gränserna är kvar som en säkerhetsmarginal mot extrema
    reglage-värden (64–160px), inte den huvudsakliga skalningen längre. */
 .todo-thread__ball-icon {
-  font-size: clamp(1.1rem, calc(var(--ball-size) * 0.24), 2.2rem);
+  /* Fyller toppen av bubblan (2026-08-07) — större andel av --ball-size än
+     tidigare, alltid procentuellt räknad ur --ball-size (inte fasta rem/vw)
+     så den fortsatt skalar följsamt med "Bubblornas storlek"-reglaget. */
+  font-size: clamp(1.6rem, calc(var(--ball-size) * 0.4), 3.4rem);
   line-height: 1;
 }
 
