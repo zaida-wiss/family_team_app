@@ -244,11 +244,24 @@ export function useCalendarView(
       editableCalendars.find((cal) => cal.ownerId === focusMemberId) ??
       editableCalendars.find((cal) => cal.ownerId === currentMember.id) ??
       editableCalendars[0];
-    setForm(blankForm({
-      calendarId: defaultCalendar.id,
-      startsAt: `${base}T09:00`,
-      endsAt: `${base}T10:00`,
-    }));
+    // Starttid: den aktuella tiden när +-knappen trycktes, sluttid 1h senare
+    // (2026-08-07, Zaidas önskemål) — bara när INGEN specifik dag valdes
+    // (den vanliga +-knappen, defaultar redan till dagens datum ovan). Ett
+    // långtryck på en specifik dag i kalendern (dateStr satt, kan vara vilken
+    // dag som helst) behåller det gamla 09:00–10:00-defaultvärdet — "nu" är
+    // inte meningsfullt för en dag som inte nödvändigtvis är idag.
+    let startsAt: string;
+    let endsAt: string;
+    if (dateStr === undefined) {
+      const nowIso = new Date().toISOString();
+      const inOneHourIso = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      startsAt = isoToLocalDateTimeStr(nowIso, fixedCalendarTimes);
+      endsAt = isoToLocalDateTimeStr(inOneHourIso, fixedCalendarTimes);
+    } else {
+      startsAt = `${base}T09:00`;
+      endsAt = `${base}T10:00`;
+    }
+    setForm(blankForm({ calendarId: defaultCalendar.id, startsAt, endsAt }));
     setModal({ kind: "new", prefilledDate: dateStr });
   }
 

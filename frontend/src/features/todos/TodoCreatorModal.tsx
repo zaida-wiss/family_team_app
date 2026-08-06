@@ -52,6 +52,24 @@ function toDateTimeString(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
 
+// "Syns från"/"Försvinner" defaultar till NU/NU+1h (2026-08-07, Zaidas
+// önskemål: "start skall alltid vara den aktuella tiden då jag tryckte på
+// knappen. Som default skall sluttiden vara 1h senare") — samma
+// "datetime-local"-strängformat som toDateTimeString ovan förväntar sig
+// (enhetens egen lokala tid, plain new Date()-parsning, INTE
+// fixedTodoTimes-medveten — matchar den redan existerande begränsningen att
+// just dessa två fält aldrig kopplats till Account.fixedTodoTimes).
+function toLocalDateTimeInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function addOneHour(localDateTimeValue: string): string {
+  const d = new Date(localDateTimeValue);
+  d.setHours(d.getHours() + 1);
+  return toLocalDateTimeInputValue(d);
+}
+
 // Enad skapa-modal (2026-07-05, Zaidas beslut) — en enda liten plus-ikon
 // ersätter både den gamla "Skapa todo"-knappen (barn-tilldelning) och den
 // tidigare separata personliga skapa-modalen. Ett val högst upp ("Åt vem?")
@@ -129,8 +147,12 @@ export function TodoCreatorModal({
   const [starValueInput, setStarValueInput] = useState("0");
   const starValue = Math.max(0, Math.floor(Number(starValueInput)) || 0);
   const [recurrence, setRecurrence] = useState<RecurrenceRule>({ type: "none" });
-  const [visibleFrom, setVisibleFrom] = useState("");
-  const [expiresAt, setExpiresAt] = useState("");
+  // Default: nu / nu+1h (2026-08-07) — se toLocalDateTimeInputValue/
+  // addOneHour ovan. Beräknat en gång vid montering (modalen monteras
+  // alltid på nytt när den öppnas, {isCreateModalOpen && <TodoCreatorModal
+  // .../>}), så "nu" motsvarar den faktiska tidpunkten +-knappen trycktes.
+  const [visibleFrom, setVisibleFrom] = useState(() => toLocalDateTimeInputValue(new Date()));
+  const [expiresAt, setExpiresAt] = useState(() => addOneHour(toLocalDateTimeInputValue(new Date())));
   const [startDate, setStartDate] = useState("");
   const [timeWindows, setTimeWindows] = useState<TodoTimeWindow[]>([
     { visibleFrom: null, expiresAt: null }
@@ -179,15 +201,15 @@ export function TodoCreatorModal({
       assigneeIds.length > 0 &&
       !isRecurrenceIncomplete(recurrence);
 
-  // Försvinner förifylls med samma värde som Syns från (2026-07-07, Zaidas
-  // önskemål) — så man inte behöver fylla i det två gånger, och för att
-  // förhindra att det annars tomma/omedvetet kvarlämnade fältet råkar bli
-  // tidigare än startdatumet. Bara ett förslag: skriver inte över ett värde
-  // användaren redan aktivt valt i Försvinner.
+  // Försvinner förifylls 1h efter Syns från (2026-08-07, Zaidas önskemål —
+  // var tidigare SAMMA värde, 2026-07-07) — så man inte behöver fylla i det
+  // två gånger, och för att förhindra att det annars tomma/omedvetet
+  // kvarlämnade fältet råkar bli tidigare än startdatumet. Bara ett förslag:
+  // skriver inte över ett värde användaren redan aktivt valt i Försvinner.
   function handleVisibleFromChange(value: string) {
     setVisibleFrom(value);
     if (!expiresAt) {
-      setExpiresAt(value);
+      setExpiresAt(addOneHour(value));
     }
   }
 
