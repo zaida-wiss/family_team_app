@@ -2,8 +2,10 @@ import { test, expect } from "@playwright/test";
 import { mockAuthAndData } from "./helpers";
 
 // Födelsedagslista (2026-08-06, Zaidas önskemål): en lista över
-// födelsedagar i Inställningar → Familj, sorterad "vem fyller år näst"
-// överst, och delbar med anslutna familjer (ADR-0030, dataScope.birthdays).
+// födelsedagar i Inställningar → Kalender (flyttad dit från Familj
+// 2026-08-07, Zaidas rättelse — hör tematiskt närmare kalenderdatum),
+// sorterad "vem fyller år näst" överst, delbar med anslutna familjer
+// (ADR-0030, dataScope.birthdays).
 
 test.describe("Födelsedagslista", () => {
   test.beforeEach(async ({ page }) => {
@@ -41,7 +43,10 @@ test.describe("Födelsedagslista", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
-    await page.getByRole("button", { name: "Familj", exact: true }).click();
+    // Flyttad från Familj till Kalender (2026-08-07, Zaidas rättelse) — nu
+    // TVÅ underkategorier under Kalender (Kalendrar + Födelsedagar), så
+    // "hasSingleSub"-genvägen gäller inte längre, ett klick krävs på båda.
+    await page.getByRole("button", { name: "Kalender", exact: true }).click();
     await page.getByRole("button", { name: "🎂 Födelsedagar" }).click();
 
     await expect(page.getByText("Inga födelsedagar sparade än.")).toBeVisible();
@@ -94,7 +99,10 @@ test.describe("Födelsedagslista", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
-    await page.getByRole("button", { name: "Familj", exact: true }).click();
+    // Flyttad från Familj till Kalender (2026-08-07, Zaidas rättelse) — nu
+    // TVÅ underkategorier under Kalender (Kalendrar + Födelsedagar), så
+    // "hasSingleSub"-genvägen gäller inte längre, ett klick krävs på båda.
+    await page.getByRole("button", { name: "Kalender", exact: true }).click();
     await page.getByRole("button", { name: "🎂 Födelsedagar" }).click();
 
     const rows = page.locator(".birthdays-settings__row");

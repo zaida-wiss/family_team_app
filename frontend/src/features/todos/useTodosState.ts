@@ -528,12 +528,24 @@ export function useTodosState(fixedTodoTimes = false) {
     );
   }
 
-  function refreshRoutineOccurrence(routineId: Id) {
+  // templatePatch (2026-08-07, Zaidas fynd: "uppdatera todon till kategori
+  // Fordon & Underhåll och ändra emoji... fungerar inte") — TodoEditModal.tsx
+  // anropar onUpdateTodo(template.id, seriesPatch) och sedan OMEDELBART
+  // (samma synkrona anrop) onRefreshRoutine(template.id). setTodos:s
+  // uppdatering hinner inte hunnit slå igenom i todosRef.current än (den
+  // synkas via en useEffect, som körs EFTER denna funktion redan returnerat)
+  // — routine hittades alltså med GÅRDAGENS värden, och applyTemplateToOccurrence
+  // kopierade tillbaka den gamla kategorin/emojin på dagens occurrence, både
+  // lokalt OCH till servern (via updateTodo). templatePatch är de redan
+  // KÄNDA, precis sparade fälten — mergas ovanpå den (annars korrekta)
+  // ref-uppslagningen istället för att lita på att den hunnit uppdateras.
+  function refreshRoutineOccurrence(routineId: Id, templatePatch?: Partial<Todo>) {
     const current = todosRef.current;
-    const routine = current.find((todo) => todo.id === routineId);
-    if (!routine) {
+    const routineBase = current.find((todo) => todo.id === routineId);
+    if (!routineBase) {
       return;
     }
+    const routine = templatePatch ? { ...routineBase, ...templatePatch } : routineBase;
 
     const today = getDateKey(new Date());
     const existingOccurrence = current.find(

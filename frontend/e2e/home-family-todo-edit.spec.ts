@@ -139,3 +139,78 @@ test("Hem-vyns familjetrådar: en nekad radering (ingen behörighet) visar ett t
   // Modalen ska INTE ha stängts — redigeringsfältet är fortfarande synligt.
   await expect(page.getByLabel("Kategori")).toBeVisible();
 });
+
+// 2026-08-07, Zaidas fynd: "när jag ska uppdatera todon till kategori
+// Fordon & underhåll och ändra emoji så fungerar det inte" — för en
+// ÅTERKOMMANDE uppgift (mall + dagens occurrence) sparas kategori/emoji-
+// ändringen på MALLEN korrekt, men refreshRoutineOccurrence (kallas direkt
+// efter, samma synkrona anrop) läste template-fälten från en ÄNNU EJ
+// synkad todosRef.current och kopierade tyst tillbaka de GAMLA värdena på
+// dagens occurrence — både lokalt och till servern. Verifierar att BÅDA
+// PATCH-anropen (mall och occurrence) bär den NYA kategorin/emojin.
+test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE uppgift sparas korrekt på både mall och dagens occurrence", async ({ page }) => {
+  const RUTINER_CATEGORY = {
+    id: "cat-family-rutiner", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
+    isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+  };
+  const FORDON_CATEGORY = {
+    id: "cat-family-fordon", accountId: "acc-1", memberId: "mem-1", name: "Fordon & Underhåll",
+    isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+  };
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const TEMPLATE = {
+    id: "todo-template", accountId: "acc-1", title: "Städa bilen", createdBy: "mem-1",
+    assignedTo: null, isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🚗" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: "cat-family-rutiner", notes: null
+  };
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: "todo-occurrence", recurringSourceId: "todo-template", occurrenceDate: todayKey,
+    recurrence: { type: "none" }
+  };
+  let templatePatch: Record<string, unknown> | null = null;
+  let occurrencePatch: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [RUTINER_CATEGORY, FORDON_CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TEMPLATE, OCCURRENCE] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-template", (route) => {
+    if (route.request().method() === "PATCH") {
+      templatePatch = { ...templatePatch, ...(route.request().postDataJSON() as object) };
+    }
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/todos/todo-occurrence", (route) => {
+    if (route.request().method() === "PATCH") {
+      occurrencePatch = { ...occurrencePatch, ...(route.request().postDataJSON() as object) };
+    }
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  await page.getByRole("button", { name: /^Städa bilen,/ }).click();
+  await page.getByRole("button", { name: "Redigera uppgift" }).click();
+  await page.getByLabel("Kategori").selectOption({ label: "Fordon & Underhåll" });
+  await page.locator(".todo-emoji-btn").click();
+  await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
+  await page.locator('button[title="Tandborste"]').click();
+
+  await expect.poll(() => templatePatch?.personalCategoryId).toBe("cat-family-fordon");
+  expect((templatePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
+
+  // Kärnregressionen: occurrence-patchen (från refreshRoutineOccurrence) ska
+  // bära samma NYA värden, inte de gamla ("cat-family-rutiner"/"🚗").
+  await expect.poll(() => occurrencePatch?.personalCategoryId).toBe("cat-family-fordon");
+  expect((occurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
+});

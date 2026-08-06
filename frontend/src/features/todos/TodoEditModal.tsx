@@ -48,8 +48,9 @@ type Props = {
   onDeleteTodo: (todoId: Id) => void | Promise<unknown>;
   // Synkar dagens redan skapade occurrence med mallens NYA värden direkt
   // (annars syns inte en redigering förrän occurrencen genereras om, se
-  // useTodosState.ts:s refreshRoutineOccurrence).
-  onRefreshRoutine: (routineId: Id) => void;
+  // useTodosState.ts:s refreshRoutineOccurrence). Andra argumentet (2026-08-07)
+  // — de redan kända, precis sparade fälten, se anropsstället nedan.
+  onRefreshRoutine: (routineId: Id, templatePatch?: Partial<Todo>) => void;
   onClose: () => void;
   fixedTodoTimes?: boolean;
   // Familje-scope (2026-08-06, Zaidas fynd: "när jag ska redigera familjens
@@ -344,7 +345,12 @@ export function TodoEditModal({
       onUpdateTodo(todo.id, dayPatch);
       // Speglar mallens nya värden på dagens redan skapade occurrence direkt
       // — annars syns inte ändringen förrän occurrencen genereras om imorgon.
-      onRefreshRoutine(template.id);
+      // seriesPatch skickas med explicit (2026-08-07) — utan den läste
+      // refreshRoutineOccurrence en ÄNNU EJ uppdaterad lokal kopia av mallen
+      // (React hinner inte synka todosRef.current innan detta synkrona
+      // anrop), och kopierade tyst tillbaka de GAMLA kategori-/emoji-
+      // värdena på dagens occurrence, både lokalt och till servern.
+      onRefreshRoutine(template.id, seriesPatch);
     } else {
       onUpdateTodo(todo.id, { ...seriesPatch, ...dayPatch });
     }
@@ -489,13 +495,15 @@ export function TodoEditModal({
               i TodoCreatorModal.tsx gäller bara det personliga anropsstället
               där (ingen familje-variant av den modalen finns).
               2026-08-07, Zaidas fynd: en genuint död familjekategori (aldrig
-              någon uppgift, t.ex. ett testartefakt som "xfv") döljs redan i
-              familjevyns trådlista (tomma trådar visas inte) men listades
-              ändå här — dropdownen ska matcha vad som faktiskt går att se i
-              familjevyn. En stabil, tidsoberoende regel (har kategorin NÅGON
-              gång fått en uppgift, oavsett status) — inte samma exakta
-              "pending idag"-check som trådvyn använder, som hade fått
-              listan flimra till/från beroende på klockslag. Den redan
+              någon PENDING uppgift, t.ex. ett testartefakt som "xfv" vars
+              enda uppgift redan var godkänd) döljs redan i familjevyns
+              trådlista (tomma trådar visas inte) men listades ändå här —
+              dropdownen ska matcha vad som faktiskt går att se i familjevyn.
+              Kollar status==="pending" (samma kriterium som trådvyns egen
+              tomhetskontroll), men INTE samma tids-/synlighetsfönster
+              (isDueWithinRange/idag-vecka-månad) — status flimrar inte med
+              klockan så det är säkert, ett tidsfönster hade fått listan att
+              flimra till/från beroende på när på dagen man tittar. Den redan
               VALDA kategorin visas alltid, oavsett — annars hade den
               försvunnit ur sin egen dropdown. */}
           <label className="field-label">
@@ -512,7 +520,16 @@ export function TodoEditModal({
                   (category) =>
                     !familyScope ||
                     category.id === selectedCategoryId ||
-                    todos.some((t) => t.personalCategoryId === category.id && t.deletedAt === null)
+                    // "pending", inte bara "finns" (2026-08-07, Zaidas fynd:
+                    // "xfv är kvar som kategori?") — en kategori vars enda
+                    // uppgift redan är godkänd/klar räknas av familjevyn som
+                    // tom (den kollar status==="pending"), så dropdownen ska
+                    // göra detsamma. Status flimrar inte med klockan (till
+                    // skillnad från tids-/synlighetsfönster), så det stabila
+                    // "tidsoberoende"-resonemanget ovan håller fortfarande.
+                    todos.some(
+                      (t) => t.personalCategoryId === category.id && t.deletedAt === null && t.status === "pending"
+                    )
                 )
                 .map((category) => (
                 <option key={category.id} value={category.id}>

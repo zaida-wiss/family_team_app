@@ -284,11 +284,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           )
         },
         {
-          id: "birthdays",
-          label: "🎂 Födelsedagar",
-          content: <BirthdaysSettings />
-        },
-        {
           id: "my-memberships",
           label: "Mina familjekonton",
           content: (
@@ -437,6 +432,14 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onSyncCalDavNow={memberContentProps.onSyncCalDavNow}
             />
           )
+        },
+        // Flyttad hit från Familj (2026-08-07, Zaidas rättelse: "borde ha
+        // hamnat i inställningar under kalendern") — en födelsedag hör
+        // tematiskt närmare kalenderdatum än familjemedlemshantering.
+        {
+          id: "birthdays",
+          label: "🎂 Födelsedagar",
+          content: <BirthdaysSettings />
         }
       ]
     },
