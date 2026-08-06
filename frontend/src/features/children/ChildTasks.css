@@ -266,7 +266,14 @@
   font-family: var(--font-display);
   font-size: clamp(0.6rem, 4cqi, 0.95rem);
   font-weight: 700;
-  color: var(--c1, var(--primary));
+  /* Samma solida, garanterat läsbara färg som .child-task-name (2026-08-07,
+     Zaidas fynd: "för låg kontrast mot bakgrunden för att synas") — var
+     tidigare var(--c1, var(--primary)), en teman-varierande accentfärg utan
+     något garanterat kontrastförhållande mot kortets pastelliga
+     kategoribakgrund (--task-bg/--task-accent). Samma resonemang som redan
+     etablerat för todo-bubblornas titel ("alltid svart... läsbart oavsett
+     bubblans bakgrundsfärg"). */
+  color: var(--black, #000);
   font-variant-numeric: tabular-nums;
 }
 
