@@ -342,10 +342,20 @@ export function TodoEditModal({
 
     if (template) {
       onUpdateTodo(template.id, seriesPatch);
-      onUpdateTodo(todo.id, dayPatch);
-      // Speglar mallens nya värden på dagens redan skapade occurrence direkt
-      // — annars syns inte ändringen förrän occurrencen genereras om imorgon.
-      // seriesPatch skickas med explicit (2026-08-07) — utan den läste
+      // seriesPatch appliceras HÄR också, direkt på occurrencen man faktiskt
+      // tittar på (2026-08-07, Zaidas fynd: "de ligger ändå kvar under
+      // dessa kategorier. De går inte att flytta") — refreshRoutineOccurrence
+      // nedan synkar bara DAGENS occurrence, vilket INTE nödvändigtvis är
+      // samma post som `todo` (en fortfarande obesvarad bubbla genererad en
+      // tidigare dag har ett äldre occurrenceDate). Utan denna rad förblev
+      // en sådan bubblas kategori/titel/emoji orörd trots en lyckad
+      // mall-uppdatering, eftersom ingenting annat pekade tillbaka på just
+      // DEN posten.
+      onUpdateTodo(todo.id, { ...seriesPatch, ...dayPatch });
+      // Speglar mallens nya värden på dagens redan skapade occurrence också,
+      // om den skulle vara en ANNAN post än `todo` — annars syns inte
+      // ändringen där förrän occurrencen genereras om imorgon. seriesPatch
+      // skickas med explicit (2026-08-07) — utan den läste
       // refreshRoutineOccurrence en ÄNNU EJ uppdaterad lokal kopia av mallen
       // (React hinner inte synka todosRef.current innan detta synkrona
       // anrop), och kopierade tyst tillbaka de GAMLA kategori-/emoji-

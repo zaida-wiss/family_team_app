@@ -214,3 +214,83 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE upp
   await expect.poll(() => occurrencePatch?.personalCategoryId).toBe("cat-family-fordon");
   expect((occurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
 });
+
+// 2026-08-07, Zaidas fynd EFTER ovanstående test redan var grönt: "nu går
+// det att uppdatera både emoji och kategori, men de ligger ändå kvar under
+// dessa kategorier. De går inte att flytta" — den bubbla man faktiskt tittar
+// på och redigerar är INTE alltid dagens occurrence (en fortfarande obesvarad
+// bubbla genererad en tidigare dag har ett äldre occurrenceDate, syns ändå om
+// den inte hunnit gå ut). refreshRoutineOccurrence synkar bara DAGENS
+// occurrence — utan att seriesPatch även appliceras direkt på `todo.id`
+// självt förblev en sådan äldre bubbla kvar i sin gamla kategori trots en
+// till synes lyckad sparning (mallen uppdaterades korrekt, bara inte den
+// synliga posten).
+test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÄLDRE, ännu obesvarad occurrence (inte dagens) flyttar bubblan direkt", async ({ page }) => {
+  const RUTINER_CATEGORY = {
+    id: "cat-family-rutiner", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
+    isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+  };
+  const FORDON_CATEGORY = {
+    id: "cat-family-fordon", accountId: "acc-1", memberId: "mem-1", name: "Fordon & Underhåll",
+    isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+  };
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+  const TEMPLATE = {
+    id: "todo-template", accountId: "acc-1", title: "Städa bilen", createdBy: "mem-1",
+    assignedTo: null, isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🚗" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: "cat-family-rutiner", notes: null
+  };
+  // Genererad IGÅR, fortfarande "pending" (aldrig avklarad/utgången) — inte
+  // samma post som dagens occurrence, som inte ens existerar än i denna fixtur.
+  const OLD_OCCURRENCE = {
+    ...TEMPLATE,
+    id: "todo-old-occurrence", recurringSourceId: "todo-template", occurrenceDate: yesterdayKey,
+    recurrence: { type: "none" }
+  };
+  let oldOccurrencePatch: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [RUTINER_CATEGORY, FORDON_CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TEMPLATE, OLD_OCCURRENCE] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-template", (route) => route.fulfill({ json: { ok: true } }));
+  await page.route("**/api/todos/todo-old-occurrence", (route) => {
+    if (route.request().method() === "PATCH") {
+      oldOccurrencePatch = { ...oldOccurrencePatch, ...(route.request().postDataJSON() as object) };
+    }
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  // Bubblan syns i Rutiner-tråden innan redigering.
+  const rutinerThread = page.locator(".todo-thread", { hasText: "Rutiner" });
+  await expect(rutinerThread.getByRole("button", { name: /^Städa bilen,/ })).toBeVisible();
+
+  await page.getByRole("button", { name: /^Städa bilen,/ }).click();
+  await page.getByRole("button", { name: "Redigera uppgift" }).click();
+  await page.getByLabel("Kategori").selectOption({ label: "Fordon & Underhåll" });
+  await page.locator(".todo-emoji-btn").click();
+  await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
+  await page.locator('button[title="Tandborste"]').click();
+
+  // Kärnregressionen: DEN ÖPPNADE, äldre occurrencen själv ska få de nya
+  // värdena — inte bara mallen (som ovanstående test redan täcker).
+  await expect.poll(() => oldOccurrencePatch?.personalCategoryId).toBe("cat-family-fordon");
+  expect((oldOccurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
+
+  await page.getByRole("button", { name: "Stäng" }).click();
+  // Bubblan har flyttat sig till den nya kategorins tråd i UI:t.
+  const fordonThread = page.locator(".todo-thread", { hasText: "Fordon & Underhåll" });
+  await expect(fordonThread.getByRole("button", { name: /^Städa bilen,/ })).toBeVisible();
+  await expect(rutinerThread.getByRole("button", { name: /^Städa bilen,/ })).toHaveCount(0);
+});
