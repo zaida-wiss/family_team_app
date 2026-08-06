@@ -7,6 +7,7 @@ import { AppError } from "../utils/errors.js";
 import { getAllRoles } from "./rolesService.js";
 import { getAllRecipes } from "./recipesService.js";
 import { getAllLists } from "./shoppingService.js";
+import { getAllBirthdaysRaw } from "./birthdaysService.js";
 import { canManageFamilyConnections } from "../../../shared/permissions.js";
 import type { AccessLevel, FamilyConnectionScope } from "../../../shared/types.js";
 
@@ -19,13 +20,20 @@ import type { AccessLevel, FamilyConnectionScope } from "../../../shared/types.j
 // pending/accept/decline-mönster (ADR-0024/0029), men på KONTONIVÅ istället
 // för per barn.
 
-const DEFAULT_SCOPE: FamilyConnectionScope = { todos: true, recipes: true, shoppingLists: true, calendars: true };
+const DEFAULT_SCOPE: FamilyConnectionScope = {
+  todos: true,
+  recipes: true,
+  shoppingLists: true,
+  calendars: true,
+  birthdays: true
+};
 
 const ScopeSchema = z.object({
   todos: z.boolean(),
   recipes: z.boolean(),
   shoppingLists: z.boolean(),
-  calendars: z.boolean()
+  calendars: z.boolean(),
+  birthdays: z.boolean()
 }).partial();
 
 const InviteConnectionBodySchema = z.object({
@@ -306,6 +314,24 @@ export async function getConnectionShoppingLists(callerAccountId: string, caller
     if (!conn || !conn.dataScope.shoppingLists) continue;
     const lists = await getAllLists(account.id);
     results.push({ accountId: account.id, accountName: account.name, lists });
+  }
+  return results;
+}
+
+// Födelsedagslista (2026-08-06, Zaidas önskemål: "man skall även kunna
+// välja vilka familjer detta skall delas med") — samma kontobreda,
+// läsning-oavsett-access-nivå-princip som recipes/shoppingLists ovan.
+export async function getConnectionBirthdays(callerAccountId: string, callerMemberId: string | null) {
+  await requireMember(callerAccountId, callerMemberId);
+  const accountsExposingToMe = await AccountModel.find({
+    familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
+  });
+  const results = [];
+  for (const account of accountsExposingToMe) {
+    const conn = findAcceptedConnectionFrom(callerAccountId, account);
+    if (!conn || !conn.dataScope.birthdays) continue;
+    const birthdays = await getAllBirthdaysRaw(account.id);
+    results.push({ accountId: account.id, accountName: account.name, birthdays });
   }
   return results;
 }

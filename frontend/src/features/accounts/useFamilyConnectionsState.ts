@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { accountsApi, membersApi, recipesApi, shoppingApi, todosApi } from "../../api";
+import { accountsApi, birthdaysApi, membersApi, recipesApi, shoppingApi, todosApi } from "../../api";
 import type { ConnectionRecipes } from "../../api/recipes";
 import type { ConnectionShoppingLists } from "../../api/shopping";
 import type { ConnectionTodosThread } from "../../api/todos";
+import type { ConnectionBirthdays } from "../../api/birthdays";
 import type {
   FamilyConnectionCandidate,
   MyFamilyConnections,
@@ -131,6 +132,16 @@ export function useConnectionShoppingLists() {
   const [groups, setGroups] = useState<ConnectionShoppingLists[]>([]);
   useEffect(() => {
     shoppingApi.getConnectionLists().then(setGroups).catch(console.error);
+  }, []);
+  return groups;
+}
+
+// Födelsedagslista (2026-08-06) — samma "bara läsbar sammanfattning"-princip
+// som useConnectionRecipes/useConnectionShoppingLists ovan.
+export function useConnectionBirthdays() {
+  const [groups, setGroups] = useState<ConnectionBirthdays[]>([]);
+  useEffect(() => {
+    birthdaysApi.getConnectionBirthdays().then(setGroups).catch(console.error);
   }, []);
   return groups;
 }

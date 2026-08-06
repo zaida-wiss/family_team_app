@@ -1,0 +1,66 @@
+/* Födelsedagslista (2026-08-06). */
+
+.birthdays-settings__list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.birthdays-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  border: 1px solid var(--border);
+  min-height: 44px;
+}
+
+.birthdays-settings__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.birthdays-settings__info small {
+  color: var(--muted-fg);
+}
+
+.birthdays-settings__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.birthdays-settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+}
+
+.birthdays-settings__form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.birthdays-settings__form-row .field-label {
+  min-width: 90px;
+  flex: 1;
+}
+
+.birthdays-settings__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -14,7 +14,8 @@ const SCOPE_LABELS: { key: keyof FamilyConnectionScope; label: string }[] = [
   { key: "todos", label: "Uppgifter" },
   { key: "recipes", label: "Recept" },
   { key: "shoppingLists", label: "Inköpslistor" },
-  { key: "calendars", label: "Kalendrar" }
+  { key: "calendars", label: "Kalendrar" },
+  { key: "birthdays", label: "Födelsedagar" }
 ];
 
 function ScopePicker({ scope, onChange }: { scope: FamilyConnectionScope; onChange: (scope: FamilyConnectionScope) => void }) {
@@ -47,7 +48,7 @@ export function FamilyConnectionSettings({ accountId, members }: Props) {
   const [email, setEmail] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<Id>>(new Set());
   const [access, setAccess] = useState<AccessLevel>("view");
-  const [scope, setScope] = useState<FamilyConnectionScope>({ todos: true, recipes: true, shoppingLists: true, calendars: true });
+  const [scope, setScope] = useState<FamilyConnectionScope>({ todos: true, recipes: true, shoppingLists: true, calendars: true, birthdays: true });
 
   // Ett accept-svar kräver samma tre val (medlemmar/access/scope) MEN för
   // MIN EGEN, oberoende exponering tillbaka — separat lokalt state per
@@ -61,7 +62,7 @@ export function FamilyConnectionSettings({ accountId, members }: Props) {
       acceptDrafts[fromAccountId] ?? {
         memberIds: new Set<Id>(),
         access: "view" as AccessLevel,
-        scope: { todos: true, recipes: true, shoppingLists: true, calendars: true }
+        scope: { todos: true, recipes: true, shoppingLists: true, calendars: true, birthdays: true }
       }
     );
   }
@@ -102,8 +103,9 @@ export function FamilyConnectionSettings({ accountId, members }: Props) {
       <h3 className="settings-sub-title">Familjeanslutningar</h3>
       <p className="settings-sub-desc">
         Anslut ditt konto till en annan familj — ingen ser hela ditt konto, bara de uppgifter, recept,
-        inköpslistor och kalendrar ni själva väljer att visa för varandra (kalendrar syns bara läsbart,
-        nästa 30 dagar, under Inställningar → Kalendrar). Barnvy och inställningar i övrigt påverkas inte.
+        inköpslistor, kalendrar och födelsedagar ni själva väljer att visa för varandra (kalendrar syns
+        bara läsbart, nästa 30 dagar, under Inställningar → Kalendrar). Barnvy och inställningar i övrigt
+        påverkas inte.
       </p>
 
       {connections.exposedToMe.length > 0 && (
@@ -120,7 +122,8 @@ export function FamilyConnectionSettings({ accountId, members }: Props) {
                     c.dataScope.todos && "Uppgifter",
                     c.dataScope.recipes && "Recept",
                     c.dataScope.shoppingLists && "Inköpslistor",
-                    c.dataScope.calendars && "Kalendrar"
+                    c.dataScope.calendars && "Kalendrar",
+                    c.dataScope.birthdays && "Födelsedagar"
                   ]
                     .filter(Boolean)
                     .join(", ")}

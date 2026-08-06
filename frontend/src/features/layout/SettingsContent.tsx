@@ -18,6 +18,7 @@ import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
 import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
 import { FamilyConnectionSettings } from "../accounts/FamilyConnectionSettings";
 import { HouseholdSecretsSettings } from "../settings/HouseholdSecretsSettings";
+import { BirthdaysSettings } from "../settings/BirthdaysSettings";
 import { HouseholdPinGate } from "../settings/HouseholdPinGate";
 import { useHouseholdPin } from "../settings/useHouseholdPin";
 import { TemplatesSettings } from "../todos/TemplatesSettings";
@@ -281,6 +282,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               )}
             </>
           )
+        },
+        {
+          id: "birthdays",
+          label: "🎂 Födelsedagar",
+          content: <BirthdaysSettings />
         },
         {
           id: "my-memberships",

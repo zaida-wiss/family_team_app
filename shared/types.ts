@@ -70,6 +70,11 @@ export type FamilyConnectionScope = {
   // flera egna medlemskap). Samma exposedMemberIds-mönster som todos —
   // en kalender blir synlig när dess ÄGARE är en exponerad medlem.
   calendars: boolean;
+  // Tillägg 2026-08-06 (Zaidas önskemål: "man skall även kunna välja
+  // vilka familjer detta skall delas med", i samband med den nya
+  // Födelsedagar-listan) — samma "kontobred, läsning oavsett access-nivå"-
+  // princip som recipes/shoppingLists ovan, se getConnectionBirthdays.
+  birthdays: boolean;
 };
 
 export type FamilyConnection = {
@@ -984,6 +989,27 @@ export type HouseholdSecret = {
   notes: string | null;
   cost: number | null;
   renewalDate: string | null;
+  createdBy: Id;
+  deletedAt: string | null;
+  deletedBy: Id | null;
+};
+
+// Födelsedagslista (2026-08-06, Zaidas önskemål: "en lista över
+// födelsedagar i inställningar... så att det kommer upp en lista över när
+// det är födelsedagar att fira, i datumordning med närmast dagens datum
+// överst") — kontobred, samma "vuxen-bara" mönster som HouseholdSecret ovan
+// (ligger under Inställningar → Familj, ingen egen kryptering — jämförbar
+// känslighet med Member.name, som redan lagras oskyddat). month/day lagras
+// separat från ett valfritt year (för åldersberäkning) istället för ett
+// fullt datum, eftersom sorteringen bygger på NÄSTA förekomst av
+// månad+dag, inte ett specifikt år.
+export type Birthday = {
+  id: Id;
+  accountId: Id;
+  name: string;
+  month: number; // 1–12
+  day: number; // 1–31
+  year: number | null;
   createdBy: Id;
   deletedAt: string | null;
   deletedBy: Id | null;
