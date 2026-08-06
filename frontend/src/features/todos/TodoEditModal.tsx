@@ -480,7 +480,17 @@ export function TodoEditModal({
           {/* Personliga kategorier normalt, familjekategorier bara i
               familje-scope (2026-08-06-fixet ovan) — motsvarande resonemang
               i TodoCreatorModal.tsx gäller bara det personliga anropsstället
-              där (ingen familje-variant av den modalen finns). */}
+              där (ingen familje-variant av den modalen finns).
+              2026-08-07, Zaidas fynd: en genuint död familjekategori (aldrig
+              någon uppgift, t.ex. ett testartefakt som "xfv") döljs redan i
+              familjevyns trådlista (tomma trådar visas inte) men listades
+              ändå här — dropdownen ska matcha vad som faktiskt går att se i
+              familjevyn. En stabil, tidsoberoende regel (har kategorin NÅGON
+              gång fått en uppgift, oavsett status) — inte samma exakta
+              "pending idag"-check som trådvyn använder, som hade fått
+              listan flimra till/från beroende på klockslag. Den redan
+              VALDA kategorin visas alltid, oavsett — annars hade den
+              försvunnit ur sin egen dropdown. */}
           <label className="field-label">
             Kategori
             <select
@@ -489,7 +499,15 @@ export function TodoEditModal({
               value={selectedCategoryId}
             >
               <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
-              {categories.filter((category) => Boolean(category.isFamily) === familyScope).map((category) => (
+              {categories
+                .filter((category) => Boolean(category.isFamily) === familyScope)
+                .filter(
+                  (category) =>
+                    !familyScope ||
+                    category.id === selectedCategoryId ||
+                    todos.some((t) => t.personalCategoryId === category.id && t.deletedAt === null)
+                )
+                .map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>

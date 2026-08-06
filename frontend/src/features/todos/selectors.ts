@@ -228,3 +228,15 @@ export function isTodoVisibleNow(
 export function sortSubtasksForDisplay(subtasks: TodoSubtask[]): TodoSubtask[] {
   return [...subtasks].sort((a, b) => Number(a.done) - Number(b.done));
 }
+
+// Familjen-poolens tråd-etikett (2026-08-07, Zaidas önskemål: "den ska
+// istället heta Wiss Kolmodin om den aktuella Familjen heter så. Heter
+// Familjen Andersson, är det just Andersson denna uppsamlingskategori...
+// skall heta") — samma princip som cross-account/anslutnings-trådarna
+// redan använder (rakt av kontonamnet, se homeFamilyThreadSources i
+// MemberShellContent.tsx), bara med "Familjen "-prefixet bortstripat om
+// det finns. Ett konto utan prefixet (t.ex. "Wiss Kolmodin") lämnas orört.
+export function familyPoolLabel(accountName: string): string {
+  const stripped = accountName.replace(/^Familjen\s+/i, "").trim();
+  return stripped || accountName;
+}

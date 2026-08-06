@@ -196,6 +196,12 @@ export function MemberOverview({
   // för familjeflödet att öppna direkt in i, till skillnad från den
   // personliga tråd-vyn).
   const [newFamilyCategoryTaskTitle, setNewFamilyCategoryTaskTitle] = useState("");
+  // "Ingen kategori" (2026-08-07) — Familjen-poolen döljs nu när den är tom
+  // (FamilyTodoThreads.tsx:s hideWhenEmpty), så dess egen "Lägg till
+  // uppgift"-meny slutar vara nåbar för att lägga till den FÖRSTA
+  // okategoriserade uppgiften. "+"-knappens formulär fick därför en genväg
+  // hit istället — kryssrutan hoppar över kategoriskapandet helt.
+  const [noFamilyCategory, setNoFamilyCategory] = useState(false);
   const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
   // Medlemsikonen (2026-08-04, Zaidas fynd: "medlemmarna tar för stor plats
   // i hemvyn") — ersätter den tidigare alltid-synliga raden av avatarer med
@@ -469,7 +475,11 @@ export function MemberOverview({
               <button
                 aria-label="Ny familjekategori"
                 className="icon-button"
-                onClick={() => { setAddingFamilyCategory((v) => !v); setNewFamilyCategoryName(""); }}
+                onClick={() => {
+                  setAddingFamilyCategory((v) => !v);
+                  setNewFamilyCategoryName("");
+                  setNoFamilyCategory(false);
+                }}
                 title="Ny familjekategori"
                 type="button"
               >
@@ -493,10 +503,10 @@ export function MemberOverview({
               className={styles.homeQuickAdd}
               onSubmit={async (e) => {
                 e.preventDefault();
-                const categoryName = newFamilyCategoryName.trim();
                 const taskTitle = newFamilyCategoryTaskTitle.trim();
-                if (!categoryName || !taskTitle) return;
-                const category = await onCreateCategory(categoryName, true);
+                const categoryName = newFamilyCategoryName.trim();
+                if (!taskTitle || (!noFamilyCategory && !categoryName)) return;
+                const categoryId = noFamilyCategory ? null : (await onCreateCategory(categoryName, true)).id;
                 onCreateTodo({
                   id: `todo-${generateId()}`,
                   title: taskTitle,
@@ -519,33 +529,45 @@ export function MemberOverview({
                   rejectedReason: null,
                   deletedAt: null,
                   deletedBy: null,
-                  personalCategoryId: category.id,
+                  personalCategoryId: categoryId,
                   notes: null
                 });
                 setNewFamilyCategoryName("");
                 setNewFamilyCategoryTaskTitle("");
+                setNoFamilyCategory(false);
                 setAddingFamilyCategory(false);
               }}
             >
+              <label className={styles.homeQuickAddNoCategory}>
+                <input
+                  checked={noFamilyCategory}
+                  onChange={(e) => setNoFamilyCategory(e.target.checked)}
+                  type="checkbox"
+                />
+                Ingen kategori
+              </label>
+              {!noFamilyCategory && (
+                <input
+                  aria-label="Namn på ny familjekategori"
+                  autoFocus
+                  className="text-input"
+                  onChange={(e) => setNewFamilyCategoryName(e.target.value)}
+                  placeholder="Namn på kategorin…"
+                  value={newFamilyCategoryName}
+                />
+              )}
               <input
-                aria-label="Namn på ny familjekategori"
-                autoFocus
-                className="text-input"
-                onChange={(e) => setNewFamilyCategoryName(e.target.value)}
-                placeholder="Namn på kategorin…"
-                value={newFamilyCategoryName}
-              />
-              <input
-                aria-label="Namn på första uppgiften"
+                aria-label={noFamilyCategory ? "Namn på uppgiften" : "Namn på första uppgiften"}
+                autoFocus={noFamilyCategory}
                 className="text-input"
                 onChange={(e) => setNewFamilyCategoryTaskTitle(e.target.value)}
-                placeholder="Namn på första uppgiften…"
+                placeholder={noFamilyCategory ? "Namn på uppgiften…" : "Namn på första uppgiften…"}
                 value={newFamilyCategoryTaskTitle}
               />
               <button
-                aria-label="Skapa familjekategori och uppgift"
+                aria-label={noFamilyCategory ? "Skapa uppgift" : "Skapa familjekategori och uppgift"}
                 className="icon-button"
-                disabled={!newFamilyCategoryName.trim() || !newFamilyCategoryTaskTitle.trim()}
+                disabled={!newFamilyCategoryTaskTitle.trim() || (!noFamilyCategory && !newFamilyCategoryName.trim())}
                 type="submit"
               >
                 <Plus size={18} />

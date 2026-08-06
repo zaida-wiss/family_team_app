@@ -67,6 +67,12 @@ export type FamilyThreadSource = {
   // hanteringen ovan). Aldrig satt för cross-account/anslutningstrådar,
   // döljer pennikonen i TodoDetailView där precis som tidigare.
   onEdit?: (todo: Todo) => void;
+  // Döljs när tom (2026-08-07, Zaidas önskemål: "den skall både gömmas när
+  // den är tom") — MEDVETET ett eget fält, inte bara "har onDeleteCategory"
+  // (som redan styr hide-when-empty för riktiga kategorier) eftersom
+  // Familjen-poolen INTE är en riktig, raderbar kategori men ändå ska
+  // kunna döljas tom, precis som de.
+  hideWhenEmpty?: boolean;
 };
 
 type Props = {
@@ -502,8 +508,10 @@ export function FamilyTodoThreads({
         // Tomma kategorier döljs, samma princip som ParentTodoThreadView.tsx
         // (2026-08-05, Zaidas önskemål: parity med den personliga Todos-vyn
         // — "familjens todovys tomma kategorier skall gömmas, precis som i
-        // min egen todo-vy"). Bara riktiga familjekategorier (onDeleteCategory
-        // satt) är hideable, aldrig "Familjen"-poolen eller cross-account/
+        // min egen todo-vy"). Riktiga familjekategorier (onDeleteCategory
+        // satt) ELLER trådar explicit markerade hideWhenEmpty (2026-08-07,
+        // "Familjen"-poolen — se homeFamilyThreadSources i
+        // MemberShellContent.tsx) är hideable, aldrig cross-account/
         // anslutna trådar. 2026-08-06, Zaidas rättelse: "tom" avgörs nu
         // ENBART av threadTodos (de FAKTISKT synliga bollarna just nu) —
         // det tidigare "eller hasAnyToday"-undantaget (dag-baserat, inkl.
@@ -511,7 +519,7 @@ export function FamilyTodoThreads({
         // kolumn hela dagen efter att dess enda uppgift avklarats eller
         // passerat sitt tidsfönster. Kategorin ska försvinna och komma
         // tillbaka först när en ny, faktiskt synlig boll finns.
-        if (source.onDeleteCategory && threadTodos.length === 0) return null;
+        if ((source.onDeleteCategory || source.hideWhenEmpty) && threadTodos.length === 0) return null;
 
         const isEditing = editingThreadId === source.id;
         const isSelecting = selectingThreadId === source.id;
@@ -540,6 +548,17 @@ export function FamilyTodoThreads({
                     autoFocus
                     className="text-input"
                     onChange={(e) => setRenameValue(e.target.value)}
+                    // Markerar hela det förifyllda namnet vid fokus (2026-08-07,
+                    // Zaidas fynd: "skriver jag i rutan så läggs texten efter
+                    // befintligt kategorinamn") — fältet förifylls redan korrekt
+                    // med nuvarande namn (startRename), men utan markering
+                    // hamnar markören bara vid SLUTET av texten (standard
+                    // webbläsarbeteende för ett förifyllt fält), så en skriven
+                    // bokstav LÄGGS TILL istället för att ERSÄTTA — exakt så
+                    // "Fordon & Underhåll" blev "Fordon & UnderhållFFordonAAFordon"
+                    // i produktion. Markering gör att första knapptrycket alltid
+                    // ersätter hela namnet, oavsett synlighet.
+                    onFocus={(e) => e.target.select()}
                     value={renameValue}
                   />
                   <button className="secondary-button" type="submit">Spara</button>

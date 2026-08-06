@@ -255,6 +255,18 @@
   flex: 1;
 }
 
+/* "Ingen kategori"-kryssrutan i uppgiftsformuläret (2026-08-07) — lägger
+   uppgiften direkt i Familjen-poolen istället för att skapa en kategori. */
+.homeQuickAddNoCategory {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
 /* Sökruta ovanför familjetrådarna (2026-08-03). */
 .todoSearchLabel {
   flex: 1;

@@ -143,7 +143,9 @@ test("Hem-vyns Todos-flik: massradering av familjens uppgifter kräver en tvåst
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa todos" }).click();
 
-  const familyThreadHeader = page.getByRole("button", { name: /^Familjen\./ });
+  // Poolens tråd är namngiven efter familjen minus "Familjen "-prefixet
+  // (2026-08-07) — kontot heter "Familjen Test" här, så tråden blir "Test".
+  const familyThreadHeader = page.getByRole("button", { name: /^Test\./ });
   await familyThreadHeader.click();
   await page.getByRole("button", { name: "Välj flera" }).click();
 
@@ -202,6 +204,55 @@ test("Hem-vyns Todos-flik: en tom familjekategori döljs alltid, oavsett om den 
 
   await expect(page.getByRole("button", { name: /^Ny\./ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Tömd\./ })).toHaveCount(0);
+});
+
+// 2026-08-07, Zaidas önskemål: "den skall både gömmas när den är tom, OCH
+// den ska istället heta [familjens namn utan 'Familjen '-prefixet]" — samma
+// döljs-när-tom-regel som riktiga familjekategorier nu även för den fasta
+// Familjen-poolen (tidigare uttryckligen UNDANTAGEN, se testerna ovan),
+// namngiven efter kontot istället för det generiska "Familjen".
+test("Hem-vyns Todos-flik: Familjen-poolen namnges efter kontot (utan Familjen-prefixet) och döljs när den är tom", async ({ page }) => {
+  const todos: Record<string, unknown>[] = [];
+  let lastPost: Record<string, unknown> | null = null;
+
+  await mockDataAPIs(page);
+  await page.route("**/api/auth/refresh", (route) =>
+    route.fulfill({
+      json: {
+        accessToken: "fake-access-token",
+        user: { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" },
+        memberships: [{ member: MEMBER, account: { id: "acc-1", name: "Familjen Andersson", type: "family", createdBy: "mem-1", deletedAt: null } }]
+      }
+    })
+  );
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "POST") {
+      lastPost = route.request().postDataJSON() as Record<string, unknown>;
+      todos.push({ ...lastPost, deletedAt: null, inProgressBy: [] });
+      return route.fulfill({ status: 201, json: { id: lastPost.id } });
+    }
+    return route.fulfill({ json: todos });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  // Tom vid start — ingen tråd alls, varken "Familjen" eller "Andersson".
+  await expect(page.getByRole("button", { name: /^Familjen\./ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Andersson\./ })).toHaveCount(0);
+
+  // Lägg till den första okategoriserade uppgiften via "+"-genvägen.
+  await page.getByRole("button", { name: "Ny familjekategori" }).click();
+  await page.getByLabel("Ingen kategori").check();
+  await page.getByLabel("Namn på uppgiften").fill("Handla mjölk");
+  await page.getByRole("button", { name: "Skapa uppgift" }).click();
+  await expect.poll(() => lastPost?.title).toBe("Handla mjölk");
+  expect(lastPost?.personalCategoryId).toBeNull();
+
+  // Tråden dyker upp, namngiven "Andersson" (inte "Familjen Andersson").
+  await expect(page.getByRole("button", { name: /^Andersson\./ })).toBeVisible();
+  await expect(page.getByText("Handla mjölk")).toBeVisible();
 });
 
 // 2026-08-05, Zaidas önskemål: "familjens todovys tomma kategorier skall

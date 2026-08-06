@@ -85,17 +85,18 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   const familyFilter = page.locator("#home-family-select");
   await expect(familyFilter).toBeVisible();
 
-  // Min egen familj vald (default) — Lägg till uppgift via trådens
-  // kategorimeny (klick på "Familjen"-rubriken öppnar menyn efter en kort
-  // fördröjning, samma tre-tryck-disambiguering som Todos-panelens trådar).
+  // Min egen familj vald (default) — Familjen-poolen är tom vid start och
+  // därför dold (2026-08-07, hideWhenEmpty) — lägg till den FÖRSTA
+  // okategoriserade uppgiften via "+"-knappens "Ingen kategori"-genväg
+  // istället för trådens egen (i det här läget onåbara) kategorimeny.
   await familyFilter.selectOption({ label: "Familjen A" });
-  const familyThreadHeader = page.getByRole("button", { name: /^Familjen\./ });
-  await familyThreadHeader.click();
-  await page.getByRole("button", { name: "Lägg till uppgift" }).click();
-  await page.getByLabel("Lägg till en uppgift").fill("Handla mjölk");
-  await page.getByRole("button", { name: "Lägg till", exact: true }).click();
+  await page.getByRole("button", { name: "Ny familjekategori" }).click();
+  await page.getByLabel("Ingen kategori").check();
+  await page.getByLabel("Namn på uppgiften").fill("Handla mjölk");
+  await page.getByRole("button", { name: "Skapa uppgift" }).click();
   await expect.poll(() => lastOwnTodoPost?.title).toBe("Handla mjölk");
   expect(lastOwnTodoPost?.assignedTo).toBeNull();
+  expect(lastOwnTodoPost?.personalCategoryId).toBeNull();
 
   // Familjen B (Mina familjekonton) — Lägg till en uppgift DÄR istället.
   await familyFilter.selectOption({ label: "Familjen B" });

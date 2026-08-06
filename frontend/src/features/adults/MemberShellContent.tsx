@@ -152,6 +152,17 @@ type Props = {
   onUpdateCalendarKeepAllHistory?: CalendarPanelProps["onUpdateCalendarKeepAllHistory"];
 };
 
+// Familjen-poolens tråd-etikett (2026-08-07, Zaidas önskemål: "den ska
+// istället heta Wiss Kolmodin om den aktuella Familjen heter så. Heter
+// Familjen Andersson, är det just Andersson denna uppsamlingskategori...
+// skall heta") — samma princip som cross-account/anslutnings-trådarna
+// redan använder (rakt av kontonamnet, se homeFamilyThreadSources nedan),
+// bara med "Familjen "-prefixet bortstripat om det finns.
+function familyPoolLabel(accountName: string): string {
+  const stripped = accountName.replace(/^Familjen\s+/i, "").trim();
+  return stripped || accountName;
+}
+
 export function MemberShellContent({
   activePanel, accountName,
 
@@ -297,7 +308,7 @@ export function MemberShellContent({
     const own = {
       id: "__familyHome__",
       accountId: currentMember.accountId,
-      label: "Familjen",
+      label: familyPoolLabel(accountName),
       // Bara okategoriserade familje-uppgifter — kategoriserade ligger i
       // sin egen tråd nedan (familyCategoryThreads), annars skulle de synas
       // dubbelt (2026-08-03, samma princip som kategori-trådarna i den
@@ -309,7 +320,10 @@ export function MemberShellContent({
       onToggleSubtask,
       onCreateTodo: (title: string, visual: string | null) => handleCreateFamilyTodo(currentMember.accountId, title, visual),
       onDeleteTodo: onSoftDeleteTodo,
-      onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id)
+      onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id),
+      // Döljs när tom (2026-08-07) — se FamilyTodoThreads.tsx:s
+      // hideWhenEmpty-kommentar.
+      hideWhenEmpty: true
     };
     // Riktiga familjekategorier (2026-08-03, isFamily:true) — en egen tråd
     // per kategori, samma mutationer som "Familjen"-poolen ovan plus
@@ -376,7 +390,7 @@ export function MemberShellContent({
     }));
     return [own, ...familyCategoryThreads, ...cross, ...connections];
   }, [
-    canSeeTodos, currentMember.accountId, currentMember.id, homeVisibleTodos, activeMembers, todos, members, roles,
+    canSeeTodos, currentMember.accountId, currentMember.id, accountName, homeVisibleTodos, activeMembers, todos, members, roles,
     familyCategories, onSoftDeleteTodo, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
     onCompleteTodo, onToggleTodoInProgress, onToggleSubtask, crossAccountFamilyThreads, crossAccountMemberGroups,
     completeCrossAccountTodo, toggleCrossAccountInProgress, createCrossAccountTodo, connectionTodoThreads,

@@ -937,6 +937,11 @@ export function ParentTodoThreadView({
                 value={editingCategoryName}
                 onChange={(e) => setEditingCategoryName(e.target.value)}
                 onBlur={saveEditingCategory}
+                // Markerar hela namnet vid fokus (2026-08-07) — se samma fix i
+                // FamilyTodoThreads.tsx för grundorsaken (annars hamnar
+                // markören bara vid slutet av det förifyllda namnet, en
+                // skriven bokstav LÄGGS TILL istället för att ERSÄTTA).
+                onFocus={(e) => e.target.select()}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") saveEditingCategory();
                   if (e.key === "Escape") setEditingCategoryId(null);
