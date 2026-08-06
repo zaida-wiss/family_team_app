@@ -2,6 +2,7 @@ import { TodoModel } from "../db/models/Todo.js";
 import { MemberModel } from "../db/models/Member.js";
 import { AccountModel } from "../db/models/Account.js";
 import { RoleModel } from "../db/models/Role.js";
+import { TodoCategoryModel } from "../db/models/TodoCategory.js";
 import { broadcastTodosChanged } from "../realtime/todoEvents.js";
 import { broadcastMembersChanged } from "../realtime/memberEvents.js";
 import { AppError } from "../utils/errors.js";
@@ -9,7 +10,16 @@ import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { getAllRoles } from "./rolesService.js";
-import { canCompleteTodo, canDeleteTodo, canEditTodo, canManageChildAccount, getChildShareAccess, hasPermission, isShareActive } from "../../../shared/permissions.js";
+import {
+  canCompleteTodo,
+  canDeleteTodo,
+  canEditTodo,
+  canManageChildAccount,
+  getChildShareAccess,
+  getExternalCategoryAccess,
+  hasPermission,
+  isShareActive
+} from "../../../shared/permissions.js";
 import type { CalendarEvent, Member, Role, Todo } from "../../../shared/types.js";
 // Dela ALLT kopplat till barnets konto, inte bara todos (2026-07-27, Zaidas
 // önskemål: "en förälder som tillhör en annan familj ska få åtkomst till
@@ -642,6 +652,136 @@ export async function rejectConnectionTodo(
   todo.rejectedReason = encryptedReason;
   await todo.save();
   broadcastTodosChanged();
+}
+
+// Delade EGNA kategorier (2026-08-06, Zaidas önskemål: "det skall vara
+// möjligt att dela sina egna kategorier med utvalda familjer") — mirror av
+// getConnectionTodos ovan, men styrt av TodoCategory.externalSharedWith
+// (ADR-0026-mönstret, direkt person-till-person, inte en Familjeanslutning)
+// istället för Account.familyConnections. En kategori kan höra till VILKEN
+// ADULT SOM HELST i ägarkontot (kontobred CRUD, ADR-0019) — mottagaren ser
+// bara den EGNA kategorins uppgifter, inte hela ägarkontots todo-lista.
+export async function getSharedCategoryTodos(callerMemberId: string, callerAccountId: string) {
+  await requireMember(callerMemberId, callerAccountId);
+  const categories = await TodoCategoryModel.find({
+    deletedAt: null,
+    externalSharedWith: { $elemMatch: { memberId: callerMemberId, accountId: callerAccountId } }
+  });
+
+  const results = [];
+  for (const category of categories) {
+    const grant = (category.externalSharedWith ?? []).find(
+      (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
+    );
+    if (!grant) continue;
+    const [accountTodos, ownerAccount] = await Promise.all([
+      getAllTodos(category.accountId),
+      AccountModel.findOne({ id: category.accountId })
+    ]);
+    const todos = accountTodos.filter(
+      (t) => t.personalCategoryId === category.id && t.recurrence.type === "none"
+    );
+    results.push({
+      category: {
+        id: category.id,
+        accountId: category.accountId,
+        name: category.name,
+        accountName: ownerAccount?.name ?? "Okänt konto"
+      },
+      access: grant.access,
+      todos
+    });
+  }
+  return results;
+}
+
+async function requireEditableSharedCategory(
+  categoryId: string,
+  categoryAccountId: string,
+  callerMemberId: string,
+  callerAccountId: string
+) {
+  const category = await TodoCategoryModel.findOne({ id: categoryId, accountId: categoryAccountId, deletedAt: null });
+  if (!category) {
+    throw new AppError(404, "Kategori hittades inte");
+  }
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
+  if (!caller) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  if (getExternalCategoryAccess(caller, category) !== "edit") {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return category;
+}
+
+// Samma "servern muterar direkt, ingen egen identitet i ägarkontot"-mönster
+// som completeSharedChildTodo/completeConnectionTodo ovan — uppgiften hör
+// till en vuxen i ägarkontot, aldrig ett barn, så assignedMemberNeedsApproval
+// blir alltid false: statusen blir "approved" direkt (ingen väntande
+// godkännande-kö för en delad kategoris uppgifter), stjärnor (om några)
+// tillskrivs kategoriägarens egen medlem, oförändrat.
+export async function completeSharedCategoryTodo(
+  todoId: string,
+  categoryAccountId: string,
+  callerMemberId: string,
+  callerAccountId: string,
+  elapsedMs: number | null
+) {
+  const todo = await TodoModel.findOne({ id: todoId, accountId: categoryAccountId, deletedAt: null });
+  if (!todo || !todo.personalCategoryId || todo.status !== "pending") {
+    throw new AppError(404, "Todo hittades inte eller är inte pending");
+  }
+  await requireEditableSharedCategory(todo.personalCategoryId, categoryAccountId, callerMemberId, callerAccountId);
+
+  todo.completedAt = new Date().toISOString();
+  if (todo.timerEnabled && elapsedMs !== null) {
+    todo.elapsedMs = elapsedMs;
+  }
+  todo.inProgressBy = [];
+  todo.inProgressSince = null;
+
+  if (await assignedMemberNeedsApproval(todo.assignedTo)) {
+    todo.status = "done";
+  } else {
+    todo.status = "approved";
+    todo.approvedBy = callerMemberId;
+    todo.approvedAt = todo.completedAt;
+    if (todo.assignedTo && todo.starValue) {
+      await MemberModel.updateOne({ id: todo.assignedTo }, { $inc: { approvedStars: todo.starValue } });
+      broadcastMembersChanged();
+    }
+  }
+
+  await todo.save();
+  broadcastTodosChanged();
+}
+
+export async function toggleSharedCategorySubtask(
+  todoId: string,
+  categoryAccountId: string,
+  subtaskId: string,
+  callerMemberId: string,
+  callerAccountId: string
+) {
+  const todo = await TodoModel.findOne({ id: todoId, accountId: categoryAccountId, deletedAt: null });
+  if (!todo || !todo.personalCategoryId) {
+    throw new AppError(404, "Todo hittades inte");
+  }
+  await requireEditableSharedCategory(todo.personalCategoryId, categoryAccountId, callerMemberId, callerAccountId);
+
+  const subtask = todo.subtasks?.find((s) => s.id === subtaskId);
+  if (!subtask) {
+    throw new AppError(404, "Delmoment hittades inte");
+  }
+  subtask.done = !subtask.done;
+  if (subtask.timedMinutes != null) {
+    subtask.timerStartedAt = subtask.done ? new Date().toISOString() : null;
+  }
+  todo.markModified("subtasks");
+  await todo.save();
+  broadcastTodosChanged();
+  return { done: subtask.done, timerStartedAt: subtask.timerStartedAt ?? null };
 }
 
 export async function createTodo(data: unknown) {

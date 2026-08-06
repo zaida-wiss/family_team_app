@@ -106,6 +106,12 @@ describe.skipIf(!RUN)("GET /api/accounts/:id/export innehåller all kontodata", 
         rejectedReason: null,
         deletedAt: null,
         deletedBy: null,
+        // Explicit kategori (2026-08-06, CI-fynd) — sedan samma dags
+        // "Mina uppgifter"-auto-kollektor (todosService.ts:s
+        // resolvePersonalCategoryId) skapar createTodo automatiskt en EXTRA
+        // kategori om personalCategoryId saknas helt, vilket hade gjort
+        // todoCategories-antalet nedan 2 istället för det avsedda 1.
+        personalCategoryId: "cat-export-test",
         notes: "Hemlig anteckning"
       });
     expect(createTodo.status).toBe(201);

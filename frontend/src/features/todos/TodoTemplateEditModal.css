@@ -1,0 +1,61 @@
+/* Full fältredigering av en uppgiftsmall (2026-08-06, Zaidas önskemål om en
+   kompaktare modal: "texten behöver börja med mindre teckenstorlek... vi
+   behöver även komprimera listan så bra som möjligt så att allt får plats
+   på minimal yta") — egen, mindre bas-teckenstorlek än resten av appen
+   (rem, inte px, så Inställningar → Utseende → textstorlek fortsatt
+   skalar den upp/ner proportionerligt) + tätare mellanrum än TodoEditModal/
+   TodoCreatorModal, som är byggda för en FULL uppgift (fler sällan-ihop-
+   visade fält), inte en mall (allt ryms rimligen på en gång). */
+.todo-template-edit-modal {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  width: min(92vw, 420px);
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.todo-template-edit-modal__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 8px;
+  background: var(--card);
+}
+
+.todo-template-edit-modal__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.todo-template-edit-modal__header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.todo-template-edit-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.todo-template-edit-modal__body .field-label {
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.todo-template-edit-modal__body .field-hint {
+  font-size: 0.75rem;
+}
+
+.todo-template-edit-modal__body textarea.text-input {
+  min-height: unset;
+}

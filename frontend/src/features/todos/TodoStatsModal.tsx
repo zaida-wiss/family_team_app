@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { X } from "lucide-react";
+import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import type { Member, Todo } from "@shared/types";
 
 type Props = {
@@ -49,8 +50,10 @@ export function TodoStatsModal({ todos, members, onClose }: Props) {
     return map;
   }, [todos, activeMembers, days]);
 
+  const overlay = useOverlayDismiss(onClose);
+
   return (
-    <div className="todo-thread-view__reuse-overlay" onClick={onClose}>
+    <div className="todo-thread-view__reuse-overlay" {...overlay}>
       <div
         aria-labelledby="todo-stats-title"
         aria-modal="true"

@@ -9,6 +9,7 @@ import { WeeklyMealPlan } from "../mealplan/WeeklyMealPlan";
 import { FamilyTodoThreads } from "../todos/FamilyTodoThreads";
 import type { FamilyThreadSource } from "../todos/FamilyTodoThreads";
 import { SharedChildrenThreads } from "../todos/SharedChildrenThreads";
+import { SharedCategoryThreads } from "../todos/SharedCategoryThreads";
 import { SharedShoppingLists } from "../shopping/SharedShoppingLists";
 import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import { TodoImportExport } from "../todos/TodoImportExport";
@@ -585,6 +586,14 @@ export function MemberOverview({
               — visas oavsett vald familj i filtret ovan (en delning är inte
               knuten till ett specifikt familjekonto-val på samma sätt). */}
           <SharedChildrenThreads todoBubbleSize={todoBubbleSize} todoThreadGap={todoThreadGap} />
+
+          {/* Delade EGNA kategorier (2026-08-06, Zaidas önskemål: "det skall
+              vara möjligt att dela sina egna kategorier med utvalda
+              familjer") — en kategori en ANNAN familj delat med mig via
+              kategorimenyns "Dela", oavsett vald familj i filtret ovan
+              (samma "en delning är inte knuten till ett specifikt
+              familjekonto-val"-princip som Delade barn ovan). */}
+          <SharedCategoryThreads range={todoThreadRange} todoBubbleSize={todoBubbleSize} todoThreadGap={todoThreadGap} />
         </article>
       )}
 

@@ -15,6 +15,16 @@ export type ConnectionTodosThread = {
   access: AccessLevel;
   todos: Todo[];
 };
+
+// Delade EGNA kategorier (2026-08-06, Zaidas önskemål: "det skall vara
+// möjligt att dela sina egna kategorier med utvalda familjer") — en tråd
+// per kategori som delats MED mig, skiljer sig från getSharedChildren (ett
+// helt barn) och getConnectionTodos (en hel Familjeanslutning) ovan.
+export type SharedCategoryThread = {
+  category: { id: string; accountId: string; name: string; accountName: string };
+  access: AccessLevel;
+  todos: Todo[];
+};
 import { api, request, subscribeToServerEvents } from "./client";
 
 // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024) —
@@ -169,6 +179,18 @@ export const todosApi = {
     request<{ id: string }>(api(`todos/connections/${targetAccountId}`), {
       method: "POST",
       body: JSON.stringify({ title, visual })
+    }),
+  // Delade EGNA kategorier (2026-08-06) — se SharedCategoryThread ovan.
+  getSharedCategories: () => request<SharedCategoryThread[]>(api("todos/shared-categories")),
+  completeSharedCategory: (categoryAccountId: string, id: string, elapsedMs: number | null = null) =>
+    request<{ ok: boolean }>(api(`todos/shared-categories/${categoryAccountId}/${id}/complete`), {
+      method: "PATCH",
+      body: JSON.stringify({ elapsedMs })
+    }),
+  toggleSharedCategorySubtask: (categoryAccountId: string, id: string, subtaskId: string) =>
+    request<{ done: boolean }>(api(`todos/shared-categories/${categoryAccountId}/${id}/subtasks/${subtaskId}`), {
+      method: "PATCH",
+      body: JSON.stringify({})
     }),
   subscribeToChanges: (onChange: () => void) => {
     let initialConnect = true;

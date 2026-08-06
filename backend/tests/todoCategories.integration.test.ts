@@ -447,8 +447,15 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
+    // isFamily måste ingå i predikatet (2026-08-06, CI-fynd) — en tidigare
+    // test i samma describe-block ("radera en PERSONLIG kategori...") skapar
+    // redan en PERSONLIG "Mina uppgifter"-samlingskategori för samma medlem,
+    // och getAllCategories sorterar på createdAt (äldst först) — ett
+    // ofiltrerat .find(c => c.isUncategorizedCollector) matchade därför FEL
+    // (den äldre, personliga) kollektorn istället för den nyss skapade
+    // familjekollektorn.
     const collector = (list.body as Array<{ id: string; name: string; isFamily: boolean; isUncategorizedCollector?: boolean }>)
-      .find((c) => c.isUncategorizedCollector);
+      .find((c) => c.isUncategorizedCollector && c.isFamily);
     expect(collector).toBeDefined();
     expect(collector?.name).toBe(accountName);
     expect(collector?.isFamily).toBe(true);
@@ -496,7 +503,11 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
-    const collectors = (list.body as Array<{ isUncategorizedCollector?: boolean }>).filter((c) => c.isUncategorizedCollector);
+    // isFamily i predikatet (se motsvarande fynd/kommentar ovan) — annars
+    // räknas även den samexisterande PERSONLIGA "Mina uppgifter"-kollektorn.
+    const collectors = (list.body as Array<{ isUncategorizedCollector?: boolean; isFamily?: boolean }>).filter(
+      (c) => c.isUncategorizedCollector && c.isFamily
+    );
     expect(collectors).toHaveLength(1);
   });
 
@@ -521,7 +532,14 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
-    expect((list.body as Array<{ isUncategorizedCollector?: boolean }>).some((c) => c.isUncategorizedCollector)).toBe(false);
+    // isFamily i predikatet (samma CI-fynd som ovan) — den PERSONLIGA "Mina
+    // uppgifter"-kollektorn (skapad av en tidigare test i samma describe-
+    // block) finns fortfarande kvar, bara familje-kollektorn raderades.
+    expect(
+      (list.body as Array<{ isUncategorizedCollector?: boolean; isFamily?: boolean }>).some(
+        (c) => c.isUncategorizedCollector && c.isFamily
+      )
+    ).toBe(false);
   });
 
   it("en NY familjekategori-radering med kvarvarande uppgifter skapar en FRÄSCH samlingskategori (den gamla är borta)", async () => {
@@ -550,8 +568,10 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
-    const newCollector = (list.body as Array<{ id: string; isUncategorizedCollector?: boolean }>).find(
-      (c) => c.isUncategorizedCollector
+    // isFamily i predikatet (samma CI-fynd som ovan) — annars kan den
+    // samexisterande PERSONLIGA "Mina uppgifter"-kollektorn matchas istället.
+    const newCollector = (list.body as Array<{ id: string; isUncategorizedCollector?: boolean; isFamily?: boolean }>).find(
+      (c) => c.isUncategorizedCollector && c.isFamily
     );
     expect(newCollector).toBeDefined();
     expect(newCollector!.id).not.toBe(collectorId);

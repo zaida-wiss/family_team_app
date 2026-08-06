@@ -1,16 +1,20 @@
 import "./TemplatesSettings.css";
 import { useState } from "react";
-import { ChevronDown, ChevronRight, GripVertical, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Pencil, Trash2 } from "lucide-react";
 import type { Id, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { describeRecurrence, describeRecurrenceEnd } from "./recurringTodos";
 import { useDragReorder } from "../../hooks/useDragReorder";
+import { TodoTemplateEditModal } from "./TodoTemplateEditModal";
 
 type Props = {
   taskTemplates: TodoTemplate[];
   categoryTemplates: TodoCategoryTemplate[];
   onRemoveTaskTemplate: (id: Id) => void;
   onRemoveCategoryTemplate: (id: Id) => void;
-  onRenameTaskTemplate: (id: Id, title: string) => void;
+  // Full fältredigering (2026-08-06, Zaidas fråga: "Går alla fält från
+  // mallen att redigera i modalerna?") — ersätter det tidigare enkla
+  // namnbytet, se TodoTemplateEditModal.tsx.
+  onUpdateTaskTemplate: (id: Id, task: TodoTemplateTask) => Promise<unknown>;
   onUpdateCategoryTemplate: (id: Id, name: string, tasks: TodoTemplateTask[]) => void;
   // Manuell ordning (2026-07-29, Zaidas önskemål: "flytta ordningen snabbt i
   // uppgiftsmallarna") — samma "olistade hamnar sist"-princip som
@@ -30,13 +34,13 @@ export function TemplatesSettings({
   categoryTemplates,
   onRemoveTaskTemplate,
   onRemoveCategoryTemplate,
-  onRenameTaskTemplate,
+  onUpdateTaskTemplate,
   onUpdateCategoryTemplate,
   order,
   onReorder
 }: Props) {
-  const [editingId, setEditingId] = useState<Id | null>(null);
-  const [draftTitle, setDraftTitle] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<Id | null>(null);
+  const editingTask = taskTemplates.find((t) => t.id === editingTaskId) ?? null;
 
   const orderIndex = new Map(order.map((id, i) => [id, i]));
   const sortedTaskTemplates = [...taskTemplates].sort((a, b) => {
@@ -62,16 +66,6 @@ export function TemplatesSettings({
   const [expandedCategoryId, setExpandedCategoryId] = useState<Id | null>(null);
   const [categoryNameDraft, setCategoryNameDraft] = useState("");
   const [categoryTasksDraft, setCategoryTasksDraft] = useState<TodoTemplateTask[]>([]);
-
-  function startEditing(template: TodoTemplate) {
-    setEditingId(template.id);
-    setDraftTitle(template.title);
-  }
-
-  function saveEditing() {
-    if (editingId) onRenameTaskTemplate(editingId, draftTitle);
-    setEditingId(null);
-  }
 
   function toggleCategory(template: TodoCategoryTemplate) {
     if (expandedCategoryId === template.id) {
@@ -223,39 +217,33 @@ export function TemplatesSettings({
                     <GripVertical size={16} />
                   </button>
                   <div className="templates-settings__info">
-                    {editingId === template.id ? (
-                      <input
-                        aria-label={`Byt namn på mallen ${template.title}`}
-                        autoFocus
-                        className="text-input templates-settings__rename-input"
-                        onBlur={saveEditing}
-                        onChange={(e) => setDraftTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.currentTarget.blur();
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                        value={draftTitle}
-                      />
-                    ) : (
-                      <span
-                        className="templates-settings__title"
-                        onClick={() => startEditing(template)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") startEditing(template);
-                        }}
-                      >
-                        {template.title}
-                      </span>
-                    )}
+                    <span
+                      className="templates-settings__title"
+                      onClick={() => setEditingTaskId(template.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") setEditingTaskId(template.id);
+                      }}
+                    >
+                      {template.title}
+                    </span>
                     {recurrenceLabel && (
                       <small>
                         {recurrenceLabel}
                         {endLabel && ` · ${endLabel}`}
+                        {template.timerEnabled && " · Tidtagning"}
                       </small>
                     )}
                   </div>
+                  <button
+                    aria-label={`Redigera mallen ${template.title}`}
+                    className="icon-button"
+                    onClick={() => setEditingTaskId(template.id)}
+                    type="button"
+                  >
+                    <Pencil size={15} />
+                  </button>
                   <button
                     aria-label={`Ta bort mallen ${template.title}`}
                     className="icon-button danger"
@@ -268,6 +256,14 @@ export function TemplatesSettings({
               );
             })}
           </ul>
+
+          {editingTask && (
+            <TodoTemplateEditModal
+              onClose={() => setEditingTaskId(null)}
+              onUpdate={onUpdateTaskTemplate}
+              template={editingTask}
+            />
+          )}
         </div>
       )}
     </div>

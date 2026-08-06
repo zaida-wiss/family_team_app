@@ -3,6 +3,7 @@ import { Pencil, X } from "lucide-react";
 import { Fragment } from "react";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
@@ -98,9 +99,10 @@ export function TodoDetailView({
   const progress = subtasks.length > 0 ? Math.round((doneCount / subtasks.length) * 100) : 0;
   const schedule = formatSchedule(todo);
   const recurrence = formatRecurrence(todo);
+  const overlay = useOverlayDismiss(onClose);
 
   return (
-    <div className="todo-detail-overlay" onClick={onClose}>
+    <div className="todo-detail-overlay" {...overlay}>
       <div
         aria-labelledby="todo-detail-title"
         aria-modal="true"

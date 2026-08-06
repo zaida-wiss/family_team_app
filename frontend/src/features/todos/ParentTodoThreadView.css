@@ -22,28 +22,14 @@
    textstorlek. Konsekvens: fyra kolumner ryms inte helt utan skroll på de
    allra smalaste telefonerna längre (var ett uttalat mål 2026-07-06) — ett
    medvetet accepterat pris, sidledes skroll är redan inbyggt stöd. */
-/* Redigeringsläge (2026-07-24, Zaidas önskemål) — en liten knapp uppe till
-   höger, ovanför själva tråd-raden, låser upp göm-genväg + bubbel-drag.
-
-   min-width: 0 är INTE kosmetiskt (2026-07-25-fynd, Zaida: "bubbelvyn är
-   väldigt bred... det är endast bubbelsektionen som ska gå att skrolla
-   sidledes"). .dashboard-list (components.css) är ett CSS-grid — precis som
-   flex-items defaultar grid-items till min-width:auto, vilket betyder "så
-   bred som innehållets min-content-bredd". Innan denna wrapper fanns var
-   .todo-thread-view (med sin egen overflow-x:auto) DIREKT grid-item, och
-   fungerade. Nu är wrappern grid-item istället, och UTAN min-width:0 vinner
-   den wide flex-radens min-content-bredd — hela sidan blir scrollbar
-   sidledes istället för att bara .todo-thread-view scrollar internt, och
-   redigeringsknappen (första barnet, INTE del av den skrollande raden)
-   hamnar utanför synligt område. */
-.todo-thread-view-wrapper {
-  position: relative;
-  min-width: 0;
-}
-
 /* Rubrik + knappar på samma rad (2026-07-25, Zaidas önskemål: "helst rymmas
    på samma rad... ge mer plats åt bubblorna") — titeln flyttad hit från
-   TodosView.tsx/.css (var en egen rubrikrad ovanför hela panelen tidigare). */
+   TodosView.tsx/.css (var en egen rubrikrad ovanför hela panelen tidigare).
+   Sedan 2026-08-06 en egen delad komponent (TodoThreadToolbar.tsx), lyft
+   ut ur ParentTodoThreadView.tsx och renderad i TodosView.tsx OVANFÖR hela
+   .todo-threads-row — annars hamnade den signade familjetrådens rubrik
+   (FamilyTodoThreads.tsx, ingen egen toolbar) i höjd med DENNA rad istället
+   för i höjd med de andra kategorierna (align-items:flex-start i raden). */
 /* 2026-07-25-fynd (Zaida: "knapparna bredvid bubbelsysslorna måste vara
    mycket mindre, annars försvinner texten") — knapparna själva får INTE
    krympa under 44×44px (CLAUDE.md:s icke förhandlingsbara touch-mål), så
@@ -54,7 +40,14 @@
    rad bara när det verkligen inte finns plats (stannar på samma rad som
    Zaidas tidigare önskemål på de flesta skärmar), och titelns font-size
    krymper med clamp() istället för att vara ett fast 1.6rem som konkurrerar
-   om samma trånga utrymme. */
+   om samma trånga utrymme.
+
+   min-width: 0 är INTE kosmetiskt (samma 2026-07-25-fynd som ovan, "bubbel-
+   vyn är väldigt bred... det är endast bubbelsektionen som ska gå att
+   skrolla sidledes") — .dashboard-list (components.css) är ett CSS-grid,
+   och toolbaren är sedan 2026-08-06 sin EGEN grid-rad (inte längre inuti
+   samma wrapper som .todo-thread-view). Utan min-width:0 kan titelns
+   min-content-bredd tvinga hela griden bredare än viewporten. */
 .todo-thread-view__toolbar {
   display: flex;
   align-items: center;
@@ -62,6 +55,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
+  min-width: 0;
 }
 
 .todo-thread-view__toolbar-title {
@@ -144,10 +138,11 @@
   width: 100%;
 }
 
-/* ParentTodoThreadView.tsx returnerar .todo-thread-view-wrapper (toolbar +
-   .todo-thread-view), FamilyTodoThreads.tsx returnerar .todo-thread-view
-   direkt (ingen egen toolbar) — olika djup, men båda ska vara oskrymplade
-   flex-syskon i raden. */
+/* ParentTodoThreadView.tsx och FamilyTodoThreads.tsx returnerar sedan
+   2026-08-06 båda samma sak — .todo-thread-view direkt, ingen egen wrapper/
+   toolbar — så de blir identiskt formade, oskrymplade flex-syskon i raden
+   (samma höjd-utgångspunkt, se .todo-thread-view__toolbar ovan för var
+   rubrikraden flyttade). */
 .todo-threads-row > * {
   flex-shrink: 0;
 }
@@ -159,10 +154,11 @@
 
 /* Kolumnen matchar bollens bredd med en liten, konstant marginal — växer med
    --ball-size istället för att vara ett eget fast mått (2026-07-06).
-   Ogenomskinlig ljus bakgrund (2026-07-08, Zaidas begäran: "bakgrunden kan
-   inte vara transparant... en ljus färg" som följer temat) — utan detta syns
-   den trådlinje/bakgrund som annars ligger bakom en fast rubrik när bollarna
-   scrollar förbi den. */
+   Genomskinlig bakgrund (2026-08-06, Zaidas önskemål: "vi gör bakgrunden i
+   kolumnerna transparanta, så vi endast ser bollarna") — kolumnens EGNA
+   bakgrund (denna regel) skiljer sig medvetet från rubrikens (.todo-
+   thread__header nedan, som MÅSTE förbli ogenomskinlig — annars syns
+   bollarna genom/bakom den sticky rubriken medan de scrollar förbi). */
 /* Egen, begränsad höjd + eget scroll (2026-07-08) — .todo-thread-view:s
    overflow-x:auto tvingar CSS-spec-mässigt fram overflow-y:auto också (man
    kan inte scrolla bara ett håll), vilket gjorde den till bollarnas FAKTISKA
@@ -176,7 +172,7 @@
   align-items: center;
   flex: 0 0 calc(var(--ball-size) + 4px);
   width: calc(var(--ball-size) + 4px);
-  background: var(--card);
+  background: transparent;
   border-radius: var(--radius-sm);
   padding: 6px 2px;
   max-height: 70vh;
@@ -806,6 +802,39 @@
   align-items: center;
   gap: 8px;
   min-height: 44px;
+}
+
+/* Dela kategorin (2026-08-06, TodoCategoryShareModal.tsx) — samma modal-skal
+   som Återanvänd/Filtrera, egen lokal lista/rad-klass istället för att
+   återanvända ChildShareSettings.css:s .child-share-list utan att importera
+   den filen (samma cross-chunk-CSS-fälla som redan dokumenterats). */
+.todo-thread-view__share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.todo-thread-view__share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+}
+
+.todo-thread-view__share-lookup {
+  display: flex;
+  gap: 8px;
+}
+
+.todo-thread-view__share-lookup .text-input {
+  flex: 1;
 }
 
 /* Delade barn, "endast visning"-låset (ADR-0024, SharedChildrenThreads.tsx) */

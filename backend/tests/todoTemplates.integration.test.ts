@@ -40,7 +40,12 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     notes: "Glöm inte solkräm.",
     subtasks: [{ title: "Handduk" }, { title: "Solglasögon", timedMinutes: 15 }],
     recurrence: { type: "none" },
-    starValue: 0
+    starValue: 0,
+    // Tidtagning (2026-08-06, Zaidas fynd: "Tidtagning text? antal minuter?
+    // Går alla fält från mallen att redigera?") — saknades tidigare helt i
+    // mallens Zod/Mongoose-scheman, precis som notes/timedMinutes en gång.
+    timerEnabled: true,
+    plannedDurationMinutes: 25
   };
 
   it("registrerar användare, familjekonto och ett barn i samma konto", async () => {
@@ -86,6 +91,8 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     expect(res.body.notes).toBe("Glöm inte solkräm.");
     expect(res.body.subtasks).toHaveLength(2);
     expect(res.body.subtasks[1]).toMatchObject({ title: "Solglasögon", timedMinutes: 15 });
+    expect(res.body.timerEnabled).toBe(true);
+    expect(res.body.plannedDurationMinutes).toBe(25);
     taskTemplateId = res.body.id;
   });
 
@@ -131,6 +138,8 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     expect(res.body.tasks).toHaveLength(2);
     expect(res.body.tasks[0].notes).toBe("Glöm inte solkräm.");
     expect(res.body.tasks[0].subtasks[1]).toMatchObject({ title: "Solglasögon", timedMinutes: 15 });
+    expect(res.body.tasks[0].timerEnabled).toBe(true);
+    expect(res.body.tasks[0].plannedDurationMinutes).toBe(25);
     categoryTemplateId = res.body.id;
   });
 

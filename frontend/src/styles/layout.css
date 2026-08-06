@@ -13,12 +13,35 @@
   color: var(--foreground);
 }
 
-/* Child view (app-shell-full) — desktop: fixed height; mobile: flex child handles height */
+/* Child view (app-shell-full) — desktop: fixed height; mobile: flex child handles height.
+   Barnens fulla vy ska fortsatt vara helt kant-till-kant (medvetet), rörs
+   INTE av den allmänna marginalen nedan — .app-shell-full har högre
+   specificitet (två klasser) och vinner alltid över plain .app-shell-content. */
 .app-shell-content.app-shell-full {
   padding: 0px;
   height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
+}
+
+/* Liten marginal runt allt panelinnehåll, genomgående i appen (2026-08-06,
+   Zaidas fynd: "nästan alla sidor saknar marginal, utan börjar direkt vid
+   skärmen"). .app-shell-content är den enda gemensamma föräldern för
+   samtliga paneler (Hem/Kalender/Inköp/Todos/Recept/Medlemmar/
+   Inställningar) — en ändring HÄR ger marginal genomgående utan att röra
+   varje panels egen CSS. Fanns tidigare bara på den enskilda .dashboard-
+   klassen (Sprint 4 S9, 5f7e613) men raderades av misstag som "död kod"
+   knuten till det då borttagna Dashboard.tsx — .dashboard-KLASSEN användes
+   redan då (och används fortsatt) av flera andra, oberoende komponenter
+   (CalendarView/ShoppingView/TodosView/RecipesView/MemberOverview m.fl.),
+   så borttagningen lämnade dem alla utan marginal. Lagd på .app-shell-
+   content istället för att återinföra på .dashboard denna gång — täcker då
+   ÄVEN sidor som inte använder .dashboard alls (Inställningar/Medlemmar).
+   Ingen bakgrund/box-shadow återinförd (det gamla `.dashboard`-kortet hade
+   det) — Zaida bad bara om "en liten marginal", inte tillbaka till en
+   skuggad kort-look. */
+.app-shell-content {
+  padding: 16px;
 }
 
 @media (max-width: 1023px) {
@@ -33,7 +56,7 @@
   .app-shell-content {
     flex: 1;
     min-height: 0;
-    padding: 0 0 64px;
+    padding: 16px 16px calc(64px + 16px);
     overflow-y: auto;
     background: var(--background);
   }
@@ -60,7 +83,7 @@
   }
 
   .app-shell-content {
-    padding: 0px 0px 0px;
+    padding: 20px;
     min-height: 100vh;
     background: var(--background);
   }

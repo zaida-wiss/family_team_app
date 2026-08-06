@@ -24,6 +24,10 @@ const todoTemplateSchema = new Schema<TodoTemplate>({
   },
   recurrence: { type: Schema.Types.Mixed, required: true },
   starValue: { type: Number, required: true },
+  // Tidtagning (2026-08-06) — samma "lägg till i Zod OCH Mongoose SAMTIDIGT"-
+  // påminnelse som notes/subtasks[].timedMinutes ovan.
+  timerEnabled: { type: Boolean, default: false },
+  plannedDurationMinutes: { type: Number, default: null },
   createdAt: { type: String, required: true },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }

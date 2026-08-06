@@ -25,21 +25,32 @@ describe("todoCsv", () => {
   // återkommande uppgifter (synlig kl. X, försvinner kl. Y, nästa dags kopia
   // oberoende av gårdagens). 2026-08-04: en tredje ny kolumn (Radera) och en
   // femte exempelrad som visar den.
-  test("buildTemplateCsv innehåller alla rubriker plus exempel för engångs-, enkel återkommande, flera-tidsrutor-, slutar- och radera-uppgifter", () => {
+  // 2026-08-06: mallen fick två nya exempelrader (en engångsuppgift som
+  // stannar kvar tills avklarad, och en timer-uppgift) — Zaidas önskemål om
+  // att tydligt visa "kvarstående vs. försvinner efter en tid vs.
+  // återkommande vs. timer" i en och samma nedladdningsbara mall.
+  test("buildTemplateCsv innehåller alla rubriker plus exempel för kvarstående-, försvinner-, enkel återkommande-, flera-tidsrutor-, slutar-, timer- och radera-uppgifter", () => {
     const csv = buildTemplateCsv();
     const table = parseCsvText(csv);
     const headerIndex = new Map(table[0].map((h, i) => [h, i]));
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
-    expect(table.length).toBe(6);
+    expect(table.length).toBe(8);
     expect(table[1][0]).toBe("Handla mat");
-    expect(table[2][0]).toBe("Andningsövning");
-    expect(table[2][headerIndex.get("Återkommer")!]).toBe("Dag");
-    expect(table[3][0]).toBe("Borsta tänderna");
-    expect(table[3][headerIndex.get("Fler tidsrutor")!]).toBe("19:00-19:15");
-    expect(table[4][0]).toBe("Öva piano");
-    expect(table[4][headerIndex.get("Slutar")!]).toBe("30");
-    expect(table[5][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
-    expect(table[5][headerIndex.get("Radera")!]).toBe("Ja");
+    expect(table[1][headerIndex.get("Startdatum")!]).toBe("");
+    expect(table[1][headerIndex.get("Slutdatum")!]).toBe("");
+    expect(table[2][0]).toBe("Hämta paket");
+    expect(table[2][headerIndex.get("Slutdatum")!]).not.toBe("");
+    expect(table[3][0]).toBe("Andningsövning");
+    expect(table[3][headerIndex.get("Återkommer")!]).toBe("Dag");
+    expect(table[4][0]).toBe("Borsta tänderna");
+    expect(table[4][headerIndex.get("Fler tidsrutor")!]).toBe("19:00-19:15");
+    expect(table[5][0]).toBe("Öva piano");
+    expect(table[5][headerIndex.get("Slutar")!]).toBe("30");
+    expect(table[6][0]).toBe("Städa rummet");
+    expect(table[6][headerIndex.get("Timer")!]).toBe("Ja");
+    expect(table[6][headerIndex.get("Timer (min)")!]).toBe("25");
+    expect(table[7][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
+    expect(table[7][headerIndex.get("Radera")!]).toBe("Ja");
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {

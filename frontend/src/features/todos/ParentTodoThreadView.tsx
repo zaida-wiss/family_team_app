@@ -1,18 +1,16 @@
 import "./ParentTodoThreadView.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Info, Plus, X } from "lucide-react";
-import { TodoStatsModal } from "./TodoStatsModal";
-import { NEW_CATEGORY_VALUE } from "./TodoCreatorModal";
 import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
+import { TodoCategoryShareModal } from "./TodoCategoryShareModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useNowTick } from "../../hooks/useNowTick";
+import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { downloadCsv, todosToCsv } from "./todoCsv";
-import { dateOnlyToISO, isRecurringTemplate } from "./recurringTodos";
+import { isRecurringTemplate } from "./recurringTodos";
 import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
-import { generateId } from "../../utils/uuid";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -69,7 +67,6 @@ type Props = {
   // önskemål) — samma "tom eller från mall"-flöde som redan fanns inbäddat i
   // TodoCreatorModal.tsx, nu även nåbart direkt från tråd-vyn.
   categoryTemplates: TodoCategoryTemplate[];
-  onCreateTodo: (todo: Todo) => void;
   onDeleteTodo: (todoId: Id) => void;
   onAddTodoToCategory: (categoryId: Id | null) => void;
   todoThreadOrder: Id[];
@@ -247,7 +244,6 @@ export function ParentTodoThreadView({
   onCreateCategoryTemplate,
   onUpdateCategoryTemplate,
   categoryTemplates,
-  onCreateTodo,
   onDeleteTodo,
   onAddTodoToCategory,
   todoThreadOrder,
@@ -306,6 +302,10 @@ export function ParentTodoThreadView({
   // (exporterar bara den kategorins uppgifter som CSV) eller "Göm" (kategorin
   // döljs ur tråd-vyn men finns kvar, visas igen via Inställningar).
   const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
+  // "Dela" i kategorimenyn (2026-08-06, Zaidas önskemål: "det skall vara
+  // möjligt att dela sina egna kategorier med utvalda familjer") — öppnar
+  // TodoCategoryShareModal.tsx.
+  const [shareCategoryId, setShareCategoryId] = useState<Id | null>(null);
   // Tvåstegsbekräftelse innan en kategori raderas (2026-08-06, Zaidas
   // önskemål: "om en kategori raderas skall det först komma en varning") —
   // saknades HELT tidigare, ett klick raderade direkt. Samma
@@ -336,6 +336,10 @@ export function ParentTodoThreadView({
   // finns nyckeln = bara de id:n i mängden visas.
   const [filterThreadId, setFilterThreadId] = useState<Id | null>(null);
   const [assigneeFilters, setAssigneeFilters] = useState<Map<Id, Set<Id>>>(new Map());
+  // Modalen ska inte stängas om man råkar dra ut en textmarkering utanför
+  // den (2026-08-06, Zaidas önskemål) — se useOverlayDismiss.ts.
+  const reuseOverlay = useOverlayDismiss(() => setReuseCategoryId(null));
+  const filterOverlay = useOverlayDismiss(() => setFilterThreadId(null));
 
   // Drag-and-drop-ordning på trådarna (2026-07-06, Zaidas önskemål) — håll
   // och dra i kategorinamnet (eller Barn-tråden, som också är flyttbar).
@@ -368,85 +372,6 @@ export function ParentTodoThreadView({
   const CATEGORY_TAP_MS = 400;
   const categoryTapRef = useRef<{ id: Id; count: number; time: number } | null>(null);
   const categoryTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Instruktionsknapp (2026-07-25, Zaidas önskemål — ersätter den tidigare
-  // fasta undertexten "Dagens familjebubblor – pilla på en när den är
-  // klar!" som togs bort ur TodosView.tsx samma dag).
-  const [showInfo, setShowInfo] = useState(false);
-  // Statistik-knapp (2026-07-25, Zaidas önskemål).
-  const [showStats, setShowStats] = useState(false);
-
-  // Ny kategori-knapp (+) längst till höger (2026-07-25, Zaidas önskemål:
-  // "lägga till en ny kategori eller hämta en från mall"). 2026-08-05,
-  // Zaidas rättelse: "aldrig bara en kategori" — det tidigare "Tom
-  // kategori"-läget (skapade en kategori helt utan uppgift) togs bort. Vill
-  // man INTE använda en sparad kategorimall öppnas nu hela Ny uppgift-
-  // modalen direkt i "+Ny kategori…"-läge (samma onAddTodoToCategory-prop
-  // som redan används av kategorimenyns "Lägg till uppgift", bara med
-  // NEW_CATEGORY_VALUE istället för ett riktigt kategori-id eller null) —
-  // kategori och första uppgift skapas då alltid i samma steg. Finns inga
-  // sparade kategorimallar alls hoppar "+"-knappen över den här minimodalen
-  // helt och öppnar Ny uppgift-modalen direkt, se knappens onClick nedan.
-  const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newCategoryTemplateId, setNewCategoryTemplateId] = useState("");
-  const [newCategoryTemplateStartDate, setNewCategoryTemplateStartDate] = useState("");
-  const [creatingCategory, setCreatingCategory] = useState(false);
-
-  const canSubmitNewCategory = Boolean(newCategoryTemplateId && newCategoryTemplateStartDate);
-
-  function closeNewCategoryModal() {
-    setShowNewCategory(false);
-    setNewCategoryTemplateId("");
-    setNewCategoryTemplateStartDate("");
-  }
-
-  function openCreateModalForNewCategory() {
-    closeNewCategoryModal();
-    onAddTodoToCategory(NEW_CATEGORY_VALUE);
-  }
-
-  async function submitNewCategory() {
-    if (!canSubmitNewCategory || creatingCategory) return;
-    setCreatingCategory(true);
-    try {
-      const template = categoryTemplates.find((t) => t.id === newCategoryTemplateId);
-      if (!template) return;
-      const category = await onCreateCategory(template.name);
-      for (const task of template.tasks) {
-        onCreateTodo({
-          id: `todo-${generateId()}`,
-          title: task.title,
-          createdBy: currentMember.id,
-          assignedTo: currentMember.id,
-          isShared: false,
-          status: "pending",
-          starValue: task.starValue,
-          visual: task.visual,
-          recurrence: task.recurrence,
-          recurringSourceId: null,
-          occurrenceDate: null,
-          visibleFrom: dateOnlyToISO(newCategoryTemplateStartDate),
-          expiresAt: null,
-          completedAt: null,
-          approvedBy: null,
-          approvedAt: null,
-          rejectedBy: null,
-          rejectedAt: null,
-          rejectedReason: null,
-          deletedAt: null,
-          deletedBy: null,
-          personalCategoryId: category.id,
-          notes: null,
-          subtasks: task.subtasks.map((s) => ({ id: generateId(), title: s.title, done: false })),
-          timerEnabled: false,
-          plannedDurationMinutes: null,
-          elapsedMs: null
-        });
-      }
-    } finally {
-      setCreatingCategory(false);
-      closeNewCategoryModal();
-    }
-  }
   const bubbleDragStateRef = useRef<{ threadId: Id; key: Id; x: number; y: number } | null>(null);
   const [draggingBubbleKey, setDraggingBubbleKey] = useState<Id | null>(null);
   const [bubbleDragOverKey, setBubbleDragOverKey] = useState<Id | null>(null);
@@ -638,7 +563,17 @@ export function ParentTodoThreadView({
         // undantaget fanns för att kunna NÅ en ny kategoris "Lägg till
         // uppgift"-meny, men den vägen behövs inte längre — "+"-knappen
         // öppnar redan skapa-kategori-flödet direkt).
-        const isEmpty = categoryBaseTodos.length === 0 && categoryAllTodos.length === 0;
+        // 2026-08-06, Zaidas rättelse: "tom" avgörs nu ENBART av
+        // categoryBaseTodos (de FAKTISKT synliga bollarna just nu) — det
+        // tidigare "eller categoryAllTodos" (dag-baserat, inkluderar även
+        // redan avklarade/godkända uppgifter) lät en kategori bli kvar
+        // synlig med bara en tom, bollfri kolumn hela dagen efter att dess
+        // enda uppgift antingen redan klarats av ELLER passerat sitt
+        // tidsfönster (t.ex. en morgonrutin, sett på eftermiddagen). En
+        // kategori ska försvinna så fort den inte har någon AKTUELL boll
+        // att visa, och komma tillbaka först när en ny (t.ex. morgondagens
+        // genererade occurrence) blir synlig.
+        const isEmpty = categoryBaseTodos.length === 0;
         if (isEmpty) return null;
         return {
           id: category.id,
@@ -890,6 +825,11 @@ export function ParentTodoThreadView({
     onSetCategoryHidden(categoryId, true);
   }
 
+  function handleShareFromMenu(categoryId: Id) {
+    setMenuCategoryId(null);
+    setShareCategoryId(categoryId);
+  }
+
   // Mallbibliotek (2026-07-08) — sparar en frusen ögonblicksbild av kategorins
   // DEFINIERANDE uppgifter (mallar och engångsuppgifter, inte deras redan
   // genererade dagliga occurrences — samma urval som handleReuseFromMenu
@@ -911,7 +851,10 @@ export function ParentTodoThreadView({
         notes: t.notes ?? null,
         subtasks: (t.subtasks ?? []).map((s) => ({ title: s.title, timedMinutes: s.timedMinutes ?? null })),
         recurrence: t.recurrence,
-        starValue: t.starValue
+        starValue: t.starValue,
+        // Tidtagning (2026-08-06, Zaidas fynd: "mallen saknade timer-fält").
+        timerEnabled: t.timerEnabled ?? false,
+        plannedDurationMinutes: t.plannedDurationMinutes ?? null
       }));
     if (tasks.length === 0) return;
     const existing = categoryTemplates.find((t) => t.sourceCategoryId === categoryId);
@@ -963,155 +906,16 @@ export function ParentTodoThreadView({
   }
 
   return (
-    <div className="todo-thread-view-wrapper">
-      <div className="todo-thread-view__toolbar">
-        <h2 className="todo-thread-view__toolbar-title">Bubbelsysslor ✨</h2>
-        <div className="todo-thread-view__toolbar-actions">
-          <button
-            aria-label="Hur fungerar bubbelsysslorna?"
-            className="icon-button"
-            onClick={() => setShowInfo(true)}
-            title="Hur fungerar bubbelsysslorna?"
-            type="button"
-          >
-            <Info size={16} />
-          </button>
-          <button
-            aria-label="Statistik"
-            className="icon-button"
-            onClick={() => setShowStats(true)}
-            title="Statistik — senaste 7 dagarna"
-            type="button"
-          >
-            <BarChart3 size={16} />
-          </button>
-          <button
-            aria-label="Ny kategori"
-            className="icon-button"
-            onClick={() => {
-              // Inget att välja mellan utan sparade kategorimallar — hoppa
-              // rakt till Ny uppgift-modalens "+Ny kategori…"-läge istället
-              // för att visa en minimodal utan reellt innehåll.
-              if (categoryTemplates.length === 0) {
-                onAddTodoToCategory(NEW_CATEGORY_VALUE);
-                return;
-              }
-              setShowNewCategory(true);
-            }}
-            title="Ny kategori — från mall, eller som en del av en ny uppgift"
-            type="button"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-      </div>
-
-      {showStats && (
-        <TodoStatsModal members={members} todos={allTodos} onClose={() => setShowStats(false)} />
-      )}
-
-      {showNewCategory && (
-        <div className="todo-thread-view__reuse-overlay" onClick={closeNewCategoryModal}>
-          <div
-            aria-labelledby="new-category-title"
-            aria-modal="true"
-            className="todo-thread-view__reuse-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-          >
-            <div className="todo-thread-view__info-header">
-              <h3 id="new-category-title">Ny kategori från mall</h3>
-              <button aria-label="Stäng" className="icon-button" onClick={closeNewCategoryModal} type="button">
-                <X size={16} />
-              </button>
-            </div>
-
-            <label className="field-label">
-              Mall
-              <select
-                className="text-input"
-                onChange={(e) => setNewCategoryTemplateId(e.target.value)}
-                value={newCategoryTemplateId}
-              >
-                <option disabled value="">Välj en mall…</option>
-                {categoryTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name} ({t.tasks.length} uppgifter)</option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              Startdatum för uppgifterna
-              <input
-                className="text-input"
-                onChange={(e) => setNewCategoryTemplateStartDate(e.target.value)}
-                type="date"
-                value={newCategoryTemplateStartDate}
-              />
-            </label>
-
-            {/* "Tom kategori" borttagen (2026-08-05, Zaidas beslut: "aldrig
-                bara en kategori") — vill man inte använda en mall öppnas
-                istället Ny uppgift-modalen direkt i "+Ny kategori…"-läge,
-                kategori och första uppgift skapas då i samma steg. */}
-            <button
-              className="secondary-button"
-              onClick={openCreateModalForNewCategory}
-              type="button"
-            >
-              Skapa istället via en ny uppgift…
-            </button>
-
-            <div className="todo-thread-view__reuse-actions">
-              <button className="secondary-button" onClick={closeNewCategoryModal} type="button">
-                Avbryt
-              </button>
-              <button
-                className="primary-button"
-                disabled={!canSubmitNewCategory || creatingCategory}
-                onClick={() => void submitNewCategory()}
-                type="button"
-              >
-                {creatingCategory ? "Skapar…" : "Skapa"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showInfo && (
-        <div className="todo-thread-view__reuse-overlay" onClick={() => setShowInfo(false)}>
-          <div
-            aria-labelledby="bubble-info-title"
-            aria-modal="true"
-            className="todo-thread-view__reuse-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-          >
-            <div className="todo-thread-view__info-header">
-              <h3 id="bubble-info-title">Så fungerar bubbelsysslorna</h3>
-              <button aria-label="Stäng" className="icon-button" onClick={() => setShowInfo(false)} type="button">
-                <X size={16} />
-              </button>
-            </div>
-            <ul className="todo-thread-view__info-list">
-              <li><strong>Kort tryck</strong> på en bubbla öppnar uppgiften — anteckningar och delmoment.</li>
-              <li><strong>Dubbeltryck</strong> markerar att du håller på med uppgiften, så andra ser det.</li>
-              <li><strong>Håll intryckt i två sekunder</strong> markerar hela uppgiften klar.</li>
-              <li><strong>Håll och dra i ett kategorinamn</strong> för att ändra ordning på trådarna.</li>
-              <li><strong>Tre snabba tryck på ett kategorinamn</strong> växlar flyttläge för just den kategorin — dra då enskilda bubblor för att ändra ordning inom kategorin (kategorin i sig går alltid att dra i, oavsett läge).</li>
-            </ul>
-          </div>
-        </div>
-      )}
-      <div
-        className="todo-thread-view"
-        style={
-          {
-            ...(threadGap != null ? { "--todo-thread-gap": `${threadGap}px` } : {}),
-            ...(bubbleSize != null ? { "--todo-bubble-size-override": `${bubbleSize}px` } : {})
-          } as React.CSSProperties
-        }
-      >
+    <>
+    <div
+      className="todo-thread-view"
+      style={
+        {
+          ...(threadGap != null ? { "--todo-thread-gap": `${threadGap}px` } : {}),
+          ...(bubbleSize != null ? { "--todo-bubble-size-override": `${bubbleSize}px` } : {})
+        } as React.CSSProperties
+      }
+    >
       {orderedThreads.map((thread) => (
         <section
           key={thread.id}
@@ -1223,6 +1027,9 @@ export function ParentTodoThreadView({
                       </button>
                       <button onClick={() => handleHideFromMenu(thread.id)} type="button">
                         Göm
+                      </button>
+                      <button onClick={() => handleShareFromMenu(thread.id)} type="button">
+                        Dela
                       </button>
                       {confirmingDeleteCategoryId === thread.id && (
                         <p className="field-hint">
@@ -1434,7 +1241,7 @@ export function ParentTodoThreadView({
       )}
 
       {reuseCategoryId && (
-        <div className="todo-thread-view__reuse-overlay" onClick={() => setReuseCategoryId(null)}>
+        <div className="todo-thread-view__reuse-overlay" {...reuseOverlay}>
           <div
             aria-labelledby="reuse-category-title"
             aria-modal="true"
@@ -1474,13 +1281,21 @@ export function ParentTodoThreadView({
         </div>
       )}
 
+      {shareCategoryId && (
+        <TodoCategoryShareModal
+          categoryId={shareCategoryId}
+          categoryName={categories.find((c) => c.id === shareCategoryId)?.name ?? ""}
+          onClose={() => setShareCategoryId(null)}
+        />
+      )}
+
       {filterThreadId &&
         (() => {
           const filterThread = orderedThreads.find((t) => t.id === filterThreadId);
           if (!filterThread) return null;
           const selected = assigneeFilters.get(filterThreadId) ?? null;
           return (
-            <div className="todo-thread-view__reuse-overlay" onClick={() => setFilterThreadId(null)}>
+            <div className="todo-thread-view__reuse-overlay" {...filterOverlay}>
               <div
                 aria-labelledby="filter-thread-title"
                 aria-modal="true"
@@ -1517,6 +1332,6 @@ export function ParentTodoThreadView({
             </div>
           );
         })()}
-    </div>
+    </>
   );
 }

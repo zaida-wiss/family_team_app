@@ -170,20 +170,49 @@ export function downloadCsv(filename: string, csv: string) {
   URL.revokeObjectURL(url);
 }
 
+// Dagens datum, ÅÅÅÅ-MM-DD — mallens exempelrader räknas ut relativt IDAG
+// istället för ett hårdkodat, med tiden allt äldre datum (2026-08-06,
+// Zaidas önskemål: "gör om mallen så att vi ser hur man fyller i uppgifter
+// som skall bli kvar och uppgifter som skall försvinna från vyn efter en
+// viss tid... och timer") — annars ser en nedladdad mall snabbt ut som att
+// allt redan hunnit gå ut.
+function todayDateOnly(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 export function buildTemplateCsv(): string {
-  const oneOff =
+  const today = todayDateOnly();
+  // 1) Blir kvar tills den bockas av — INGA datum alls (Startdatum/
+  //    Slutdatum tomma). En engångsuppgift utan datum försvinner aldrig av
+  //    sig själv, oavsett hur länge den ligger okvitterad.
+  const staysUntilDone =
     ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", "", "", "", ""];
-  // Enkel återkommande, en tidsruta per dag (synlig kl./försvinner kl.) —
-  // det vanligaste fallet, ingen "Fler tidsrutor" eller "Slutar" behövs.
+  // 2) Försvinner ur vyn efter en viss tid — en engångsuppgift (INGEN
+  //    återkommelse) med ett satt Slutdatum. Syns från Startdatum, försvinner
+  //    (räknas som utgången) vid Slutdatum om den inte hunnit avklaras.
+  const expiresAfterDeadline =
+    ["Hämta paket", "📦", SELF_LABEL, "Ärenden", "", "", "", `${today} 08:00`, `${today} 20:00`, "", "", "", "", "", "", "Utlämningsstället stänger 20:00", "", "", "", ""];
+  // 3) Återkommande, enkel — en tidsruta per dag (synlig kl./försvinner kl.),
+  //    det vanligaste fallet. Ingen "Fler tidsrutor" eller "Slutar" behövs.
   const recurringSimple =
-    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", "2026-08-04 10:00", "2026-08-04 10:30", "", "Dag", "1", "", "", "", "", "", "", "", ""];
-  // Flera tidsrutor på SAMMA mall (morgon OCH kväll) — Startdatum/Slutdatum
-  // är den FÖRSTA rutan, "Fler tidsrutor" lägger till resten (samma ankardag).
+    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", `${today} 10:00`, `${today} 10:30`, "", "Dag", "1", "", "", "", "", "", "", "", ""];
+  // 4) Återkommande med FLERA tidsrutor på SAMMA mall (morgon OCH kväll) —
+  //    Startdatum/Slutdatum är den FÖRSTA rutan, "Fler tidsrutor" lägger
+  //    till resten (samma ankardag, "TT:MM-TT:MM" per extra ruta).
   const recurringMultiWindow =
-    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", "2026-08-04 07:00", "2026-08-04 07:15", "19:00-19:15", "Dag", "1", "", "", "", "", "", "", "", ""];
-  // Slutar efter ett visst antal gånger (eller sätt ett datum i ÅÅÅÅ-MM-DD).
+    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", `${today} 07:00`, `${today} 07:15`, "19:00-19:15", "Dag", "1", "", "", "", "", "", "", "", ""];
+  // 5) Återkommande med ett SLUTVILLKOR — antingen ett antal gånger (som
+  //    här, "30") eller ett slutdatum (ÅÅÅÅ-MM-DD) i "Slutar"-kolumnen.
   const recurringWithEnd =
-    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", "2026-08-04 17:00", "2026-08-04 17:20", "", "Dag", "1", "", "30", "", "", "", "", "", ""];
+    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", `${today} 17:00`, `${today} 17:20`, "", "Dag", "1", "", "30", "", "", "", "", "", ""];
+  // 6) Tidtagning — "Timer: Ja" + "Timer (min)" (1–480) ger barnet en
+  //    nedräkning på uppdragskortet istället för en vanlig Starta/Klar-
+  //    tidtagning. Fungerar för både engångs- och återkommande uppgifter
+  //    (denna är ett engångsexempel, för att hålla raden enkel).
+  const withTimer =
+    ["Städa rummet", "🧹", SELF_LABEL, "Hushåll", "3", YES_LABEL, "25", "", "", "", "", "", "", "", "", "", "", "", "", ""];
   // Radera (2026-08-04) — kräver ett riktigt Id från en tidigare export, en
   // helt ny rad utan Id kan aldrig raderas (det finns inget att matcha mot).
   // Den här exempelraden fungerar alltså bara som illustration i just mallen,
@@ -195,10 +224,12 @@ export function buildTemplateCsv(): string {
     ["Gammal uppgift (exempel)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-x-från-en-export", "", "", "Ja"];
   return [
     toCsvRow([...TODO_CSV_HEADERS]),
-    toCsvRow(oneOff),
+    toCsvRow(staysUntilDone),
+    toCsvRow(expiresAfterDeadline),
     toCsvRow(recurringSimple),
     toCsvRow(recurringMultiWindow),
     toCsvRow(recurringWithEnd),
+    toCsvRow(withTimer),
     toCsvRow(deleteExample)
   ].join("\r\n");
 }

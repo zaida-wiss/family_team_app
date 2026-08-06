@@ -184,6 +184,46 @@ todosRouter.patch(
   }
 );
 
+// Delade EGNA kategorier (2026-08-06, TodoCategory.externalSharedWith) —
+// måste registreras FÖRE PATCH-rutterna med /:id nedan, av samma skäl som
+// /shared-children/family-across-accounts/connections ovan.
+todosRouter.get("/shared-categories", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await todos.getSharedCategoryTodos(req.memberId!, req.accountId!));
+});
+
+todosRouter.patch(
+  "/shared-categories/:categoryAccountId/:id/complete",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
+    await todos.completeSharedCategoryTodo(
+      req.params.id,
+      req.params.categoryAccountId,
+      req.memberId!,
+      req.accountId!,
+      elapsedMs ?? null
+    );
+    res.json({ ok: true });
+  }
+);
+
+todosRouter.patch(
+  "/shared-categories/:categoryAccountId/:id/subtasks/:subtaskId",
+  requireAuth,
+  attachAccountId,
+  async (req, res) => {
+    const result = await todos.toggleSharedCategorySubtask(
+      req.params.id,
+      req.params.categoryAccountId,
+      req.params.subtaskId,
+      req.memberId!,
+      req.accountId!
+    );
+    res.json(result);
+  }
+);
+
 todosRouter.get("/events", requireAuth, async (_req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",

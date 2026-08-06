@@ -1023,6 +1023,20 @@ export type TodoCategory = {
   // helst) skapas en ny nästa gång en familjekategori med kvarvarande
   // uppgifter raderas. Valfritt/saknas = en vanlig kategori (bakåtkompatibelt).
   isUncategorizedCollector?: boolean;
+  // Delning mellan FAMILJER (2026-08-06, Zaidas önskemål: "det skall vara
+  // möjligt att dela sina egna kategorier med utvalda familjer" — samma
+  // icke-transitiva mönster som ShoppingList.externalSharedWith, ADR-0026).
+  // "edit" ger full uppgifts-hantering (klarmarkera/bocka delmoment/lägga
+  // till), inte omdöpning/radering/vidaredelning av själva kategorin — det
+  // stannar hos ägarkontots egna vuxna (samma ADR-0019-kontobreda CRUD som
+  // redan gäller där).
+  externalSharedWith?: {
+    memberId: Id;
+    accountId: Id;
+    access: AccessLevel;
+    grantedBy: Id;
+    grantedAt: string;
+  }[];
   deletedAt: string | null;
   deletedBy: Id | null;
 };
@@ -1050,6 +1064,13 @@ export type TodoTemplateTask = {
   subtasks: { title: string; timedMinutes?: number | null }[];
   recurrence: RecurrenceRule;
   starValue: number;
+  // Tidtagning (2026-08-06, ADR-0018, Zaidas fynd: mallen saknade helt
+  // timerEnabled/plannedDurationMinutes — "Tidtagning text? antal minuter?
+  // Går alla fält från mallen att redigera?") — samma två fält som Todo
+  // självt, tidigare kvarglömda på precis samma sätt som notes/subtasks[]
+  // .timedMinutes en gång var (2026-07-27).
+  timerEnabled?: boolean;
+  plannedDurationMinutes?: number | null;
 };
 
 // Fristående uppgiftsmall (kan hämtas oberoende av kategori, t.ex. via "Lägg

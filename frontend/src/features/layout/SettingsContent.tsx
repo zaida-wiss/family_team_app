@@ -118,7 +118,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
     categoryTemplates,
     onCreateTaskTemplate,
     onRemoveTaskTemplate,
-    onRenameTaskTemplate,
+    onUpdateTaskTemplate,
     onRemoveCategoryTemplate,
     onUpdateCategoryTemplate,
     onCreateTodo,
@@ -585,7 +585,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               taskTemplates={taskTemplates}
               categoryTemplates={categoryTemplates}
               onRemoveTaskTemplate={onRemoveTaskTemplate}
-              onRenameTaskTemplate={onRenameTaskTemplate}
+              onUpdateTaskTemplate={onUpdateTaskTemplate}
               onRemoveCategoryTemplate={onRemoveCategoryTemplate}
               onUpdateCategoryTemplate={onUpdateCategoryTemplate}
               order={taskTemplateOrder}

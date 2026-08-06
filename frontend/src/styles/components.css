@@ -473,15 +473,6 @@ h3 {
   .account-type-grid {
     grid-template-columns: 1fr;
   }
-
-  .dashboard {
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 14px 0;
-    margin-top: 0;
-    border-bottom: 1px solid var(--border);
-  }
 }
 
 /* Delad emoji-väljarrad + delmoment-checklista (kodstädning 2026-08-03) —

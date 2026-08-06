@@ -1578,14 +1578,58 @@ test("Inställningar → Mallar: kan byta namn på en sparad uppgiftsmall", asyn
   await page.getByRole("button", { name: "Todo-lista" }).click();
   await page.getByRole("button", { name: "📋 Mallar" }).click();
 
+  // 2026-08-06: bytt från en inline-rename till en full redigeringsmodal
+  // (TodoTemplateEditModal.tsx, Zaidas fråga: "Går alla fält från mallen
+  // att redigera?") — klick på titeln öppnar nu modalen, ett Titel-fält
+  // + en explicit Spara-knapp ersätter det tidigare blur-sparade fältet.
   await page.getByText("Styrketräning", { exact: true }).click();
-  const input = page.getByLabel("Byt namn på mallen Styrketräning");
+  await expect(page.getByRole("dialog", { name: "Redigera mall" })).toBeVisible();
+  const input = page.getByLabel("Titel", { exact: true });
   await input.fill("Styrketräning (uppdaterad)");
-  await input.blur();
+  await page.getByRole("button", { name: "Spara" }).click();
 
   await expect.poll(() => patched).toBeTruthy();
   expect((patched as unknown as { title: string }).title).toBe("Styrketräning (uppdaterad)");
+  await expect(page.getByRole("dialog", { name: "Redigera mall" })).not.toBeVisible();
   await expect(page.getByText("Styrketräning (uppdaterad)", { exact: true })).toBeVisible();
+});
+
+// 2026-08-06, Zaidas fråga: "Går alla fält från mallen att redigera i
+// modalerna? Tidtagning text? antal minuter?" — timerEnabled/
+// plannedDurationMinutes saknades tidigare helt i mallens typ/scheman,
+// precis som notes/subtask-timedMinutes en gång gjorde (2026-07-27).
+test("Inställningar → Mallar: redigera-modalen sparar tidtagning (Timer + minuter), inte bara titeln", async ({ page }) => {
+  const TASK_TEMPLATE = {
+    id: "todo-template-1", accountId: "acc-1", memberId: "mem-1",
+    title: "Städa rummet", visual: { type: "lucide-icon", value: "⭐" },
+    subtasks: [], recurrence: { type: "none" }, starValue: 0, timerEnabled: false, plannedDurationMinutes: null,
+    createdAt: "2026-07-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
+  let patched: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-templates/tasks", (route) => route.fulfill({ json: [TASK_TEMPLATE] }));
+  await page.route("**/api/todo-templates/tasks/todo-template-1", (route) => {
+    if (route.request().method() === "PATCH") {
+      patched = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ...TASK_TEMPLATE, ...patched } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Todo-lista" }).click();
+  await page.getByRole("button", { name: "📋 Mallar" }).click();
+
+  await page.getByText("Städa rummet", { exact: true }).click();
+  await page.getByLabel("Tidtagning").check();
+  await page.getByLabel("Planerad tid (minuter)").fill("25");
+  await page.getByRole("button", { name: "Spara" }).click();
+
+  await expect.poll(() => patched).toBeTruthy();
+  expect((patched as unknown as { timerEnabled: boolean }).timerEnabled).toBe(true);
+  expect((patched as unknown as { plannedDurationMinutes: number }).plannedDurationMinutes).toBe(25);
 });
 
 // 2026-07-29, Zaidas önskemål: "jag behöver kunna flytta ordningen snabbt i

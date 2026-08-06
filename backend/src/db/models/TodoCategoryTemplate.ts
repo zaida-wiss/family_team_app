@@ -17,7 +17,10 @@ const taskSchema = {
     default: []
   },
   recurrence: { type: Schema.Types.Mixed, required: true },
-  starValue: { type: Number, required: true }
+  starValue: { type: Number, required: true },
+  // Tidtagning (2026-08-06) — se TodoTemplate.ts:s motsvarande kommentar.
+  timerEnabled: { type: Boolean, default: false },
+  plannedDurationMinutes: { type: Number, default: null }
 };
 
 const todoCategoryTemplateSchema = new Schema<TodoCategoryTemplate>({

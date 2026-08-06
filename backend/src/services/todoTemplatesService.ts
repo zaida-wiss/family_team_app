@@ -81,6 +81,12 @@ export async function updateTaskTemplate(id: string, accountId: string, memberId
   template.subtasks = encrypted.subtasks as never;
   template.recurrence = encrypted.recurrence as never;
   template.starValue = encrypted.starValue;
+  // Tidtagning (2026-08-06) — glömda här trots att endpointen redan tog
+  // emot en FULL TodoTemplateTask, samma bugklass som todoThreadGap en
+  // gång var (ett fält som fanns i typen/Mongoose-schemat men aldrig
+  // faktiskt skrevs av update-funktionen).
+  template.timerEnabled = encrypted.timerEnabled ?? false;
+  template.plannedDurationMinutes = encrypted.plannedDurationMinutes ?? null;
   template.markModified("subtasks");
   await template.save();
   return decryptTask(accountId, template.toObject());

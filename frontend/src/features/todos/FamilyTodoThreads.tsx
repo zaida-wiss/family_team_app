@@ -504,13 +504,14 @@ export function FamilyTodoThreads({
         // — "familjens todovys tomma kategorier skall gömmas, precis som i
         // min egen todo-vy"). Bara riktiga familjekategorier (onDeleteCategory
         // satt) är hideable, aldrig "Familjen"-poolen eller cross-account/
-        // anslutna trådar. En kategori med NÅGON uppgift (oavsett status)
-        // inom samma dagsfönster räknas inte som tom — visar t.ex. en redan
-        // avklarad kategori med 100% istället för att gömma den helt.
-        if (source.onDeleteCategory) {
-          const hasAnyToday = source.todos.some((t) => isDueWithinRange(t, today, range));
-          if (threadTodos.length === 0 && !hasAnyToday) return null;
-        }
+        // anslutna trådar. 2026-08-06, Zaidas rättelse: "tom" avgörs nu
+        // ENBART av threadTodos (de FAKTISKT synliga bollarna just nu) —
+        // det tidigare "eller hasAnyToday"-undantaget (dag-baserat, inkl.
+        // redan avklarade uppgifter) höll en kategori synlig med en tom
+        // kolumn hela dagen efter att dess enda uppgift avklarats eller
+        // passerat sitt tidsfönster. Kategorin ska försvinna och komma
+        // tillbaka först när en ny, faktiskt synlig boll finns.
+        if (source.onDeleteCategory && threadTodos.length === 0) return null;
 
         const isEditing = editingThreadId === source.id;
         const isSelecting = selectingThreadId === source.id;

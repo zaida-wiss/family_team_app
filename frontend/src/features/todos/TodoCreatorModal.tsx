@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { suggestEmojiForTitle } from "../../components/emojiData";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { generateId } from "../../utils/uuid";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
@@ -269,6 +270,11 @@ export function TodoCreatorModal({
       done: false,
       timedMinutes: s.timedMinutes ?? null
     })));
+    // Tidtagning (2026-08-06, Zaidas fynd: "mallen saknade timer-fält") —
+    // fyller i checkbox/minuter, verkar bara om minst en vald mottagare är
+    // ett barn (isForChild), samma spärr som fältet självt redan har.
+    setTimerEnabled(template.timerEnabled ?? false);
+    setPlannedDurationMinutesInput(template.plannedDurationMinutes ? String(template.plannedDurationMinutes) : "");
   }
 
   // Mallbibliotek: skapar en HEL kategori i ett svep utifrån en kategori-mall
@@ -310,8 +316,9 @@ export function TodoCreatorModal({
           done: false,
           timedMinutes: s.timedMinutes ?? null
         })),
-        timerEnabled: false,
-        plannedDurationMinutes: null,
+        // Tidtagning (2026-08-06, Zaidas fynd: "mallen saknade timer-fält").
+        timerEnabled: task.timerEnabled ?? false,
+        plannedDurationMinutes: task.plannedDurationMinutes ?? null,
         elapsedMs: null
       });
     }
@@ -394,8 +401,10 @@ export function TodoCreatorModal({
     }
   }
 
+  const overlay = useOverlayDismiss(onClose);
+
   return (
-    <div className="todo-creator-overlay" onClick={onClose}>
+    <div className="todo-creator-overlay" {...overlay}>
       <div
         aria-labelledby="todo-creator-title"
         aria-modal="true"

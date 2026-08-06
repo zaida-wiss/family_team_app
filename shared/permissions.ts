@@ -6,7 +6,8 @@ import type {
   PermissionKey,
   Role,
   ShoppingList,
-  Todo
+  Todo,
+  TodoCategory
 } from "./types.js";
 
 export function getRoleForMember(member: Member, roles: Role[]): Role {
@@ -207,6 +208,24 @@ export function canManageExternalShoppingListShares(
     hasPermission(caller, roles, "canEditShoppingLists") &&
     canEditSharedResource(caller, list)
   );
+}
+
+// Delning av EGNA kategorier mellan FAMILJER (2026-08-06, Zaidas önskemål:
+// "det skall vara möjligt att dela sina egna kategorier med utvalda
+// familjer") — samma icke-transitiva mönster som getExternalShoppingListAccess
+// ovan. Ingen egen "canManage..."-funktion behövs (till skillnad från
+// inköpslistor) — kategorier är redan kontobrett hanterbara av VILKEN VUXEN
+// SOM HELST i ägarkontot (ADR-0019), samma requireAdultMember-kontroll som
+// redan gate:ar rename/delete/hide (todoCategoriesService.ts) räcker även
+// för att STARTA en delning.
+export function getExternalCategoryAccess(
+  caller: Member,
+  category: TodoCategory
+): AccessLevel | null {
+  const grant = (category.externalSharedWith ?? []).find(
+    (share) => share.memberId === caller.id && share.accountId === caller.accountId
+  );
+  return grant?.access ?? null;
 }
 
 export function canExportCalendar(

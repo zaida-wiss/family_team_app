@@ -48,17 +48,17 @@ export function useTodoTemplatesState() {
   }
 
   // 2026-07-28, Zaidas önskemål: "jag behöver även kunna se och redigera i
-  // uppgiftsmallarna" — mallbiblioteket hade tidigare bara se+radera. Bara ett
-  // enkelt namnbyte (inte en full redigeringsmodal) — övriga fält (delmoment/
-  // återkommelse/stjärnor) sätts redan korrekt vid själva "Spara som mall".
-  function renameTaskTemplate(id: Id, title: string) {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    const existing = taskTemplates.find((t) => t.id === id);
-    if (!existing) return;
-    const { id: _id, accountId: _accountId, memberId: _memberId, createdAt: _createdAt, deletedAt: _deletedAt, ...task } = existing;
-    todoTemplatesApi.updateTask(id, { ...task, title: trimmed }).catch(console.error);
-    setTaskTemplates((current) => current.map((t) => (t.id === id ? { ...t, title: trimmed } : t)));
+  // uppgiftsmallarna" — mallbiblioteket hade tidigare bara se+radera.
+  // 2026-08-06 utökad från ett enkelt namnbyte till FULL fältredigering
+  // (Zaidas fråga: "Går alla fält från mallen att redigera i modalerna?
+  // Tidtagning text? antal minuter?") — backend-endpointen tog redan emot en
+  // FULL TodoTemplateTask (bara aldrig anropad med mer än titeln ändrad från
+  // klienten), se TodoTemplateEditModal.tsx.
+  function updateTaskTemplate(id: Id, task: TodoTemplateTask) {
+    return todoTemplatesApi.updateTask(id, task).then((template) => {
+      setTaskTemplates((current) => current.map((t) => (t.id === id ? template : t)));
+      return template;
+    });
   }
 
   function createCategoryTemplate(name: string, tasks: TodoTemplateTask[], sourceCategoryId?: Id | null) {
@@ -85,7 +85,7 @@ export function useTodoTemplatesState() {
     categoryTemplates,
     createTaskTemplate,
     removeTaskTemplate,
-    renameTaskTemplate,
+    updateTaskTemplate,
     createCategoryTemplate,
     updateCategoryTemplate,
     removeCategoryTemplate

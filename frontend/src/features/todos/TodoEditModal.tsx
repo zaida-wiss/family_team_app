@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, FileStack, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
@@ -94,7 +95,14 @@ export function TodoEditModal({
         timedMinutes: s.timedMinutes ?? null
       })),
       recurrence,
-      starValue
+      starValue,
+      // Tidtagning (2026-08-06, Zaidas fynd: "mallen saknade timer-fält")
+      // — samma isForChild-spärr som fältet självt redan har (rad ~282).
+      timerEnabled: isForChild ? timerEnabled : false,
+      plannedDurationMinutes:
+        isForChild && timerEnabled && plannedDurationMinutesInput
+          ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+          : null
     }).then(() => {
       setTemplateSaved(true);
       window.setTimeout(() => setTemplateSaved(false), SAVED_INDICATOR_MS);
@@ -357,9 +365,10 @@ export function TodoEditModal({
   }
 
   const dialogRef = useModalA11y<HTMLDivElement>(handleClose);
+  const overlay = useOverlayDismiss(handleClose);
 
   return (
-    <div className="todo-detail-overlay" onClick={handleClose}>
+    <div className="todo-detail-overlay" {...overlay}>
       <div
         aria-labelledby="todo-edit-title"
         aria-modal="true"

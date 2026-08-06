@@ -88,7 +88,7 @@ export function useShellState(
     categoryTemplates,
     createTaskTemplate,
     removeTaskTemplate,
-    renameTaskTemplate,
+    updateTaskTemplate,
     createCategoryTemplate,
     updateCategoryTemplate,
     removeCategoryTemplate
@@ -434,7 +434,7 @@ export function useShellState(
     onCreateTaskTemplate: createTaskTemplate,
     onCreateCategoryTemplate: createCategoryTemplate,
     onRemoveTaskTemplate: removeTaskTemplate,
-    onRenameTaskTemplate: renameTaskTemplate,
+    onUpdateTaskTemplate: updateTaskTemplate,
     onRemoveCategoryTemplate: removeCategoryTemplate,
     onUpdateCategoryTemplate: updateCategoryTemplate,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as todoCategories from "../services/todoCategoriesService.js";
+import * as todoCategoryShares from "../services/todoCategorySharesService.js";
 import { AppError } from "../utils/errors.js";
 
 export const todoCategoriesRouter = Router();
@@ -46,4 +47,31 @@ todoCategoriesRouter.delete("/:id", async (req, res) => {
 todoCategoriesRouter.patch("/:id/hidden", async (req, res) => {
   const memberId = requireMemberId(req.memberId);
   res.json(await todoCategories.setCategoryHidden(req.params.id, req.accountId!, memberId, Boolean(req.body?.hidden)));
+});
+
+// Dela EN kategori med en annan familj, icke-transitivt (2026-08-06, samma
+// mönster som shopping.ts:s /:id/external-share, ADR-0026).
+todoCategoriesRouter.get("/:id/external-share", async (req, res) => {
+  res.json(await todoCategoryShares.listShares(req.params.id, req.accountId!, req.memberId ?? null));
+});
+
+todoCategoriesRouter.post("/:id/external-share/lookup", async (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email : "";
+  res.json(await todoCategoryShares.lookupShareCandidate(req.params.id, req.accountId!, req.memberId ?? null, email));
+});
+
+todoCategoriesRouter.post("/:id/external-share", async (req, res) => {
+  const result = await todoCategoryShares.shareCategoryExternally(req.params.id, req.accountId!, req.memberId ?? null, req.body);
+  res.status(201).json(result);
+});
+
+todoCategoriesRouter.delete("/:id/external-share/:granteeAccountId/:granteeMemberId", async (req, res) => {
+  await todoCategoryShares.revokeExternalShare(
+    req.params.id,
+    req.accountId!,
+    req.memberId ?? null,
+    req.params.granteeMemberId,
+    req.params.granteeAccountId
+  );
+  res.json({ ok: true });
 });

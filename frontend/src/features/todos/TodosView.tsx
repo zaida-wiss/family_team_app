@@ -4,6 +4,7 @@ import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoCategoryTemplate
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
 import { ParentTodoThreadView } from "./ParentTodoThreadView";
+import { TodoThreadToolbar } from "./TodoThreadToolbar";
 import { FamilyTodoThreads } from "./FamilyTodoThreads";
 import type { FamilyThreadSource } from "./FamilyTodoThreads";
 import { getAssigneeName, getMyTodosViewTodos, isDueWithinRange, isTodoHistory } from "./selectors";
@@ -267,6 +268,27 @@ export function TodosView({
           />
         )}
 
+        {/* Delad verktygsrad (2026-08-06, Zaidas fynd: "familjens todo som
+            jag assignat mig på" hamnade inte i samma container som mina
+            egna kategorier) — låg tidigare INUTI ParentTodoThreadView.tsx,
+            ovanför bara DESS EGEN .todo-thread-view. FamilyTodoThreads.tsx
+            hade ingen motsvarande rad ovanför sig, så med align-items:
+            flex-start i .todo-threads-row hamnade familjetrådens rubrik i
+            höjd med DENNA rad istället för i höjd med de andra kategorierna,
+            under den. Flyttad hit — en enda delad rad, ovanför HELA
+            .todo-threads-row — löser det, se TodoThreadToolbar.tsx. */}
+        {todoViewMode === "thread" && canSeeTodos && (
+          <TodoThreadToolbar
+            categoryTemplates={categoryTemplates}
+            currentMember={currentMember}
+            members={allMembers}
+            onAddTodoToCategory={openCreateModalForCategory}
+            onCreateCategory={onCreateCategory}
+            onCreateTodo={onCreateTodo}
+            todos={todos}
+          />
+        )}
+
         {/* Gemensam rad (2026-08-03, Zaidas önskemål: "jag vill ha dem i
             samma rad") — mina egna trådar och signade familjeuppgifter
             ligger sida vid sida istället för staplade som två separata
@@ -298,7 +320,6 @@ export function TodosView({
             onCreateCategoryTemplate={onCreateCategoryTemplate}
             onUpdateCategoryTemplate={onUpdateCategoryTemplate}
             categoryTemplates={categoryTemplates}
-            onCreateTodo={onCreateTodo}
             onDeleteTodo={onSoftDeleteTodo}
             onAddTodoToCategory={openCreateModalForCategory}
             todoThreadOrder={todoThreadOrder}

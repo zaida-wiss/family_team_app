@@ -70,6 +70,10 @@ export async function mockDataAPIs(page: Page) {
   // panelen), default-stubb så ett test utan egen mock inte faller igenom
   // till ett riktigt, ej mockat nätverksanrop.
   await page.route("**/api/todos/shared-children", (route) => route.fulfill({ json: [] }));
+  // Delade EGNA kategorier (2026-08-06) — hämtas globalt av
+  // useSharedCategoryTodos (SharedCategoryThreads.tsx, Hem-vyns Todos-flik),
+  // samma default-stubb-skäl som shared-children ovan.
+  await page.route("**/api/todos/shared-categories", (route) => route.fulfill({ json: [] }));
   // Familjeanslutningar (ADR-0030, 2026-07-29) — hämtas globalt av Hem-vyn
   // (MemberOverview.tsx/ConnectionRecipesSection, sedan 2026-08-01 — flyttat
   // ut ur Todos-/Recept-/Inköp-panelerna, som numera bara visar mitt eget),

@@ -18,6 +18,21 @@ const todoCategorySchema = new Schema<TodoCategory>({
   // som fältet införs, annars strippas det tyst av Mongoose strict-läge
   // (samma bugklass som todoThreadGap-incidenten). Se shared/types.ts.
   isUncategorizedCollector: { type: Boolean, default: false },
+  // Delning mellan familjer (2026-08-06) — måste läggas till HÄR samma dag
+  // som fältet införs i shared/types.ts, annars strippas det tyst av
+  // Mongoose strict-läge (samma bugklass som todoThreadGap-incidenten).
+  externalSharedWith: {
+    type: [
+      {
+        memberId: { type: String, required: true },
+        accountId: { type: String, required: true },
+        access: { type: String, required: true },
+        grantedBy: { type: String, required: true },
+        grantedAt: { type: String, required: true }
+      }
+    ],
+    default: []
+  },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });
