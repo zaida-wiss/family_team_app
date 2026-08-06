@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNowTick } from "../../hooks/useNowTick";
 import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
@@ -37,7 +38,11 @@ export function ChildShellContent({
   onThemePickerOpen,
 }: Props) {
   const childTimedTasks = timedTasks.filter((t) => t.assignedTo === currentMember.id);
-  const now = Date.now();
+  // Tickande klocka (2026-08-06, se useNowTick.ts) — var tidigare
+  // Date.now() beräknat en gång per rendering, så en uppgift med ett
+  // tidsfönster (t.ex. en morgonrutin) bara försvann vid nästa omrendering
+  // av en annan anledning, inte exakt när fönstret gick ut.
+  const now = useNowTick();
   // Gömda kategoriers uppgifter ska inte synas här (2026-07-22, Zaidas
   // önskemål: "mallar till listor och undanlagda listor skall inte stå med
   // i barnvyn ens för vuxna, endast assignade 2do") — samma fix som

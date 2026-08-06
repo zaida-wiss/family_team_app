@@ -8,6 +8,7 @@ import type { Id, Member, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTe
 import { TodoDetailView } from "./TodoDetailView";
 import { TodoEditModal } from "./TodoEditModal";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { useNowTick } from "../../hooks/useNowTick";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { dateOnlyToISO, isRecurringTemplate } from "./recurringTodos";
 import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
@@ -277,15 +278,16 @@ export function ParentTodoThreadView({
   const [inProgressPickerTodoId, setInProgressPickerTodoId] = useState<Id | null>(null);
   const [inProgressPickerPos, setInProgressPickerPos] = useState({ top: 0, left: 0 });
   const inProgressPickerRef = useRef<HTMLDivElement>(null);
-  // Delad klocka (2026-07-22) — tickar bara medan minst en boll faktiskt har
-  // två eller fler på sig samtidigt, annars onödigt att rendera om varje sekund.
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  const hasSharedTimer = todos.some((t) => (t.inProgressBy?.length ?? 0) >= 2);
-  useEffect(() => {
-    if (!hasSharedTimer) return;
-    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [hasSharedTimer]);
+  // Delad klocka (2026-07-22, gjord ALLTID tickande 2026-08-06) — tickade
+  // tidigare bara medan minst en boll hade två eller fler på sig samtidigt,
+  // vilket i praktiken frös "nu" på mount-tidpunkten för alla ANDRA syften
+  // (bl.a. "idag"-tidsspannets isTodoVisibleNow, se pendingTodos nedan) —
+  // en morgonuppgift utan delad "någon håller på med"-status försvann
+  // därför aldrig av sig själv när dess tidsfönster gick ut, bara vid nästa
+  // omrendering av en helt annan anledning (Zaidas fynd 2026-08-06). Nu
+  // samma delade `useNowTick`-hook som FamilyTodoThreads.tsx/
+  // MemberShellContent.tsx/ChildShellContent.tsx.
+  const nowTick = useNowTick();
   // Bollar som just markerats klara via långtryck — hålls kvar i renderingen
   // (även efter att de lämnat "pending" i props) medan bortdöende-animationen
   // ("gå upp i rök", Zaidas beslut 2026-07-05) spelas upp.

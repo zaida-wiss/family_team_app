@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { Id, Member, Todo, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { useNowTick } from "../../hooks/useNowTick";
 import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
 import {
   applyBubbleOrder,
@@ -113,7 +114,7 @@ export function FamilyTodoThreads({
   const [inProgressPickerTodoId, setInProgressPickerTodoId] = useState<Id | null>(null);
   const [inProgressPickerPos, setInProgressPickerPos] = useState({ top: 0, left: 0 });
   const inProgressPickerRef = useRef<HTMLDivElement>(null);
-  const [nowTick, setNowTick] = useState(() => Date.now());
+  const nowTick = useNowTick();
   const [dissolving, setDissolving] = useState<Map<Id, Todo>>(new Map());
   const dissolveTimersRef = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
   const [showExpiredThreadIds, setShowExpiredThreadIds] = useState<Set<Id>>(new Set());
@@ -157,18 +158,9 @@ export function FamilyTodoThreads({
   const [dragOverThreadId, setDragOverThreadId] = useState<Id | null>(null);
   const suppressThreadClickRef = useRef(false);
 
-  // Tickar alltid nu (2026-08-04) — tidigare bara när en delad "någon håller
-  // på med den här"-klocka faktiskt behövde den (hasSharedTimer), en
-  // medveten optimering mot onödiga omrenderingar. Men "idag"-tidsspannets
-  // exakta klockslags-gating (isTodoVisibleNow nedan) behöver nowTick
-  // uppdateras KONTINUERLIGT för att en uppgift ska dyka upp automatiskt när
-  // dess klockslag inträffar — annars fryser nowTick vid sidladdningens
-  // tidpunkt och en uppgift som borde dölja sig (eller visa sig) förblir i
-  // det tillstånd den hade vid mount tills sidan laddas om.
-  useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
+  // Tickar alltid (2026-08-04, se useNowTick.ts) — utbruten till en delad
+  // hook 2026-08-06, samma nu använd av ParentTodoThreadView.tsx/
+  // MemberShellContent.tsx/ChildShellContent.tsx.
 
   useEffect(
     () => () => {

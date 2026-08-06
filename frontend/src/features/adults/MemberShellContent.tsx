@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { useNowTick } from "../../hooks/useNowTick";
 import type { ComponentProps } from "react";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import type { AddEventInput } from "../calendars/useCalendarsState";
@@ -187,6 +188,13 @@ export function MemberShellContent({
   // Egen sida för Medaljer/Rekord (2026-07-06) — samma pokal-knapp/sida som
   // barnets egen vy, men här när en vuxen tittar på ett barns dashboard.
   const [showChildRecords, setShowChildRecords] = useState(false);
+  // Tickande klocka (2026-08-06, se useNowTick.ts) — activeChildTodos nedan
+  // beräknade tidigare bara Date.now() en gång per rendering, så en uppgift
+  // med ett tidsfönster (t.ex. en morgonrutin) bara försvann vid nästa
+  // omrendering av en annan anledning, inte exakt när fönstret gick ut.
+  // Måste anropas ovillkorligt (Hooks-regeln), även om den bara används
+  // inuti if-blocket längre ner.
+  const nowTick = useNowTick();
 
   const canSeeAllCalendars = hasPermission(currentMember, roles, "canSeeAllCalendar");
   const canSeeOwnCalendars = hasPermission(currentMember, roles, "canSeeOwnCalendar");
@@ -556,7 +564,7 @@ export function MemberShellContent({
   // medlem sett en annans dashboard på Hem igen efter en enda
   // sidomladdning, med fel nav-ikon markerad.
   if (selectedDashboardMember && activePanel === "members") {
-    const now = Date.now();
+    const now = nowTick;
     // Ogömda/tilldelade uppgifter bara (2026-07-22, Zaidas önskemål: "mallar
     // till listor och undanlagda listor skall inte stå med i barnvyn ens för
     // vuxna, endast assignade 2do") — assignedTo===id och recurrence==="none"

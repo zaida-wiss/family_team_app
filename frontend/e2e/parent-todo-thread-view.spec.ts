@@ -248,6 +248,52 @@ test("Bollar i tråd: visar bara dagens todos — inte de som ännu inte syns el
   await expect(thread.getByText("För fyra dagar sedan")).toHaveCount(0);
 });
 
+// 2026-08-06, Zaidas fynd: "varför försvinner inte morgonuppgifterna när
+// dom slutar? precis som i barnens vy." Grundorsak: nowTick (den delade
+// klockan som "idag"-tidsspannets exakta klockslags-gating, isTodoVisibleNow,
+// läser) tickade i den här filen bara medan minst en boll hade två eller
+// fler personer samtidigt "på sig" (hasSharedTimer, 2026-07-22) — annars
+// frös den vid mount-tidpunkten. En vanlig, enkel morgonuppgift (en
+// mottagare) fick alltså aldrig klockan att röra sig, så den försvann bara
+// vid en sidomladdning, inte i realtid — till skillnad från
+// FamilyTodoThreads.tsx, som redan fick samma bugg fixad 2026-08-04 (fast
+// en kommentar här felaktigt antog att DEN HÄR filen redan var fixad).
+// Nu en delad, alltid tickande useNowTick()-hook (samma i båda filerna).
+// Testet ovan ("visar bara dagens todos") fångade inte detta — det kollar
+// bara tillståndet VID SIDLADDNING, aldrig det LEVANDE beteendet medan
+// sidan står öppen.
+test("Bollar i tråd: en morgonuppgift döljs innan sitt klockslag, dyker upp och försvinner igen automatiskt utan omladdning", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-08-06T06:00:00") });
+
+  const MORNING_TODO = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-morning",
+    title: "Borsta tänderna",
+    visibleFrom: "2026-08-06T07:00:00",
+    expiresAt: "2026-08-06T08:00:00"
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [MORNING_TODO] }));
+
+  await openThreadView(page);
+
+  const thread = page.getByRole("region", { name: "Tråd: Träning" });
+  await expect(thread.getByText("Borsta tänderna")).toHaveCount(0);
+
+  // Klockan slår 07:00 — ingen omladdning, uppgiften ska dyka upp av sig
+  // själv (nowTick tickar varje sekund).
+  await page.clock.setSystemTime(new Date("2026-08-06T07:00:01"));
+  await page.clock.runFor(2000);
+  await expect(thread.getByText("Borsta tänderna")).toBeVisible();
+
+  // Klockan slår 08:00 — uppgiften ska försvinna av sig själv, samma sätt.
+  await page.clock.setSystemTime(new Date("2026-08-06T08:00:01"));
+  await page.clock.runFor(2000);
+  await expect(thread.getByText("Borsta tänderna")).toHaveCount(0);
+});
+
 // 2026-07-06 (Zaidas önskemål): "Bara idag, en vecka, en månad, eller en lång
 // lista på allt i framtiden" — ny per-medlem-inställning todoThreadRange,
 // väljs i Inställningar → Utseende, precis som Todos-vy.
