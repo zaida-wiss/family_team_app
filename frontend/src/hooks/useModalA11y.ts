@@ -14,6 +14,21 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
   // eget autoFocus-fält redan ta fokus innan effekten körs, och triggerRef
   // pekar felaktigt in i dialogen istället för på det som öppnade den.
   const triggerRef = useRef<Element | null>(document.activeElement);
+  // onClose i en ref (2026-08-07, Zaidas fynd: "kategori-dropdownen stänger
+  // sig nästan direkt efter att jag öppnat den") — de flesta anropare
+  // (t.ex. TodoEditModal.tsx:s handleClose) skickar in en NY funktion vid
+  // varje render, inte en useCallback-memoiserad referens. Utan denna ref
+  // låg effekten nedan i [onClose]-beroendelistan och körde om VARJE gång
+  // modalen renderade om av EN HELT ANNAN anledning (en prop som todos/
+  // members uppdaterades via SSE, en tickande klocka i en förälderkomponent,
+  // m.m.) — cleanup:en flyttade då fokus UT ur dialogen och setup-koden
+  // flyttade det tillbaka IN igen, en synlig fokus-studs som tvingar
+  // webbläsaren att stänga en öppen nativ <select>-dropdown (samma
+  // blur-stänger-dropdown-beteende i alla större webbläsare). Effekten körs
+  // nu bara EN gång per montering/avmontering, oavsett hur många gånger
+  // onClose-referensen byts ut.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -26,7 +41,7 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !container) return;
@@ -50,7 +65,8 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
       document.removeEventListener("keydown", handleKeyDown);
       if (triggerRef.current instanceof HTMLElement) triggerRef.current.focus();
     };
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return containerRef;
 }

@@ -81,16 +81,22 @@
   color: var(--primary-fg, white);
 }
 
-@media (max-width: 480px) {
+/* Samma navbar-krock-fix som TodoDetailModal.css (2026-08-07) — 124px
+   (HeroBar 64px + Hem-vyns familje-navigeringsrad ~60px, staplade) reserverat
+   redan från 1023px, inte bara under 480px, annars döljs Skapa-knappen bakom
+   en fast navbar på mellanstora skärmar/när modalen öppnas från Hem. */
+@media (max-width: 1023px) {
   .todo-creator-overlay {
-    padding: 10px 8px 96px;
+    padding: 10px 8px calc(124px + env(safe-area-inset-bottom, 0px));
     align-items: flex-start;
   }
 
   .todo-creator-modal {
     max-height: 100%;
   }
+}
 
+@media (max-width: 480px) {
   /* Minimalistisk/tätare på de minsta mobilerna (2026-07-06-fix) — mindre
      luft mellan fälten så mer får plats i synfältet utan att skrolla. */
   .todo-creator-modal__hdr {

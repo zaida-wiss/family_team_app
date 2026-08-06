@@ -696,12 +696,26 @@
   padding: 20px;
 }
 
+/* Samma navbar-krock-fix som TodoDetailModal.css/TodoCreatorModal.css
+   (2026-08-07, Zaidas fynd) — dessa mindre modaler (Återanvänd/Filtrera/
+   Statistik/Dela kategori/Info) är oftast korta nog att aldrig nå ner till
+   navbaren, men en lång medlemslista i Filtrera-modalen kan göra det på en
+   kort mobilskärm — samma 124px-reservering ändå, för säkerhets skull. */
+@media (max-width: 1023px) {
+  .todo-thread-view__reuse-overlay {
+    padding: 10px 8px calc(124px + env(safe-area-inset-bottom, 0px));
+    align-items: flex-start;
+  }
+}
+
 .todo-thread-view__reuse-modal {
   background: var(--card);
   border-radius: var(--radius-lg);
   box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
   width: 100%;
   max-width: 340px;
+  max-height: 100%;
+  overflow-y: auto;
   padding: 18px;
   display: flex;
   flex-direction: column;

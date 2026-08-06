@@ -226,12 +226,27 @@
   white-space: pre-wrap;
 }
 
-@media (max-width: 480px) {
+/* Modalen fick aldrig dölja knappar/innehåll bakom en fast navbar
+   (2026-08-07, Zaidas fynd: "Modaler får inte heller dölja knappar och
+   innehåll bakom navbaren, inte ens familjens navbar"). Två fasta rader kan
+   ligga staplade på mobil samtidigt: HeroBar.module.css:s bottennav (64px,
+   alltid närvarande under 1024px) och Hem-vyns egen familje-navigeringsrad
+   (MemberOverview.module.css:s .controlRow, fast ovanför HeroBar, ~60px —
+   bara synlig på Hem, men den här modalen kan öppnas därifrån). En tidigare
+   version reserverade bara 96px och bara under 480px — otillräckligt både i
+   bredd (HeroBar blir fast redan vid 1023px) och höjd (räckte inte när
+   BÅDA raderna var synliga samtidigt). 124px (64+60) reserveras nu alltid
+   på mobil, oavsett om familje-raden råkar synas just då — en boxändring,
+   inte bara visuell padding, så modalens egen max-height:100% aldrig kan
+   sträcka sig in i den reserverade zonen. */
+@media (max-width: 1023px) {
   .todo-detail-overlay {
-    padding: 10px 8px 96px;
+    padding: 10px 8px calc(124px + env(safe-area-inset-bottom, 0px));
     align-items: flex-start;
   }
+}
 
+@media (max-width: 480px) {
   /* Minimalistisk/tätare på de minsta mobilerna (2026-07-06-fix) — mindre
      luft mellan fälten så mer får plats i synfältet utan att skrolla. */
   .todo-detail-modal__hdr {
