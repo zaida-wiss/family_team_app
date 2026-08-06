@@ -308,12 +308,19 @@ export function TodoEditModal({
     // Titel/ikon/kategori/mottagare/stjärnor/timer/återkommelse hör till HELA
     // serien, inte bara dagens boll (2026-07-08, Zaidas önskemål om full
     // fältparitet med skapa-modalen) — sparas på mallen om en sådan finns.
-    // En Familjen-todo hör bara hemma i Familjen-tråden, aldrig en personlig
-    // kategori-tråd (2026-07-23, samma princip som barnens uppgifter).
+    // En Familjen-todo hör bara hemma i Familjen-tråden, aldrig en PERSONLIG
+    // kategori-tråd (2026-07-23, samma princip som barnens uppgifter) — men
+    // det gäller uttryckligen bara den PERSONLIGA Todos-panelen. I familje-
+    // scope (2026-08-07, Zaidas fynd: "jag verkar inte kunna byta kategori i
+    // modalen") är motsatsen sann: en familjekategori-uppgift har NORMALT
+    // assignedTo:null (Familjen), så isFamilyRecipient är sant för nästan
+    // ALLA familje-uppgifter — det ovillkorliga null:et här nollställde
+    // alltså kategorivalet på varje autospara, oavsett vad som faktiskt
+    // valdes i dropdownen.
     const seriesPatch: Partial<Todo> = {
       title: title.trim(),
       visual: { type: "lucide-icon", value: emoji },
-      personalCategoryId: isFamilyRecipient ? null : categoryId,
+      personalCategoryId: !familyScope && isFamilyRecipient ? null : categoryId,
       assignedTo: resolvedAssignedTo,
       starValue: isChildRecipient ? starValue : 0,
       timerEnabled: isChildRecipient ? timerEnabled : false,

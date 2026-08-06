@@ -47,6 +47,42 @@ test("Hem-vyns familjetrådar: redigera-modalens kategori-dropdown visar familje
   await expect(categorySelect.getByRole("option", { name: "Skola" })).not.toBeAttached();
 });
 
+// 2026-08-07, Zaidas fynd: "jag verkar inte kunna byta kategori i modalen"
+// — seriesPatch.personalCategoryId var ovillkorligt `null` så fort
+// mottagaren var "Familjen" (isFamilyRecipient), vilket är det NORMALA
+// tillståndet för nästan varje familjekategori-uppgift (assignedTo:null +
+// en satt personalCategoryId, t.ex. FAMILY_TODO ovan) — kategorivalet i
+// dropdownen sparades alltså aldrig i familje-scope, oavsett vad man valde.
+test("Hem-vyns familjetrådar: byte av kategori i redigera-modalen sparas faktiskt (inte tyst nollställt till Ingen kategori)", async ({ page }) => {
+  const FORDON_CATEGORY = {
+    id: "cat-family-fordon", accountId: "acc-1", memberId: "mem-1", name: "Fordon & Underhåll",
+    isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+  };
+  let patchedBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [FAMILY_CATEGORY, FORDON_CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [FAMILY_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-kvall", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedBody = { ...patchedBody, ...(route.request().postDataJSON() as object) };
+    }
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  await page.getByRole("button", { name: /^Kvällsrutiner,/ }).click();
+  await page.getByRole("button", { name: "Redigera uppgift" }).click();
+  await page.getByLabel("Kategori").selectOption({ label: "Fordon & Underhåll" });
+
+  await expect.poll(() => patchedBody?.personalCategoryId).toBe("cat-family-fordon");
+});
+
 // 2026-08-06, Zaidas fynd: "det är även fortfarande problem med
 // autentisering och behörighet att radera todos" — TodoEditModal.tsx:s
 // handleDelete stängde modalen OVILLKORLIGT direkt efter att onDeleteTodo
