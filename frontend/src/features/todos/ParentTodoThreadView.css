@@ -856,6 +856,45 @@
   flex: 1;
 }
 
+/* Avatarklick-delning (2026-08-06 uppföljning, Zaidas rättelse: "genom att
+   klicka på deras profilbild") — en kompakt, radbrytande avatar-grid,
+   samma "44px+ touch-mål"-princip som .memberPopupRow. */
+.todo-thread-view__share-avatar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-thread-view__share-avatar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+  min-height: 44px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.todo-thread-view__share-avatar-btn:hover {
+  background: var(--muted);
+  border-color: var(--border);
+}
+
+.todo-thread-view__share-avatar-btn span {
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Delade barn, "endast visning"-låset (ADR-0024, SharedChildrenThreads.tsx) */
 .shared-child-thread__lock {
   margin-left: 4px;

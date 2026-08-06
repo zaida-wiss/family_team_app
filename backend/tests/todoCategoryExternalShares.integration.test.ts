@@ -119,6 +119,18 @@ describe.skipIf(!RUN)("Dela en egen kategori med en annan familj", () => {
     expect(share.status).toBe(201);
   });
 
+  it("familj A:s ägare ser vem kategorin delas med (namn+konto), inte bara access-nivån", async () => {
+    const list = await request(app)
+      .get(`/api/todo-categories/${categoryId}/external-share`)
+      .set("Authorization", `Bearer ${familyA.accessToken}`)
+      .set("x-member-id", familyA.parentMemberId);
+    expect(list.status).toBe(200);
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0].memberId).toBe(familyB.parentMemberId);
+    expect(list.body[0].memberName).toBe("Förälder");
+    expect(list.body[0].accountName).toBe("Familj B");
+  });
+
   it("familj B ser nu kategorins uppgift (dekrypterad titel), men kan INTE klarmarkera den med bara 'view'-åtkomst", async () => {
     const shared = await request(app)
       .get("/api/todos/shared-categories")
@@ -129,6 +141,9 @@ describe.skipIf(!RUN)("Dela en egen kategori med en annan familj", () => {
     expect(shared.body[0].access).toBe("view");
     expect(shared.body[0].category.id).toBe(categoryId);
     expect(shared.body[0].category.accountName).toBe("Familj A");
+    // sharedByName (2026-08-06 uppföljning, Zaidas rättelse: "döpt till
+    // medlemmens namn") — namnet på den som DELADE, inte bara kontonamnet.
+    expect(shared.body[0].category.sharedByName).toBe("Förälder");
     expect(shared.body[0].todos.map((t: { id: string; title: string }) => t.title)).toContain("Packa badkläder");
 
     const complete = await request(app)

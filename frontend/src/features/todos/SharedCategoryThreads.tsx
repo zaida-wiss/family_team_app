@@ -29,7 +29,7 @@ export function SharedCategoryThreads({ range, todoBubbleSize, todoThreadGap }: 
   const sources: FamilyThreadSource[] = threads.map(({ category, todos }) => ({
     id: category.id,
     accountId: category.accountId,
-    label: `${category.name} (${category.accountName})`,
+    label: `${category.name} (${category.sharedByName})`,
     todos,
     members: [],
     onComplete: (todoId) => completeTodo(category.accountId, todoId),

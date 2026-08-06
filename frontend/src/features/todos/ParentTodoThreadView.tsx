@@ -1285,7 +1285,10 @@ export function ParentTodoThreadView({
         <TodoCategoryShareModal
           categoryId={shareCategoryId}
           categoryName={categories.find((c) => c.id === shareCategoryId)?.name ?? ""}
+          currentMember={currentMember}
+          members={members}
           onClose={() => setShareCategoryId(null)}
+          roles={roles}
         />
       )}
 

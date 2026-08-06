@@ -11,6 +11,8 @@ export type TodoCategoryShare = {
   access: AccessLevel;
   grantedBy: string;
   grantedAt: string;
+  memberName: string;
+  accountName: string;
 };
 
 export type TodoCategoryShareCandidate = {

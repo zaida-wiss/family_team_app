@@ -21,7 +21,7 @@ export type ConnectionTodosThread = {
 // per kategori som delats MED mig, skiljer sig från getSharedChildren (ett
 // helt barn) och getConnectionTodos (en hel Familjeanslutning) ovan.
 export type SharedCategoryThread = {
-  category: { id: string; accountId: string; name: string; accountName: string };
+  category: { id: string; accountId: string; name: string; accountName: string; sharedByName: string };
   access: AccessLevel;
   todos: Todo[];
 };

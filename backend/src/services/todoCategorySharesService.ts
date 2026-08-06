@@ -54,9 +54,30 @@ export async function lookupShareCandidate(categoryId: string, accountId: string
   };
 }
 
+// memberName/accountName denormaliseras live vid LÄSNING (2026-08-06,
+// Zaidas fynd: "det skall stå bekräftat vilka man delar med"), samma mönster
+// som childSharesService.ts:s listShares — kan aldrig bli inaktuellt.
 export async function listShares(categoryId: string, accountId: string, callerMemberId: string | null) {
   const category = await requireManageableCategory(categoryId, accountId, callerMemberId);
-  return category.externalSharedWith ?? [];
+  const shares = category.externalSharedWith ?? [];
+  if (shares.length === 0) return [];
+
+  const memberIds = [...new Set(shares.map((s) => s.memberId))];
+  const accountIds = [...new Set(shares.map((s) => s.accountId))];
+  const [members, accounts] = await Promise.all([
+    MemberModel.find({ id: { $in: memberIds } }),
+    AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 })
+  ]);
+
+  return shares.map((s) => ({
+    memberId: s.memberId,
+    accountId: s.accountId,
+    access: s.access,
+    grantedBy: s.grantedBy,
+    grantedAt: s.grantedAt,
+    memberName: members.find((m) => m.id === s.memberId)?.name ?? "Okänd",
+    accountName: accounts.find((a) => a.id === s.accountId)?.name ?? "Okänt konto"
+  }));
 }
 
 export async function shareCategoryExternally(categoryId: string, accountId: string, callerMemberId: string | null, data: unknown) {

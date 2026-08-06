@@ -674,9 +674,10 @@ export async function getSharedCategoryTodos(callerMemberId: string, callerAccou
       (s) => s.memberId === callerMemberId && s.accountId === callerAccountId
     );
     if (!grant) continue;
-    const [accountTodos, ownerAccount] = await Promise.all([
+    const [accountTodos, ownerAccount, sharer] = await Promise.all([
       getAllTodos(category.accountId),
-      AccountModel.findOne({ id: category.accountId })
+      AccountModel.findOne({ id: category.accountId }),
+      MemberModel.findOne({ id: grant.grantedBy, accountId: category.accountId })
     ]);
     const todos = accountTodos.filter(
       (t) => t.personalCategoryId === category.id && t.recurrence.type === "none"
@@ -686,7 +687,13 @@ export async function getSharedCategoryTodos(callerMemberId: string, callerAccou
         id: category.id,
         accountId: category.accountId,
         name: category.name,
-        accountName: ownerAccount?.name ?? "Okänt konto"
+        accountName: ownerAccount?.name ?? "Okänt konto",
+        // Namnet på personen som DELADE kategorin (2026-08-06, Zaidas
+        // önskemål: "döpt till medlemmens namn") — mer personligt än bara
+        // källfamiljens kontonamn, särskilt eftersom mottagaren nu väljer
+        // en specifik medlem via avatarklick istället för en anonym
+        // e-postsökning.
+        sharedByName: sharer?.name ?? ownerAccount?.name ?? "Okänt konto"
       },
       access: grant.access,
       todos
