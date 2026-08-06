@@ -357,7 +357,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                     currentMember={currentMember}
                     members={members}
                     roles={roles}
-                    shoppingLists={shoppingLists}
                     onRestoreCalendar={settingsProps.onRestoreCalendar}
                     onRestoreMember={settingsProps.onRestoreMember}
                     onRestoreShoppingList={settingsProps.onRestoreShoppingList}

@@ -37,8 +37,31 @@ async function requirePermission(accountId: string, memberId: string | null, per
   }
 }
 
+// Fixat 2026-08-06 (samma klass av bugg som todosService.ts:s getAllTodos
+// innan 2026-07-26-fixen — Zaidas Lighthouse-rapport visade flera ovanligt
+// stora API-svar, en skrivskyddad kontroll mot produktion bekräftade att
+// getAllLists aldrig filtrerat bort mjuk-raderade listor ELLER varor):
+// mjuk-raderade LISTOR flyttas nu till en egen getDeletedLists nedan (TrashView
+// behöver fortfarande kunna visa/återställa dem), och mjuk-raderade VAROR
+// inom en aktiv lista (bockade+borttagna, eller enskilt raderade) strippas
+// helt ur svaret — ingen UI läser dem (ShoppingView.tsx/ShoppingListsPanel.tsx
+// filtrerar redan bort item.deletedAt!==null klientsidan, och det finns
+// ingen papperskorgs-vy för enskilda varor, bara för hela listor).
 export async function getAllLists(accountId: string) {
-  return ShoppingListModel.find({ accountId }, { _id: 0, __v: 0 });
+  const lists = await ShoppingListModel.find({ accountId, deletedAt: null }, { _id: 0, __v: 0 }).lean();
+  return lists.map((list) => ({
+    ...list,
+    items: list.items.filter((item) => item.deletedAt === null)
+  }));
+}
+
+// Papperskorg (2026-08-06) — samma "huvudlistan visar bara aktivt, en egen
+// väg för det raderade"-princip som todosService.ts:s getTodosHistoryPage,
+// men medvetet UTAN paginering: en hel inköpslista raderas sällan (låg
+// volym jämfört med enskilda todos), en enkel obegränsad lista är
+// proportionerlig här.
+export async function getDeletedLists(accountId: string) {
+  return ShoppingListModel.find({ accountId, deletedAt: { $ne: null } }, { _id: 0, __v: 0 }).lean();
 }
 
 export async function createList(data: unknown, accountId: string, memberId: string | null) {

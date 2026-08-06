@@ -1,9 +1,10 @@
 import styles from "./TrashView.module.css";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { hasPermission } from "../../utils/permissions";
 import { getDeletedItemsForTrash } from "./trash";
 import { useTodosHistoryState } from "../todos/useTodosHistoryState";
+import { shoppingApi } from "../../api";
 import type { Calendar, Id, Member, Role, ShoppingList } from "@shared/types";
 
 type TrashViewProps = {
@@ -11,7 +12,6 @@ type TrashViewProps = {
   currentMember: Member;
   members: Member[];
   roles: Role[];
-  shoppingLists: ShoppingList[];
   onRestoreCalendar: (calendarId: Id) => void;
   onRestoreMember: (memberId: Id) => void;
   onRestoreShoppingList: (listId: Id) => void;
@@ -30,7 +30,6 @@ export function TrashView({
   onRestoreShoppingList,
   onRestoreTodo,
   roles,
-  shoppingLists,
   onRestoreMember,
   onPurgeAllTrash,
   onPurgeTodo
@@ -40,6 +39,24 @@ export function TrashView({
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [purging, setPurging] = useState(false);
   const [purgeError, setPurgeError] = useState<string | null>(null);
+  // Papperskorg (2026-08-06) — GET /api/shopping returnerar sedan samma dag
+  // bara aktiva listor (samma fix som todosService.ts:s getAllTodos fick
+  // 2026-07-26), så en egen, enkel (ingen paginering — listradering är låg
+  // volym, till skillnad från todos) hämtning krävs här för de raderade.
+  const [deletedShoppingListsRaw, setDeletedShoppingLists] = useState<ShoppingList[]>([]);
+  const [shoppingTrashLoading, setShoppingTrashLoading] = useState(true);
+  const [shoppingTrashRefreshKey, setShoppingTrashRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setShoppingTrashLoading(true);
+    shoppingApi.getTrash().then((lists) => {
+      if (!cancelled) setDeletedShoppingLists(lists);
+    }).catch(console.error).finally(() => {
+      if (!cancelled) setShoppingTrashLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [shoppingTrashRefreshKey]);
   // Radera permanent per todo-rad (2026-08-05, Zaidas önskemål: "möjlighet
   // att ångra eller att göra en hard delete" — bulk-tömningen ovan var
   // tidigare allt-eller-inget, ingen väg att permanent radera EN specifik
@@ -50,9 +67,10 @@ export function TrashView({
   const [purgeTodoError, setPurgeTodoError] = useState<string | null>(null);
   // Todos-delen av papperskorgen är paginerad (2026-07-26) — samma nya
   // GET /api/todos/history som Todo-historik-fliken använder, filtrerad
-  // till bara mjuk-raderade nedan. Medlemmar/inköpslistor/kalendrar är
-  // fortsatt ofiltrerade, redan hämtade arrayer via props — bara todos-
-  // volymen var det egentliga problemet, se todosService.ts:s kommentar.
+  // till bara mjuk-raderade nedan. Medlemmar/kalendrar är fortsatt
+  // ofiltrerade, redan hämtade arrayer via props (låg volym, inte samma
+  // ohanterade tillväxt som todos/inköpslistor hade) — bara todos-volymen
+  // var det ursprungliga problemet, se todosService.ts:s kommentar.
   const {
     items: todoHistoryItems,
     total: todoHistoryTotal,
@@ -76,9 +94,10 @@ export function TrashView({
     try {
       await onPurgeAllTrash();
       setConfirmPurge(false);
-      // ADR-0025 rör bara den centrala todos-listan — den lokalt hämtade
-      // historik-/papperskorgssidan här måste hämtas om separat.
+      // ADR-0025 rör bara den centrala todos-listan — de lokalt hämtade
+      // historik-/papperskorgssidorna här måste hämtas om separat.
       refetchTodoTrash();
+      setShoppingTrashRefreshKey((k) => k + 1);
     } catch (err) {
       setPurgeError(err instanceof Error ? err.message : "Något gick fel");
     } finally {
@@ -92,6 +111,13 @@ export function TrashView({
     // todos-listan — ett refetch() här hade kunnat racea mot ett anrop som
     // inte hunnit landa, tas bort optimistiskt lokalt istället.
     removeTodoTrashItem(todoId);
+  }
+
+  function handleRestoreShoppingList(listId: Id) {
+    onRestoreShoppingList(listId);
+    // Samma resonemang som handleRestoreTodo ovan — restoreList är också
+    // fire-and-forget.
+    setDeletedShoppingLists((prev) => prev.filter((list) => list.id !== listId));
   }
 
   async function handlePurgeTodo(todoId: Id) {
@@ -114,13 +140,14 @@ export function TrashView({
   }
 
   const deletedMembers = getDeletedItemsForTrash(members, currentMember, roles);
-  const deletedShoppingLists = getDeletedItemsForTrash(shoppingLists, currentMember, roles);
+  const deletedShoppingLists = getDeletedItemsForTrash(deletedShoppingListsRaw, currentMember, roles);
   const deletedCalendars = getDeletedItemsForTrash(calendars, currentMember, roles);
   const deletedTodos = getDeletedItemsForTrash(todoHistoryItems, currentMember, roles);
   const hasMoreTodoTrash = todoHistoryTotal !== null && todoHistoryItems.length < todoHistoryTotal;
 
   const isTrashEmpty =
     !todoHistoryLoading &&
+    !shoppingTrashLoading &&
     deletedMembers.length === 0 &&
     deletedShoppingLists.length === 0 &&
     deletedCalendars.length === 0 &&
@@ -199,7 +226,7 @@ export function TrashView({
               <button
                 className="secondary-button"
                 disabled={!canRestore}
-                onClick={() => onRestoreShoppingList(list.id)}
+                onClick={() => handleRestoreShoppingList(list.id)}
                 type="button"
               >
                 <RotateCcw size={16} />

@@ -153,6 +153,10 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
       .set("x-member-id", ownerMemberId);
     expect(res.status).toBe(200);
 
+    // 2026-08-06: GET /api/shopping strippar sedan samma dag mjuk-raderade
+    // varor helt ur svaret (samma fix som todosService.ts:s getAllTodos
+    // fick 2026-07-26) — den raderade varan ska alltså inte finnas kvar
+    // alls, inte bara ha deletedAt satt.
     const lists = await request(app)
       .get("/api/shopping")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -160,7 +164,7 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
     const list = (lists.body as Array<{ id: string; items: Array<{ id: string; deletedAt: string | null }> }>).find(
       (l) => l.id === listId
     )!;
-    expect(list.items.find((i) => i.id === itemAId)?.deletedAt).not.toBeNull();
+    expect(list.items.find((i) => i.id === itemAId)).toBeUndefined();
   });
 
   it("nekar töm-listan för en medlem utan canEditShoppingLists, tillåter för ägaren (rör bara bockade varor)", async () => {
@@ -178,6 +182,8 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
       .send({});
     expect(allowed.status).toBe(200);
 
+    // Se samma kommentar/fix ovan (2026-08-06) — den bockade, nu raderade
+    // varan ska vara helt borta ur svaret.
     const lists = await request(app)
       .get("/api/shopping")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -185,7 +191,7 @@ describe.skipIf(!RUN)("shopping.ts: server-side behörighetskontroll på delete-
     const list = (lists.body as Array<{ id: string; items: Array<{ id: string; done: boolean; deletedAt: string | null }> }>).find(
       (l) => l.id === listId
     )!;
-    expect(list.items.find((i) => i.id === itemBId)?.deletedAt).not.toBeNull();
+    expect(list.items.find((i) => i.id === itemBId)).toBeUndefined();
   });
 });
 

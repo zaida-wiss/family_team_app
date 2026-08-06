@@ -41,6 +41,9 @@ export type CrossAccountShoppingLists = {
 
 export const shoppingApi = {
   getAll: () => request<ShoppingList[]>(api("shopping")),
+  // Papperskorg (2026-08-06) — huvudlistan ovan returnerar bara aktiva
+  // listor sedan samma dag, TrashView.tsx hämtar mjuk-raderade härifrån.
+  getTrash: () => request<ShoppingList[]>(api("shopping/trash")),
   getConnectionLists: () => request<ConnectionShoppingLists[]>(api("shopping/connections")),
   // Mina familjekonton (2026-08-01) — mina EGNA andra medlemskap, jag är en
   // riktig medlem där (skiljer sig från connections ovan, som bara stöder

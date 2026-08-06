@@ -12,6 +12,13 @@ shoppingRouter.get("/", async (req, res) => {
   res.json(await shopping.getAllLists(req.accountId!));
 });
 
+// Papperskorg (2026-08-06) — se shoppingService.ts:s getDeletedLists.
+// Måste registreras FÖRE PATCH/DELETE-rutterna med /:id nedan, annars
+// matchar Express "trash" literalt som ett listId.
+shoppingRouter.get("/trash", async (req, res) => {
+  res.json(await shopping.getDeletedLists(req.accountId!));
+});
+
 // Familjeanslutningar (ADR-0030, 2026-07-29) — läsning av anslutna
 // familjers inköpslistor. Måste registreras FÖRE PATCH/DELETE-rutterna med
 // /:id nedan, av samma skäl som /shared-lists ovan.

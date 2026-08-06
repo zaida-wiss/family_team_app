@@ -94,12 +94,20 @@ test("Töm papperskorgen permanent: dubbel bekräftelse, anropar alla fyra endpo
     purgeCalls.push("calendars");
     route.fulfill({ json: { ok: true } });
   });
+  // GET /api/shopping returnerar sedan 2026-08-06 bara aktiva listor (samma
+  // fix som todos fick 2026-07-26) — den mjuk-raderade listan kommer numera
+  // via den egna /trash-endpointen nedan, som TrashView.tsx läser från.
   await page.route("**/api/shopping", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [DELETED_LIST] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
     route.fulfill({ json: { ok: true } });
   });
+  let shoppingTrashPurged = false;
+  await page.route("**/api/shopping/trash", (route) =>
+    route.fulfill({ json: shoppingTrashPurged ? [] : [DELETED_LIST] })
+  );
   await page.route("**/api/shopping/purge-trash", (route) => {
     purgeCalls.push("shopping");
+    shoppingTrashPurged = true;
     route.fulfill({ json: { ok: true } });
   });
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
@@ -163,6 +171,7 @@ test("Radera permanent (per rad): dubbel bekräftelse, anropar bara den valda ra
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/shopping", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/shopping/trash", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: { items: [], requireApprovalForCategories: false } }));
   await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));

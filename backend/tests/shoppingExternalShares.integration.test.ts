@@ -182,13 +182,17 @@ describe.skipIf(!RUN)("ADR-0026: dela en inköpslista med en annan familj", () =
       .set("x-member-id", familyB.parentMemberId);
     expect(remove.status).toBe(200);
 
+    // 2026-08-06: GET /api/shopping strippar sedan samma dag mjuk-raderade
+    // varor helt ur svaret (samma fix som todosService.ts:s getAllTodos
+    // fick 2026-07-26) — den borttagna varan ska alltså inte finnas kvar
+    // alls, inte bara ha deletedAt satt.
     const all = await request(app)
       .get("/api/shopping")
       .set("Authorization", `Bearer ${familyA.accessToken}`)
       .set("x-member-id", familyA.parentMemberId);
     const saved = (all.body as Array<{ id: string; items: Array<{ id: string; done: boolean; deletedAt: string | null }> }>).find((l) => l.id === listId)!;
     expect(saved.items.find((i) => i.id === itemId)!.done).toBe(true);
-    expect(saved.items.find((i) => i.id === newItemId)!.deletedAt).not.toBeNull();
+    expect(saved.items.find((i) => i.id === newItemId)).toBeUndefined();
   });
 
   it("återkallar delningen — familj B förlorar åtkomsten helt", async () => {
