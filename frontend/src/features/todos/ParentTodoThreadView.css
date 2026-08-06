@@ -651,12 +651,12 @@
    kontext). Golv/tak-gränserna är kvar som en säkerhetsmarginal mot extrema
    reglage-värden (64–160px), inte den huvudsakliga skalningen längre. */
 .todo-thread__ball-icon {
-  font-size: clamp(0.85rem, calc(var(--ball-size) * 0.16), 1.6rem);
+  font-size: clamp(1.1rem, calc(var(--ball-size) * 0.24), 2.2rem);
   line-height: 1;
 }
 
 .todo-thread__ball--small .todo-thread__ball-icon {
-  font-size: clamp(0.75rem, calc(var(--ball-size-small) * 0.16), 1.05rem);
+  font-size: clamp(0.95rem, calc(var(--ball-size-small) * 0.24), 1.4rem);
 }
 
 .todo-thread__ball-title {
