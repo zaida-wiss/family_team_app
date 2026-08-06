@@ -20,6 +20,13 @@ const HOLD_DURATION_MS = 2000;
 // faktiskt tas bort ur listan.
 const DISSOLVE_DURATION_MS = 500;
 const CHILDREN_THREAD_ID = "__children__";
+// "Mina uppgifter" (2026-08-06, Zaidas önskemål — "vad händer med uppgifter
+// som saknar kategori?") — en egen, icke-döpbar/raderbar samlingstråd för
+// MINA EGNA uppgifter utan personalCategoryId, oavsett om de aldrig fick en
+// eller om deras kategori senare raderades (deleteCategory nollställer
+// numera fältet istället för att lämna en trasig referens). Döljs som
+// övriga kategorier när tom — inte alltid närvarande som Barn-tråden.
+const UNCATEGORIZED_THREAD_ID = "__uncategorized__";
 
 // Exporterad (2026-08-01) för återanvändning i FamilyTodoThreads.tsx — Hem-
 // vyns familjebubblor ska ha "samma gester och kategorimenyer som todovyn"
@@ -300,6 +307,13 @@ export function ParentTodoThreadView({
   // (exporterar bara den kategorins uppgifter som CSV) eller "Göm" (kategorin
   // döljs ur tråd-vyn men finns kvar, visas igen via Inställningar).
   const [menuCategoryId, setMenuCategoryId] = useState<Id | null>(null);
+  // Tvåstegsbekräftelse innan en kategori raderas (2026-08-06, Zaidas
+  // önskemål: "om en kategori raderas skall det först komma en varning") —
+  // saknades HELT tidigare, ett klick raderade direkt. Samma
+  // "stannar öppen mellan de två klicken, återställs vid utsidesklick"-
+  // mönster som redan finns i FamilyTodoThreads.tsx:s motsvarande
+  // familjekategori-radering.
+  const [confirmingDeleteCategoryId, setConfirmingDeleteCategoryId] = useState<Id | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // Menyn portalas till document.body (2026-07-08) — kolumnen (.todo-thread)
   // fick eget scroll (overflow-y:auto, se ParentTodoThreadView.css) för att
@@ -493,6 +507,7 @@ export function ParentTodoThreadView({
     function handleOutsideClick(e: MouseEvent) {
       if (menuRef.current?.contains(e.target as Node)) return;
       setMenuCategoryId(null);
+      setConfirmingDeleteCategoryId(null);
     }
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
@@ -641,7 +656,40 @@ export function ParentTodoThreadView({
       })
       .filter((thread): thread is Thread => thread !== null);
 
-    return [...(showChildTodos ? [childThread] : []), ...categoryThreads];
+    // "Mina uppgifter" — mina egna todos utan personalCategoryId (se
+    // UNCATEGORIZED_THREAD_ID ovan). Samma "döljs tom, visas annars"-princip
+    // som en riktig kategori, men icke-döpbar/raderbar (ingen egen
+    // TodoCategory-post) — samma mönster som Barn-tråden.
+    const showUncategorizedExpired = showExpiredThreadIds.has(UNCATEGORIZED_THREAD_ID);
+    const uncategorizedBaseTodos = visibleTodos.filter(
+      (t) =>
+        t.personalCategoryId === null &&
+        t.assignedTo === currentMember.id &&
+        (t.status !== "expired" || showUncategorizedExpired)
+    );
+    const uncategorizedAllTodos = allDueTodos.filter(
+      (t) => t.personalCategoryId === null && t.assignedTo === currentMember.id
+    );
+    const uncategorizedThread: Thread | null =
+      uncategorizedBaseTodos.length === 0 && uncategorizedAllTodos.length === 0
+        ? null
+        : {
+            id: UNCATEGORIZED_THREAD_ID,
+            label: "Mina uppgifter",
+            deletable: false,
+            assignees: uniqueAssignees(uncategorizedBaseTodos, members),
+            todos: applyBubbleOrder(
+              sortByEndThenStartTime(applyAssigneeFilter(UNCATEGORIZED_THREAD_ID, uncategorizedBaseTodos)),
+              todoBubbleOrder[UNCATEGORIZED_THREAD_ID]
+            ),
+            completedPercent: computeCompletedPercent(uncategorizedAllTodos)
+          };
+
+    return [
+      ...(showChildTodos ? [childThread] : []),
+      ...categoryThreads,
+      ...(uncategorizedThread ? [uncategorizedThread] : [])
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters, todoBubbleOrder, showChildTodos]);
 
@@ -852,7 +900,12 @@ export function ParentTodoThreadView({
   }
 
   function handleDeleteFromMenu(categoryId: Id) {
+    if (confirmingDeleteCategoryId !== categoryId) {
+      setConfirmingDeleteCategoryId(categoryId);
+      return;
+    }
     setMenuCategoryId(null);
+    setConfirmingDeleteCategoryId(null);
     onRemoveCategory(categoryId);
   }
 
@@ -1205,12 +1258,24 @@ export function ParentTodoThreadView({
                       <button onClick={() => handleHideFromMenu(thread.id)} type="button">
                         Göm
                       </button>
+                      {confirmingDeleteCategoryId === thread.id && (
+                        <p className="field-hint">
+                          {(() => {
+                            const count = allTodos.filter(
+                              (t) => t.personalCategoryId === thread.id && t.deletedAt === null
+                            ).length;
+                            return count > 0
+                              ? `${count} ${count === 1 ? "uppgift blir" : "uppgifter blir"} okategoriserad${count === 1 ? "" : "e"} — hittas sedan under "Mina uppgifter".`
+                              : "Kategorin tas bort permanent.";
+                          })()}
+                        </p>
+                      )}
                       <button
                         className="todo-thread__category-menu-danger"
                         onClick={() => handleDeleteFromMenu(thread.id)}
                         type="button"
                       >
-                        Radera
+                        {confirmingDeleteCategoryId === thread.id ? "Bekräfta radering" : "Radera"}
                       </button>
                     </>
                   )}

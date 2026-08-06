@@ -598,6 +598,16 @@ export function FamilyTodoThreads({
                         Göm
                       </button>
                     )}
+                    {source.onDeleteCategory && confirmingDeleteThreadId === source.id && (
+                      <p className="field-hint">
+                        {(() => {
+                          const count = source.todos.filter((t) => t.deletedAt === null).length;
+                          return count > 0
+                            ? `${count} ${count === 1 ? "uppgift blir" : "uppgifter blir"} okategoriserad${count === 1 ? "" : "e"} — samlas upp i en egen kategori.`
+                            : "Kategorin tas bort permanent.";
+                        })()}
+                      </p>
+                    )}
                     {source.onDeleteCategory && (
                       <button onClick={() => handleDeleteCategoryClick(source)} type="button">
                         {confirmingDeleteThreadId === source.id ? "Bekräfta radering" : "Radera"}

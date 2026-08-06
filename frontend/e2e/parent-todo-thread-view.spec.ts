@@ -1282,9 +1282,14 @@ test("Bollar i tråd: döper om och tar bort en personlig kategori", async ({ pa
 
   // "Radera" i menyn tar bort kategorin (2026-07-05, Zaidas beslut, utökad
   // senare samma dag) — ersätter den tidigare håll-intryckt (2s)-mekanismen
-  // helt med en explicit menyknapp.
+  // helt med en explicit menyknapp. Tvåstegsbekräftelse tillagd 2026-08-06
+  // (Zaidas önskemål: "om en kategori raderas skall det först komma en
+  // varning") — ett klick räckte tidigare inte alls för att radera.
   await renamedThread.getByRole("button", { name: /Gym/ }).click();
-  await page.getByRole("button", { name: "Radera" }).click();
+  await page.getByRole("button", { name: "Radera", exact: true }).click();
+  expect(deletedId).toBeNull();
+  await expect(page.getByText('1 uppgift blir okategoriserad — hittas sedan under "Mina uppgifter".')).toBeVisible();
+  await page.getByRole("button", { name: "Bekräfta radering" }).click();
   await expect.poll(() => deletedId).toBe("cat-1");
   await expect(page.getByRole("region", { name: "Tråd: Gym" })).toHaveCount(0);
 });
@@ -2765,4 +2770,46 @@ test("Redigera uppgift: cyklar ett delmoments tilldelning, autosparas", async ({
 
   await expect.poll(() => (updatedPatch?.subtasks as Array<{ assignedTo: string | null }> | undefined)?.[0]?.assignedTo)
     .toBe("mem-1");
+});
+
+// 2026-08-06, Zaidas fråga: "vad händer med uppgifter som saknar kategori?"
+// — en uppgift tilldelad mig men utan personalCategoryId (oavsett om den
+// aldrig fick en, eller om dess kategori senare raderades av
+// deleteCategory) samlas nu upp i en egen, icke-döpbar/raderbar
+// "Mina uppgifter"-tråd — döljs helt om den är tom, precis som en riktig
+// kategori.
+test("Bollar i tråd: en okategoriserad egen uppgift visas under 'Mina uppgifter', tråden döljs om ingen sådan finns", async ({ page }) => {
+  const UNCATEGORIZED_TODO = {
+    ...PERSONAL_TODO_NO_SUBTASKS,
+    id: "todo-uncategorized",
+    title: "Handla mjölk",
+    personalCategoryId: null
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: route.request().method() === "GET" ? [UNCATEGORIZED_TODO] : {} })
+  );
+
+  await openThreadView(page);
+  const thread = page.getByRole("region", { name: "Tråd: Mina uppgifter" });
+  await expect(thread).toBeVisible();
+  await expect(thread.getByText("Handla mjölk")).toBeVisible();
+  // Ingen döp om/radera-knapp — inte en riktig kategori.
+  await thread.getByRole("button", { name: /Mina uppgifter/ }).click();
+  await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Radera", exact: true })).toHaveCount(0);
+});
+
+test("Bollar i tråd: 'Mina uppgifter' syns INTE när alla mina uppgifter redan har en kategori", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: route.request().method() === "GET" ? [PERSONAL_TODO_NO_SUBTASKS] : {} })
+  );
+
+  await openThreadView(page);
+  await expect(page.getByRole("region", { name: "Tråd: Träning" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Tråd: Mina uppgifter" })).toHaveCount(0);
 });

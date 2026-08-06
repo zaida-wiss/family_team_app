@@ -14,6 +14,10 @@ const todoCategorySchema = new Schema<TodoCategory>({
   hidden: { type: Boolean, default: false },
   // Familjekategori (2026-08-03) — se shared/types.ts:s kommentar.
   isFamily: { type: Boolean, default: false },
+  // Auto-samlingskategori (2026-08-06) — måste läggas till HÄR samma dag
+  // som fältet införs, annars strippas det tyst av Mongoose strict-läge
+  // (samma bugklass som todoThreadGap-incidenten). Se shared/types.ts.
+  isUncategorizedCollector: { type: Boolean, default: false },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }
 });

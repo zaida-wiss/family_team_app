@@ -1015,6 +1015,14 @@ export type TodoCategory = {
   // visas som en egen tråd i Hem-vyn istället för i den personliga
   // Todos-panelen — se getFamilyViewTodos (selectors.ts).
   isFamily?: boolean;
+  // Auto-hanterad samlingskategori för familjevyn (2026-08-06, Zaidas
+  // önskemål) — högst en per konto, namngiven efter kontots namn, dit
+  // uppgifter flyttas när DERAS EGEN familjekategori raderas (se
+  // deleteCategory, todoCategoriesService.ts). Skapas automatiskt (get-or-
+  // create) bara vid behov — raderas den (som vilken annan kategori som
+  // helst) skapas en ny nästa gång en familjekategori med kvarvarande
+  // uppgifter raderas. Valfritt/saknas = en vanlig kategori (bakåtkompatibelt).
+  isUncategorizedCollector?: boolean;
   deletedAt: string | null;
   deletedBy: Id | null;
 };

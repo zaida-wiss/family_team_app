@@ -10,7 +10,7 @@ import { mockDataAPIs, MEMBER } from "./helpers";
 // per familjekategori i Hem-vyns Todos-flik, sida vid sida med den
 // okategoriserade Familjen-poolen.
 
-type Category = { id: string; accountId: string; memberId: string; name: string; isFamily?: boolean; hidden?: boolean; deletedAt: null; deletedBy: null; createdAt: string };
+type Category = { id: string; accountId: string; memberId: string; name: string; isFamily?: boolean; hidden?: boolean; isUncategorizedCollector?: boolean; deletedAt: null; deletedBy: null; createdAt: string };
 
 // 2026-08-05, Zaidas beslut: "aldrig bara en kategori" — en ny
 // familjekategori skapas nu alltid TILLSAMMANS med sin första uppgift, i
@@ -313,4 +313,90 @@ test("Hem-vyns Todos-flik: trådarna/kolumnerna går att flytta med drag-and-dro
 
   // Kategorimenyn ska INTE ha öppnats av draget.
   await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
+});
+
+// 2026-08-06, Zaidas fråga ("vad händer med uppgifter som saknar kategori?")
+// följd av önskemålet: "om en kategori raderas skall det först komma en
+// varning" — familjekategorins radering hade redan en generisk
+// tvåstegsbekräftelse (2026-08-03), men ingen varning om ANTALET uppgifter
+// som skulle bli okategoriserade. Backend (deleteCategory,
+// todoCategoriesService.ts) flyttar dem numera till en auto-skapad,
+// kontonamngiven samlingskategori — detta test verifierar bara
+// varningstexten/tvåstegsflödet i UI:t, inte hela rundtripen (frontend
+// refetchar inte kategorier/todos efter en radering utan en sidomladdning,
+// se backend-integrationstestet för den fulla collector-logiken).
+test("Hem-vyns Todos-flik: radering av en familjekategori med uppgifter visar en varning om antalet innan bekräftelse", async ({ page }) => {
+  const categories: Category[] = [
+    { id: "cat-household", accountId: "acc-1", memberId: "mem-1", name: "Hushåll", isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" }
+  ];
+  const todos = [
+    { id: "todo-dishes", accountId: "acc-1", title: "Diska", assignedTo: null, createdBy: "mem-1", personalCategoryId: "cat-household", status: "pending", starValue: 0, visual: { type: "lucide-icon", value: "⭐" }, recurrence: { type: "none" }, recurringSourceId: null, deletedAt: null, inProgressBy: [] }
+  ];
+  let deletedId: string | null = null;
+
+  await mockDataAPIs(page);
+  await page.route("**/api/auth/refresh", (route) =>
+    route.fulfill({
+      json: {
+        accessToken: "fake-access-token",
+        user: { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" },
+        memberships: [{ member: MEMBER, account: { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null } }]
+      }
+    })
+  );
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: categories }));
+  await page.route("**/api/todo-categories/cat-household", (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedId = "cat-household";
+      return route.fulfill({ json: { ok: true, uncategorizedCount: 1 } });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/todos", (route) => route.fulfill({ json: todos }));
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  const thread = page.getByRole("region", { name: "Tråd: Hushåll" });
+  await thread.getByRole("button", { name: /^Hushåll\./ }).click();
+  await page.getByRole("button", { name: "Radera", exact: true }).click();
+  expect(deletedId).toBeNull();
+  await expect(page.getByText('1 uppgift blir okategoriserad — samlas upp i en egen kategori.')).toBeVisible();
+  await page.getByRole("button", { name: "Bekräfta radering" }).click();
+  await expect.poll(() => deletedId).toBe("cat-household");
+});
+
+// Samlingskategorin (isUncategorizedCollector) är en RIKTIG TodoCategory
+// (isFamily:true) — verifierar att den renderas precis som vilken annan
+// familjekategori, ingen specialhantering i frontend som kan gå sönder.
+test("Hem-vyns Todos-flik: samlingskategorin renderas som en vanlig familjetråd", async ({ page }) => {
+  const categories: Category[] = [
+    {
+      id: "cat-collector", accountId: "acc-1", memberId: "mem-1", name: "Familjen Test", isFamily: true,
+      isUncategorizedCollector: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+    }
+  ];
+  const todos = [
+    { id: "todo-moved", accountId: "acc-1", title: "Klippa gräs", assignedTo: null, createdBy: "mem-1", personalCategoryId: "cat-collector", status: "pending", starValue: 0, visual: { type: "lucide-icon", value: "⭐" }, recurrence: { type: "none" }, recurringSourceId: null, deletedAt: null, inProgressBy: [] }
+  ];
+
+  await mockDataAPIs(page);
+  await page.route("**/api/auth/refresh", (route) =>
+    route.fulfill({
+      json: {
+        accessToken: "fake-access-token",
+        user: { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" },
+        memberships: [{ member: MEMBER, account: { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null } }]
+      }
+    })
+  );
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: categories }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: todos }));
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  const thread = page.getByRole("region", { name: "Tråd: Familjen Test" });
+  await expect(thread).toBeVisible();
+  await expect(thread.getByText("Klippa gräs")).toBeVisible();
 });

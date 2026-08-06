@@ -1,6 +1,8 @@
 import { TodoCategoryModel } from "../db/models/TodoCategory.js";
 import { MemberModel } from "../db/models/Member.js";
 import { RoleModel } from "../db/models/Role.js";
+import { TodoModel } from "../db/models/Todo.js";
+import { AccountModel } from "../db/models/Account.js";
 import { AppError } from "../utils/errors.js";
 
 // Kontobreda (2026-07-07, Zaidas beslut) — tidigare strikt privata per medlem.
@@ -76,11 +78,75 @@ export async function setCategoryHidden(id: string, accountId: string, memberId:
   return { ok: true };
 }
 
+// Auto-samlingskategori för familjevyn (2026-08-06, Zaidas önskemål: "i
+// familjevyn skall den gå under familjens namn... om den kategorin inte
+// finns skall den skapas igen när det finns okategoriserade uppgifter") —
+// en RIKTIG, sparad TodoCategory (isFamily:true), inte bara ett tomt fält —
+// går att byta namn på/gömma/radera som vilken annan kategori, men skapas
+// automatiskt om den saknas när en familjekategori med kvarvarande
+// uppgifter raderas. Namnges efter kontots namn (Inställningar → Konto).
+async function getOrCreateUncategorizedCollector(accountId: string, memberId: string) {
+  const existing = await TodoCategoryModel.findOne({
+    accountId,
+    isFamily: true,
+    isUncategorizedCollector: true,
+    deletedAt: null
+  });
+  if (existing) return existing;
+
+  const account = await AccountModel.findOne({ id: accountId });
+  const category = await TodoCategoryModel.create({
+    id: `todo-category-${crypto.randomUUID()}`,
+    accountId,
+    memberId,
+    name: account?.name ?? "Familjen",
+    createdAt: new Date().toISOString(),
+    isFamily: true,
+    isUncategorizedCollector: true,
+    deletedAt: null,
+    deletedBy: null
+  });
+  return category;
+}
+
+// Zaidas önskemål 2026-08-06: "om en kategori raderas... alla som var i den
+// kategorin nu få ett tomt fält i kategori-kolumnen, dessa okategoriserade
+// uppgifter skall sedan samlas upp i en samlingskategori" — tidigare rörde
+// deleteCategory bara kategorin själv, todos som pekade på den (via
+// personalCategoryId) blev tysta, trasiga referenser (osynliga i tråd-vyn,
+// utan varken varning eller väg tillbaka). En PERSONLIG kategoris uppgifter
+// nollställs (samlas upp i ParentTodoThreadView.tsx:s virtuella, icke-
+// döpbara "Mina uppgifter"-tråd — ingen riktig kategori krävs där, ingen
+// UI låter användaren radera den, så "skapas igen"-scenariot kan aldrig
+// inträffa för den). En FAMILJEKATEGORIS uppgifter flyttas istället till
+// den riktiga samlingskategorin ovan (get-or-create) — men bara om det
+// FAKTISKT fanns uppgifter kvar (annars inget att samla, ingen anledning
+// att skapa en tom kategori) och bara om det INTE är samlingskategorin
+// SJÄLV som raderas (då nollställs dess uppgifter istället — nästa
+// familjekategori-radering med kvarvarande uppgifter skapar en ny åt dem).
 export async function deleteCategory(id: string, accountId: string, memberId: string) {
   await requireAdultMember(memberId, accountId);
   const category = await findCategoryInAccount(id, accountId);
   category.deletedAt = new Date().toISOString();
   category.deletedBy = memberId;
   await category.save();
-  return { ok: true };
+
+  const affectedCount = await TodoModel.countDocuments({ accountId, personalCategoryId: id, deletedAt: null });
+  if (affectedCount === 0) {
+    return { ok: true, uncategorizedCount: 0 };
+  }
+
+  if (category.isFamily && !category.isUncategorizedCollector) {
+    const collector = await getOrCreateUncategorizedCollector(accountId, memberId);
+    await TodoModel.updateMany(
+      { accountId, personalCategoryId: id, deletedAt: null },
+      { $set: { personalCategoryId: collector.id } }
+    );
+  } else {
+    await TodoModel.updateMany(
+      { accountId, personalCategoryId: id, deletedAt: null },
+      { $set: { personalCategoryId: null } }
+    );
+  }
+  return { ok: true, uncategorizedCount: affectedCount };
 }

@@ -233,3 +233,249 @@ describe.skipIf(!RUN)("Vuxenvyns personliga kategorier", () => {
     expect(res.body).toEqual([]);
   });
 });
+
+// 2026-08-06, Zaidas önskemål (efter frågan "vad händer med uppgifter som
+// saknar kategori?"): deleteCategory rörde tidigare bara kategorin själv —
+// uppgifter som pekade på den (personalCategoryId) blev tysta, trasiga
+// referenser. Nu nollställs de (personliga kategorier, samlas upp virtuellt
+// i "Mina uppgifter" i frontend) eller flyttas till en riktig, auto-skapad
+// samlingskategori (familjekategorier — namngiven efter kontot, återanvänd
+// om den redan finns, ALDRIG skapad om det inte fanns några uppgifter kvar).
+function todoPayload(overrides: Record<string, unknown>) {
+  return {
+    isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    visibleFrom: null, expiresAt: null, completedAt: null, approvedBy: null,
+    approvedAt: null, rejectedBy: null, rejectedAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null, inProgressBy: [], inProgressSince: null,
+    ...overrides
+  };
+}
+
+describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjekategorier får en auto-skapad samlingskategori", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.db?.dropDatabase();
+    await mongoose.disconnect();
+  });
+
+  let accessToken: string;
+  let memberId: string;
+  let accountName: string;
+
+  it("sätter upp konto", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "categories-orphan-int@bmad.test", password: "Lösenord1!", name: "Kategoriorfantest" });
+    accessToken = register.body.accessToken as string;
+
+    accountName = "Orfanfamiljen";
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: accountName });
+    memberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
+  });
+
+  it("radera en TOM kategori: inga uppgifter, ingen samlingskategori skapas", async () => {
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Tom familjekategori", isFamily: true });
+
+    const del = await request(app)
+      .delete(`/api/todo-categories/${category.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(del.status).toBe(200);
+    expect(del.body.uncategorizedCount).toBe(0);
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect((list.body as Array<{ isUncategorizedCollector?: boolean }>).some((c) => c.isUncategorizedCollector)).toBe(false);
+  });
+
+  it("radera en PERSONLIG kategori med en uppgift: uppgiftens personalCategoryId nollställs, ingen samlingskategori skapas", async () => {
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Träning" });
+
+    const todoId = `todo-orphan-personal-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Löpa", createdBy: memberId, assignedTo: memberId,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+
+    const del = await request(app)
+      .delete(`/api/todo-categories/${category.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(del.status).toBe(200);
+    expect(del.body.uncategorizedCount).toBe(1);
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.personalCategoryId).toBeNull();
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect((list.body as Array<{ isUncategorizedCollector?: boolean }>).some((c) => c.isUncategorizedCollector)).toBe(false);
+  });
+
+  let collectorId: string;
+
+  it("radera en FAMILJEKATEGORI med en uppgift: en samlingskategori skapas automatiskt, namngiven efter kontot, uppgiften flyttas dit", async () => {
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Hushåll", isFamily: true });
+
+    const todoId = `todo-orphan-family-1-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Diska", createdBy: memberId, assignedTo: null,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+
+    const del = await request(app)
+      .delete(`/api/todo-categories/${category.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(del.status).toBe(200);
+    expect(del.body.uncategorizedCount).toBe(1);
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const collector = (list.body as Array<{ id: string; name: string; isFamily: boolean; isUncategorizedCollector?: boolean }>)
+      .find((c) => c.isUncategorizedCollector);
+    expect(collector).toBeDefined();
+    expect(collector?.name).toBe(accountName);
+    expect(collector?.isFamily).toBe(true);
+    collectorId = collector!.id;
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.personalCategoryId).toBe(collectorId);
+  });
+
+  it("radera en ANDRA familjekategori med en uppgift: den REDAN SKAPADE samlingskategorin återanvänds, ingen ny skapas", async () => {
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Trädgård", isFamily: true });
+
+    const todoId = `todo-orphan-family-2-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Klippa gräs", createdBy: memberId, assignedTo: null,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+
+    const del = await request(app)
+      .delete(`/api/todo-categories/${category.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(del.status).toBe(200);
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.personalCategoryId).toBe(collectorId);
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const collectors = (list.body as Array<{ isUncategorizedCollector?: boolean }>).filter((c) => c.isUncategorizedCollector);
+    expect(collectors).toHaveLength(1);
+  });
+
+  it("radera SAMLINGSKATEGORIN själv: dess egna uppgifter nollställs (inte omdirigerade till sig själv)", async () => {
+    const del = await request(app)
+      .delete(`/api/todo-categories/${collectorId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(del.status).toBe(200);
+    expect(del.body.uncategorizedCount).toBe(2);
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const stillReferencing = (todos.body as Array<{ personalCategoryId: string | null }>).filter(
+      (t) => t.personalCategoryId === collectorId
+    );
+    expect(stillReferencing).toHaveLength(0);
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect((list.body as Array<{ isUncategorizedCollector?: boolean }>).some((c) => c.isUncategorizedCollector)).toBe(false);
+  });
+
+  it("en NY familjekategori-radering med kvarvarande uppgifter skapar en FRÄSCH samlingskategori (den gamla är borta)", async () => {
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Tvätt", isFamily: true });
+
+    const todoId = `todo-orphan-family-3-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Tvätta kläder", createdBy: memberId, assignedTo: null,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+
+    await request(app)
+      .delete(`/api/todo-categories/${category.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const newCollector = (list.body as Array<{ id: string; isUncategorizedCollector?: boolean }>).find(
+      (c) => c.isUncategorizedCollector
+    );
+    expect(newCollector).toBeDefined();
+    expect(newCollector!.id).not.toBe(collectorId);
+  });
+});
