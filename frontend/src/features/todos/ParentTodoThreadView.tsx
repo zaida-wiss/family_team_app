@@ -21,12 +21,11 @@ const HOLD_DURATION_MS = 2000;
 const DISSOLVE_DURATION_MS = 500;
 const CHILDREN_THREAD_ID = "__children__";
 // "Mina uppgifter" (2026-08-06, Zaidas önskemål — "vad händer med uppgifter
-// som saknar kategori?") — en egen, icke-döpbar/raderbar samlingstråd för
-// MINA EGNA uppgifter utan personalCategoryId, oavsett om de aldrig fick en
-// eller om deras kategori senare raderades (deleteCategory nollställer
-// numera fältet istället för att lämna en trasig referens). Döljs som
-// övriga kategorier när tom — inte alltid närvarande som Barn-tråden.
-const UNCATEGORIZED_THREAD_ID = "__uncategorized__";
+// som saknar kategori?") behöver INGEN egen virtuell tråd här — den är en
+// RIKTIG, auto-skapad TodoCategory (samma mekanism som familjevyns
+// samlingskategori, se getOrCreateUncategorizedCollector i
+// todoCategoriesService.ts) och renderas redan via den vanliga
+// categoryThreads-mappningen nedan, precis som vilken annan kategori.
 
 // Exporterad (2026-08-01) för återanvändning i FamilyTodoThreads.tsx — Hem-
 // vyns familjebubblor ska ha "samma gester och kategorimenyer som todovyn"
@@ -656,40 +655,7 @@ export function ParentTodoThreadView({
       })
       .filter((thread): thread is Thread => thread !== null);
 
-    // "Mina uppgifter" — mina egna todos utan personalCategoryId (se
-    // UNCATEGORIZED_THREAD_ID ovan). Samma "döljs tom, visas annars"-princip
-    // som en riktig kategori, men icke-döpbar/raderbar (ingen egen
-    // TodoCategory-post) — samma mönster som Barn-tråden.
-    const showUncategorizedExpired = showExpiredThreadIds.has(UNCATEGORIZED_THREAD_ID);
-    const uncategorizedBaseTodos = visibleTodos.filter(
-      (t) =>
-        t.personalCategoryId === null &&
-        t.assignedTo === currentMember.id &&
-        (t.status !== "expired" || showUncategorizedExpired)
-    );
-    const uncategorizedAllTodos = allDueTodos.filter(
-      (t) => t.personalCategoryId === null && t.assignedTo === currentMember.id
-    );
-    const uncategorizedThread: Thread | null =
-      uncategorizedBaseTodos.length === 0 && uncategorizedAllTodos.length === 0
-        ? null
-        : {
-            id: UNCATEGORIZED_THREAD_ID,
-            label: "Mina uppgifter",
-            deletable: false,
-            assignees: uniqueAssignees(uncategorizedBaseTodos, members),
-            todos: applyBubbleOrder(
-              sortByEndThenStartTime(applyAssigneeFilter(UNCATEGORIZED_THREAD_ID, uncategorizedBaseTodos)),
-              todoBubbleOrder[UNCATEGORIZED_THREAD_ID]
-            ),
-            completedPercent: computeCompletedPercent(uncategorizedAllTodos)
-          };
-
-    return [
-      ...(showChildTodos ? [childThread] : []),
-      ...categoryThreads,
-      ...(uncategorizedThread ? [uncategorizedThread] : [])
-    ];
+    return [...(showChildTodos ? [childThread] : []), ...categoryThreads];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTodos, allTodos, range, members, roles, categories, currentMember.id, showExpiredThreadIds, assigneeFilters, todoBubbleOrder, showChildTodos]);
 

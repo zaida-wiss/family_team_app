@@ -48,6 +48,18 @@ export async function createCategory(accountId: string, memberId: string, name: 
   return category.toObject();
 }
 
+// Duplicerad från todosService.ts:s identiska helper (medvetet, inte
+// importerad — todosService.ts importerar redan FRÅN den här filen, ett
+// tvärimport åt andra hållet hade blivit en cirkelimport).
+async function isChildMemberId(memberId: string | null): Promise<boolean> {
+  if (!memberId) return false;
+  const member = await MemberModel.findOne({ id: memberId });
+  if (!member) return false;
+  if (member.isChild) return true;
+  const role = await RoleModel.findOne({ id: member.roleId });
+  return role?.isChildRole === true;
+}
+
 async function findCategoryInAccount(id: string, accountId: string) {
   const category = await TodoCategoryModel.findOne({ id, accountId, deletedAt: null });
   if (!category) {
@@ -78,30 +90,51 @@ export async function setCategoryHidden(id: string, accountId: string, memberId:
   return { ok: true };
 }
 
-// Auto-samlingskategori för familjevyn (2026-08-06, Zaidas önskemål: "i
-// familjevyn skall den gå under familjens namn... om den kategorin inte
-// finns skall den skapas igen när det finns okategoriserade uppgifter") —
-// en RIKTIG, sparad TodoCategory (isFamily:true), inte bara ett tomt fält —
-// går att byta namn på/gömma/radera som vilken annan kategori, men skapas
-// automatiskt om den saknas när en familjekategori med kvarvarande
-// uppgifter raderas. Namnges efter kontots namn (Inställningar → Konto).
-async function getOrCreateUncategorizedCollector(accountId: string, memberId: string) {
+// Auto-samlingskategori (2026-08-06, Zaidas önskemål: "detsamma gäller i
+// min egen todo-vy. Okategoriserade uppgifter skall skapa 'Mina
+// uppgifter'" — samma mekanism som familjevyns samlingskategori, bara
+// namngiven annorlunda) — en RIKTIG, sparad TodoCategory, inte bara ett
+// tomt fält — går att byta namn på/gömma/radera som vilken annan kategori,
+// men skapas automatiskt om den saknas när det finns okategoriserade
+// uppgifter. Exporterad — används både av deleteCategory nedan OCH av
+// todosService.ts:s createTodo/updateTodo (en uppgift som sparas utan
+// personalCategoryId löser sig hit direkt, inte bara vid en
+// kategoriradering).
+//
+// FAMILJE-samlingskategorin (isFamily:true) är EN delad per konto,
+// namngiven efter kontots namn (Inställningar → Konto) — Hem-vyns
+// familjekategorier visas redan kontobrett, ingen ägarfiltrering.
+//
+// PERSONLIGA samlingskategorin (isFamily:false) är däremot EN PER MEDLEM
+// (scopead på memberId, alltid namngiven "Mina uppgifter") — till skillnad
+// från familjekategorier filtrerar ParentTodoThreadView.tsx:s kolumner
+// personliga kategorier på `category.memberId === currentMember.id` (för
+// att inte visa andra vuxnas tomma kategorier som klutter, se
+// "myCategories" i ParentTodoThreadView.tsx). En delad, kontobred "Mina
+// uppgifter" hade alltså bara synts för den som råkade skapa den först —
+// varje vuxen behöver sin EGEN.
+export async function getOrCreateUncategorizedCollector(accountId: string, memberId: string, isFamily: boolean) {
   const existing = await TodoCategoryModel.findOne({
     accountId,
-    isFamily: true,
+    ...(isFamily ? {} : { memberId }),
+    isFamily,
     isUncategorizedCollector: true,
     deletedAt: null
   });
   if (existing) return existing;
 
-  const account = await AccountModel.findOne({ id: accountId });
+  let name = "Mina uppgifter";
+  if (isFamily) {
+    const account = await AccountModel.findOne({ id: accountId });
+    name = account?.name ?? "Familjen";
+  }
   const category = await TodoCategoryModel.create({
     id: `todo-category-${crypto.randomUUID()}`,
     accountId,
     memberId,
-    name: account?.name ?? "Familjen",
+    name,
     createdAt: new Date().toISOString(),
-    isFamily: true,
+    isFamily,
     isUncategorizedCollector: true,
     deletedAt: null,
     deletedBy: null
@@ -114,16 +147,23 @@ async function getOrCreateUncategorizedCollector(accountId: string, memberId: st
 // uppgifter skall sedan samlas upp i en samlingskategori" — tidigare rörde
 // deleteCategory bara kategorin själv, todos som pekade på den (via
 // personalCategoryId) blev tysta, trasiga referenser (osynliga i tråd-vyn,
-// utan varken varning eller väg tillbaka). En PERSONLIG kategoris uppgifter
-// nollställs (samlas upp i ParentTodoThreadView.tsx:s virtuella, icke-
-// döpbara "Mina uppgifter"-tråd — ingen riktig kategori krävs där, ingen
-// UI låter användaren radera den, så "skapas igen"-scenariot kan aldrig
-// inträffa för den). En FAMILJEKATEGORIS uppgifter flyttas istället till
-// den riktiga samlingskategorin ovan (get-or-create) — men bara om det
-// FAKTISKT fanns uppgifter kvar (annars inget att samla, ingen anledning
-// att skapa en tom kategori) och bara om det INTE är samlingskategorin
-// SJÄLV som raderas (då nollställs dess uppgifter istället — nästa
-// familjekategori-radering med kvarvarande uppgifter skapar en ny åt dem).
+// utan varken varning eller väg tillbaka). Nu flyttas de till den riktiga
+// samlingskategorin ovan (get-or-create) — men bara om det FAKTISKT fanns
+// uppgifter kvar (annars inget att samla) och bara om det INTE är
+// samlingskategorin SJÄLV som raderas (då nollställs dess uppgifter
+// istället — nästa kategoriradering av samma typ med kvarvarande
+// uppgifter skapar en ny åt dem).
+//
+// En FAMILJEKATEGORI har EN delad samlingskategori för hela kontot — ett
+// enda updateMany räcker. En PERSONLIG kategori kan däremot ha uppgifter
+// SKAPADE av flera olika vuxna (kategorier är kontobreda sedan ADR-0019,
+// vem som helst kan lägga en uppgift i vilken kategori som helst) — var och
+// en har sin EGEN "Mina uppgifter" (se getOrCreateUncategorizedCollector
+// ovan, samma createdBy-baserade tillhörighet som resolvePersonalCategoryId
+// i todosService.ts redan använder vid skapande). Ett barn-tilldelat
+// personligt-kategoriserat todo (ett teoretiskt men möjligt fall — Barn-
+// tråden bryr sig aldrig om personalCategoryId) nollställs istället, samma
+// "aldrig peka på ett barns kategori"-princip.
 export async function deleteCategory(id: string, accountId: string, memberId: string) {
   await requireAdultMember(memberId, accountId);
   const category = await findCategoryInAccount(id, accountId);
@@ -131,22 +171,41 @@ export async function deleteCategory(id: string, accountId: string, memberId: st
   category.deletedBy = memberId;
   await category.save();
 
-  const affectedCount = await TodoModel.countDocuments({ accountId, personalCategoryId: id, deletedAt: null });
-  if (affectedCount === 0) {
+  const affected = await TodoModel.find(
+    { accountId, personalCategoryId: id, deletedAt: null },
+    { _id: 0, id: 1, assignedTo: 1, createdBy: 1 }
+  );
+  if (affected.length === 0) {
     return { ok: true, uncategorizedCount: 0 };
   }
 
-  if (category.isFamily && !category.isUncategorizedCollector) {
-    const collector = await getOrCreateUncategorizedCollector(accountId, memberId);
+  if (category.isUncategorizedCollector) {
+    // Samlingskategorin raderas själv — nollställ, omdirigera aldrig till
+    // sig själv. Nästa kategoriradering av samma typ skapar en ny.
+    await TodoModel.updateMany(
+      { accountId, personalCategoryId: id, deletedAt: null },
+      { $set: { personalCategoryId: null } }
+    );
+  } else if (category.isFamily) {
+    const collector = await getOrCreateUncategorizedCollector(accountId, memberId, true);
     await TodoModel.updateMany(
       { accountId, personalCategoryId: id, deletedAt: null },
       { $set: { personalCategoryId: collector.id } }
     );
   } else {
-    await TodoModel.updateMany(
-      { accountId, personalCategoryId: id, deletedAt: null },
-      { $set: { personalCategoryId: null } }
-    );
+    const collectorsByCreator = new Map<string, string>();
+    for (const todo of affected) {
+      if (await isChildMemberId(todo.assignedTo)) {
+        await TodoModel.updateOne({ id: todo.id }, { $set: { personalCategoryId: null } });
+        continue;
+      }
+      const creatorId = todo.createdBy ?? memberId;
+      if (!collectorsByCreator.has(creatorId)) {
+        const collector = await getOrCreateUncategorizedCollector(accountId, creatorId, false);
+        collectorsByCreator.set(creatorId, collector.id);
+      }
+      await TodoModel.updateOne({ id: todo.id }, { $set: { personalCategoryId: collectorsByCreator.get(creatorId) } });
+    }
   }
-  return { ok: true, uncategorizedCount: affectedCount };
+  return { ok: true, uncategorizedCount: affected.length };
 }

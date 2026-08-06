@@ -2773,21 +2773,26 @@ test("Redigera uppgift: cyklar ett delmoments tilldelning, autosparas", async ({
 });
 
 // 2026-08-06, Zaidas fråga: "vad händer med uppgifter som saknar kategori?"
-// — en uppgift tilldelad mig men utan personalCategoryId (oavsett om den
-// aldrig fick en, eller om dess kategori senare raderades av
-// deleteCategory) samlas nu upp i en egen, icke-döpbar/raderbar
-// "Mina uppgifter"-tråd — döljs helt om den är tom, precis som en riktig
-// kategori.
-test("Bollar i tråd: en okategoriserad egen uppgift visas under 'Mina uppgifter', tråden döljs om ingen sådan finns", async ({ page }) => {
+// följt av rättelsen "detsamma gäller i min egen todo-vy. Okategoriserade
+// uppgifter skall skapa 'Mina uppgifter'" — en RIKTIG, auto-skapad
+// TodoCategory (samma mekanism som familjevyns samlingskategori, se
+// getOrCreateUncategorizedCollector, todoCategoriesService.ts), inte en
+// virtuell tråd — renderas därför som VILKEN ANNAN kategori som helst,
+// fullt hanterbar (byt namn/radera).
+test("Bollar i tråd: samlingskategorin 'Mina uppgifter' renderas som en vanlig, fullt hanterbar kategori", async ({ page }) => {
+  const COLLECTOR_CATEGORY = {
+    id: "cat-collector", accountId: "acc-1", memberId: "mem-1", name: "Mina uppgifter",
+    isFamily: false, isUncategorizedCollector: true, createdAt: "2024-01-01T00:00:00.000Z", deletedAt: null, deletedBy: null
+  };
   const UNCATEGORIZED_TODO = {
     ...PERSONAL_TODO_NO_SUBTASKS,
     id: "todo-uncategorized",
     title: "Handla mjölk",
-    personalCategoryId: null
+    personalCategoryId: "cat-collector"
   };
 
   await mockAuthAndData(page);
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [COLLECTOR_CATEGORY] }));
   await page.route("**/api/todos", (route) =>
     route.fulfill({ json: route.request().method() === "GET" ? [UNCATEGORIZED_TODO] : {} })
   );
@@ -2796,10 +2801,10 @@ test("Bollar i tråd: en okategoriserad egen uppgift visas under 'Mina uppgifter
   const thread = page.getByRole("region", { name: "Tråd: Mina uppgifter" });
   await expect(thread).toBeVisible();
   await expect(thread.getByText("Handla mjölk")).toBeVisible();
-  // Ingen döp om/radera-knapp — inte en riktig kategori.
+  // En riktig kategori — byt namn/radera finns, ingen specialbegränsning.
   await thread.getByRole("button", { name: /Mina uppgifter/ }).click();
-  await expect(page.getByRole("button", { name: "Byt namn" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Radera", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Byt namn" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Radera", exact: true })).toBeVisible();
 });
 
 test("Bollar i tråd: 'Mina uppgifter' syns INTE när alla mina uppgifter redan har en kategori", async ({ page }) => {

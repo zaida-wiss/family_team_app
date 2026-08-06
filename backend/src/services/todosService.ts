@@ -22,7 +22,7 @@ import { getAllCalendars } from "./calendarsService.js";
 import { getPurchasedRewardsForMember } from "./rewardShopService.js";
 import { getAllTimedTasks } from "./timedTasksService.js";
 import { findAcceptedConnectionFrom } from "./familyConnectionsService.js";
-import { getAllCategories } from "./todoCategoriesService.js";
+import { getAllCategories, getOrCreateUncategorizedCollector } from "./todoCategoriesService.js";
 
 // Servern litade tidigare bara på att frontend gömde knapparna bakom
 // canCompleteTodo/hasPermission(..., "canApproveTodos") — vem som helst
@@ -676,9 +676,17 @@ export async function createTodo(data: unknown) {
     }
   }
 
+  const resolvedPersonalCategoryId = await resolvePersonalCategoryId(
+    input.accountId,
+    input.createdBy ?? "",
+    input.assignedTo,
+    input.personalCategoryId
+  );
+
   const now = new Date().toISOString();
   const encrypted = {
     ...input,
+    personalCategoryId: resolvedPersonalCategoryId,
     // Alltid server-satta (2026-08-05) — skriver över vad klienten än må ha
     // skickat, samma "servern äger sina egna revisionsstämplar"-princip som
     // createdBy redan följer (ADR-0008-mönstret). updatedAt får dessutom
@@ -726,17 +734,47 @@ function isDuplicateKeyError(error: unknown) {
   );
 }
 
+async function isChildMemberId(memberId: string | null): Promise<boolean> {
+  if (!memberId) return false;
+  const member = await MemberModel.findOne({ id: memberId });
+  if (!member) return false;
+  if (member.isChild) return true;
+  const role = await RoleModel.findOne({ id: member.roleId });
+  return role?.isChildRole === true;
+}
+
 // Det är bara BARNENS uppgifter som ska behöva ett separat godkännande-steg
 // (Zaidas rättelse 2026-07-05) — en vuxens egen personliga uppgift har ingen
 // förälder-över-föräldern som ska godkänna den, så den går direkt till
 // "approved" istället för att fastna i "done" och dyka upp i godkänna-listan.
 async function assignedMemberNeedsApproval(assignedTo: string | null): Promise<boolean> {
-  if (!assignedTo) return false;
-  const member = await MemberModel.findOne({ id: assignedTo });
-  if (!member) return false;
-  if (member.isChild) return true;
-  const role = await RoleModel.findOne({ id: member.roleId });
-  return role?.isChildRole === true;
+  return isChildMemberId(assignedTo);
+}
+
+// Zaidas önskemål 2026-08-06: "detsamma gäller i min egen todo-vy.
+// Okategoriserade uppgifter skall skapa 'Mina uppgifter'" — en PERSONLIG
+// uppgift (tilldelad en specifik VUXEN, inte Familjen-poolen och inte ett
+// barn — barnens uppgifter bryr sig aldrig om personalCategoryId, se
+// Barn-trådens filter i ParentTodoThreadView.tsx) som sparas utan
+// personalCategoryId löser sig direkt till samlingskategorin "Mina
+// uppgifter" (get-or-create, samma mekanism som en kategoriradering redan
+// använder) — istället för att bli en tyst, osynlig null-referens.
+// assignedTo===null (Familjen-poolen) rörs ALDRIG, den har sin egen,
+// redan existerande "Familjen"-tråd i Hem-vyn.
+async function resolvePersonalCategoryId(
+  accountId: string,
+  createdBy: string,
+  assignedTo: string | null | undefined,
+  personalCategoryId: string | null | undefined
+): Promise<string | null> {
+  if (personalCategoryId || !assignedTo) {
+    return personalCategoryId ?? null;
+  }
+  if (await isChildMemberId(assignedTo)) {
+    return null;
+  }
+  const collector = await getOrCreateUncategorizedCollector(accountId, createdBy, false);
+  return collector.id;
 }
 
 export async function completeTodo(
@@ -841,6 +879,18 @@ export async function updateTodo(id: string, accountId: string, data: unknown, m
   if (patch.notes !== undefined) patch.notes = encryptNullable(accountId, patch.notes) ?? null;
   if (patch.subtasks !== undefined) {
     patch.subtasks = patch.subtasks.map((s) => ({ ...s, title: encryptField(accountId, s.title) }));
+  }
+  // Samma "okategoriserad → Mina uppgifter"-upplösning som createTodo (se
+  // resolvePersonalCategoryId) — en redigering som uttryckligen väljer
+  // "Ingen kategori" (patch.personalCategoryId===null) ska lösa sig precis
+  // lika lite tyst-osynligt som en nyskapad uppgift.
+  if (patch.personalCategoryId === null) {
+    patch.personalCategoryId = await resolvePersonalCategoryId(
+      accountId,
+      memberId ?? todo.createdBy,
+      patch.assignedTo !== undefined ? patch.assignedTo : todo.assignedTo,
+      null
+    );
   }
 
   Object.assign(todo, patch);

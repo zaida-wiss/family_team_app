@@ -301,7 +301,12 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
     expect((list.body as Array<{ isUncategorizedCollector?: boolean }>).some((c) => c.isUncategorizedCollector)).toBe(false);
   });
 
-  it("radera en PERSONLIG kategori med en uppgift: uppgiftens personalCategoryId nollställs, ingen samlingskategori skapas", async () => {
+  // 2026-08-06, Zaidas rättelse: "detsamma gäller i min egen todo-vy.
+  // Okategoriserade uppgifter skall skapa 'Mina uppgifter'" — samma riktiga,
+  // auto-skapade samlingskategori-mekanism som familjevyn, bara alltid
+  // namngiven "Mina uppgifter" och scopead PER MEDLEM (till skillnad från
+  // familjens EN delade per konto) — se getOrCreateUncategorizedCollector.
+  it("radera en PERSONLIG kategori med en uppgift: en samlingskategori 'Mina uppgifter' skapas automatiskt, uppgiften flyttas dit", async () => {
     const category = await request(app)
       .post("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -325,18 +330,91 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
     expect(del.status).toBe(200);
     expect(del.body.uncategorizedCount).toBe(1);
 
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const personalCollector = (list.body as Array<{ id: string; name: string; isFamily: boolean; memberId: string; isUncategorizedCollector?: boolean }>)
+      .find((c) => c.isUncategorizedCollector && !c.isFamily);
+    expect(personalCollector).toBeDefined();
+    expect(personalCollector?.name).toBe("Mina uppgifter");
+    expect(personalCollector?.memberId).toBe(memberId);
+
     const todos = await request(app)
       .get("/api/todos")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
     const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
-    expect(todo?.personalCategoryId).toBeNull();
+    expect(todo?.personalCategoryId).toBe(personalCollector!.id);
+  });
+
+  // En personlig kategori är kontobred (ADR-0019) — flera olika vuxna kan ha
+  // skapat en uppgift i den. Var och en ska få sin EGEN "Mina uppgifter",
+  // inte dela en gemensam (annars hade den bara synts för en av dem, se
+  // getOrCreateUncategorizedCollector:s kommentar om memberId-scopning).
+  it("radera en PERSONLIG kategori med uppgifter skapade av TVÅ olika vuxna: var och en får sin EGEN 'Mina uppgifter'", async () => {
+    const roles = await request(app)
+      .get("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const parentRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>).find((r) => !r.isChildRole)!.id;
+    const thirdAdult = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Tredje föräldern", roleId: parentRoleId, isChild: false, avatarUrl: null, color: null, dashboardTheme: null });
+    const thirdAdultId = (thirdAdult.body as { id: string }).id;
+
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Delad kategori" });
+
+    const todoA = `todo-owner-a-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoA, title: "Uppgift A", createdBy: memberId, assignedTo: memberId,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+    const todoB = `todo-owner-b-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", thirdAdultId)
+      .send({
+        id: todoB, title: "Uppgift B", createdBy: thirdAdultId, assignedTo: thirdAdultId,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+
+    const del = await request(app)
+      .delete(`/api/todo-categories/${category.body.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(del.status).toBe(200);
+    expect(del.body.uncategorizedCount).toBe(2);
 
     const list = await request(app)
       .get("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId);
-    expect((list.body as Array<{ isUncategorizedCollector?: boolean }>).some((c) => c.isUncategorizedCollector)).toBe(false);
+    const collectors = (list.body as Array<{ id: string; memberId: string; isUncategorizedCollector?: boolean; isFamily: boolean }>)
+      .filter((c) => c.isUncategorizedCollector && !c.isFamily);
+    expect(collectors).toHaveLength(2);
+    const collectorForMe = collectors.find((c) => c.memberId === memberId)!;
+    const collectorForThird = collectors.find((c) => c.memberId === thirdAdultId)!;
+    expect(collectorForMe.id).not.toBe(collectorForThird.id);
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const bodyTodos = todos.body as Array<{ id: string; personalCategoryId: string | null }>;
+    expect(bodyTodos.find((t) => t.id === todoA)?.personalCategoryId).toBe(collectorForMe.id);
+    expect(bodyTodos.find((t) => t.id === todoB)?.personalCategoryId).toBe(collectorForThird.id);
   });
 
   let collectorId: string;
@@ -477,5 +555,154 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
     );
     expect(newCollector).toBeDefined();
     expect(newCollector!.id).not.toBe(collectorId);
+  });
+});
+
+// 2026-08-06, Zaidas önskemål: "Okategoriserade uppgifter skall skapa 'Mina
+// uppgifter'" — gäller inte bara kategoriradering (se ovan) utan även en
+// helt vanlig skapelse/redigering där "Ingen kategori" väljs, det vanligaste
+// sättet en uppgift faktiskt blir okategoriserad på (TodoCreatorModal.tsx:s
+// "Ingen kategori"-val är en förstklassig, alltid tillgänglig knapp).
+describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgift löser sig direkt till 'Mina uppgifter'", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.db?.dropDatabase();
+    await mongoose.disconnect();
+  });
+
+  let accessToken: string;
+  let memberId: string;
+  let childMemberId: string;
+
+  it("sätter upp konto + ett barn", async () => {
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ email: "categories-createtodo-int@bmad.test", password: "Lösenord1!", name: "Skaparetest" });
+    accessToken = register.body.accessToken as string;
+    const setup = await request(app)
+      .post("/api/accounts/setup")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: "Skaparfamiljen" });
+    memberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
+
+    const roles = await request(app)
+      .get("/api/roles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const childRoleId = (roles.body as Array<{ id: string; isChildRole: boolean }>).find((r) => r.isChildRole)!.id;
+    const child = await request(app)
+      .post("/api/members")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Barnet", roleId: childRoleId, isChild: true, avatarUrl: null, color: null, dashboardTheme: null });
+    childMemberId = (child.body as { id: string }).id;
+  });
+
+  it("skapar en personlig uppgift utan personalCategoryId: löses direkt till en auto-skapad 'Mina uppgifter'", async () => {
+    const todoId = `todo-create-uncategorized-${crypto.randomUUID()}`;
+    const create = await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Handla mjölk", createdBy: memberId, assignedTo: memberId,
+        ...todoPayload({})
+      });
+    expect(create.status).toBe(201);
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.personalCategoryId).not.toBeNull();
+
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const collector = (list.body as Array<{ id: string; name: string; isUncategorizedCollector?: boolean }>)
+      .find((c) => c.isUncategorizedCollector);
+    expect(collector).toBeDefined();
+    expect(collector?.name).toBe("Mina uppgifter");
+    expect(todo?.personalCategoryId).toBe(collector!.id);
+  });
+
+  it("en FAMILJEN-poolens uppgift (assignedTo:null) rörs INTE — förblir riktigt okategoriserad, ingen samlingskategori", async () => {
+    const todoId = `todo-create-family-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Handla till alla", createdBy: memberId, assignedTo: null,
+        ...todoPayload({})
+      });
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.personalCategoryId).toBeNull();
+  });
+
+  it("en BARN-tilldelad uppgift rörs INTE — förblir null, aldrig omdirigerad till en vuxens 'Mina uppgifter'", async () => {
+    const todoId = `todo-create-child-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Städa rummet", createdBy: memberId, assignedTo: childMemberId,
+        ...todoPayload({})
+      });
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    expect(todo?.personalCategoryId).toBeNull();
+  });
+
+  it("redigerar en kategoriserad uppgift till 'Ingen kategori': löses om till 'Mina uppgifter' istället för att bli null", async () => {
+    const category = await request(app)
+      .post("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ name: "Tillfällig" });
+
+    const todoId = `todo-update-uncategorized-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId, title: "Diska", createdBy: memberId, assignedTo: memberId,
+        ...todoPayload({ personalCategoryId: category.body.id })
+      });
+
+    const patch = await request(app)
+      .patch(`/api/todos/${todoId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ personalCategoryId: null });
+    expect(patch.status).toBe(200);
+
+    const todos = await request(app)
+      .get("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const todo = (todos.body as Array<{ id: string; personalCategoryId: string | null }>).find((t) => t.id === todoId);
+    const list = await request(app)
+      .get("/api/todo-categories")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    const collector = (list.body as Array<{ id: string; isUncategorizedCollector?: boolean }>).find((c) => c.isUncategorizedCollector);
+    expect(todo?.personalCategoryId).toBe(collector!.id);
   });
 });
