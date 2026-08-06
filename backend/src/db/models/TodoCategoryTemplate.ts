@@ -8,7 +8,9 @@ const taskSchema = {
   title: { type: String, required: true },
   visual: {
     type: { type: String, enum: ["lucide-icon", "image"], required: true },
-    value: { type: String, required: true }
+    // Se Todo.ts:s motsvarande kommentar (2026-08-07) — tom sträng =
+    // "ingen ikon vald", inte "saknat värde".
+    value: { type: String, default: "" }
   },
   // Se TodoTemplate.ts:s motsvarande kommentar (2026-07-27).
   notes: { type: String, default: null },

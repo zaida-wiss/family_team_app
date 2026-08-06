@@ -22,7 +22,14 @@ const todoSchema = new Schema<Todo>({
   updatedAt: { type: String, default: () => new Date().toISOString() },
   visual: {
     type: { type: String, enum: ["lucide-icon", "image"], required: true },
-    value: { type: String, required: true }
+    // value INTE required (2026-08-07, Zaidas fynd: "jag måste kunna ta
+    // bort en ikon om jag inte vill ha någon") — en tom sträng betyder
+    // uttryckligen "ingen ikon vald" (EmojiPickerSv.tsx:s "Ingen ikon"-
+    // knapp, samma tolkning som redan används överallt vid RENDERING,
+    // "todo.visual.value && (...)"). Mongoose 8:s default required-check
+    // för String förkastar dock en tom sträng som "saknad" — det gjorde
+    // att en explicit borttagen ikon aldrig gick att spara.
+    value: { type: String, default: "" }
   },
   recurrence: { type: Schema.Types.Mixed, required: true },
   recurringSourceId: { type: String, default: null },
