@@ -1,6 +1,16 @@
 .todo-detail-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 100dvh, inte inset:0:s bottom:0-baserade auto-höjd (2026-08-07) — samma
+     dynamiska-viewport-mönster som redan används i ParentTodoThreadView.css
+     (min-height:calc(100dvh - 170px)). Mobila webbläsares adressfält kan
+     visas/döljas dynamiskt; en höjd baserad på den "stora" layout-viewporten
+     (vad inset:0 kan råka räkna ut) kan bli TALARE än vad som faktiskt syns,
+     vilket gör att den nedersta reserverade navbar-zonen (se media query
+     nedan) räknas ut fel — 100dvh spårar alltid den faktiskt synliga ytan. */
+  height: 100dvh;
   background: color-mix(in oklch, var(--foreground) 28%, transparent);
   display: flex;
   align-items: center;

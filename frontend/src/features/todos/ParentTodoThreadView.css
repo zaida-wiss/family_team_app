@@ -687,7 +687,12 @@
    cross-file-beroende, minsta diff). */
 .todo-thread-view__reuse-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 100dvh, samma dynamiska-viewport-mönster som TodoDetailModal.css
+     (2026-08-07) — se kommentaren där. */
+  height: 100dvh;
   background: color-mix(in oklch, var(--foreground) 28%, transparent);
   display: flex;
   align-items: center;
