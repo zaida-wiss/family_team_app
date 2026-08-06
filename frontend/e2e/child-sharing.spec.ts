@@ -96,10 +96,14 @@ test("Dela barn: söker en vuxen via e-post, ger åtkomst, ser delningen, återk
   expect(shareBody!.access).toBe("edit");
 
   // 2026-07-28, Zaidas önskemål: bekräftelse-listan ska visa vilket barn +
-  // vem det delas med, inte bara behörighetsnivån.
-  await expect(page.getByText("Nova")).toBeVisible();
-  await expect(page.getByText("delas med Erik (Familjen Andersson)")).toBeVisible();
-  await expect(page.getByText("Kan redigera")).toBeVisible();
+  // vem det delas med, inte bara behörighetsnivån. Scopat till "Delade
+  // barn"-listan (2026-08-07, samma dags avatarklick-UI la till en EGEN
+  // "Nova"-familjeväljarknapp högre upp på sidan — ett ojust "Nova" matchar
+  // nu båda, strict-mode-krock).
+  const sharedChildrenList = page.getByLabel("Delade barn");
+  await expect(sharedChildrenList.getByText("Nova")).toBeVisible();
+  await expect(sharedChildrenList.getByText("delas med Erik (Familjen Andersson)")).toBeVisible();
+  await expect(sharedChildrenList.getByText("Kan redigera")).toBeVisible();
 
   await page.getByRole("button", { name: "Ta bort delning av Nova med Erik" }).click();
   await expect.poll(() => revoked).toBe(true);

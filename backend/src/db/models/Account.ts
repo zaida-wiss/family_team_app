@@ -19,7 +19,16 @@ const familyConnectionScopeSchema = new Schema({
   // undefined (Mongoose strict-läge stripper okända subdokument-fält),
   // vilket gjorde `!conn.dataScope.calendars` alltid sant och dolde varje
   // delad kalender. Fångades av familyConnectionCalendars.integration.test.ts i CI.
-  calendars: { type: Boolean, default: true }
+  calendars: { type: Boolean, default: true },
+  // Tillagd 2026-08-07 — EXAKT SAMMA MISSTAG SOM OVAN, upprepat en tredje
+  // gång: birthdays lades till i shared/types.ts:s FamilyConnectionScope
+  // 2026-08-06 men glömdes här igen, vilket gjorde att en delad
+  // födelsedagslista aldrig kunde bli synlig (samma tysta strip-i-strict-
+  // läge-mekanism). Fångades av birthdays.integration.test.ts i CI. Account
+  // (och därmed familyConnections[].dataScope) är MEDVETET utanför
+  // checkSchemaSync.ts:s täckning (validerar bara entiteter med ett fullt
+  // Zod-objektschema, Account normaliseras ad-hoc) — se CLAUDE.md.
+  birthdays: { type: Boolean, default: true }
 }, { _id: false });
 
 // Familjeanslutningar (ADR-0030, 2026-07-29) — tillagd i Mongoose-schemat
