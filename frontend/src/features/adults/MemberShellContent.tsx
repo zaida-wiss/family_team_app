@@ -931,6 +931,7 @@ export function MemberShellContent({
         shoppingCreatableFamilyAccountIds={homeShoppingCreatableAccountIds}
         members={members}
         categories={personalCategories}
+        allTodos={todos}
         onCreateCategory={onCreateCategory}
         onCreateTodo={onCreateTodo}
         onUpdateTodo={onUpdateTodo}
@@ -957,6 +958,7 @@ export function MemberShellContent({
               <TodoEditModal
                 categories={personalCategories}
                 currentMember={currentMember}
+                familyScope
                 fixedTodoTimes={fixedTodoTimes}
                 members={members}
                 onClose={() => setEditFamilyTodoId(null)}

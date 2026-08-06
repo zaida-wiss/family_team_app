@@ -40,7 +40,7 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   // 2026-08-05: Skapad/Ändrad tillagda — rent informativa, serverstyrda
   // revisionsstämplar (Todo.createdAt/updatedAt), aldrig lästa vid import.
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Skapad,Ändrad,Radera"
+    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Skapad,Ändrad,Radera,Familj"
   );
 });
 
@@ -332,6 +332,73 @@ test("Todos-import/export: en rad utan matchande Id men samma titel+klockslag so
   });
 
   await expect.poll(() => patchedBody?.title).toBe("duka undan");
+  expect(templatePostCreated).toBe(false);
+});
+
+// 2026-08-06, Zaidas fynd: "en uppgift som ändras via importera... skall
+// inte rendera en ny, endast uppdatera befintlig" — en tidigare
+// felkategoriserad Familjen-uppgift (personalCategoryId pekar på en
+// PERSONLIG, inte en familje-, kategori) är osynlig i getFamilyViewTodos
+// och därmed i den familje-scopade `todos`-propen — men matchningen mot en
+// befintlig uppgift vid en omimport ska ändå hitta den (via den bredare
+// allTodosForMatching-propen) och uppdatera, inte skapa ännu en dubblett.
+test("Todos-import/export (familje-scope, Hem-vyn): en omimport hittar och uppdaterar en uppgift som är osynlig i familjevyn p.g.a. fel kategoriscope, skapar ingen dubblett", async ({ page }) => {
+  const templateVisibleFrom = new Date("2000-01-01T18:00:00").toISOString();
+  const templateExpiresAt = new Date("2000-01-01T23:55:00").toISOString();
+  const PERSONAL_CATEGORY = {
+    id: "cat-personal-1", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
+    isFamily: false, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+  };
+  const MISCATEGORIZED_TEMPLATE = {
+    id: "todo-template-existing", accountId: "acc-1", title: "Kvällsrutiner", createdBy: "mem-1",
+    assignedTo: null, isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: templateVisibleFrom, expiresAt: templateExpiresAt,
+    deletedAt: null, deletedBy: null, personalCategoryId: "cat-personal-1", notes: null
+  };
+  let templatePostCreated = false;
+  let patchedBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [PERSONAL_CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [MISCATEGORIZED_TEMPLATE] });
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      if (body.recurringSourceId === null) templatePostCreated = true;
+      return route.fulfill({ status: 201, json: { id: body.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-template-existing", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedBody = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+  // Uppgiften är felkategoriserad (personlig kategori, inte familjens) —
+  // syns alltså aldrig som en bubbla i familjevyn, precis som buggen.
+  await expect(page.getByText("Kvällsrutiner")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Importera/exportera familjens uppgifter" }).click();
+  const csv = [
+    "Titel,Tilldelad,Startdatum,Slutdatum,Återkommer,Intervall,Veckodagar",
+    "Kvällsrutiner,Familjen,2026-08-06 18:00,2026-08-06 23:55,Dag,1,"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect.poll(() => patchedBody?.title).toBe("Kvällsrutiner");
   expect(templatePostCreated).toBe(false);
 });
 

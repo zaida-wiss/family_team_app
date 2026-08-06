@@ -24,6 +24,18 @@ type Props = {
   // Maja-incident) exporterades då aldrig med, tyst, även med kryssrutan i).
   roles: Role[];
   todos: Todo[];
+  // Sökrymden för dubblettmatchning vid import (2026-08-06, Zaidas fynd:
+  // "en uppgift som ändras via importera... skall inte rendera en ny,
+  // endast uppdatera befintlig") — SKILD från `todos` (som styr export/
+  // visning och i familje-scope redan är hårt scopad, se todos-kommentaren
+  // ovan). Grundorsaken till dagens dubbletter var att `todos`-propen i
+  // familje-scope filtreras genom getFamilyViewTodos INNAN den når hit —
+  // en tidigare felkategoriserad (men annars identisk) uppgift blev då
+  // osynlig för findContentMatch/Id-lookupen också, så en omimport aldrig
+  // kunde hitta den och skapade en ny dubblett varje gång istället för att
+  // uppdatera. Valfri — defaultar till `todos` (personlig scope är redan
+  // hela kontots lista, ingen skillnad där).
+  allTodosForMatching?: Todo[];
   categories: TodoCategory[];
   // Returnerar nu ett promise (2026-08-04, Zaidas fynd: "kvällsrutiner och
   // tvätt blir dubletter" efter Ångra-senaste-import→ny-import i snabb
@@ -158,6 +170,7 @@ export function TodoImportExport({
   members,
   roles,
   todos,
+  allTodosForMatching,
   categories,
   onCreateTodo,
   onUpdateTodo,
@@ -172,6 +185,7 @@ export function TodoImportExport({
   scope = "personal"
 }: Props) {
   const isFamilyScope = scope === "family";
+  const matchTodos = allTodosForMatching ?? todos;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   // Väntar på att importören mappar okända "Tilldelad"-namn innan importen
@@ -228,7 +242,13 @@ export function TodoImportExport({
   const { threads: crossAccountThreads, createCrossAccountTodo } = useCrossAccountFamilyTodos();
   const { threads: connectionThreads, createConnectionTodo } = useConnectionTodos();
   const otherFamilies = [
-    ...crossAccountThreads.map((t) => ({ accountId: t.accountId, accountName: t.accountName, todos: t.todos, creatable: true })),
+    ...crossAccountThreads.map((t) => ({
+      accountId: t.accountId,
+      accountName: t.accountName,
+      todos: t.todos,
+      creatable: true,
+      categoryNames: t.categoryNames
+    })),
     ...connectionThreads.map((t) => ({ accountId: t.accountId, accountName: t.accountName, todos: t.todos, creatable: t.access === "edit" }))
   ];
   const [newFamilyTodoTitle, setNewFamilyTodoTitle] = useState("");
@@ -333,7 +353,7 @@ export function TodoImportExport({
     });
     downloadCsv(
       isFamilyScope ? "familjens-todos.csv" : "mina-todos.csv",
-      todosToCsv(included, members, currentMember.id, categories)
+      todosToCsv(included, members, currentMember.id, categories, otherFamilies)
     );
   }
 
@@ -372,7 +392,7 @@ export function TodoImportExport({
   // upprepad import av "samma" rad bygger på ÄNNU en dubblett varje gång.
   function findContentMatch(row: ParsedTodoRow, assignedTo: Id | null): Todo | undefined {
     const isTemplateRow = row.recurrence.type !== "none";
-    return todos.find((t) => {
+    return matchTodos.find((t) => {
       if (t.deletedAt !== null || t.title !== row.title || t.assignedTo !== assignedTo) return false;
       if (!(isFamilyScope || canEditTodo(currentMember, roles, t))) return false;
       if (isTemplateRow) {
@@ -424,10 +444,10 @@ export function TodoImportExport({
           // uppgifter via CSV — bara EGNA/tilldelade-mig matchade tidigare,
           // så raden hittades aldrig ens innan behörighetskontrollen fick
           // chansen att godkänna den). Familje-scope (isFamilyScope) förbi
-          // rakt av, precis som tidigare — todos-propen är redan
-          // familje-scopad av anroparen där.
+          // rakt av, precis som tidigare — söker mot matchTodos (2026-08-06),
+          // se kommentaren vid allTodosForMatching-propen ovan.
           const existing = row.sourceId
-            ? todos.find(
+            ? matchTodos.find(
                 (t) =>
                   t.id === row.sourceId &&
                   t.deletedAt === null &&
@@ -518,12 +538,12 @@ export function TodoImportExport({
         // för snävt villkor (2026-08-05, samma fynd/fix som radera-raden
         // ovan) — en admin med canEditAnyTodos kunde annars inte uppdatera
         // en annan familjemedlems uppgift via CSV; rad matchades aldrig,
-        // skapade tyst en DUBBLETT istället för att uppdatera originalet. I
-        // familje-scope är `todos`-propen redan familje-scopad av anroparen
-        // (2026-08-03) — ingen extra koll behövs där, till skillnad från den
-        // personliga varianten, vars `todos`-prop är HELA kontots lista.
+        // skapade tyst en DUBBLETT istället för att uppdatera originalet.
+        // Söker mot matchTodos, inte den familje-scopade `todos` (2026-08-06)
+        // — en tidigare felkategoriserad, osynlig uppgift ska fortfarande
+        // gå att hitta och uppdatera, inte trigga ännu en dubblett.
         const existingById = row.sourceId
-          ? todos.find(
+          ? matchTodos.find(
               (t) =>
                 t.id === row.sourceId &&
                 t.deletedAt === null &&
@@ -591,7 +611,8 @@ export function TodoImportExport({
       members,
       categories,
       currentMember.id,
-      isFamilyScope ? null : currentMember.id
+      isFamilyScope ? null : currentMember.id,
+      isFamilyScope
     );
 
     const unresolvedLabels = [

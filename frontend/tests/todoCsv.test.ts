@@ -34,7 +34,7 @@ describe("todoCsv", () => {
     const table = parseCsvText(csv);
     const headerIndex = new Map(table[0].map((h, i) => [h, i]));
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
-    expect(table.length).toBe(8);
+    expect(table.length).toBe(9);
     expect(table[1][0]).toBe("Handla mat");
     expect(table[1][headerIndex.get("Startdatum")!]).toBe("");
     expect(table[1][headerIndex.get("Slutdatum")!]).toBe("");
@@ -51,6 +51,13 @@ describe("todoCsv", () => {
     expect(table[6][headerIndex.get("Timer (min)")!]).toBe("25");
     expect(table[7][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
     expect(table[7][headerIndex.get("Radera")!]).toBe("Ja");
+    // 2026-08-06: en åttonde exempelrad visar Familj-kolumnen ifylld — bara
+    // förekommande på riktiga exporterade rader från "Andra familjer", tom
+    // annars (se raderna ovan, alla har en tom Familj-cell).
+    expect(table[8][headerIndex.get("Familj")!]).toBe("Familjen Andersson");
+    for (let i = 1; i <= 7; i++) {
+      expect(table[i][headerIndex.get("Familj")!]).toBe("");
+    }
   });
 
   test("parseTodoCsv: giltig rad tilldelad Mig själv med ny kategori", () => {
@@ -101,6 +108,64 @@ describe("todoCsv", () => {
       // Mig själv-rader.
       personalCategoryId: "cat-1",
       newCategoryName: null
+    });
+  });
+
+  // 2026-08-06, Zaidas fynd: familjekategorier med samma namn som en redan
+  // existerande PERSONLIG kategori (t.ex. "Rutiner") gjorde att en
+  // familje-import tyst kapade den personliga kategorin istället för att
+  // matcha/skapa en riktig familjekategori — todon fanns i CSV-exporten men
+  // var osynlig i familjevyn (getFamilyViewTodos filtrerar bort allt vars
+  // personalCategoryId pekar på en icke-familjekategori).
+  test("parseTodoCsv: en familje-import matchar bara en familjekategori, aldrig en likanämnd personlig", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const categories = [
+      { id: "cat-personal", accountId: "acc-1", memberId: "mem-1", name: "Rutiner", isFamily: false, createdAt: "", deletedAt: null, deletedBy: null },
+      { id: "cat-family", accountId: "acc-1", memberId: "mem-1", name: "Rutiner", isFamily: true, createdAt: "", deletedAt: null, deletedBy: null }
+    ];
+    const csv = ["Titel,Tilldelad,Egen kategori", "Kvällsrutiner,Familjen,Rutiner"].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, categories, "mem-1", null, true);
+    expect(errors).toEqual([]);
+    expect(rows[0]).toMatchObject({
+      assignedTo: null,
+      personalCategoryId: "cat-family",
+      newCategoryName: null
+    });
+  });
+
+  test("parseTodoCsv: en personlig import matchar bara en personlig kategori, aldrig en likanämnd familjekategori", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const categories = [
+      { id: "cat-personal", accountId: "acc-1", memberId: "mem-1", name: "Rutiner", isFamily: false, createdAt: "", deletedAt: null, deletedBy: null },
+      { id: "cat-family", accountId: "acc-1", memberId: "mem-1", name: "Rutiner", isFamily: true, createdAt: "", deletedAt: null, deletedBy: null }
+    ];
+    const csv = ["Titel,Tilldelad,Egen kategori", "Läsa bok,Mig själv,Rutiner"].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, categories, "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows[0]).toMatchObject({
+      assignedTo: "mem-1",
+      personalCategoryId: "cat-personal",
+      newCategoryName: null
+    });
+  });
+
+  // Ingen befintlig kategori i rätt scope — ska föreslå en NY kategori
+  // (matchande isFamily-beslutet i TodoImportExport.tsx:s runImport), inte
+  // felaktigt återanvända den enda likanämnda men fel-scopade kategorin.
+  test("parseTodoCsv: saknas en familjekategori med rätt namn föreslås en NY, trots en likanämnd personlig kategori", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const categories = [
+      { id: "cat-personal", accountId: "acc-1", memberId: "mem-1", name: "Rutiner", isFamily: false, createdAt: "", deletedAt: null, deletedBy: null }
+    ];
+    const csv = ["Titel,Tilldelad,Egen kategori", "Kvällsrutiner,Familjen,Rutiner"].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, categories, "mem-1", null, true);
+    expect(errors).toEqual([]);
+    expect(rows[0]).toMatchObject({
+      personalCategoryId: null,
+      newCategoryName: "Rutiner"
     });
   });
 
@@ -231,6 +296,37 @@ describe("todoCsv", () => {
     const table = parseCsvText(csv);
     const titles = table.slice(1).map((row) => row[0]);
     expect(titles).toEqual(["Min uppgift", "Annans uppgift", "Återkommande mall"]);
+  });
+
+  // 2026-08-06, Zaidas önskemål: "gör det tydligare i mallen och import och
+  // export vilken familj uppgiften tillhör. Om det står tomt där så tillhör
+  // den kontoinnehavaren själv" — rena visningskolumnen "Familj", bara
+  // ifylld för rader som kommer från "Andra familjer" (TodoImportExport.tsx:s
+  // otherFamilies-parameter), aldrig läst vid import.
+  test("todosToCsv: Familj-kolumnen tom för mina egna, kontonamnet för en rad från en annan familj", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const own = createTodo({ id: "t1", title: "Min uppgift", createdBy: "mem-1", assignedTo: "mem-1" });
+    const foreign = createTodo({
+      id: "t2", title: "Handla present", createdBy: "mem-annan", assignedTo: null, personalCategoryId: "cat-foreign"
+    });
+
+    const csv = todosToCsv([own], members, "mem-1", [], [
+      { accountName: "Familjen Andersson", todos: [foreign], categoryNames: { "cat-foreign": "Present" } }
+    ]);
+    const table = parseCsvText(csv);
+    const headerIndex = new Map(table[0].map((h, i) => [h, i]));
+
+    expect(table[1][0]).toBe("Min uppgift");
+    expect(table[1][headerIndex.get("Familj")!]).toBe("");
+    expect(table[2][0]).toBe("Handla present");
+    expect(table[2][headerIndex.get("Familj")!]).toBe("Familjen Andersson");
+    expect(table[2][headerIndex.get("Egen kategori")!]).toBe("Present");
+
+    // Ignoreras helt vid import — ingen ny import-mekanik, bara till
+    // information i en exporterad/nedladdad fil.
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(2);
   });
 
   test("todosToCsv skriver Familjen som Tilldelad-etikett för en otilldelad uppgift", () => {

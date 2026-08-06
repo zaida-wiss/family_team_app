@@ -58,6 +58,8 @@ type Props = {
   // MemberOverview.tsx.
   members?: Member[];
   categories?: TodoCategory[];
+  // Kontots HELA, ofiltrerade todo-lista (2026-08-06) — se MemberOverview.tsx.
+  allTodos?: Todo[];
   onCreateCategory?: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
   onCreateTodo?: (todo: Todo) => void;
   onUpdateTodo?: (todoId: Id, patch: Partial<Todo>) => void;
@@ -79,7 +81,7 @@ export function HomePage({
   familyThreadSources, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
   todoThreadGap, todoBubbleSize, todoThreadRange,
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
-  members, categories, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
+  members, categories, allTodos, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
   enableTabs
 }: Props) {
@@ -122,6 +124,7 @@ export function HomePage({
       shoppingCreatableFamilyAccountIds={shoppingCreatableFamilyAccountIds}
       members={members}
       categories={categories}
+      allTodos={allTodos}
       onCreateCategory={onCreateCategory}
       onCreateTodo={onCreateTodo}
       onUpdateTodo={onUpdateTodo}

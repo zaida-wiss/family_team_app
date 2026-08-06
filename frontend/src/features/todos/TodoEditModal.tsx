@@ -34,15 +34,34 @@ type Props = {
   // (todo.recurringSourceId) — se seriesSource nedan.
   todos: Todo[];
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
-  onCreateCategory: (name: string) => Promise<TodoCategory>;
+  onCreateCategory: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
   onCreateTaskTemplate: (task: TodoTemplateTask) => Promise<TodoTemplate>;
-  onDeleteTodo: (todoId: Id) => void;
+  // Returnerar numera möjligen ett promise (2026-08-06, Zaidas fynd:
+  // "fortfarande problem med autentisering och behörighet att radera
+  // todos") — den underliggande softDeleteTodo (useTodosState.ts) har sedan
+  // 2026-08-05 en klientsidig canDeleteTodo-förkoll och returnerar
+  // {ok:false} om anroparen inte får radera (skapad av någon annan, ingen
+  // canDeleteAnyTodos) — men handleDelete här stängde modalen OVILLKORLIGT
+  // direkt efter anropet, utan att någonsin läsa av resultatet. En nekad
+  // radering såg då ut som att "ingenting händer"/"fungerar inte", utan
+  // någon förklaring till varför.
+  onDeleteTodo: (todoId: Id) => void | Promise<unknown>;
   // Synkar dagens redan skapade occurrence med mallens NYA värden direkt
   // (annars syns inte en redigering förrän occurrencen genereras om, se
   // useTodosState.ts:s refreshRoutineOccurrence).
   onRefreshRoutine: (routineId: Id) => void;
   onClose: () => void;
   fixedTodoTimes?: boolean;
+  // Familje-scope (2026-08-06, Zaidas fynd: "när jag ska redigera familjens
+  // todo så står det andra kategorier än de som finns i familjen") — modalen
+  // öppnas numera (sedan 2026-08-04) ÄVEN från Hem-vyns familjetrådar
+  // (MemberShellContent.tsx:s editFamilyTodoId), men kategori-dropdownen
+  // filtrerade ALLTID på `!isFamily` oavsett anropskontext (rätt för de
+  // personliga anropsställena, fel här — visade Zaidas egna personliga
+  // kategorier istället för familjens). Styr filtret explicit istället för
+  // att gissa utifrån todon själv (en familje-tilldelad todo kan i teorin
+  // sakna kategori helt, `assignedTo===null` räcker inte som signal).
+  familyScope?: boolean;
 };
 
 function isoToDateTimeLocal(iso: string | null): string {
@@ -73,10 +92,17 @@ export function TodoEditModal({
   onDeleteTodo,
   onRefreshRoutine,
   onClose,
-  fixedTodoTimes = false
+  fixedTodoTimes = false,
+  familyScope = false
 }: Props) {
-  function handleDelete() {
-    onDeleteTodo(todo.id);
+  const [deleteDenied, setDeleteDenied] = useState(false);
+  async function handleDelete() {
+    const result = await onDeleteTodo(todo.id);
+    const failed = typeof result === "object" && result !== null && "ok" in result && result.ok === false;
+    if (failed) {
+      setDeleteDenied(true);
+      return;
+    }
     onClose();
   }
 
@@ -257,7 +283,10 @@ export function TodoEditModal({
     if (isCreatingCategory) {
       const trimmedName = newCategoryName.trim();
       if (!trimmedName) return;
-      const category = await onCreateCategory(trimmedName);
+      // Familje-scope (2026-08-06) — se familyScope-propens kommentar ovan,
+      // en ny kategori som skapas MEDAN man redigerar en familjeuppgift ska
+      // bli en familjekategori, inte tyst en personlig.
+      const category = await onCreateCategory(trimmedName, familyScope);
       categoryId = category.id;
       // Undviker att skapa ännu en kategori nästa gång autospara triggas av en
       // orelaterad ändring — pekar om valet mot den nyss skapade kategorin.
@@ -448,8 +477,10 @@ export function TodoEditModal({
           </div>
           {isTitleMissing && <p className="field-hint">Titel krävs.</p>}
 
-          {/* Familjekategorier (isFamily:true, 2026-08-03) exkluderade — se
-              samma resonemang i TodoCreatorModal.tsx. */}
+          {/* Personliga kategorier normalt, familjekategorier bara i
+              familje-scope (2026-08-06-fixet ovan) — motsvarande resonemang
+              i TodoCreatorModal.tsx gäller bara det personliga anropsstället
+              där (ingen familje-variant av den modalen finns). */}
           <label className="field-label">
             Kategori
             <select
@@ -458,7 +489,7 @@ export function TodoEditModal({
               value={selectedCategoryId}
             >
               <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
-              {categories.filter((category) => !category.isFamily).map((category) => (
+              {categories.filter((category) => Boolean(category.isFamily) === familyScope).map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
@@ -636,6 +667,11 @@ export function TodoEditModal({
             </button>
           </div>
 
+          {deleteDenied && (
+            <p className="field-hint">
+              Kunde inte radera — antingen ett serverfel (försök igen), eller så har du inte behörighet (du kan bara radera uppgifter du själv skapat, om inte en admin gett dig utökad behörighet).
+            </p>
+          )}
           <div className="todo-edit-modal__actions">
             <button className="secondary-button" onClick={handleSaveAsTemplate} type="button">
               <FileStack size={15} />

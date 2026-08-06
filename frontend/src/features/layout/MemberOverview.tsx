@@ -110,6 +110,13 @@ type Props = {
   // jag bara tittar på.
   members?: Member[];
   categories?: TodoCategory[];
+  // Kontots HELA, ofiltrerade todo-lista (2026-08-06, Zaidas fynd: "en
+  // uppgift som ändras via importera eller via modalen skall inte rendera
+  // en ny, endast uppdatera befintlig") — SKILD från localFamilyTodos (som
+  // redan filtrerats genom getFamilyViewTodos innan den når hit), bara
+  // vidarebefordrad till TodoImportExport.tsx:s dubblettmatchning, aldrig
+  // använd för export/visning här.
+  allTodos?: Todo[];
   onCreateCategory?: (name: string, isFamily?: boolean) => Promise<TodoCategory>;
   onCreateTodo?: (todo: Todo) => void;
   onUpdateTodo?: (todoId: Id, patch: Partial<Todo>) => void;
@@ -164,6 +171,7 @@ export function MemberOverview({
   shoppingCreatableFamilyAccountIds,
   members = [],
   categories = [],
+  allTodos = [],
   onCreateCategory,
   onCreateTodo,
   onUpdateTodo,
@@ -547,6 +555,7 @@ export function MemberOverview({
 
           {isOwnFamilySelected && showFamilyImportExport && onCreateTodo && onUpdateTodo && onDeleteTodo && onCreateCategory && (
             <TodoImportExport
+              allTodosForMatching={allTodos}
               categories={categories}
               currentMember={currentMember}
               lastImportUndo={todoImportUndo ?? null}
