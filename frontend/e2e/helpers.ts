@@ -85,6 +85,19 @@ export async function mockDataAPIs(page: Page) {
   // 2026-08-01 bidrar detta även med Todos-panelens EGNA signade-tråd
   // (personalSignedUpThreadSources) — se samma dags rättelse i CLAUDE.md.
   await page.route("**/api/todos/family-across-accounts", (route) => route.fulfill({ json: [] }));
+  // Receptlistan (2026-07-26) — useRecipesState() lyftes den dagen från en
+  // lokal hook i RecipesView.tsx till en DELAD instans i useShellState.ts
+  // (så Inställningar och receptvyn delar samma data) — sedan dess hämtas
+  // GET /api/recipes GLOBALT av varje session, oavsett aktiv panel, precis
+  // som todo-categories/timed-tasks/reward-shop. Många äldre testfiler
+  // (skrivna innan denna lyft) mockar den aldrig explicit — utan en
+  // bred default-stubb faller anropet igenom till ett riktigt, ej mockat
+  // nätverksanrop (ECONNREFUSED i CI, ingen backend körs i E2E-jobbet),
+  // vilket kan hänga/krascha HELA sidladdningen (2026-08-08, upptäckt via en
+  // stabil, upprepad CI-röd-kluster som spårades till exakt detta).
+  // Registrerad FÖRE de mer specifika /connections och /cross-account
+  // nedan (samma "bred FÖRE specifik"-konvention som resten av filen).
+  await page.route("**/api/recipes", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/recipes/connections", (route) => route.fulfill({ json: [] }));
   // Mina familjekonton (2026-08-01) — recept/inköpslistor/måltidsplan i ett
   // av mina egna andra medlemskap, hämtas globalt av Hem-vyn/måltids-

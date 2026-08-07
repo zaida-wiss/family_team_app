@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // 2026-07-30, Zaidas uppföljning: "kalender man valt att dela med
 // respektive familj skall komma upp i familjens tillgängliga kalendrar" —
@@ -56,6 +57,18 @@ const SHARED_CALENDAR = {
 };
 
 async function mockCommon(page: import("@playwright/test").Page) {
+  // 2026-08-08 (stabil, upprepad CI-röd-kluster spårad hit): denna fil
+  // underhöll sin EGEN, oberoende kopia av alla data-mockar istället för den
+  // delade mockDataAPIs (helpers.ts) — hade tystnat efter hand allteftersom
+  // nya globalt hämtade endpoints (Mina familjekonton/Familjeanslutningar/
+  // delade barn m.fl.) lagts till i appen men aldrig i DENNA fils egen
+  // separata lista, senast /api/recipes:s BASENDPOINT (mönstret
+  // "**/api/recipes/**" nedan matchar aldrig en bar GET utan trailing path).
+  // Anropar nu den delade helpern FÖRST (fyller i alla defaults, inklusive
+  // framtida nya) — filens egna, mer SPECIFIKA mockar nedan registreras
+  // sedan och vinner därför (Playwright: senast registrerad matchning
+  // vinner), precis som redan är etablerat mönster i resten av e2e-sviten.
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));

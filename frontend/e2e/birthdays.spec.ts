@@ -46,7 +46,11 @@ test.describe("Födelsedagslista", () => {
     // Flyttad från Familj till Kalender (2026-08-07, Zaidas rättelse) — nu
     // TVÅ underkategorier under Kalender (Kalendrar + Födelsedagar), så
     // "hasSingleSub"-genvägen gäller inte längre, ett klick krävs på båda.
-    await page.getByRole("button", { name: "Kalender", exact: true }).click();
+    // Scopat till kategori-rutnätet (samma mönster som calendar-export-all.
+    // spec.ts) — appens bottennav har en egen, likadant namngiven
+    // "Kalender"-knapp synlig samtidigt, exact:true räcker inte ensamt när
+    // två OLIKA element har EXAKT samma tillgängliga namn.
+    await page.locator(".settings-category-grid").getByRole("button", { name: "Kalender" }).click();
     await page.getByRole("button", { name: "🎂 Födelsedagar" }).click();
 
     await expect(page.getByText("Inga födelsedagar sparade än.")).toBeVisible();
@@ -102,7 +106,11 @@ test.describe("Födelsedagslista", () => {
     // Flyttad från Familj till Kalender (2026-08-07, Zaidas rättelse) — nu
     // TVÅ underkategorier under Kalender (Kalendrar + Födelsedagar), så
     // "hasSingleSub"-genvägen gäller inte längre, ett klick krävs på båda.
-    await page.getByRole("button", { name: "Kalender", exact: true }).click();
+    // Scopat till kategori-rutnätet (samma mönster som calendar-export-all.
+    // spec.ts) — appens bottennav har en egen, likadant namngiven
+    // "Kalender"-knapp synlig samtidigt, exact:true räcker inte ensamt när
+    // två OLIKA element har EXAKT samma tillgängliga namn.
+    await page.locator(".settings-category-grid").getByRole("button", { name: "Kalender" }).click();
     await page.getByRole("button", { name: "🎂 Födelsedagar" }).click();
 
     const rows = page.locator(".birthdays-settings__row");
