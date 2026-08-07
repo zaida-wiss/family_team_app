@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import { readCache, writeCache } from "../../utils/localCache";
+import { linkifyText } from "../../hooks/useLinkifiedText";
 import {
   canEditSharedResource,
   canViewResource,
@@ -518,7 +519,7 @@ export function ShoppingView({
                       onChange={() => onToggleItem(list.id, item.id)}
                       type="checkbox"
                     />
-                    <span>{item.title}</span>
+                    <span>{linkifyText(item.title)}</span>
                   </span>
                   {isEditing && (
                     <button

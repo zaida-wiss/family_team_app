@@ -2,6 +2,7 @@ import { MapPin, X } from "lucide-react";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 import { fmtDayLabel, fmtDaysFromToday, fmtEventTime } from "./timelineMath";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { useLinkifiedText } from "../../hooks/useLinkifiedText";
 
 type Props = {
   event: EnrichedEvent;
@@ -10,6 +11,7 @@ type Props = {
 
 export function TimelineEventDetail({ event, onClose }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  const notesContent = useLinkifiedText(event.notes ? event.notes.replace(/\\n/g, "\n") : null);
   return (
     <div
       className="child-tl-detail-backdrop"
@@ -47,8 +49,8 @@ export function TimelineEventDetail({ event, onClose }: Props) {
             <span>{event.location}</span>
           </p>
         )}
-        {event.notes && (
-          <p className="child-tl-detail-notes">{event.notes.replace(/\\n/g, "\n")}</p>
+        {notesContent && (
+          <p className="child-tl-detail-notes">{notesContent}</p>
         )}
       </div>
     </div>

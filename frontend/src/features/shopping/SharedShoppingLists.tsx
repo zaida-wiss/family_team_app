@@ -1,6 +1,7 @@
 import { Lock, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useSharedShoppingLists } from "./useShoppingSharesState";
+import { linkifyText } from "../../hooks/useLinkifiedText";
 import styles from "./ShoppingLists.module.css";
 import type { Id, Member } from "@shared/types";
 
@@ -63,7 +64,7 @@ export function SharedShoppingLists({ currentMember }: Props) {
                       onChange={() => toggleItem(list.id, list.accountId!, item.id)}
                       type="checkbox"
                     />
-                    <span>{item.title}</span>
+                    <span>{linkifyText(item.title)}</span>
                   </span>
                   {editable && (
                     <button

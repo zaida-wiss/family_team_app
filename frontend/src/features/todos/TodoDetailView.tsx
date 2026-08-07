@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
+import { useLinkifiedText } from "../../hooks/useLinkifiedText";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
@@ -160,6 +161,7 @@ export function TodoDetailView({
   const schedule = formatSchedule(todo);
   const recurrence = formatRecurrence(todo);
   const overlay = useOverlayDismiss(onClose);
+  const notesContent = useLinkifiedText(todo.notes);
 
   return (
     <div className="todo-detail-overlay" {...overlay}>
@@ -276,8 +278,8 @@ export function TodoDetailView({
 
           <div className="todo-detail-modal__section">
             <h4 className="todo-detail-modal__section-title">Anteckningar</h4>
-            {todo.notes ? (
-              <p className="todo-detail-modal__notes">{todo.notes}</p>
+            {notesContent ? (
+              <p className="todo-detail-modal__notes">{notesContent}</p>
             ) : (
               <p className="todo-detail-modal__empty-hint">Inga anteckningar ännu.</p>
             )}

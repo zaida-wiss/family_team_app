@@ -1,6 +1,6 @@
 import "./Settings.css";
 import { lazy, useState } from "react";
-import { Baby, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
+import { Baby, Cake, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
 import { RecipeImportExport } from "../recipes/RecipeImportExport";
 import { ShoppingImportExport } from "../shopping/ShoppingImportExport";
 import { RecipeShoppingListSettings } from "../recipes/RecipeShoppingListSettings";
@@ -432,10 +432,21 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onSyncCalDavNow={memberContentProps.onSyncCalDavNow}
             />
           )
-        },
-        // Flyttad hit från Familj (2026-08-07, Zaidas rättelse: "borde ha
-        // hamnat i inställningar under kalendern") — en födelsedag hör
-        // tematiskt närmare kalenderdatum än familjemedlemshantering.
+        }
+      ]
+    },
+    // Egen toppnivå-kategori (2026-08-09, Zaidas rättelse: "Lyft ut
+    // 'födelsedagar' till en egen kategori i inställningar, istället för en
+    // underkategori under kalender") — låg tidigare (2026-08-07) som en
+    // underkategori under Kalender, flyttad hit ut igen. Bara EN
+    // underkategori, så SettingsCategoryNav.tsx:s "hoppa rakt förbi
+    // underkategori-listan"-genväg (samma som Utseende/Kalendrar) gäller
+    // automatiskt.
+    {
+      id: "birthdays",
+      label: "🎂 Födelsedagar",
+      icon: <Cake aria-hidden="true" size={22} />,
+      subcategories: [
         {
           id: "birthdays",
           label: "🎂 Födelsedagar",

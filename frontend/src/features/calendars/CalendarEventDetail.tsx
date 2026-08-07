@@ -4,6 +4,7 @@ import type { CalendarEvent, Member } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
 import { fmtFullDate, fmtTime } from "./calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { useLinkifiedText } from "../../hooks/useLinkifiedText";
 
 type CalendarCssVars = React.CSSProperties & {
   "--event-color"?: string;
@@ -29,6 +30,7 @@ export function CalendarEventDetail({
     "--event-color": event.color ?? calendarDisplayColor.get(event.calendarId) ?? event.calendarColor,
   };
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  const notesContent = useLinkifiedText(event.notes ? event.notes.replace(/\\n/g, "\n") : null);
 
   return (
     <div className="cal-form-overlay" onClick={onClose}>
@@ -61,9 +63,9 @@ export function CalendarEventDetail({
               <MapPin className="cal-meta-icon" size={13} /> {event.location}
             </p>
           )}
-          {event.notes && (
+          {notesContent && (
             <p className="cal-event-detail-notes">
-              {event.notes.replace(/\\n/g, "\n")}
+              {notesContent}
             </p>
           )}
           <p className="cal-event-row-meta cal-event-detail-calendar-meta">

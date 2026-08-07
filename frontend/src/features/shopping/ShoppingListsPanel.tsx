@@ -1,6 +1,7 @@
 import { Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
+import { linkifyText } from "../../hooks/useLinkifiedText";
 import {
   canEditSharedResource,
   canViewResource,
@@ -248,7 +249,7 @@ export function ShoppingListsPanel({
                             onChange={() => onToggleItem(list.id, item.id)}
                             type="checkbox"
                           />
-                          <span>{item.title}</span>
+                          <span>{linkifyText(item.title)}</span>
                         </label>
                       </li>
                     ))}

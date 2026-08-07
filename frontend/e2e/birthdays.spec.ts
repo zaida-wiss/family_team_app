@@ -2,10 +2,11 @@ import { test, expect } from "@playwright/test";
 import { mockAuthAndData } from "./helpers";
 
 // Födelsedagslista (2026-08-06, Zaidas önskemål): en lista över
-// födelsedagar i Inställningar → Kalender (flyttad dit från Familj
-// 2026-08-07, Zaidas rättelse — hör tematiskt närmare kalenderdatum),
-// sorterad "vem fyller år näst" överst, delbar med anslutna familjer
-// (ADR-0030, dataScope.birthdays).
+// födelsedagar i Inställningar — låg 2026-08-07 en kort period under
+// Kalender, sedan 2026-08-09 en egen toppnivå-kategori (Zaidas rättelse:
+// "Lyft ut 'födelsedagar' till en egen kategori... istället för en
+// underkategori under kalender"), sorterad "vem fyller år näst" överst,
+// delbar med anslutna familjer (ADR-0030, dataScope.birthdays).
 
 test.describe("Födelsedagslista", () => {
   test.beforeEach(async ({ page }) => {
@@ -43,14 +44,10 @@ test.describe("Födelsedagslista", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
-    // Flyttad från Familj till Kalender (2026-08-07, Zaidas rättelse) — nu
-    // TVÅ underkategorier under Kalender (Kalendrar + Födelsedagar), så
-    // "hasSingleSub"-genvägen gäller inte längre, ett klick krävs på båda.
-    // Scopat till kategori-rutnätet (samma mönster som calendar-export-all.
-    // spec.ts) — appens bottennav har en egen, likadant namngiven
-    // "Kalender"-knapp synlig samtidigt, exact:true räcker inte ensamt när
-    // två OLIKA element har EXAKT samma tillgängliga namn.
-    await page.locator(".settings-category-grid").getByRole("button", { name: "Kalender" }).click();
+    // Egen toppnivå-kategori sedan 2026-08-09 — ett enda klick räcker,
+    // "hasSingleSub"-genvägen (samma som Utseende/Kalendrar) hoppar rakt
+    // förbi underkategori-listan eftersom Födelsedagar bara har EN
+    // underkategori.
     await page.getByRole("button", { name: "🎂 Födelsedagar" }).click();
 
     await expect(page.getByText("Inga födelsedagar sparade än.")).toBeVisible();
@@ -103,14 +100,10 @@ test.describe("Födelsedagslista", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
-    // Flyttad från Familj till Kalender (2026-08-07, Zaidas rättelse) — nu
-    // TVÅ underkategorier under Kalender (Kalendrar + Födelsedagar), så
-    // "hasSingleSub"-genvägen gäller inte längre, ett klick krävs på båda.
-    // Scopat till kategori-rutnätet (samma mönster som calendar-export-all.
-    // spec.ts) — appens bottennav har en egen, likadant namngiven
-    // "Kalender"-knapp synlig samtidigt, exact:true räcker inte ensamt när
-    // två OLIKA element har EXAKT samma tillgängliga namn.
-    await page.locator(".settings-category-grid").getByRole("button", { name: "Kalender" }).click();
+    // Egen toppnivå-kategori sedan 2026-08-09 — ett enda klick räcker,
+    // "hasSingleSub"-genvägen (samma som Utseende/Kalendrar) hoppar rakt
+    // förbi underkategori-listan eftersom Födelsedagar bara har EN
+    // underkategori.
     await page.getByRole("button", { name: "🎂 Födelsedagar" }).click();
 
     const rows = page.locator(".birthdays-settings__row");
