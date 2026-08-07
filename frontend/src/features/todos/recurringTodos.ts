@@ -333,6 +333,7 @@ export function applyTemplateToOccurrence(
     | "assignedTo"
     | "timerEnabled"
     | "plannedDurationMinutes"
+    | "timerMaxMinutes"
   >,
   fixedTodoTimes = false
 ): Partial<Todo> {
@@ -354,5 +355,7 @@ export function applyTemplateToOccurrence(
     assignedTo: template.assignedTo,
     timerEnabled: template.timerEnabled,
     plannedDurationMinutes: template.plannedDurationMinutes,
+    // Auto-stopp (2026-08-08) — samma fältparitet-princip som raden ovan.
+    timerMaxMinutes: template.timerMaxMinutes,
   };
 }

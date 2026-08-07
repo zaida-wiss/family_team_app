@@ -290,6 +290,10 @@ export function useCalendarView(
   function submitForm() {
     const trimmed = form.title.trim();
     if (!trimmed || !form.startsAt || !form.endsAt || !form.calendarId) return;
+    // Samma spärr som knappens disabled-villkor (CalendarEventModal.tsx) —
+    // ett ogiltigt fönster (slut före start) ska aldrig kunna sparas, även
+    // om något annat anropsställe skulle råka kringgå knappen.
+    if (form.endsAt < form.startsAt) return;
 
     const recurrence: EventRecurrence = {
       type: form.recurrenceType,
@@ -344,7 +348,35 @@ export function useCalendarView(
   }
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => {
+      if (key !== "startsAt") return { ...f, [key]: value };
+      // Sluttiden följer med när starttiden ändras (2026-08-08, Zaidas fynd:
+      // "sluttiden [ändrades] inte en timme senare automatiskt, och blev
+      // därför tidigare än själva starttiden. Någon som skall förhindras.")
+      // — bevarar den BEFINTLIGA längden mellan start/slut (samma etablerade
+      // kalender-UX-konvention som t.ex. Google Kalender: flyttar man
+      // starten flyttas slutet med), istället för att lämna slutet orört och
+      // riskera att det hamnar FÖRE den nya starten. Faller tillbaka på 1h
+      // bara om den gamla längden redan var ogiltig (<=0) eller om något
+      // datum inte går att tolka — kortar aldrig en legitimt kort händelse.
+      const newStartsAt = value as FormState["startsAt"];
+      const prevStart = new Date(f.startsAt);
+      const prevEnd = new Date(f.endsAt);
+      const nextStart = new Date(newStartsAt);
+      if (
+        !f.startsAt || !f.endsAt ||
+        Number.isNaN(prevStart.getTime()) || Number.isNaN(prevEnd.getTime()) || Number.isNaN(nextStart.getTime())
+      ) {
+        return { ...f, startsAt: newStartsAt };
+      }
+      let durationMs = prevEnd.getTime() - prevStart.getTime();
+      if (durationMs <= 0) durationMs = 60 * 60 * 1000;
+      const nextEndDate = new Date(nextStart.getTime() + durationMs);
+      const nextEndsAt = f.isAllDay
+        ? toLocalDateStr(nextEndDate)
+        : isoToLocalDateTimeStr(nextEndDate.toISOString(), fixedCalendarTimes);
+      return { ...f, startsAt: newStartsAt, endsAt: nextEndsAt as FormState["endsAt"] };
+    });
   }
 
   function toggleAttendee(memberId: string) {

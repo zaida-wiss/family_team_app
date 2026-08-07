@@ -30,6 +30,12 @@ export function CalendarEventModal({
   onClose, onSubmit, onDelete, onSetField, onToggleAttendee, fixedCalendarTimes = false,
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  // Säkerhetsspärr (2026-08-08, Zaidas fynd — se onSetField:s auto-skift av
+  // sluttiden i useCalendarView.ts, den huvudsakliga fixen) — täcker fall
+  // auto-skiftet inte gör: t.ex. att man redigerar SLUTTIDEN direkt till
+  // något innan starten. "Sparar"-knappen var tidigare bara spärrad mot
+  // TOMMA fält, aldrig mot ett ogiltigt (slut före start) fönster.
+  const isEndBeforeStart = Boolean(form.startsAt && form.endsAt && form.endsAt < form.startsAt);
   return (
     <>
     <div className="cal-form-overlay" onClick={onClose}>
@@ -109,6 +115,7 @@ export function CalendarEventModal({
                 <input className="text-input" onChange={(e) => onSetField("endsAt", e.target.value)} type={form.isAllDay ? "date" : "datetime-local"} value={form.endsAt} />
               </div>
             </div>
+            {isEndBeforeStart && <p className="field-hint">Slutar kan inte vara tidigare än Startar.</p>}
             <div className="cal-form-location">
               <MapPin size={15} />
               <input className="text-input" onChange={(e) => onSetField("location", e.target.value)} placeholder="Plats (valfritt)" value={form.location} />
@@ -178,7 +185,7 @@ export function CalendarEventModal({
                   <Trash2 size={15} /> Radera
                 </button>
               )}
-              <button className="primary-button" disabled={!form.title.trim() || !form.startsAt || !form.endsAt} onClick={onSubmit} style={{ flex: 1 }} type="button">
+              <button className="primary-button" disabled={!form.title.trim() || !form.startsAt || !form.endsAt || isEndBeforeStart} onClick={onSubmit} style={{ flex: 1 }} type="button">
                 {isEditing ? "Spara ändringar" : "Spara händelse"}
               </button>
             </div>

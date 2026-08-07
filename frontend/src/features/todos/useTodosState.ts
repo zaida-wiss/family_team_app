@@ -124,7 +124,14 @@ export function useTodosState(fixedTodoTimes = false) {
         // i snabb följd) kan en ANNAN mutations refresh vinna med data hämtad
         // innan DEN HÄR mutationen hunnit landa på servern, vilket annars
         // skriver tillbaka den till "done" igen.
-        if (todo.status === optimistic.status) {
+        //
+        // Jämför ÄVEN subtasks (2026-08-08) — toggleSubtask ändrar aldrig
+        // status (bara ett enskilt delmoments done-fält), så en jämförelse
+        // som bara tittar på status hade släppt skyddet på FÖRSTA refresh
+        // efter en avbockning, oavsett om just DEN mutationen faktiskt
+        // hunnit landa på servern än.
+        const subtasksMatch = JSON.stringify(todo.subtasks) === JSON.stringify(optimistic.subtasks);
+        if (todo.status === optimistic.status && subtasksMatch) {
           pendingMutationIds.current.delete(todo.id);
           return todo;
         }
@@ -225,8 +232,22 @@ export function useTodosState(fixedTodoTimes = false) {
 
   // Föräldravyn med delmoment (Sprint 6 S3) — bockar av/på ett enskilt delmoment,
   // oberoende av övriga delmoment och av complete/approve/reject-flödet.
-  function toggleSubtask(todoId: Id, subtaskId: Id) {
-    todosApi.toggleSubtask(todoId, subtaskId).catch(console.error);
+  //
+  // pendingMutationIds-skyddat (2026-08-08, Zaidas fynd: "ingenting av det
+  // jag kryssat för av avklarat sparas... det blir ett streck i en halv
+  // sekund, sedan stängs modalen, sedan öppnas den igen och inget är
+  // markerat längre") — samma bugklass som redan dokumenterats och fixats
+  // för approve/reject (se refreshTodos-kommentaren): backendens egen
+  // toggleSubtask broadcastar todos-changed EFTER varje toggle, vilket
+  // triggar en SSE-driven refreshTodos() på samma klient. toggleSubtask var
+  // den ENDA muterande funktionen i den här filen som aldrig lade sitt eget
+  // todo-id i pendingMutationIds — en helt VANLIG, oberoende bakgrunds-
+  // refresh (SSE, 30s-intervallet, ett annat konto-medlemsjobb) kunde alltså
+  // fritt skriva över den optimistiska avbockningen med en server-snapshot
+  // hämtad EFTER den optimistiska uppdateringen men INNAN just den här
+  // PATCH:en hunnit committa — UI:t "studsade tillbaka" till obockat.
+  async function toggleSubtask(todoId: Id, subtaskId: Id) {
+    const previousTodo = todosRef.current.find((t) => t.id === todoId);
     setTodos((current) =>
       current.map((todo) =>
         todo.id !== todoId
@@ -239,6 +260,17 @@ export function useTodosState(fixedTodoTimes = false) {
             }
       )
     );
+    pendingMutationIds.current.add(todoId);
+    try {
+      await todosApi.toggleSubtask(todoId, subtaskId);
+      await refreshTodos();
+    } catch (error) {
+      console.error(error);
+      pendingMutationIds.current.delete(todoId);
+      if (previousTodo) {
+        setTodos((current) => current.map((todo) => (todo.id === todoId ? previousTodo : todo)));
+      }
+    }
   }
 
   // "Någon håller på med den här"-indikator (2026-07-22) — targetMemberId är
