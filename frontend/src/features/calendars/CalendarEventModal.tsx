@@ -1,12 +1,13 @@
 import "./CalendarEventModal.css";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
-import { MapPin, RefreshCw, Trash2, X } from "lucide-react";
+import { MapPin, MoveDiagonal2, RefreshCw, Trash2, X } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import type { Calendar, Member } from "@shared/types";
 import type { FormState, ModalMode } from "./calendarTypes";
 import { RECURRENCE_LABELS, RECURRENCE_UNIT, fmtFullDate, fmtTime } from "./calendarHelpers";
 import type { EventRecurrence } from "@shared/types";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { useResizableTextarea } from "../../hooks/useResizableTextarea";
 
 type Props = {
   modal: ModalMode;
@@ -36,6 +37,7 @@ export function CalendarEventModal({
   // något innan starten. "Sparar"-knappen var tidigare bara spärrad mot
   // TOMMA fält, aldrig mot ett ogiltigt (slut före start) fönster.
   const isEndBeforeStart = Boolean(form.startsAt && form.endsAt && form.endsAt < form.startsAt);
+  const notesResize = useResizableTextarea(54);
   return (
     <>
     <div className="cal-form-overlay" onClick={onClose}>
@@ -120,7 +122,18 @@ export function CalendarEventModal({
               <MapPin size={15} />
               <input className="text-input" onChange={(e) => onSetField("location", e.target.value)} placeholder="Plats (valfritt)" value={form.location} />
             </div>
-            <textarea className="text-input cal-notes" onChange={(e) => onSetField("notes", e.target.value)} placeholder="Anteckningar (valfritt)" rows={2} value={form.notes} />
+            <div className="resizable-textarea">
+              <textarea
+                className="text-input cal-notes"
+                onChange={(e) => onSetField("notes", e.target.value)}
+                placeholder="Anteckningar (valfritt)"
+                style={notesResize.textareaStyle}
+                value={form.notes}
+              />
+              <span aria-hidden="true" className="resizable-textarea__handle" {...notesResize.handleProps}>
+                <MoveDiagonal2 size={14} />
+              </span>
+            </div>
             <div className="cal-recurrence">
               <div className="cal-recurrence-top">
                 <RefreshCw size={15} />

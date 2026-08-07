@@ -80,6 +80,45 @@
   font-size: 16px;
 }
 
+/* Egen, touch-vänlig storleksändring av anteckningsfält (2026-08-08, Zaidas
+   fynd: "anteckningar är inte reglerbart på små skärmar, tex i mobilen") —
+   den native CSS resize:vertical som fanns tidigare (TodoEditModal/
+   TodoCreatorModal/CalendarEventModal) ritar bara ett drag-handtag som
+   fungerar med MUS, de flesta mobila webbläsare stödjer inte att dra i det
+   med touch. Ersatt med en egen, pointer-baserad handtag (useResizableTextarea.
+   ts, samma mönster som useDragReorder.ts) — fungerar identiskt för mus och
+   touch. Textarean inuti sätts till resize:none (se respektive filers CSS)
+   för att inte visa TVÅ konkurrerande resize-affordanser samtidigt. */
+.resizable-textarea {
+  position: relative;
+}
+
+.resizable-textarea textarea {
+  resize: none;
+  display: block;
+  width: 100%;
+}
+
+.resizable-textarea__handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 6px;
+  color: var(--muted-fg);
+  cursor: ns-resize;
+  /* touch-action:none förhindrar att sidan scrollar under fingret medan man
+     drar i handtaget (samma skäl som andra pekar-baserade dra-mönster i
+     appen redan sätter detta). */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .primary-button {
   display: inline-flex;
   align-items: center;

@@ -1,10 +1,11 @@
 import "./TodoCreatorModal.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, MoveDiagonal2, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { suggestEmojiForTitle } from "../../components/emojiData";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
+import { useResizableTextarea } from "../../hooks/useResizableTextarea";
 import { generateId } from "../../utils/uuid";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
@@ -158,6 +159,7 @@ export function TodoCreatorModal({
     { visibleFrom: null, expiresAt: null }
   ]);
   const [notes, setNotes] = useState("");
+  const notesResize = useResizableTextarea(56);
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>([]);
   // Timerfunktion (2026-07-07, Zaidas önskemål: "hur lång tid det tar att
   // göra todo", precis som Medaljer/Rekord — men ett helt separat, enklare
@@ -744,13 +746,22 @@ export function TodoCreatorModal({
 
               <label className="field-label">
                 Anteckningar
-                <textarea
-                  className="text-input"
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Valfritt"
-                  rows={2}
-                  value={notes}
-                />
+                <div className="resizable-textarea">
+                  <textarea
+                    className="text-input"
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Valfritt"
+                    style={notesResize.textareaStyle}
+                    value={notes}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="resizable-textarea__handle"
+                    {...notesResize.handleProps}
+                  >
+                    <MoveDiagonal2 size={14} />
+                  </span>
+                </div>
               </label>
 
               <div className="field-label">

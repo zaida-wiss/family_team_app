@@ -1,9 +1,10 @@
 import "./TodoDetailModal.css";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, FileStack, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FileStack, MoveDiagonal2, Plus, Trash2, X } from "lucide-react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
+import { useResizableTextarea } from "../../hooks/useResizableTextarea";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
 import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
@@ -195,6 +196,7 @@ export function TodoEditModal({
   // Anteckningar/delmoment hör till just DEN HÄR dagen, inte serien — läses
   // alltid från occurrencen/uppgiften själv, aldrig mallen.
   const [notes, setNotes] = useState(todo.notes ?? "");
+  const notesResize = useResizableTextarea();
   const [subtasks, setSubtasks] = useState<TodoSubtask[]>(todo.subtasks ?? []);
   const [timerEnabled, setTimerEnabled] = useState(seriesSource.timerEnabled ?? false);
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState(
@@ -688,13 +690,22 @@ export function TodoEditModal({
 
           <label className="field-label">
             Anteckningar
-            <textarea
-              className="text-input todo-edit-modal__notes"
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Valfritt"
-              rows={3}
-              value={notes}
-            />
+            <div className="resizable-textarea">
+              <textarea
+                className="text-input todo-edit-modal__notes"
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Valfritt"
+                style={notesResize.textareaStyle}
+                value={notes}
+              />
+              <span
+                aria-hidden="true"
+                className="resizable-textarea__handle"
+                {...notesResize.handleProps}
+              >
+                <MoveDiagonal2 size={14} />
+              </span>
+            </div>
           </label>
 
           <div className="field-label">

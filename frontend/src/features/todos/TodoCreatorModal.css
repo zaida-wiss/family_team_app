@@ -46,7 +46,6 @@
 }
 
 .todo-creator-modal__body textarea.text-input {
-  resize: vertical;
   font-family: inherit;
 }
 
