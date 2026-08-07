@@ -169,7 +169,7 @@ test("Kategorimenyns 'Dela' via e-post (döljd disclosure): söker en vuxen, ger
 
   await page.getByRole("button", { name: "Eller dela via e-post…" }).click();
   await page.getByLabel("E-post till en vuxen").fill("annan-familj@exempel.se");
-  await page.getByRole("button", { name: "Sök" }).click();
+  await page.getByRole("button", { name: "Sök", exact: true }).click();
 
   const candidateRow = page.getByText("Erik (Familjen Andersson)").locator("..");
   await expect(candidateRow).toBeVisible();

@@ -42,7 +42,7 @@ test("Hem-vyns familjetrådar: redigera-modalens kategori-dropdown visar familje
   await page.getByRole("button", { name: /^Kvällsrutiner,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
 
-  const categorySelect = page.getByLabel("Kategori");
+  const categorySelect = page.getByLabel("Kategori", { exact: true });
   await expect(categorySelect.getByRole("option", { name: "Rutiner" })).toBeAttached();
   await expect(categorySelect.getByRole("option", { name: "Skola" })).not.toBeAttached();
 });
@@ -78,7 +78,7 @@ test("Hem-vyns familjetrådar: byte av kategori i redigera-modalen sparas faktis
 
   await page.getByRole("button", { name: /^Kvällsrutiner,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
-  await page.getByLabel("Kategori").selectOption({ label: "Fordon & Underhåll" });
+  await page.getByLabel("Kategori", { exact: true }).selectOption({ label: "Fordon & Underhåll" });
 
   await expect.poll(() => patchedBody?.personalCategoryId).toBe("cat-family-fordon");
 });
@@ -137,7 +137,7 @@ test("Hem-vyns familjetrådar: en nekad radering (ingen behörighet) visar ett t
   await expect(page.getByText(/Kunde inte radera/)).toBeVisible();
   expect(deleteCalled).toBe(false);
   // Modalen ska INTE ha stängts — redigeringsfältet är fortfarande synligt.
-  await expect(page.getByLabel("Kategori")).toBeVisible();
+  await expect(page.getByLabel("Kategori", { exact: true })).toBeVisible();
 });
 
 // 2026-08-07, Zaidas fynd: "när jag ska uppdatera todon till kategori
@@ -201,7 +201,7 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE upp
 
   await page.getByRole("button", { name: /^Städa bilen,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
-  await page.getByLabel("Kategori").selectOption({ label: "Fordon & Underhåll" });
+  await page.getByLabel("Kategori", { exact: true }).selectOption({ label: "Fordon & Underhåll" });
   await page.locator(".todo-emoji-btn").click();
   await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
   await page.locator('button[title="Tandborste"]').click();
@@ -278,7 +278,7 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÄLDRE, ännu obe
 
   await page.getByRole("button", { name: /^Städa bilen,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
-  await page.getByLabel("Kategori").selectOption({ label: "Fordon & Underhåll" });
+  await page.getByLabel("Kategori", { exact: true }).selectOption({ label: "Fordon & Underhåll" });
   await page.locator(".todo-emoji-btn").click();
   await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
   await page.locator('button[title="Tandborste"]').click();

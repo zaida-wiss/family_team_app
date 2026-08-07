@@ -136,6 +136,10 @@ test("samma delade kalender syns INTE i Inställningar → Kalendrars hanterings
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.locator(".settings-category-grid").getByRole("button", { name: "Kalender" }).click();
+  // Kalender fick en andra underkategori (🎂 Födelsedagar, 2026-08-07) —
+  // "hasSingleSub"-genvägen gäller alltså inte längre, ett andra klick på
+  // "Kalendrar" krävs nu.
+  await page.getByRole("button", { name: "Kalendrar" }).click();
 
   // Kalenderväljaren i Settings (CalendarManagementCard) ska bara lista
   // kalendrar jag faktiskt kan hantera — inte den delade, readOnly-kalendern.

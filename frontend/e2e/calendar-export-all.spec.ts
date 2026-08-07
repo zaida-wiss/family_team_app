@@ -35,6 +35,10 @@ async function openCalendarSettings(page: import("@playwright/test").Page) {
   // Scopar till kategori-rutnätet — appens bottennav har en egen, likadant
   // namngiven "Kalender"-knapp synlig samtidigt.
   await page.locator(".settings-category-grid").getByRole("button", { name: "Kalender" }).click();
+  // Kalender fick en andra underkategori (🎂 Födelsedagar, 2026-08-07) —
+  // "hasSingleSub"-genvägen (som tidigare hoppade rakt till innehållet)
+  // gäller alltså inte längre, ett andra klick på "Kalendrar" krävs nu.
+  await page.getByRole("button", { name: "Kalendrar" }).click();
 }
 
 test("Exporterar alla mina kalendrar som en enda .ics-fil, exkluderar delade kalendrar jag inte äger", async ({ page }) => {

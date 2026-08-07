@@ -5,6 +5,7 @@ import type { Id, Member, Todo, TodoThreadRange } from "@shared/types";
 import { TodoDetailView } from "./TodoDetailView";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useNowTick } from "../../hooks/useNowTick";
+import { isRecurringTemplate } from "./recurringTodos";
 import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
 import { clearTodoTimer, readTodoTimerStartedAt, startTodoTimer, timerCapMinutes } from "./useTodoTimer";
 import {
@@ -536,8 +537,19 @@ export function FamilyTodoThreads({
         // sanningen) — "Visa utgångna" (andra grenen) behövs alltså bara
         // för en genuint FORTFARANDE utgången uppgift, inte längre för en
         // vars fönster råkar innehålla "nu" igen.
+        //
+        // 2026-08-08, CI-fynd: återkommande MALLAR ska aldrig visas som en
+        // egen bubbla — bara deras dagliga occurrence gör det (samma redan
+        // etablerade regel som ParentTodoThreadView.tsx alltid haft, men
+        // som saknades här sedan denna komponent byggdes 2026-08-01). Utan
+        // detta filter renderades mallen (recurrence.type!=="none",
+        // recurringSourceId===null, status oftast "pending", inget tidsfönster
+        // satt) som en till synes duplicerad bubbla bredvid sin egen
+        // occurrence — synligt via en Playwright strict-mode-krock (två
+        // element med identisk titel/emoji) i home-family-todo-edit.spec.ts.
         const baseTodos = source.todos.filter(
           (t) =>
+            !isRecurringTemplate(t) &&
             (dissolving.has(t.id) ||
               ((t.status === "pending" || t.status === "expired") &&
                 (range === "today" ? isTodoVisibleNow(t, nowTick) : isDueWithinRange(t, today, range))) ||

@@ -316,6 +316,10 @@ test("Hem-vyns Todos-flik: trådarna/kolumnerna går att flytta med drag-and-dro
     { id: "cat-2", accountId: "acc-1", memberId: "mem-1", name: "Hushåll", isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" }
   ];
   const todos = [
+    // Familjen-poolens tråd (__familyHome__) är hideWhenEmpty (2026-08-07)
+    // — en egen, okategoriserad uppgift krävs så tråden faktiskt renderas
+    // och kan ingå i drag-testet nedan (testets syfte är 3-vägs-omordning).
+    { id: "todo-0", accountId: "acc-1", title: "Handla mat", assignedTo: null, createdBy: "mem-1", personalCategoryId: null, status: "pending", starValue: 0, visual: { type: "lucide-icon", value: "⭐" }, recurrence: { type: "none" }, recurringSourceId: null, visibleFrom: null, expiresAt: null, deletedAt: null, inProgressBy: [] },
     { id: "todo-1", accountId: "acc-1", title: "Löpning", assignedTo: null, createdBy: "mem-1", personalCategoryId: "cat-1", status: "pending", starValue: 0, visual: { type: "lucide-icon", value: "⭐" }, recurrence: { type: "none" }, recurringSourceId: null, visibleFrom: null, expiresAt: null, deletedAt: null, inProgressBy: [] },
     { id: "todo-2", accountId: "acc-1", title: "Dammsuga", assignedTo: null, createdBy: "mem-1", personalCategoryId: "cat-2", status: "pending", starValue: 0, visual: { type: "lucide-icon", value: "⭐" }, recurrence: { type: "none" }, recurringSourceId: null, visibleFrom: null, expiresAt: null, deletedAt: null, inProgressBy: [] }
   ];
