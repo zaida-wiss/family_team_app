@@ -1,30 +1,48 @@
+/* Fyller skärmen (2026-08-09, Zaidas önskemål: "fyll skärmen med
+   uppgiftsmodalen (familje och vuxenvy)") — samma mönster som receptens
+   fullskärmsmodaler (RecipesView.css:s .recipe-modal-overlay, 2026-07-25/27):
+   overlayn stannar FÖRE navbaren istället för att lägga en stor bottom-
+   padding-reservation ovanpå den (bottom på mobil, där HeroBar är en fast
+   bottennav; left på desktop, där den är ett sidofält) — de kan då aldrig
+   överlappa oavsett z-index, och navbaren är alltid synlig/klickbar. Gäller
+   BÅDA vyerna automatiskt eftersom TodoEditModal/TodoDetailView är samma
+   delade komponenter i både den personliga Todos-panelen och Hem-vyns
+   familjetrådar (MemberShellContent.tsx/FamilyTodoThreads.tsx). */
 .todo-detail-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* 100dvh, inte inset:0:s bottom:0-baserade auto-höjd (2026-08-07) — samma
-     dynamiska-viewport-mönster som redan används i ParentTodoThreadView.css
-     (min-height:calc(100dvh - 170px)). Mobila webbläsares adressfält kan
-     visas/döljas dynamiskt; en höjd baserad på den "stora" layout-viewporten
-     (vad inset:0 kan råka räkna ut) kan bli TALARE än vad som faktiskt syns,
-     vilket gör att den nedersta reserverade navbar-zonen (se media query
-     nedan) räknas ut fel — 100dvh spårar alltid den faktiskt synliga ytan. */
-  height: 100dvh;
+  inset: 0;
   background: color-mix(in oklch, var(--foreground) 28%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
-  padding: 20px;
+  z-index: 1200;
+  padding: 0;
+}
+
+@media (max-width: 1023px) {
+  /* 124px, inte bara HeroBar (64px) ensamt — modalen kan öppnas från
+     Hem-vyns familjetrådar, där MemberOverview.module.css:s .controlRow
+     lägger en ANDRA fast rad (~60px) ovanpå HeroBar på mobil. Samma
+     kombinerade mått som den tidigare stora padding-reservationen redan
+     räknade ut (2026-08-07), bara uttryckt som var overlayn SLUTAR nu
+     istället för hur mycket luft den lägger runt en mindre modal. */
+  .todo-detail-overlay {
+    bottom: calc(124px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 1024px) {
+  .todo-detail-overlay {
+    left: 64px;
+  }
 }
 
 .todo-detail-modal {
   background: var(--card);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 12px 48px color-mix(in oklch, var(--foreground) 22%, transparent);
+  border-radius: 0;
   width: 100%;
-  max-width: 420px;
+  max-width: 100%;
+  height: 100%;
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -285,26 +303,6 @@
   margin: 0;
   font-size: 0.9rem;
   white-space: pre-wrap;
-}
-
-/* Modalen fick aldrig dölja knappar/innehåll bakom en fast navbar
-   (2026-08-07, Zaidas fynd: "Modaler får inte heller dölja knappar och
-   innehåll bakom navbaren, inte ens familjens navbar"). Två fasta rader kan
-   ligga staplade på mobil samtidigt: HeroBar.module.css:s bottennav (64px,
-   alltid närvarande under 1024px) och Hem-vyns egen familje-navigeringsrad
-   (MemberOverview.module.css:s .controlRow, fast ovanför HeroBar, ~60px —
-   bara synlig på Hem, men den här modalen kan öppnas därifrån). En tidigare
-   version reserverade bara 96px och bara under 480px — otillräckligt både i
-   bredd (HeroBar blir fast redan vid 1023px) och höjd (räckte inte när
-   BÅDA raderna var synliga samtidigt). 124px (64+60) reserveras nu alltid
-   på mobil, oavsett om familje-raden råkar synas just då — en boxändring,
-   inte bara visuell padding, så modalens egen max-height:100% aldrig kan
-   sträcka sig in i den reserverade zonen. */
-@media (max-width: 1023px) {
-  .todo-detail-overlay {
-    padding: 10px 8px calc(124px + env(safe-area-inset-bottom, 0px));
-    align-items: flex-start;
-  }
 }
 
 @media (max-width: 480px) {

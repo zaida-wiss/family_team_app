@@ -471,6 +471,11 @@ export function MemberOverview({
               konto, aldrig en annan familj jag bara tittar på via filtret
               ovan. */}
           {isOwnFamilySelected && onCreateCategory && (
+            // Ikonstorleken minimerad (2026-08-09, Zaidas önskemål: "Gör todo
+            // listan så att den upptar mest plats... minimera resten av
+            // texten... infoknapparna") — samma .icon-button-klickyta (44px,
+            // oförändrad touch-mål-golv), bara den synliga glyfen krymper
+            // (var 18px), matchar samma minskning i TodoThreadToolbar.tsx.
             <div className={styles.homeQuickAdd}>
               <button
                 aria-label="Ny familjekategori"
@@ -483,7 +488,7 @@ export function MemberOverview({
                 title="Ny familjekategori"
                 type="button"
               >
-                <Plus size={18} />
+                <Plus size={14} />
               </button>
               <button
                 aria-expanded={showFamilyImportExport}
@@ -493,7 +498,7 @@ export function MemberOverview({
                 title="Importera/exportera"
                 type="button"
               >
-                <Upload size={18} />
+                <Upload size={14} />
               </button>
             </div>
           )}

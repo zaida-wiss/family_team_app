@@ -1,7 +1,9 @@
 .home {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  /* Minimerad (2026-08-09, Zaidas önskemål: "Gör todo listan så att den
+     upptar mest plats på skärmen") — var 12px. */
+  gap: 8px;
 }
 
 /* Familjefilter + medlemmar + flikikoner på samma rad (2026-07-31, Zaidas

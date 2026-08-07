@@ -121,6 +121,11 @@ export function TodoThreadToolbar({
     <div className="todo-thread-view__toolbar">
       <h2 className="todo-thread-view__toolbar-title">Bubbelsysslor ✨</h2>
       <div className="todo-thread-view__toolbar-actions">
+        {/* Ikonstorleken minimerad (2026-08-09, Zaidas önskemål: "minimera
+            resten av texten... infoknapparna") — knappens EGEN klickyta
+            (.icon-button, components.css) förblir 44×44px oavsett, det
+            icke förhandlingsbara touch-målsgolvet (CLAUDE.md), bara den
+            synliga glyfen krymper (var 16px). */}
         <button
           aria-label="Hur fungerar bubbelsysslorna?"
           className="icon-button"
@@ -128,7 +133,7 @@ export function TodoThreadToolbar({
           title="Hur fungerar bubbelsysslorna?"
           type="button"
         >
-          <Info size={16} />
+          <Info size={14} />
         </button>
         <button
           aria-label="Statistik"
@@ -137,7 +142,7 @@ export function TodoThreadToolbar({
           title="Statistik — senaste 7 dagarna"
           type="button"
         >
-          <BarChart3 size={16} />
+          <BarChart3 size={14} />
         </button>
         <button
           aria-label="Ny kategori"
@@ -155,7 +160,7 @@ export function TodoThreadToolbar({
           title="Ny kategori — från mall, eller som en del av en ny uppgift"
           type="button"
         >
-          <Plus size={16} />
+          <Plus size={14} />
         </button>
       </div>
 

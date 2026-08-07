@@ -54,18 +54,24 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  /* Minimerad (2026-08-09, Zaidas önskemål: "Gör todo listan så att den
+     upptar mest plats på skärmen, och minimera resten av texten både i
+     storlek, drop down, infoknappar") — var 4px. */
+  margin-bottom: 2px;
   min-width: 0;
 }
 
 .todo-thread-view__toolbar-title {
   margin: 0;
   flex: 1;
-  min-width: 120px;
+  min-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(1.1rem, 5vw, 1.6rem);
+  /* Minimerad (2026-08-09, samma önskemål som ovan) — var
+     clamp(1.1rem, 5vw, 1.6rem), en rent dekorativ rubrik som tog onödig
+     vertikal plats ovanför bubblorna. */
+  font-size: clamp(0.85rem, 3vw, 1.05rem);
   font-weight: 800;
   background: linear-gradient(90deg, var(--c0), var(--c1));
   -webkit-background-clip: text;
@@ -117,7 +123,12 @@
      .dashboard/.dashboard-list (delade klasser, components.css, används av
      ALLA paneler) bygger om till en flex-fyll-kedja hela vägen — medvetet
      inte gjort här för att inte riskera andra panelers layout. */
-  min-height: calc(100dvh - 170px);
+  /* 150px, inte 170px (2026-08-09) — verktygsradens rubrik/marginal
+     krymptes samma dag ("Gör todo listan så att den upptar mest plats på
+     skärmen"), vilket frigjorde motsvarande vertikal yta ovanför raden —
+     fortsatt en uppskattning (se ovan), bara omräknad efter samma
+     minskning. */
+  min-height: calc(100dvh - 150px);
 }
 
 /* Gemensam rad för mina egna trådar + signade familjeuppgifter (2026-08-03,
