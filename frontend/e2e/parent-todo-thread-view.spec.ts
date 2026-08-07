@@ -742,6 +742,85 @@ test("Redigera uppgift: att sätta en timer på en enkel-tidsruta-återkommande 
   await editDialog.getByRole("button", { name: "Stäng" }).click();
 });
 
+// Uppföljning samma dag (2026-08-09, Zaidas fynd: "nu hände det igen. Jag
+// bytte ikon på kvällsrutinen och då försvann uppgiften") — testet ovan
+// verifierade bara den SISTA (korrekta) PATCH:en som landar på occurrencen,
+// men de två skrivningarna dit (den direkta onUpdateTodo(todo.id,...) OCH
+// onRefreshRoutine:s egen korrigering) är två OBEROENDE fire-and-forget
+// nätverksanrop — ingen garanti att den korrekta skrivningen vinner racet
+// mot servern, bara att den råkar dispatchas sist lokalt. Det här testet
+// fångar istället den FÖRSTA PATCH:en som skickas till occurrencen (den som
+// tidigare bar mallens ankardatum istället för occurrensens eget) och
+// verifierar att ÄVEN DEN redan har rätt datum — dvs. att racet är
+// ofarliggjort genom att båda skrivningarna nu bär identiska, korrekta
+// värden, inte genom att en av dem råkar vinna.
+test("Redigera uppgift: byt ikon på en enkel-tidsruta-återkommande uppgift ger korrekt datum redan i den FÖRSTA PATCH:en till occurrencen (inte bara den sista)", async ({ page }) => {
+  const TEMPLATE = {
+    id: "todo-template-evening", accountId: "acc-1", title: "Kvällsrutiner", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "🌙" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null,
+    // Samma "riktigt klockslag långt tillbaka i tiden"-fixture som testet
+    // ovan — mallens ankardatum ligger MÅNADER före dagens datum.
+    visibleFrom: "2026-01-01T20:00:00.000Z", expiresAt: "2026-01-01T21:00:00.000Z",
+    deletedAt: null, deletedBy: null, personalCategoryId: "cat-1", timerEnabled: false, plannedDurationMinutes: null
+  };
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: `todo-template-evening-occurrence-${dateKey}`,
+    recurrence: { type: "none" },
+    recurringSourceId: "todo-template-evening",
+    occurrenceDate: dateKey,
+    visibleFrom: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 1).toISOString(),
+    expiresAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59).toISOString()
+  };
+
+  const occurrencePatches: Record<string, unknown>[] = [];
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+  await page.route(new RegExp(`/api/todos/(${TEMPLATE.id}|${OCCURRENCE.id})$`), (route) => {
+    if (route.request().method() === "PATCH") {
+      const id = route.request().url().split("/").pop()!;
+      if (id === OCCURRENCE.id) {
+        occurrencePatches.push(route.request().postDataJSON() as Record<string, unknown>);
+      }
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Kvällsrutiner/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  await editDialog.locator(".todo-emoji-btn").click();
+  await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
+  await page.locator('button[title="Tandborste"]').click();
+
+  await expect.poll(() => occurrencePatches.length).toBeGreaterThan(0);
+  // Kärnassertion: redan den FÖRSTA PATCH:en (inte bara den sista) till
+  // occurrencen bär dagens datum, inte mallens ankardatum (2026-01-01) — en
+  // omkastad nätverksordning kan alltså inte längre korrumpera occurrencens
+  // datum, eftersom det inte finns någon "fel" version kvar att förlora
+  // racet mot.
+  const firstPatch = occurrencePatches[0];
+  const firstVisibleFrom = new Date(firstPatch.visibleFrom as string);
+  const firstExpiresAt = new Date(firstPatch.expiresAt as string);
+  expect(firstVisibleFrom.toDateString()).toBe(new Date().toDateString());
+  expect(firstExpiresAt.getTime() - firstVisibleFrom.getTime()).toBe(60 * 60 * 1000);
+  expect(firstPatch.visual).toEqual({ type: "lucide-icon", value: "🪥" });
+
+  await editDialog.getByRole("button", { name: "Stäng" }).click();
+});
+
 test("Redigera uppgift: Stjärnor-fältet finns för en barn-tilldelad uppgift, och går att tömma och skriva om", async ({ page }) => {
   let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);

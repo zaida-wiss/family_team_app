@@ -7,7 +7,7 @@ import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { useResizableTextarea } from "../../hooks/useResizableTextarea";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
-import { isoToDateOnly } from "./recurringTodos";
+import { applyTemplateToOccurrence, isoToDateOnly } from "./recurringTodos";
 import { isChildMember } from "./selectors";
 import { SubtaskAssigneeButton } from "./SubtaskAssigneeButton";
 import { generateId } from "../../utils/uuid";
@@ -398,7 +398,54 @@ export function TodoEditModal({
       // en sådan bubblas kategori/titel/emoji orörd trots en lyckad
       // mall-uppdatering, eftersom ingenting annat pekade tillbaka på just
       // DEN posten.
-      onUpdateTodo(todo.id, { ...seriesPatch, ...dayPatch });
+      //
+      // applyTemplateToOccurrence, INTE ett rått seriesPatch-spread
+      // (2026-08-09, Zaidas fynd: "jag bytte ikon på kvällsrutinen och då
+      // försvann uppgiften igen") — seriesPatch.visibleFrom/expiresAt är
+      // räknade fram för MALLEN (ankrade mot startDate, se kommentaren vid
+      // seriesPatch ovan), inte för DEN HÄR occurrencen (ankrad mot sitt
+      // eget occurrenceDate, t.ex. idag). Ett rått spread skrev tidigare
+      // occurrencens visibleFrom/expiresAt till mallens ankardatum — om det
+      // skiljer sig från occurrencens eget datum (nästan alltid, mallens
+      // ankare är ju skapelsedagen) pekade occurrencen plötsligt på ett
+      // datum i det förflutna och försvann ur alla datumfiltrerade vyer.
+      // När todo.id RÅKAR vara samma post som refreshRoutineOccurrence
+      // sedan korrigerar (dagens occurrence, det vanligaste fallet) doldes
+      // detta genom att den KORREKTA skrivningen nedan råkade vinna
+      // lokalt — men de två skrivningarna är två OBEROENDE, fire-and-forget
+      // nätverksanrop mot SAMMA rad; anländer de i fel ordning till
+      // servern (helt möjligt, ingen garanti finns) blir den FELAKTIGA
+      // skrivningen kvarstående i databasen trots att UI:t visade rätt
+      // lokalt. Genom att räkna fram occurrensens egna, korrekt ankrade
+      // datum HÄR (samma withWallClockOnDate/createOccurrenceExpiresAt-
+      // logik som refreshRoutineOccurrence redan använder, bara körd på
+      // todo.occurrenceDate istället för startDate) blir båda skrivningarna
+      // identiska i sak — en omkastad nätverksordning blir då ofarlig
+      // istället för datakorrumperande.
+      onUpdateTodo(todo.id, {
+        // seriesPatch bär redan alla fält funktionen behöver (byggs alltid
+        // med dem ovan) — asserten är bara för att seriesPatch är brett
+        // typad som Partial<Todo> (för att kunna spridas till onUpdateTodo),
+        // inte för att fälten faktiskt saknas vid körning.
+        ...applyTemplateToOccurrence(
+          todo,
+          seriesPatch as Pick<
+            Todo,
+            | "title"
+            | "starValue"
+            | "visual"
+            | "personalCategoryId"
+            | "visibleFrom"
+            | "expiresAt"
+            | "assignedTo"
+            | "timerEnabled"
+            | "plannedDurationMinutes"
+            | "timerMaxMinutes"
+          >,
+          fixedTodoTimes
+        ),
+        ...dayPatch
+      });
       // Speglar mallens nya värden på dagens redan skapade occurrence också,
       // om den skulle vara en ANNAN post än `todo` — annars syns inte
       // ändringen där förrän occurrencen genereras om imorgon. seriesPatch
