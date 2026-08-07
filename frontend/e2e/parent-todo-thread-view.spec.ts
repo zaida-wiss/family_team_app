@@ -570,8 +570,11 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
 
   const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
   await expect(editDialog).toBeVisible();
-  // Ingen checklista att kryssa av — sektionen finns bara i visa-vyn.
-  await expect(editDialog.getByRole("checkbox")).toHaveCount(0);
+  // Ingen checklista att kryssa av — sektionen finns bara i visa-vyn. Den
+  // enda kryssrutan i redigera-modalen är nu Tidta-kryssrutan (2026-08-07,
+  // timern tillgänglig för alla uppgifter, inte bara barn-tilldelade).
+  await expect(editDialog.getByRole("checkbox")).toHaveCount(1);
+  await expect(editDialog.getByLabel("Använd en timer för uppgiften")).toBeVisible();
 
   // Autospara (2026-07-08) — ingen Spara-knapp längre, ändringen skickas av
   // sig själv efter en kort skrivpaus.
@@ -587,14 +590,13 @@ test("Bollar i tråd: pennikonen i visa-vyn öppnar redigeringsformuläret, och 
 // en barn-tilldelad uppgift, trots att skapa-modalen har det — inkonsekvent.
 // Fältet ska nu finnas i BÅDA, och siffer-inputen ska gå att tömma och skriva
 // om (en envis "0" stod tidigare kvar och gick inte att byta ut).
-// Timerfunktion (2026-07-07, Zaidas önskemål: "precis som barnens belöningar
-// skall man även kunna lägga in en timer på hur lång aktiviteten är") —
-// kryssrutan finns bara när uppgiften tilldelas ett barn, precis som
-// Stjärnor-fältet.
-test("Ny uppgift-modalen: Tidta-kryssrutan finns bara för barn-mottagare, och skickas med i uppgiften", async ({ page }) => {
+// Timerfunktion, alla mottagare (2026-08-07, Zaidas önskemål: "timern skall
+// gå att välja för ALLA uppgifter, inte bara barn-tilldelade") — kryssrutan
+// visades tidigare bara när uppgiften tilldelades ett barn (samma spärr som
+// Stjärnor-fältet, som fortsatt är barn-bara — bara timern ändrades).
+test("Ny uppgift-modalen: Tidta-kryssrutan finns för alla mottagare, inte bara barn", async ({ page }) => {
   let createdTodo: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
-  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD_MEMBER] }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/todos", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [] });
@@ -609,20 +611,16 @@ test("Ny uppgift-modalen: Tidta-kryssrutan finns bara för barn-mottagare, och s
   await openCreateModalFromMyTasksThread(page);
   const dialog = page.getByRole("dialog");
 
-  await expect(dialog.getByLabel("Använd en timer för uppgiften")).toHaveCount(0);
-
-  const assigneePicker = dialog.getByRole("group", { name: "Åt vem?" });
-  await assigneePicker.getByRole("button", { name: "Mig själv" }).click();
-  await assigneePicker.getByRole("button", { name: "Lilla Barnet" }).click();
-
+  // Default-mottagaren är redan "Mig själv" (inget barn valt) — kryssrutan
+  // är ändå synlig direkt, inget krav på en barn-mottagare längre.
   const timerCheckbox = dialog.getByLabel("Använd en timer för uppgiften");
   await expect(timerCheckbox).toBeVisible();
   await timerCheckbox.check();
 
-  await dialog.getByLabel("Titel").fill("Diska efter middagen");
+  await dialog.getByLabel("Titel").fill("Städa mitt eget skrivbord");
   await dialog.getByRole("button", { name: "Skapa" }).click();
 
-  await expect.poll(() => createdTodo?.title).toBe("Diska efter middagen");
+  await expect.poll(() => createdTodo?.title).toBe("Städa mitt eget skrivbord");
   expect(createdTodo?.timerEnabled).toBe(true);
 });
 
