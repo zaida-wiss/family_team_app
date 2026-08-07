@@ -1211,3 +1211,66 @@ test("Todos-import/export: en Familj-cell som matchar Mina familjekonton skapar 
   expect(crossAccountImportBody?.assignedTo).toBe("mem-lars");
   expect(ownAccountPostCalled).toBe(false);
 });
+
+// 2026-08-09, Zaidas önskemål: "jag vill inte tappa avklarade delmoment
+// bara för att en uppgift uppdateras i övrigt" — CSV-exporten skriver bara
+// ut delmomentens TITLAR (aldrig avklarad-status), så en omimport av en
+// oförändrad Delmoment-cell (t.ex. efter att bara Timer eller Anteckningar
+// ändrats i kalkylarket) fick tidigare ett HELT NYTT, ovillkorligt
+// delmoment-set (nya id:n, done alltid false) — raderade all bockad
+// historik trots identiska titlar.
+test("Todos-import/export: en uppdaterad rad med samma delmoment-titlar behåller redan avklarad status/id, en genuint ny titel blir obockad", async ({ page }) => {
+  const EXISTING_TODO = {
+    id: "todo-with-subtasks", accountId: "acc-1", title: "Packa väskan", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    personalCategoryId: null, notes: null,
+    subtasks: [
+      { id: "subtask-badkläder", title: "Badkläder", done: true },
+      { id: "subtask-tandborste", title: "Tandborste", done: false }
+    ]
+  };
+  let patchedBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [EXISTING_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-with-subtasks", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedBody = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await openImportExportSettings(page);
+
+  // Samma två titlar som redan finns (Badkläder klart, Tandborste obockad)
+  // PLUS en tredje, genuint NY titel ("Laddare") — samma cell-format som en
+  // riktig export producerar (subtasksToCsv, "; "-separerat).
+  const csv = [
+    "Titel,Id,Delmoment",
+    "Packa väskan,todo-with-subtasks,Badkläder; Tandborste; Laddare"
+  ].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("0 uppgifter importerade, 1 uppgift uppdaterade.")).toBeVisible();
+  await expect.poll(() => patchedBody?.subtasks).toBeTruthy();
+  const subtasks = (patchedBody!.subtasks as Array<{ id: string; title: string; done: boolean }>);
+  expect(subtasks).toHaveLength(3);
+  expect(subtasks[0]).toEqual({ id: "subtask-badkläder", title: "Badkläder", done: true });
+  expect(subtasks[1]).toEqual({ id: "subtask-tandborste", title: "Tandborste", done: false });
+  expect(subtasks[2].title).toBe("Laddare");
+  expect(subtasks[2].done).toBe(false);
+  expect(subtasks[2].id).not.toBe("subtask-badkläder");
+  expect(subtasks[2].id).not.toBe("subtask-tandborste");
+});

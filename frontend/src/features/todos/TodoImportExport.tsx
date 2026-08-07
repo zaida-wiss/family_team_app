@@ -1,7 +1,7 @@
 import "./TodoImportExport.css";
 import { useRef, useState } from "react";
 import { Download, FileSpreadsheet, Pencil, Trash2, Upload } from "lucide-react";
-import type { Id, Member, Role, Todo, TodoCategory, TodoTemplate, TodoTemplateTask } from "@shared/types";
+import type { Id, Member, Role, Todo, TodoCategory, TodoSubtask, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { generateId } from "../../utils/uuid";
 import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type OtherFamilyForImport, type ParsedTodoRow } from "./todoCsv";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
@@ -115,10 +115,32 @@ function buildNewTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | 
   };
 }
 
+// Delmomentens avklarade status/id bevaras vid en uppdatering (2026-08-09,
+// Zaidas önskemål: "jag vill inte tappa avklarade delmoment bara för att en
+// uppgift uppdateras i övrigt") — CSV-exporten skriver bara ut TITLAR
+// (subtasksToCsv), aldrig avklarad-status, så en oförändrad rad som bara
+// uppdaterar t.ex. Timer eller Anteckningar skickade tidigare ovillkorligt
+// ett HELT NYTT delmoment-set (nya id:n, done alltid false) tillbaka —
+// raderade all bockad historik oavsett om titlarna var oförändrade. Matchar
+// nu radens delmoment-TITLAR mot den BEFINTLIGA uppgiftens (i ordning, exakt
+// titel) och återanvänder dess id/done där en matchning finns — bara en
+// GENUINT NY titel (utan motsvarighet bland de befintliga) blir en riktig ny
+// rad (done:false, nytt id), en borttagen titel försvinner helt precis som
+// innan (raden i kalkylarket är sanningen för VILKA delmoment som finns).
+function mergeSubtasksWithExisting(rowSubtasks: TodoSubtask[], existingSubtasks: TodoSubtask[] | undefined): TodoSubtask[] {
+  const availableExisting = [...(existingSubtasks ?? [])];
+  return rowSubtasks.map((s) => {
+    const matchIndex = availableExisting.findIndex((e) => e.title === s.title);
+    if (matchIndex === -1) return s;
+    const [matched] = availableExisting.splice(matchIndex, 1);
+    return matched;
+  });
+}
+
 // Uppdaterings-patch (2026-07-07, Zaidas önskemål: "uppdatera todolistan med
 // export och import") — rör MEDVETET inte assignedTo/createdBy/id/status,
 // bara samma fält en vanlig redigering också får ändra.
-function buildUpdatePatch(row: ParsedTodoRow, categoryId: Id | null): Partial<Todo> {
+function buildUpdatePatch(row: ParsedTodoRow, categoryId: Id | null, existing?: Todo): Partial<Todo> {
   return {
     title: row.title,
     visual: { type: "lucide-icon", value: row.emoji },
@@ -130,7 +152,8 @@ function buildUpdatePatch(row: ParsedTodoRow, categoryId: Id | null): Partial<To
     expiresAt: row.expiresAt,
     timeWindows: row.timeWindows,
     personalCategoryId: categoryId,
-    subtasks: row.subtasks.length > 0 ? row.subtasks : undefined,
+    subtasks:
+      row.subtasks.length > 0 ? mergeSubtasksWithExisting(row.subtasks, existing?.subtasks) : undefined,
     notes: row.notes
   };
 }
@@ -608,7 +631,11 @@ export function TodoImportExport({
               accountId: row.targetFamily.accountId,
               previous: extractPatchFields(existingCross)
             });
-            const result = await updateCrossAccountTodo(row.targetFamily.accountId, existingCross.id, buildUpdatePatch(row, null));
+            const result = await updateCrossAccountTodo(
+              row.targetFamily.accountId,
+              existingCross.id,
+              buildUpdatePatch(row, null, existingCross)
+            );
             if (isFailure(result)) {
               errors.push(`Rad ("${row.title}"): kunde inte sparas (uppdatering) i ${row.targetFamily.accountName} — försök igen.`);
             } else {
@@ -654,7 +681,7 @@ export function TodoImportExport({
 
         if (existing) {
           undoUpdated.push({ id: existing.id, previous: extractPatchFields(existing) });
-          const result = await onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId));
+          const result = await onUpdateTodo(existing.id, buildUpdatePatch(row, categoryId, existing));
           if (isFailure(result)) {
             errors.push(`Rad ("${row.title}"): kunde inte sparas (uppdatering) — försök igen.`);
           } else {
