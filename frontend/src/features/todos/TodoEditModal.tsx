@@ -306,7 +306,19 @@ export function TodoEditModal({
       .filter((s) => s.title.length > 0);
     const dayPatch: Partial<Todo> = {
       notes: notes.trim() || null,
-      subtasks: cleanedSubtasks
+      subtasks: cleanedSubtasks,
+      // En redan UTGÅNGEN uppgift blir "pending" igen av att man redigerar
+      // den (2026-08-08, Zaidas fynd: "om jag t.ex. förlänger sluttiden så
+      // vill jag ju att den skall visas igen i todo-vyn") — annars sparades
+      // t.ex. en förlängd sluttid korrekt, men uppgiften förblev osynlig i
+      // tråd-/listvyn eftersom `status` aldrig återställdes. Samma
+      // pendingPatch-återställning som refreshRoutineOccurrence redan gör
+      // för DAGENS occurrence (useTodosState.ts) — men den täcker bara
+      // just den posten, inte occurrencen man faktiskt sitter och redigerar
+      // om det är en ANNAN (t.ex. en äldre, redan utgången bubbla).
+      ...(todo.status === "expired"
+        ? { status: "pending" as const, completedAt: null, approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null }
+        : {})
     };
 
     // Titel/ikon/kategori/mottagare/stjärnor/timer/återkommelse hör till HELA
