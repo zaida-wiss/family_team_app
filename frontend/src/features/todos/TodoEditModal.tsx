@@ -7,10 +7,11 @@ import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { useResizableTextarea } from "../../hooks/useResizableTextarea";
 import { isRecurrenceIncomplete, RecurrencePicker } from "./RecurrencePicker";
 import { TimeWindowsPicker } from "./TimeWindowsPicker";
-import { dateOnlyToISO, isoToDateOnly } from "./recurringTodos";
+import { isoToDateOnly } from "./recurringTodos";
 import { isChildMember } from "./selectors";
 import { SubtaskAssigneeButton } from "./SubtaskAssigneeButton";
 import { generateId } from "../../utils/uuid";
+import { withWallClockOnDate } from "../../utils/fixedTimeZone";
 import type { Id, Member, RecurrenceRule, Role, Todo, TodoCategory, TodoSubtask, TodoTemplate, TodoTemplateTask, TodoTimeWindow } from "@shared/types";
 
 const NEW_CATEGORY_VALUE = "__new__";
@@ -358,7 +359,30 @@ export function TodoEditModal({
       // timeWindows. Engångsuppgift: visibleFrom/expiresAt är en fullständig
       // datum+tid som tidigare, timeWindows nollställs (annars kvarstår den
       // dött om uppgiften senare blir återkommande igen utan att fyllas i).
-      visibleFrom: isRecurring ? dateOnlyToISO(startDate) : dateTimeLocalToISO(visibleFrom),
+      //
+      // withWallClockOnDate, INTE dateOnlyToISO (2026-08-09, Zaidas fynd:
+      // "nu satte jag en timer på en uppgift när jag redigerade i modalen
+      // och då försvann uppgiften igen från todovyn") — allvarlig bugg: en
+      // CSV-importerad enkel-tidsruta-mall (ingen "Fler tidsrutor") har ett
+      // RIKTIGT klockslag på sitt eget expiresAt-fält (t.ex. "09:00"), inte
+      // null (bara en mall med FLERA tidsrutor får expiresAt:null vid
+      // skapande, se TodoCreatorModal.tsx/todoCsv.ts). dateOnlyToISO nollade
+      // ALLTID visibleFrom till midnatt vid VARJE sparning i den här
+      // modalen (oavsett vilket fält man faktiskt ändrade), medan expiresAt
+      // bara kopierades oförändrat — bröt därmed "visibleFrom+varaktighet=
+      // expiresAt"-invarianten som createOccurrenceExpiresAt
+      // (recurringTodos.ts) räknar med. Nästa gång dagens occurrence
+      // synkades (onRefreshRoutine nedan, ELLER denna rad direkt på
+      // todo.id) räknades en ny expiresAt ut som "midnatt idag + (gamla
+      // expiresAt − NYA midnatt-visibleFrom)" — en varaktighet som kunde bli
+      // kraftigt negativ (skillnaden mellan dagens datum och mallens
+      // ursprungliga skapelsedatum), vilket gav en expiresAt LÅNGT bakåt i
+      // tiden och gjorde uppgiften osynlig direkt (isTodoVisibleNow). Nu
+      // behålls det BEFINTLIGA klockslaget och bara datumdelen byts —
+      // identiskt resultat om Startdatum inte ändrats, ingen korruption.
+      visibleFrom: isRecurring
+        ? withWallClockOnDate(seriesSource.visibleFrom, startDate, fixedTodoTimes)
+        : dateTimeLocalToISO(visibleFrom),
       expiresAt: isRecurring ? seriesSource.expiresAt : dateTimeLocalToISO(expiresAt),
       timeWindows: isRecurring ? timeWindows : []
     };

@@ -653,6 +653,95 @@ test("Redigera uppgift: Tidta-kryssrutan finns för en barn-tilldelad uppgift oc
   await expect.poll(() => updatedPatch?.timerEnabled).toBe(true);
 });
 
+// Allvarlig bugg fixad 2026-08-09 (Zaidas fynd: "nu satte jag en timer på en
+// uppgift när jag redigerade i modalen och då försvann uppgiften igen från
+// todovyn (förmiddagsrutiner)") — en CSV-importerad ENKEL-tidsruta-mall (ingen
+// "Fler tidsrutor", timeWindows saknas) har ett RIKTIGT klockslag på sitt eget
+// expiresAt-fält (t.ex. 09:00–10:00), till skillnad från en UI-skapad eller
+// flera-tidsrutor-mall (som alltid får expiresAt:null). TodoEditModal.tsx
+// skrev tidigare ALLTID visibleFrom till midnatt via dateOnlyToISO(startDate)
+// vid VARJE sparning — oavsett vilket fält man faktiskt ändrade — medan
+// expiresAt bara kopierades oförändrat, vilket bröt varaktighets-invarianten
+// (recurringTodos.ts:s createOccurrenceExpiresAt) och räknade fram en ny
+// expiresAt långt bakåt i tiden (skillnaden mellan mallens ursprungliga
+// skapelsedatum och dagens datum). Verifierar att BÅDA de skickade PATCH-
+// anropen (mallen OCH dagens occurrence via onRefreshRoutine) behåller det
+// exakta, ursprungliga klockslaget — inte midnatt.
+test("Redigera uppgift: att sätta en timer på en enkel-tidsruta-återkommande uppgift nollställer inte klockslaget till midnatt", async ({ page }) => {
+  const TEMPLATE = {
+    id: "todo-template-morning", accountId: "acc-1", title: "Förmiddagsrutiner", createdBy: "mem-1",
+    assignedTo: "mem-1", isShared: false, status: "pending", starValue: 0,
+    visual: { type: "lucide-icon", value: "☀️" },
+    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurringSourceId: null, occurrenceDate: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+    rejectedReason: null,
+    // Ett riktigt klockslag (som en CSV-import utan "Fler tidsrutor" sätter),
+    // långt tillbaka i tiden — precis den kombination som avslöjar
+    // korruptionen (en UI-skapad mall har alltid expiresAt:null, som aldrig
+    // korrumperas eftersom createOccurrenceExpiresAt kortsluter direkt).
+    visibleFrom: "2026-01-01T09:00:00.000Z", expiresAt: "2026-01-01T10:00:00.000Z",
+    deletedAt: null, deletedBy: null, personalCategoryId: "cat-1", timerEnabled: false, plannedDurationMinutes: null
+  };
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  // Hela dygnet, inte "nu ± offset" (samma tidsoberoende mönster som redan
+  // etablerat i denna fil) — testet ska inte flaka beroende på när det körs.
+  const OCCURRENCE = {
+    ...TEMPLATE,
+    id: `todo-template-morning-occurrence-${dateKey}`,
+    recurrence: { type: "none" },
+    recurringSourceId: "todo-template-morning",
+    occurrenceDate: dateKey,
+    visibleFrom: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 1).toISOString(),
+    expiresAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59).toISOString()
+  };
+
+  const patchedById: Record<string, Record<string, unknown>> = {};
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE, OCCURRENCE] }));
+  await page.route(new RegExp(`/api/todos/(${TEMPLATE.id}|${OCCURRENCE.id})$`), (route) => {
+    if (route.request().method() === "PATCH") {
+      const id = route.request().url().split("/").pop()!;
+      patchedById[id] = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Förmiddagsrutiner/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Redigera uppgift" }).click();
+
+  const editDialog = page.getByRole("dialog", { name: "Redigera uppgift" });
+  await editDialog.getByLabel("Använd en timer för uppgiften").check();
+
+  await expect.poll(() => patchedById[TEMPLATE.id]?.timerEnabled).toBe(true);
+  // Kärnassertion 1: mallens EGET klockslag (09:00) ska vara oförändrat —
+  // INTE nollställt till midnatt (00:00), oavsett tidszon testet körs i.
+  expect(patchedById[TEMPLATE.id]?.visibleFrom).toBe(TEMPLATE.visibleFrom);
+
+  // Kärnassertion 2: dagens occurrence synkas separat (onRefreshRoutine →
+  // applyTemplateToOccurrence, recurringTodos.ts) till DAGENS datum med
+  // SAMMA klockslag — inte samma exakta sträng som mallen (mallens datum är
+  // ju 2026-01-01, occurrensen ska ligga på DAGENS datum), men varaktigheten
+  // (1h) måste vara EXAKT bevarad. Innan fixen kunde denna bli kraftigt
+  // korrumperad (skillnaden mellan mallens ursprungliga skapelsedatum och
+  // dagens datum, potentiellt flera MÅNADER) — vilket gav en expiresAt
+  // långt bakåt i tiden och gjorde uppgiften osynlig. Kollar strukturen
+  // (samma kalenderdag + exakt bevarad varaktighet) istället för en
+  // hårdkodad tid-på-dygnet-sträng, för att inte bli tidsberoende (samma
+  // redan etablerade lärdom i denna fil).
+  const occVisibleFrom = new Date(patchedById[OCCURRENCE.id]?.visibleFrom as string);
+  const occExpiresAt = new Date(patchedById[OCCURRENCE.id]?.expiresAt as string);
+  expect(occVisibleFrom.toDateString()).toBe(new Date().toDateString());
+  expect(occExpiresAt.getTime() - occVisibleFrom.getTime()).toBe(60 * 60 * 1000);
+
+  await editDialog.getByRole("button", { name: "Stäng" }).click();
+});
+
 test("Redigera uppgift: Stjärnor-fältet finns för en barn-tilldelad uppgift, och går att tömma och skriva om", async ({ page }) => {
   let updatedPatch: Record<string, unknown> | null = null;
   await mockAuthAndData(page);
