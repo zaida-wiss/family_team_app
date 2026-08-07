@@ -208,14 +208,17 @@ test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning,
   expect(sentElapsedMs as number).toBeGreaterThan(1800);
 });
 
-// 2026-08-08, Zaidas fynd + rättelse samma dag: "om man trycker på
+// 2026-08-08, Zaidas fynd + två rättelser samma dag: "om man trycker på
 // uppdragskortet i barnvyn 3 ggr när timern redan är igång nollställs den",
 // följt av "man skall alltså kunna trycka 3 snabba tryck om man behövde
-// starta om timern. 3 snabba tryck tar bort timern, ytterligare tre snabba
-// tryck startar den igen" — en TOGGLE, inte en no-op. Verifierar hela
-// cykeln: start → tre nya tryck tar bort (kortet återgår till "Tre snabba
-// tryck startar...") → tre tryck till startar om FRÅN BÖRJAN.
-test("Barnets uppgifter: tre nya tryck medan timern går tar bort den, tre tryck till startar om från början", async ({ page }) => {
+// starta om timern", och slutligen förtydligat: "när jag menar 'nollställ'
+// så menar jag så som det var i inställningarna innan man tryckte. Var det
+// en timer på 2 minuter så skall en nollställning föra så att den går
+// tillbaka till just 2 min. Är det en tidtagning så skall den börja om från
+// 0." — INGEN toggle, en ren nollställning som håller timern IGÅNG.
+// Verifierar: start → låt den gå en bit → tre nya tryck → tillbaka till
+// hela den planerade tiden (1:00), fortsatt räknande (inte stoppad).
+test("Barnets uppgifter: tre nya tryck medan timern går nollställer den till full planerad tid, fortsätter räkna", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [COUNTDOWN_TODO] }));
 
@@ -226,18 +229,14 @@ test("Barnets uppgifter: tre nya tryck medan timern går tar bort den, tre tryck
   await card.click({ clickCount: 3 });
   await expect(card).toHaveAccessibleName(/0:5\d kvar|1:00 kvar/);
 
-  // Låt nedräkningen hinna gå en bit, så en efterföljande borttagning+omstart
-  // (tillbaka till exakt 1:00) blir mätbart skild från "fortsätter räkna ner".
+  // Låt nedräkningen hinna gå en bit, så en efterföljande nollställning
+  // (tillbaka till exakt 1:00) blir mätbart skild från "fortsätter räkna ner
+  // därifrån den redan var".
   await page.waitForTimeout(2200);
 
-  // Tre nya tryck tar bort timern — kortet återgår till startläget (samma
-  // aria-label-mönster som INNAN första starten).
-  await card.click({ clickCount: 3 });
-  await expect(card).toHaveAccessibleName(/Tre snabba tryck startar nedräkningen/);
-  await expect(page.getByText(/^0:\d\d$|^1:00$/)).toHaveCount(0);
-
-  // Tre tryck till startar om FRÅN BÖRJAN (1:00), inte varifrån den
-  // stannade.
+  // Tre nya tryck nollställer timern — tillbaka till hela planerade tiden,
+  // fortsatt IGÅNG (inte tillbaka till "ej startad").
   await card.click({ clickCount: 3 });
   await expect(card).toHaveAccessibleName(/1:00 kvar/);
+  await expect(page.getByText("1:00")).toBeVisible();
 });

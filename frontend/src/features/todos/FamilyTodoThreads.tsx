@@ -282,17 +282,13 @@ export function FamilyTodoThreads({
     }
 
     if (count >= 3) {
-      // Tre snabba tryck (2026-08-08) togglar timern — toggle, inte alltid
-      // en omstart (Zaidas rättelse: "3 snabba tryck tar bort timern,
-      // ytterligare tre snabba tryck startar den igen").
+      // Tre snabba tryck (2026-08-08) NOLLSTÄLLER timern — nollställ, inte
+      // en toggle (Zaidas andra rättelse: "en nollställning [ska] föra så
+      // att den går tillbaka till just 2 min [för en nedräkning]... är det
+      // en tidtagning så skall den börja om från 0") — startTodoTimer
+      // skriver alltid en NY starttid oavsett tidigare tillstånd.
       lastTapRef.current = null;
-      if (todo.timerEnabled) {
-        if (readTodoTimerStartedAt(todo.id, timerCapMinutes(todo)) !== null) {
-          clearTodoTimer(todo.id);
-        } else {
-          startTodoTimer(todo.id);
-        }
-      }
+      if (todo.timerEnabled) startTodoTimer(todo.id);
       return;
     }
 

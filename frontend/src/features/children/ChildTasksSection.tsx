@@ -195,16 +195,16 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
     if (tapCountRef.current >= 3) {
       tapCountRef.current = 0;
       tapTimerRef.current = null;
-      // Toggle, inte alltid en omstart (2026-08-08, Zaidas rättelse: "3
-      // snabba tryck tar bort timern, ytterligare tre snabba tryck startar
-      // den igen") — tre nya tryck MEDAN timern redan går tar bort den (från
-      // noll), inte förlänger den nollställda tiden tyst vidare. En andra
-      // omgång tre tryck (nu från ett rensat läge) startar den på nytt.
-      if (startedAt !== null) {
-        clear();
-      } else {
-        start();
-      }
+      // Nollställ, inte en toggle (2026-08-08, Zaidas andra rättelse: "när
+      // jag menar 'nollställ' så menar jag så som det var i inställningarna
+      // innan man tryckte... en nollställning [ska] föra så att den går
+      // tillbaka till just 2 min [för en nedräkning]... är det en tidtagning
+      // så skall den börja om från 0") — start() skriver alltid en NY
+      // starttid, vilket redan ger exakt detta: en nedräkning visar direkt
+      // hela sin planerade tid igen (elapsed=0), en öppen tidtagning börjar
+      // om från 0 — och fortsätter räkna, oavsett om den redan gick eller
+      // inte. Inget separat "ta bort helt"-läge.
+      start();
       return;
     }
     tapTimerRef.current = window.setTimeout(() => {
