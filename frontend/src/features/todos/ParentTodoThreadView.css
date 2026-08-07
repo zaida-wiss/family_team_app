@@ -136,6 +136,17 @@
   align-items: flex-start;
   overflow-x: auto;
   width: 100%;
+  /* Avståndet MELLAN de två grupperna (mina egna trådar vs. signade
+     familjetrådar) följde tidigare aldrig --todo-thread-gap-reglaget
+     (2026-08-09, Zaidas fynd: "varför följer inte Wiss Kolmodin samma
+     regler för avstånd... som mina egna?") — det reglaget sätts som en
+     inline-variabel på VARJE .todo-thread-view (ParentTodoThreadView.tsx/
+     FamilyTodoThreads.tsx), som styr avståndet MELLAN KOLUMNER INOM VARJE
+     GRUPP (se .todo-thread-view nedan), men denna YTTRE rad — som styr
+     avståndet MELLAN grupperna — saknade helt en egen gap-regel. TodosView.
+     tsx sätter nu samma --todo-thread-gap-variabel på DENNA rad också, så
+     mellanrummet före en signad familjetråd matchar exakt samma reglage. */
+  gap: var(--todo-thread-gap, clamp(4px, 1vw, 8px));
 }
 
 /* ParentTodoThreadView.tsx och FamilyTodoThreads.tsx returnerar sedan
@@ -516,30 +527,38 @@
   border: 1px solid color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--border))) 80%, transparent);
   border-radius: 50%;
   padding: 4px;
-  /* Fyllningen blandar flera av temats EGNA färger (2026-07-06, Zaidas
-     mockup) — samma --c0…--c4-variabler man väljer i temainställningarna,
-     inte hårdkodade kulörer. Fyra mjuka färgfläckar i hörnen blandas ihop
-     till ett pastelligt svirl istället för ett hårt konisk-regnbågsband, plus
-     en stor mjuk diffus glans uppe till vänster och en liten skarp blank
-     prick nere till höger — som en riktig såpbubblas skiftande, glasiga sken. */
-  /* Fyra hörnfärger + en bottenfärg, per kategori (2026-08-09, se
-     ballAccentStyleForIndex i ParentTodoThreadView.tsx) — --ball-a…--ball-d/
-     --ball-base sätts inline per tråd, roterar genom temats åtta färger så
-     grannkategorier aldrig får identisk blandning. Fallback (var(--c0) osv)
-     = exakt den tidigare, oföränderliga formeln, för trådar utan egen
-     blandning (Barn-tråden). Bottenfärgen späds ALLTID ut mot vitt — den kan
-     annars rotera in på temats mörkare kvartett (c0…c3, avsiktligt valda
-     för vit knapptext), vilket hade kunnat bryta kontrasten mot bubblans
-     alltid SVARTA titel (Zaidas krav: "utan att kontrasten till texten blir
-     för låg"). */
+  /* Fyllningen är en RUND (radial) blandning av kategorins EGEN --thread-
+     accent-färg (2026-08-09, Zaidas rättelse i två steg: "nu har ju dessa
+     kolumner exakt samma blandning", sedan "man skall kunna se skillnad i
+     färg eller färgmönstret" efter en första, för försiktig ljusnings-
+     spärr). Ett första försök roterade ett fönster av fem PÅ VARANDRA
+     FÖLJANDE temafärger per kategoriindex — grannindex delade tre av fyra
+     hörnfärger och blev nästan omöjliga att skilja åt. Ersatt med
+     --thread-accent direkt (samma EXAKTA färg som redan driver kategorins
+     rubriktext/progressbar, accentColorForIndex, en ren 1:1-mappning
+     index→färg) — men den FÖRSTA ljusnings-spärren (22%/55%) var i sin tur
+     för försiktig: Klar-temat (default, alla --c0…--c7 samma nyans, bara
+     olika ljushet) blev näst intill overiskiljbart vid så hög utspädning.
+     Procenttalen nedan (40%/60%) är inte gissade — uträknade programmatiskt
+     (tillfälligt Playwright-skript, samma "kontrastverifierat
+     programmatiskt"-metod som redan användes för Mörkt läge 2026-07-23):
+     WCAG-kontrast mot SVART text för samtliga elva vuxentemans mörkaste
+     --cN-färg, vid varje utspädningsnivå. 60% var högsta nivån där ALLA
+     teman fortfarande klarade 4,5:1 (sämst: Karneval, 5,11:1 — en tydlig
+     marginal, inte precis vid gränsen). "Rund blandning istället för
+     linjär" (Zaidas ord): en genuin tvåstegs radial-gradient, något
+     ljusare i mitten (40%) och mer mättad ut mot kanten (60%) — INTE en
+     platt bottenfärg + fyra knappt synliga hörnfläckar som tidigare. De två
+     vita glansfläckarna (uppe till vänster/nere till höger) oförändrade —
+     ger fortsatt en riktig såpbubblas skiftande, glasiga sken. */
   background:
     radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
     radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
-    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--ball-a, var(--c0)) 92%, transparent) 0%, transparent 62%),
-    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--ball-b, var(--c1)) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--ball-c, var(--c2)) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--ball-d, var(--c3)) 88%, transparent) 0%, transparent 66%),
-    color-mix(in srgb, var(--ball-base, var(--c4)) 45%, white 55%);
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--thread-accent, var(--c0)) 40%, white 60%) 0%,
+      color-mix(in srgb, var(--thread-accent, var(--c0)) 60%, white 40%) 100%
+    );
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--primary))) 25%, transparent),
     0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 35%, transparent),
@@ -563,26 +582,12 @@
 
 /* Hem-vyns familjefliks bubblor (2026-08-01, Zaidas önskemål: "bollar i
    familjevyns todo, precis som i min egen, men andra färger i temat") —
-   samma såpbubbel-mekanik som huvudbollen ovan, men blandad ur den ANDRA
-   halvan av temats åttafärgsskala (--c4…--c7 istället för --c0…--c3/--c4)
-   så familjevyns bubblor alltid går att skilja visuellt från Todos-panelens
-   egna, oavsett vilket tema man valt — fortfarande temats egna färger, inga
-   hårdkodade kulörer.  */
-.todo-thread__ball--home {
-  /* Samma per-kategori-rotation som .todo-thread__ball ovan (2026-08-09) —
-     fallback (var(--c4)…var(--c7)) = den tidigare, oföränderliga formeln
-     för trådar utan egen blandning. FamilyTodoThreads.tsx ankrar sina
-     --ball-*-variabler med offset 4 (ballAccentStyleForIndex), så
-     familjevyns bubblor fortsatt går att skilja från de personliga. */
-  background:
-    radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
-    radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
-    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--ball-a, var(--c4)) 92%, transparent) 0%, transparent 62%),
-    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--ball-b, var(--c5)) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--ball-c, var(--c6)) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--ball-d, var(--c7)) 88%, transparent) 0%, transparent 66%),
-    color-mix(in srgb, var(--ball-base, var(--c4)) 45%, white 55%);
-}
+   .todo-thread__ball--home behöver sedan 2026-08-09 INGEN egen bakgrunds-
+   regel längre. FamilyTodoThreads.tsx sätter --thread-accent på varje
+   trådwrapper (accentColorForIndex(index + 4), samma variabel som
+   .todo-thread__ball ovan redan läser) — offset 4 ankrar familjevyns
+   trådar i temats ANDRA halva, så bubblorna fortsatt går att skilja
+   visuellt från Todos-panelens egna utan en duplicerad CSS-formel. */
 
 /* Barnens bubblor (Barn-tråden) mycket mindre än vuxnas egna kategori-trådar
    (2026-07-06, Zaidas begäran) — golvat på 44px, det minsta tillåtna

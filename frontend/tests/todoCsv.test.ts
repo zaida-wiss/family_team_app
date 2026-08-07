@@ -35,18 +35,19 @@ describe("todoCsv", () => {
     const headerIndex = new Map(table[0].map((h, i) => [h, i]));
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
     expect(table.length).toBe(9);
-    expect(table[1][0]).toBe("Handla mat");
+    const titleCol = headerIndex.get("Titel")!;
+    expect(table[1][titleCol]).toBe("Handla mat");
     expect(table[1][headerIndex.get("Startdatum")!]).toBe("");
     expect(table[1][headerIndex.get("Slutdatum")!]).toBe("");
-    expect(table[2][0]).toBe("Hämta paket");
+    expect(table[2][titleCol]).toBe("Hämta paket");
     expect(table[2][headerIndex.get("Slutdatum")!]).not.toBe("");
-    expect(table[3][0]).toBe("Andningsövning");
+    expect(table[3][titleCol]).toBe("Andningsövning");
     expect(table[3][headerIndex.get("Återkommer")!]).toBe("Dag");
-    expect(table[4][0]).toBe("Borsta tänderna");
+    expect(table[4][titleCol]).toBe("Borsta tänderna");
     expect(table[4][headerIndex.get("Fler tidsrutor")!]).toBe("19:00-19:15");
-    expect(table[5][0]).toBe("Öva piano");
+    expect(table[5][titleCol]).toBe("Öva piano");
     expect(table[5][headerIndex.get("Slutar")!]).toBe("30");
-    expect(table[6][0]).toBe("Städa rummet");
+    expect(table[6][titleCol]).toBe("Städa rummet");
     expect(table[6][headerIndex.get("Timer")!]).toBe("Ja");
     expect(table[6][headerIndex.get("Timer (min)")!]).toBe("25");
     expect(table[7][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
@@ -294,7 +295,8 @@ describe("todoCsv", () => {
 
     const csv = todosToCsv(todos, members, "mem-1", []);
     const table = parseCsvText(csv);
-    const titles = table.slice(1).map((row) => row[0]);
+    const titleCol = table[0].indexOf("Titel");
+    const titles = table.slice(1).map((row) => row[titleCol]);
     expect(titles).toEqual(["Min uppgift", "Annans uppgift", "Återkommande mall"]);
   });
 
@@ -315,10 +317,11 @@ describe("todoCsv", () => {
     ]);
     const table = parseCsvText(csv);
     const headerIndex = new Map(table[0].map((h, i) => [h, i]));
+    const titleCol = headerIndex.get("Titel")!;
 
-    expect(table[1][0]).toBe("Min uppgift");
+    expect(table[1][titleCol]).toBe("Min uppgift");
     expect(table[1][headerIndex.get("Familj")!]).toBe("");
-    expect(table[2][0]).toBe("Handla present");
+    expect(table[2][titleCol]).toBe("Handla present");
     expect(table[2][headerIndex.get("Familj")!]).toBe("Familjen Andersson");
     expect(table[2][headerIndex.get("Egen kategori")!]).toBe("Present");
 

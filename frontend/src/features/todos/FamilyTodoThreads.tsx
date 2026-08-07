@@ -13,7 +13,6 @@ import {
   applyBubbleOrder,
   assigneeColorFor,
   assigneeNameFor,
-  ballAccentStyleForIndex,
   computeCompletedPercent,
   computeProgress,
   formatElapsed,
@@ -576,13 +575,15 @@ export function FamilyTodoThreads({
           (t) => !isRecurringTemplate(t) && isDueWithinRange(t, today, range)
         );
         const completedPercent = computeCompletedPercent(allDueSourceTodos);
-        // Egen färgblandning per tråd (2026-08-09, Zaidas önskemål: "varje
-        // kategori som visas skall ha en egen blandning") — ankrad i temats
-        // ANDRA halva (offset 4) så familjevyns bubblor fortsatt går att
-        // skilja från de personliga trådarnas (se ballAccentStyleForIndex).
+        // Egen accentfärg per tråd (2026-08-09, Zaidas önskemål: "varje
+        // kategori som visas skall ha en egen blandning... man skall kunna
+        // se skillnad i färg") — samma --thread-accent-variabel som redan
+        // driver rubriktextens/progressbarens färg (ParentTodoThreadView.tsx),
+        // .todo-thread__ball läser den nu också för sin runda blandning.
+        // offset 4 ankrar familjevyns trådar i temats ANDRA halva, så de
+        // fortsatt går att skilja från de personliga trådarnas (2026-08-01).
         const threadStyle = {
-          "--thread-accent": accentColorForIndex(index + 4),
-          ...ballAccentStyleForIndex(index, 4)
+          "--thread-accent": accentColorForIndex(index + 4)
         } as React.CSSProperties;
 
         // Tomma kategorier döljs, samma princip som ParentTodoThreadView.tsx

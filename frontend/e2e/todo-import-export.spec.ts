@@ -39,8 +39,11 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   // 2026-08-04: Radera tillagd — massradera via en ifylld kolumn i mallen.
   // 2026-08-05: Skapad/Ändrad tillagda — rent informativa, serverstyrda
   // revisionsstämplar (Todo.createdAt/updatedAt), aldrig lästa vid import.
+  // 2026-08-09: kolumnordningen omkastad (Zaidas önskemål: de fält man
+  // fyller i FÖRST för hand överst) — importen läser fortsatt av NAMN, inte
+  // position, så bara denna förväntade sträng behövde uppdateras.
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Titel,Emoji,Tilldelad,Egen kategori,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Delmoment,Anteckningar,Id,Skapad,Ändrad,Radera,Familj"
+    "Emoji,Titel,Egen kategori,Delmoment,Anteckningar,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Familj,Tilldelad,Id,Skapad,Ändrad,Radera"
   );
 });
 
@@ -823,7 +826,11 @@ test("Todos-import/export: avmarkerar Barn i exportfiltret utesluter barnens upp
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   const text = Buffer.concat(chunks).toString("utf-8").replace(/^﻿/, "");
-  const titles = text.split(/\r?\n/).slice(1).map((line) => line.split(",")[0]);
+  const lines = text.split(/\r?\n/);
+  // Kolumnordningen är inte fast (2026-08-09) — slår upp "Titel" i
+  // rubrikraden istället för att anta position 0.
+  const titleCol = lines[0].split(",").indexOf("Titel");
+  const titles = lines.slice(1).map((line) => line.split(",")[titleCol]);
 
   expect(titles).toEqual(["Min egen uppgift"]);
 });

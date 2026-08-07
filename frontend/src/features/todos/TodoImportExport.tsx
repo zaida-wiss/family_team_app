@@ -6,7 +6,7 @@ import { generateId } from "../../utils/uuid";
 import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type OtherFamilyForImport, type ParsedTodoRow } from "./todoCsv";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { getAssigneeName, getVisibleTodos, groupByChildAssignee, isChildMember } from "./selectors";
-import { describeRecurrence, describeRecurrenceEnd } from "./recurringTodos";
+import { describeRecurrence, describeRecurrenceEnd, isRecurringTemplate } from "./recurringTodos";
 import { canDeleteTodo, canEditTodo } from "../../utils/permissions";
 import { TodoEditModal } from "./TodoEditModal";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers } from "./useCrossAccountFamilyState";
@@ -333,8 +333,28 @@ export function TodoImportExport({
   // kategorier"-sektionen i samma Inställningar-panel). I familje-scope
   // (2026-08-03) visas familjekategorier (isFamily:true) istället för mina
   // egna personliga.
+  //
+  // 2026-08-09, Zaidas fynd: en kategori utan några uppgifter FRAMÅT I
+  // TIDEN (t.ex. gamla testkategorier) skräpade ner listan i onödan — ett
+  // eget filter, SKILT från tråd-vyns "tomma kategorier göms" (som bara
+  // bryr sig om DAGENS tidsspann). En återkommande MALL räknas alltid som
+  // "har uppgifter framåt" (en aktiv serie genererar nya dagar oavbrutet,
+  // oavsett dagens klockslag) — bara en engångsuppgift kollas mot sitt
+  // eget expiresAt (null = inget slutdatum, räknas också som framåt).
+  const now = new Date();
+  const hasUpcomingTodo = (categoryId: Id) =>
+    todos.some(
+      (t) =>
+        t.personalCategoryId === categoryId &&
+        t.deletedAt === null &&
+        (isRecurringTemplate(t) ||
+          (t.status === "pending" && (!t.expiresAt || new Date(t.expiresAt) >= now)))
+    );
   const myCategories = categories.filter(
-    (c) => !c.hidden && (isFamilyScope ? c.isFamily : c.memberId === currentMember.id && !c.isFamily)
+    (c) =>
+      !c.hidden &&
+      (isFamilyScope ? c.isFamily : c.memberId === currentMember.id && !c.isFamily) &&
+      hasUpcomingTodo(c.id)
   );
   // Standard: allt ikryssat (oförändrat beteende om man inte aktivt väljer
   // bort något) — Zaidas önskemål: "måste kunna välja vilka todolistor man

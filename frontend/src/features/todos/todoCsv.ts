@@ -26,11 +26,23 @@ import { generateId } from "../../utils/uuid";
 // parseTodoCsv (ingen col()-uppslagning för dem alls, se längre ner) — precis
 // som vilken okänd extra-kolumn som helst ignoreras de tyst vid import, ett
 // klistrat-in värde där kan alltså aldrig påverka en skapad/uppdaterad todo.
+// Kolumnordning (2026-08-09, Zaidas önskemål: "för att det skall gå lättare
+// att göra nya uppgifter") — de fält man fyller i FÖRST när man skapar en ny
+// uppgift för hand (Emoji/Titel/Egen kategori/Delmoment/Anteckningar) ligger
+// nu överst i mallen, sedan tidsstyrning (Stjärnor→Slutar), och de fält man
+// sällan rör själv (Familj/Tilldelad/Id/Skapad/Ändrad/Radera) längst ner.
+// Importen (parseTodoCsv) slår upp varje kolumn via NAMNET i filens EGEN
+// rubrikrad (headerIndex, se längre ner) — helt oberoende av vilken ordning
+// de råkar stå i, så en redan exporterad äldre fil med den GAMLA ordningen
+// fortsätter importeras korrekt. Exportens/mallens radbyggare (rowFromFields
+// nedan) läser likaså av namn, inte position — en omordning av bara DENNA
+// array räcker alltså, ingen annan kod behöver röras.
 export const TODO_CSV_HEADERS = [
-  "Titel",
   "Emoji",
-  "Tilldelad",
+  "Titel",
   "Egen kategori",
+  "Delmoment",
+  "Anteckningar",
   "Stjärnor",
   "Timer",
   "Timer (min)",
@@ -41,12 +53,6 @@ export const TODO_CSV_HEADERS = [
   "Intervall",
   "Veckodagar",
   "Slutar",
-  "Delmoment",
-  "Anteckningar",
-  "Id",
-  "Skapad",
-  "Ändrad",
-  "Radera",
   // Familj (2026-08-06, Zaidas önskemål: "gör det tydligare i mallen och
   // import och export vilken familj uppgiften tillhör. Om det står tomt
   // där så tillhör den kontoinnehavaren själv") — REN VISNING, ingen ny
@@ -56,8 +62,26 @@ export const TODO_CSV_HEADERS = [
   // familjekonton/Familjeanslutningar) visar VILKEN annan familj raden hör
   // till. parseTodoCsv läser aldrig denna kolumn — precis som Skapad/Ändrad
   // är den bara till för att göra en export/mall självförklarande.
-  "Familj"
+  "Familj",
+  "Tilldelad",
+  "Id",
+  "Skapad",
+  "Ändrad",
+  "Radera"
 ] as const;
+
+type TodoCsvHeader = (typeof TODO_CSV_HEADERS)[number];
+
+// Bygger den faktiska raden i RÄTT kolumnordning från ett namngivet
+// fält-objekt (2026-08-09) — ersätter tidigare positionella arrayer, där en
+// framtida omordning av TODO_CSV_HEADERS hade krävt att räkna om index i
+// FLERA separata arrayer utan att TypeScript kunde varna för ett missat
+// fält. `Record<TodoCsvHeader, string>` tvingar fram att ALLA kolumner
+// anges (saknas en ger TypeScript ett kompileringsfel, inte en tyst
+// förskjuten cell).
+function rowFromFields(fields: Record<TodoCsvHeader, string>): string {
+  return toCsvRow(TODO_CSV_HEADERS.map((h) => fields[h]));
+}
 
 // "HH:MM-HH:MM, HH:MM-HH:MM, ..." — ytterligare tidsrutor UTÖVER den första
 // (som redan täcks av Startdatum/Slutdatum), alla på SAMMA ankardag som
@@ -192,37 +216,70 @@ function todayDateOnly(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+// Gemensam bas — alla kolumner tomma som standard, varje exempelrad nedan
+// skriver bara över de fält den faktiskt vill illustrera (2026-08-09,
+// samma "namngivna fält istället för positionella arrayer"-omläggning som
+// rowFromFields ovan — en framtida ny kolumn i TODO_CSV_HEADERS ger annars
+// ett kompileringsfel här tills den läggs till, istället för att tyst
+// förskjuta alla celler i en hårdkodad array).
+function blankRow(): Record<TodoCsvHeader, string> {
+  const row = {} as Record<TodoCsvHeader, string>;
+  for (const h of TODO_CSV_HEADERS) row[h] = "";
+  return row;
+}
+
 export function buildTemplateCsv(): string {
   const today = todayDateOnly();
   // 1) Blir kvar tills den bockas av — INGA datum alls (Startdatum/
   //    Slutdatum tomma). En engångsuppgift utan datum försvinner aldrig av
   //    sig själv, oavsett hur länge den ligger okvitterad.
-  const staysUntilDone =
-    ["Handla mat", "🛒", SELF_LABEL, "Hushåll", "", "", "", "", "", "", "", "", "", "", "", "Mjölk, bröd, ägg", "", "", "", "", ""];
+  const staysUntilDone: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Handla mat", Emoji: "🛒", Tilldelad: SELF_LABEL, "Egen kategori": "Hushåll",
+    Anteckningar: "Mjölk, bröd, ägg"
+  };
   // 2) Försvinner ur vyn efter en viss tid — en engångsuppgift (INGEN
   //    återkommelse) med ett satt Slutdatum. Syns från Startdatum, försvinner
   //    (räknas som utgången) vid Slutdatum om den inte hunnit avklaras.
-  const expiresAfterDeadline =
-    ["Hämta paket", "📦", SELF_LABEL, "Ärenden", "", "", "", `${today} 08:00`, `${today} 20:00`, "", "", "", "", "", "", "Utlämningsstället stänger 20:00", "", "", "", "", ""];
+  const expiresAfterDeadline: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Hämta paket", Emoji: "📦", Tilldelad: SELF_LABEL, "Egen kategori": "Ärenden",
+    Startdatum: `${today} 08:00`, Slutdatum: `${today} 20:00`,
+    Anteckningar: "Utlämningsstället stänger 20:00"
+  };
   // 3) Återkommande, enkel — en tidsruta per dag (synlig kl./försvinner kl.),
   //    det vanligaste fallet. Ingen "Fler tidsrutor" eller "Slutar" behövs.
-  const recurringSimple =
-    ["Andningsövning", "🧘", SELF_LABEL, "", "", "", "", `${today} 10:00`, `${today} 10:30`, "", "Dag", "1", "", "", "", "", "", "", "", "", ""];
+  const recurringSimple: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Andningsövning", Emoji: "🧘", Tilldelad: SELF_LABEL,
+    Startdatum: `${today} 10:00`, Slutdatum: `${today} 10:30`, Återkommer: "Dag", Intervall: "1"
+  };
   // 4) Återkommande med FLERA tidsrutor på SAMMA mall (morgon OCH kväll) —
   //    Startdatum/Slutdatum är den FÖRSTA rutan, "Fler tidsrutor" lägger
   //    till resten (samma ankardag, "TT:MM-TT:MM" per extra ruta).
-  const recurringMultiWindow =
-    ["Borsta tänderna", "🦷", SELF_LABEL, "", "", "", "", `${today} 07:00`, `${today} 07:15`, "19:00-19:15", "Dag", "1", "", "", "", "", "", "", "", "", ""];
+  const recurringMultiWindow: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Borsta tänderna", Emoji: "🦷", Tilldelad: SELF_LABEL,
+    Startdatum: `${today} 07:00`, Slutdatum: `${today} 07:15`, "Fler tidsrutor": "19:00-19:15",
+    Återkommer: "Dag", Intervall: "1"
+  };
   // 5) Återkommande med ett SLUTVILLKOR — antingen ett antal gånger (som
   //    här, "30") eller ett slutdatum (ÅÅÅÅ-MM-DD) i "Slutar"-kolumnen.
-  const recurringWithEnd =
-    ["Öva piano", "🎹", SELF_LABEL, "", "", "", "", `${today} 17:00`, `${today} 17:20`, "", "Dag", "1", "", "30", "", "", "", "", "", "", ""];
+  const recurringWithEnd: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Öva piano", Emoji: "🎹", Tilldelad: SELF_LABEL,
+    Startdatum: `${today} 17:00`, Slutdatum: `${today} 17:20`, Återkommer: "Dag", Intervall: "1",
+    Slutar: "30"
+  };
   // 6) Tidtagning — "Timer: Ja" + "Timer (min)" (1–480) ger barnet en
   //    nedräkning på uppdragskortet istället för en vanlig Starta/Klar-
   //    tidtagning. Fungerar för både engångs- och återkommande uppgifter
   //    (denna är ett engångsexempel, för att hålla raden enkel).
-  const withTimer =
-    ["Städa rummet", "🧹", SELF_LABEL, "Hushåll", "3", YES_LABEL, "25", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+  const withTimer: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Städa rummet", Emoji: "🧹", Tilldelad: SELF_LABEL, "Egen kategori": "Hushåll",
+    Stjärnor: "3", Timer: YES_LABEL, "Timer (min)": "25"
+  };
   // Radera (2026-08-04) — kräver ett riktigt Id från en tidigare export, en
   // helt ny rad utan Id kan aldrig raderas (det finns inget att matcha mot).
   // Den här exempelraden fungerar alltså bara som illustration i just mallen,
@@ -230,24 +287,30 @@ export function buildTemplateCsv(): string {
   // rad man redan hämtat via "Exportera mina uppgifter", med det Id:t kvar.
   // "Skapad"/"Ändrad" (2026-08-05) tomma i mallen — de finns bara på riktiga,
   // redan exporterade rader, en ny mall-rad har ingen historik än.
-  const deleteExample =
-    ["Gammal uppgift (exempel)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-x-från-en-export", "", "", "Ja", ""];
+  const deleteExample: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Gammal uppgift (exempel)", Id: "todo-x-från-en-export", Radera: "Ja"
+  };
   // 8) Familj (2026-08-06) — bara förekommande på RIKTIGA exporterade rader
   //    från "Andra familjer" (Mina familjekonton/Familjeanslutningar), ren
   //    information. En tom cell (som alla ovanstående exempel) betyder alltid
   //    ditt eget konto — det är det enda en NY rad du själv fyller i kan bli.
-  const otherFamilyExample =
-    ["Handla present (exempel, hör till en annan familj)", "🎁", FAMILY_LABEL, "", "", "", "", "", "", "", "", "", "", "", "", "Bara till information — importen läser aldrig denna kolumn.", "", "", "", "", "Familjen Andersson"];
+  const otherFamilyExample: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Handla present (exempel, hör till en annan familj)", Emoji: "🎁", Tilldelad: FAMILY_LABEL,
+    Anteckningar: "Bara till information — importen läser aldrig denna kolumn.",
+    Familj: "Familjen Andersson"
+  };
   return [
     toCsvRow([...TODO_CSV_HEADERS]),
-    toCsvRow(staysUntilDone),
-    toCsvRow(expiresAfterDeadline),
-    toCsvRow(recurringSimple),
-    toCsvRow(recurringMultiWindow),
-    toCsvRow(recurringWithEnd),
-    toCsvRow(withTimer),
-    toCsvRow(deleteExample),
-    toCsvRow(otherFamilyExample)
+    rowFromFields(staysUntilDone),
+    rowFromFields(expiresAfterDeadline),
+    rowFromFields(recurringSimple),
+    rowFromFields(recurringMultiWindow),
+    rowFromFields(recurringWithEnd),
+    rowFromFields(withTimer),
+    rowFromFields(deleteExample),
+    rowFromFields(otherFamilyExample)
   ].join("\r\n");
 }
 
@@ -417,38 +480,38 @@ function buildTodoCsvRow(
   // tidsrutor" bär resten.
   const firstWindow = todo.timeWindows?.[0];
   const end = todo.recurrence.type === "recurring" ? todo.recurrence.end : undefined;
-  return toCsvRow([
-    todo.title,
-    todo.visual.value,
-    assigneeLabel,
-    categoryName,
-    todo.starValue > 0 ? String(todo.starValue) : "",
-    todo.timerEnabled ? YES_LABEL : "",
-    todo.timerEnabled && todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : "",
+  return rowFromFields({
+    Titel: todo.title,
+    Emoji: todo.visual.value,
+    Tilldelad: assigneeLabel,
+    "Egen kategori": categoryName,
+    Stjärnor: todo.starValue > 0 ? String(todo.starValue) : "",
+    Timer: todo.timerEnabled ? YES_LABEL : "",
+    "Timer (min)": todo.timerEnabled && todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : "",
     // Lokala Date-getters (inte en rå ISO-sträng-slice, som läser UTC och
     // kan hamna en dag fel beroende på tidszon) — inkluderar nu klockslag,
     // inte bara datum (2026-07-05, Zaidas fynd).
-    isoToDateTimeDisplay(firstWindow ? firstWindow.visibleFrom : todo.visibleFrom),
-    isoToDateTimeDisplay(firstWindow ? firstWindow.expiresAt : todo.expiresAt),
-    formatExtraTimeWindows(todo.timeWindows),
-    unit,
-    every,
-    days,
-    formatRecurrenceEnd(end),
-    subtasksToCsv(todo.subtasks),
-    todo.notes ?? "",
-    todo.id,
+    Startdatum: isoToDateTimeDisplay(firstWindow ? firstWindow.visibleFrom : todo.visibleFrom),
+    Slutdatum: isoToDateTimeDisplay(firstWindow ? firstWindow.expiresAt : todo.expiresAt),
+    "Fler tidsrutor": formatExtraTimeWindows(todo.timeWindows),
+    Återkommer: unit,
+    Intervall: every,
+    Veckodagar: days,
+    Slutar: formatRecurrenceEnd(end),
+    Delmoment: subtasksToCsv(todo.subtasks),
+    Anteckningar: todo.notes ?? "",
+    Id: todo.id,
     // Serverstyrda, rent informativa (2026-08-05) — saknas de (redan
     // existerande, ej ommigrerade todos) blir cellen bara tom, ingen krasch.
-    isoToDateTimeDisplay(todo.createdAt ?? null),
-    isoToDateTimeDisplay(todo.updatedAt ?? null),
+    Skapad: isoToDateTimeDisplay(todo.createdAt ?? null),
+    Ändrad: isoToDateTimeDisplay(todo.updatedAt ?? null),
     // Aldrig förifylld vid export — en radering är alltid ett aktivt val
     // importören gör i kalkylarket efteråt, inte något exporten gissar.
-    "",
+    Radera: "",
     // Familj (2026-08-06) — tom för mina egna, kontonamnet för en rad från
     // "Andra familjer" (se TODO_CSV_HEADERS-kommentaren).
-    familyName
-  ]);
+    Familj: familyName
+  });
 }
 
 export function todosToCsv(

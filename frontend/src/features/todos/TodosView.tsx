@@ -308,7 +308,19 @@ export function TodosView({
             komponent, med olika mutationsmodeller — en fullständig
             sammanslagning till EN skrollbar lista är en större omskrivning,
             medvetet inte gjord denna gång). */}
-        <div className="todo-threads-row">
+        <div
+          className="todo-threads-row"
+          style={
+            {
+              // Samma reglage-värde som skickas ned till VARJE .todo-thread-
+              // view nedan (threadGap/todoThreadGap-props) — annars följer
+              // bara AVSTÅNDET INOM varje grupp reglaget, inte avståndet
+              // MELLAN mina egna trådar och en signad familjetråd
+              // (2026-08-09, Zaidas fynd).
+              ...(todoThreadGap != null ? { "--todo-thread-gap": `${todoThreadGap}px` } : {})
+            } as React.CSSProperties
+          }
+        >
         {todoViewMode === "thread" && canSeeTodos && (
           <ParentTodoThreadView
             todos={visibleTodos}

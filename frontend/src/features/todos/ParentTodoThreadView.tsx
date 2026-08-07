@@ -106,10 +106,6 @@ type Thread = {
   todos: Todo[];
   deletable: boolean;
   accentColor?: string;
-  // Bollarnas egen färgblandning (2026-08-09, Zaidas önskemål: "varje
-  // kategori som visas skall ha en egen blandning av färgerna från
-  // färgtema") — samma index som accentColor ovan, se ballAccentStyleForIndex.
-  ballAccent?: React.CSSProperties;
   // Distinkta mottagare bland trådens EGNA uppgifter (innan ett ev. eget
   // person-filter appliceras) — används för att bygga filtreringsmenyn och
   // för att avgöra om den ens ska visas (ingen mening att filtrera en tråd
@@ -134,31 +130,6 @@ export const THEME_ACCENT_COUNT = 8;
 
 export function accentColorForIndex(index: number): string {
   return `var(--c${index % THEME_ACCENT_COUNT})`;
-}
-
-// Varje kategoris bubblor får sin EGEN blandning av temats åtta färger
-// (2026-08-09, Zaidas önskemål: "varje kategori som visas skall ha en egen
-// blandning av färgerna från färgtema, utan att kontrasten till texten blir
-// för låg") — ett fönster av fem på varandra följande --cN-variabler
-// (fyra hörn + en bottenfärg), skiftat per kategoriindex så grannkategorier
-// aldrig ser identiska ut. `offset` (default 0) låter FamilyTodoThreads.tsx
-// ankra sina egna trådar i den ANDRA halvan av hjulet (samma "c4…c7 istället
-// för c0…c3"-princip som redan skiljde familjevyns bubblor från de
-// personliga sedan 2026-08-01), utan att duplicera formeln.
-// Bottenfärgen (--ball-base) späds alltid ut mot vitt i själva CSS-formeln
-// (.todo-thread__ball) — den kan annars rotera in på temats MÖRKARE kvartett
-// (c0…c3, avsiktligt valda för vit knapptext) som bottenfärg, vilket hade
-// kunnat bryta kontrasten mot bubblans alltid SVARTA titel.
-export function ballAccentStyleForIndex(index: number, offset = 0): React.CSSProperties {
-  const base = (index + offset) % THEME_ACCENT_COUNT;
-  const at = (step: number) => `var(--c${(base + step) % THEME_ACCENT_COUNT})`;
-  return {
-    "--ball-a": at(0),
-    "--ball-b": at(1),
-    "--ball-c": at(2),
-    "--ball-d": at(3),
-    "--ball-base": at(4)
-  } as React.CSSProperties;
 }
 
 export function computeProgress(todo: Todo): number | null {
@@ -634,7 +605,6 @@ export function ParentTodoThreadView({
           label: category.name,
           deletable: true,
           accentColor: accentColorForIndex(index),
-          ballAccent: ballAccentStyleForIndex(index),
           assignees: uniqueAssignees(categoryBaseTodos, members),
           todos: applyBubbleOrder(
             sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
@@ -1013,12 +983,7 @@ export function ParentTodoThreadView({
             (editingThreadId === thread.id ? " todo-thread--editing" : "")
           }
           aria-label={`Tråd: ${thread.label}`}
-          style={
-            {
-              ...(thread.accentColor ? { "--thread-accent": thread.accentColor } : {}),
-              ...(thread.ballAccent ?? {})
-            } as React.CSSProperties
-          }
+          style={thread.accentColor ? ({ "--thread-accent": thread.accentColor } as React.CSSProperties) : undefined}
         >
           <div className="todo-thread__header">
             {editingCategoryId === thread.id ? (
