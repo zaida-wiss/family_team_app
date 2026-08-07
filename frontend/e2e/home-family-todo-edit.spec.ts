@@ -42,7 +42,7 @@ test("Hem-vyns familjetrådar: redigera-modalens kategori-dropdown visar familje
   await page.getByRole("button", { name: /^Kvällsrutiner,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
 
-  const categorySelect = page.getByLabel("Kategori", { exact: true });
+  const categorySelect = page.getByLabel(/^Kategori/);
   await expect(categorySelect.getByRole("option", { name: "Rutiner" })).toBeAttached();
   await expect(categorySelect.getByRole("option", { name: "Skola" })).not.toBeAttached();
 });
@@ -58,12 +58,20 @@ test("Hem-vyns familjetrådar: byte av kategori i redigera-modalen sparas faktis
     id: "cat-family-fordon", accountId: "acc-1", memberId: "mem-1", name: "Fordon & Underhåll",
     isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
   };
+  // Kategori-dropdownen filtrerar bort TOMMA familjekategorier (TodoEditModal.
+  // tsx, samma princip som tråd-vyns "tomma kategorier göms") — en kategori
+  // utan någon "pending"-uppgift visas alltså inte i listan alls, om den inte
+  // redan är vald. En egen, orelaterad uppgift i Fordon & Underhåll krävs för
+  // att kunna VÄLJA den kategorin i det här testet.
+  const OTHER_FORDON_TODO = {
+    ...FAMILY_TODO, id: "todo-fordon-other", title: "Byt vinterdäck", personalCategoryId: "cat-family-fordon"
+  };
   let patchedBody: Record<string, unknown> | null = null;
 
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [FAMILY_CATEGORY, FORDON_CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [FAMILY_TODO] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [FAMILY_TODO, OTHER_FORDON_TODO] });
     return route.fulfill({ json: {} });
   });
   await page.route("**/api/todos/todo-kvall", (route) => {
@@ -78,7 +86,7 @@ test("Hem-vyns familjetrådar: byte av kategori i redigera-modalen sparas faktis
 
   await page.getByRole("button", { name: /^Kvällsrutiner,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
-  await page.getByLabel("Kategori", { exact: true }).selectOption({ label: "Fordon & Underhåll" });
+  await page.getByLabel(/^Kategori/).selectOption({ label: "Fordon & Underhåll" });
 
   await expect.poll(() => patchedBody?.personalCategoryId).toBe("cat-family-fordon");
 });
@@ -137,7 +145,7 @@ test("Hem-vyns familjetrådar: en nekad radering (ingen behörighet) visar ett t
   await expect(page.getByText(/Kunde inte radera/)).toBeVisible();
   expect(deleteCalled).toBe(false);
   // Modalen ska INTE ha stängts — redigeringsfältet är fortfarande synligt.
-  await expect(page.getByLabel("Kategori", { exact: true })).toBeVisible();
+  await expect(page.getByLabel(/^Kategori/)).toBeVisible();
 });
 
 // 2026-08-07, Zaidas fynd: "när jag ska uppdatera todon till kategori
@@ -166,7 +174,10 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE upp
     recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
-    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    // visibleFrom är ankardatumet för en återkommande mall — appen kräver ett
+    // riktigt startdatum (canSubmit/isStartDateMissing i TodoEditModal.tsx),
+    // en null-mall gör autospara helt tyst overksam (2026-08-08, CI-fynd).
+    rejectedReason: null, visibleFrom: "2026-01-01T00:00:00.000Z", expiresAt: null, deletedAt: null, deletedBy: null,
     personalCategoryId: "cat-family-rutiner", notes: null
   };
   const OCCURRENCE = {
@@ -174,13 +185,20 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE upp
     id: "todo-occurrence", recurringSourceId: "todo-template", occurrenceDate: todayKey,
     recurrence: { type: "none" }
   };
+  // Kategori-dropdownen filtrerar bort TOMMA familjekategorier (samma
+  // princip som tråd-vyns "tomma kategorier göms") — en egen, orelaterad
+  // uppgift i Fordon & Underhåll krävs för att kunna VÄLJA den här.
+  const OTHER_FORDON_TODO = {
+    ...TEMPLATE, id: "todo-fordon-other", title: "Byt vinterdäck",
+    personalCategoryId: "cat-family-fordon", recurrence: { type: "none" }
+  };
   let templatePatch: Record<string, unknown> | null = null;
   let occurrencePatch: Record<string, unknown> | null = null;
 
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [RUTINER_CATEGORY, FORDON_CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [TEMPLATE, OCCURRENCE] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [TEMPLATE, OCCURRENCE, OTHER_FORDON_TODO] });
     return route.fulfill({ json: {} });
   });
   await page.route("**/api/todos/todo-template", (route) => {
@@ -201,7 +219,7 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE upp
 
   await page.getByRole("button", { name: /^Städa bilen,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
-  await page.getByLabel("Kategori", { exact: true }).selectOption({ label: "Fordon & Underhåll" });
+  await page.getByLabel(/^Kategori/).selectOption({ label: "Fordon & Underhåll" });
   await page.locator(".todo-emoji-btn").click();
   await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
   await page.locator('button[title="Tandborste"]').click();
@@ -236,14 +254,26 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÄLDRE, ännu obe
   };
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+  // "unit:week" med alla veckodagar UTOM dagens (2026-08-08, CI-fynd) —
+  // en daglig mall (unit:"day") genererar automatiskt sin EGEN dagens-
+  // occurrence (klientsidig syncScheduledTodos), oberoende av OLD_OCCURRENCE
+  // nedan — testet fick då TVÅ bubblor med samma titel/emoji, en Playwright
+  // strict-mode-krock. Mallen behöver fortfarande vara "recurring" (testets
+  // syfte är just en återkommande uppgift), bara inte träffa just IDAG.
+  const WEEKDAY_ORDER = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const todayWeekday = WEEKDAY_ORDER[new Date().getDay()];
+  const otherWeekdays = WEEKDAY_ORDER.filter((d) => d !== todayWeekday);
   const TEMPLATE = {
     id: "todo-template", accountId: "acc-1", title: "Städa bilen", createdBy: "mem-1",
     assignedTo: null, isShared: false, status: "pending", starValue: 0,
     visual: { type: "lucide-icon", value: "🚗" },
-    recurrence: { type: "recurring", unit: "day", every: 1, daysOfWeek: null },
+    recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: otherWeekdays },
     recurringSourceId: null, occurrenceDate: null, completedAt: null,
     approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
-    rejectedReason: null, visibleFrom: null, expiresAt: null, deletedAt: null, deletedBy: null,
+    // visibleFrom är ankardatumet för en återkommande mall — appen kräver ett
+    // riktigt startdatum (canSubmit/isStartDateMissing i TodoEditModal.tsx),
+    // en null-mall gör autospara helt tyst overksam (2026-08-08, CI-fynd).
+    rejectedReason: null, visibleFrom: "2026-01-01T00:00:00.000Z", expiresAt: null, deletedAt: null, deletedBy: null,
     personalCategoryId: "cat-family-rutiner", notes: null
   };
   // Genererad IGÅR, fortfarande "pending" (aldrig avklarad/utgången) — inte
@@ -253,12 +283,18 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÄLDRE, ännu obe
     id: "todo-old-occurrence", recurringSourceId: "todo-template", occurrenceDate: yesterdayKey,
     recurrence: { type: "none" }
   };
+  // Kategori-dropdownen filtrerar bort TOMMA familjekategorier — en egen,
+  // orelaterad uppgift i Fordon & Underhåll krävs för att kunna VÄLJA den.
+  const OTHER_FORDON_TODO = {
+    ...TEMPLATE, id: "todo-fordon-other", title: "Byt vinterdäck",
+    personalCategoryId: "cat-family-fordon", recurrence: { type: "none" }
+  };
   let oldOccurrencePatch: Record<string, unknown> | null = null;
 
   await mockAuthAndData(page);
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [RUTINER_CATEGORY, FORDON_CATEGORY] }));
   await page.route("**/api/todos", (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ json: [TEMPLATE, OLD_OCCURRENCE] });
+    if (route.request().method() === "GET") return route.fulfill({ json: [TEMPLATE, OLD_OCCURRENCE, OTHER_FORDON_TODO] });
     return route.fulfill({ json: {} });
   });
   await page.route("**/api/todos/todo-template", (route) => route.fulfill({ json: { ok: true } }));
@@ -278,7 +314,7 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÄLDRE, ännu obe
 
   await page.getByRole("button", { name: /^Städa bilen,/ }).click();
   await page.getByRole("button", { name: "Redigera uppgift" }).click();
-  await page.getByLabel("Kategori", { exact: true }).selectOption({ label: "Fordon & Underhåll" });
+  await page.getByLabel(/^Kategori/).selectOption({ label: "Fordon & Underhåll" });
   await page.locator(".todo-emoji-btn").click();
   await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
   await page.locator('button[title="Tandborste"]').click();
