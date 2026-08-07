@@ -199,90 +199,100 @@ export function TodoDetailView({
           </div>
         </div>
 
-        <div className="todo-detail-modal__section">
-          <h4 className="todo-detail-modal__section-title">Delmoment</h4>
-          {subtasks.length > 0 ? (
-            <>
-              <div className="todo-detail-modal__progress">
-                <div
-                  className="todo-detail-modal__progress-bar"
-                  role="progressbar"
-                  aria-valuenow={progress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Andel avklarade delmoment"
-                >
-                  <div className="todo-detail-modal__progress-fill" style={{ width: `${progress}%` }} />
-                </div>
-                <span className="todo-detail-modal__progress-label">{progress}% klart</span>
-              </div>
-
-              <ul className="todo-detail-modal__checklist">
-                {sortSubtasksForDisplay(subtasks).map((subtask) => {
-                  const subtaskAssignee = members.find((m) => m.id === subtask.assignedTo);
-                  return (
-                    <li className="todo-detail-modal__checklist-item" key={subtask.id}>
-                      <input
-                        aria-label={subtaskAssignee ? `${subtask.title}, tilldelad ${subtaskAssignee.name}` : subtask.title}
-                        checked={subtask.done}
-                        onChange={() => onToggleSubtask(todo.id, subtask.id)}
-                        type="checkbox"
-                      />
-                      <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
-                        {subtask.title}
-                      </span>
-                      {subtask.done && subtask.timedMinutes != null && subtask.timerStartedAt && (
-                        <SubtaskCountdown timedMinutes={subtask.timedMinutes} timerStartedAt={subtask.timerStartedAt} />
-                      )}
-                      {subtaskAssignee && (
-                        <span
-                          aria-hidden="true"
-                          className="todo-detail-modal__checklist-item-assignee"
-                          // Fallback till --primary när medlemmen saknar egen
-                          // färg (samma fix som SubtaskAssigneeButton.tsx) —
-                          // annars nästan osynlig vit initial mot en ljus
-                          // var(--muted)-bakgrund.
-                          style={{ background: subtaskAssignee.color ?? "var(--primary)" }}
-                          title={subtaskAssignee.name}
-                        >
-                          {subtaskAssignee.name.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : (
-            <p className="todo-detail-modal__empty-hint">Inga delmoment ännu.</p>
-          )}
-        </div>
-
-        <div className="todo-detail-modal__body todo-detail-modal__body--view">
-          {(categoryName || schedule || recurrence) && (
-            <p className="todo-detail-modal__meta">
-              {[categoryName, schedule, recurrence].filter(Boolean).map((line, i, arr) => (
-                <Fragment key={line}>
-                  {line}
-                  {i < arr.length - 1 && <br />}
-                </Fragment>
-              ))}
-            </p>
-          )}
-
-          {todo.timerEnabled && todo.elapsedMs != null && (
-            <p className="todo-detail-modal__meta">Tog {formatElapsed(todo.elapsedMs)}</p>
-          )}
-
-          {todo.timerEnabled && todo.elapsedMs == null && <TodoTimerSection todo={todo} />}
-
+        {/* Delmoment + Anteckningar delar NU en enda scroll-yta (2026-08-09,
+            Zaidas rättelse: "hela listan skall synas först, även om man inte
+            ser anteckningar utan att skrolla först") — checklistan har inget
+            eget tak/scroll längre (se .todo-detail-modal__checklist), utan
+            renderas i sin FULLA längd; Anteckningar ligger direkt efter i
+            samma dokumentflöde. Är delmomenten fler än vad som får plats
+            skrollar man den GEMENSAMMA ytan (inte en liten inre listruta)
+            för att nå Anteckningar — är listan kort ryms allt utan skroll. */}
+        <div className="todo-detail-modal__scroll">
           <div className="todo-detail-modal__section">
-            <h4 className="todo-detail-modal__section-title">Anteckningar</h4>
-            {notesContent ? (
-              <p className="todo-detail-modal__notes">{notesContent}</p>
+            <h4 className="todo-detail-modal__section-title">Delmoment</h4>
+            {subtasks.length > 0 ? (
+              <>
+                <div className="todo-detail-modal__progress">
+                  <div
+                    className="todo-detail-modal__progress-bar"
+                    role="progressbar"
+                    aria-valuenow={progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Andel avklarade delmoment"
+                  >
+                    <div className="todo-detail-modal__progress-fill" style={{ width: `${progress}%` }} />
+                  </div>
+                  <span className="todo-detail-modal__progress-label">{progress}% klart</span>
+                </div>
+
+                <ul className="todo-detail-modal__checklist">
+                  {sortSubtasksForDisplay(subtasks).map((subtask) => {
+                    const subtaskAssignee = members.find((m) => m.id === subtask.assignedTo);
+                    return (
+                      <li className="todo-detail-modal__checklist-item" key={subtask.id}>
+                        <input
+                          aria-label={subtaskAssignee ? `${subtask.title}, tilldelad ${subtaskAssignee.name}` : subtask.title}
+                          checked={subtask.done}
+                          onChange={() => onToggleSubtask(todo.id, subtask.id)}
+                          type="checkbox"
+                        />
+                        <span className={subtask.done ? "todo-detail-modal__checklist-item-title--done" : ""}>
+                          {subtask.title}
+                        </span>
+                        {subtask.done && subtask.timedMinutes != null && subtask.timerStartedAt && (
+                          <SubtaskCountdown timedMinutes={subtask.timedMinutes} timerStartedAt={subtask.timerStartedAt} />
+                        )}
+                        {subtaskAssignee && (
+                          <span
+                            aria-hidden="true"
+                            className="todo-detail-modal__checklist-item-assignee"
+                            // Fallback till --primary när medlemmen saknar egen
+                            // färg (samma fix som SubtaskAssigneeButton.tsx) —
+                            // annars nästan osynlig vit initial mot en ljus
+                            // var(--muted)-bakgrund.
+                            style={{ background: subtaskAssignee.color ?? "var(--primary)" }}
+                            title={subtaskAssignee.name}
+                          >
+                            {subtaskAssignee.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             ) : (
-              <p className="todo-detail-modal__empty-hint">Inga anteckningar ännu.</p>
+              <p className="todo-detail-modal__empty-hint">Inga delmoment ännu.</p>
             )}
+          </div>
+
+          <div className="todo-detail-modal__body todo-detail-modal__body--view">
+            {(categoryName || schedule || recurrence) && (
+              <p className="todo-detail-modal__meta">
+                {[categoryName, schedule, recurrence].filter(Boolean).map((line, i, arr) => (
+                  <Fragment key={line}>
+                    {line}
+                    {i < arr.length - 1 && <br />}
+                  </Fragment>
+                ))}
+              </p>
+            )}
+
+            {todo.timerEnabled && todo.elapsedMs != null && (
+              <p className="todo-detail-modal__meta">Tog {formatElapsed(todo.elapsedMs)}</p>
+            )}
+
+            {todo.timerEnabled && todo.elapsedMs == null && <TodoTimerSection todo={todo} />}
+
+            <div className="todo-detail-modal__section">
+              <h4 className="todo-detail-modal__section-title">Anteckningar</h4>
+              {notesContent ? (
+                <p className="todo-detail-modal__notes">{notesContent}</p>
+              ) : (
+                <p className="todo-detail-modal__empty-hint">Inga anteckningar ännu.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

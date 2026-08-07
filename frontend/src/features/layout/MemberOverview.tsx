@@ -185,6 +185,21 @@ export function MemberOverview({
   const ownAccountId = currentMember.accountId;
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
   const [activeTab, setActiveTab] = useState<HomeTab>("calendar");
+  // Ökas vid VARJE flikklick, oavsett om fliken faktiskt bytte värde
+  // (2026-08-09, Zaidas önskemål, samma mönster som huvudnavets
+  // panelNavResetKey i useAppState.ts) — ett klick på en redan aktiv flik
+  // ändrar aldrig `activeTab`, så en enkel `key={effectiveTab}` på
+  // flikinnehållet remountar aldrig av sig själv. Den här räknaren är en
+  // TILLÄGGSDEL av samma key och tvingar fram en remount ändå, vilket
+  // stänger en öppen modal (t.ex. en todo-detaljvy i FamilyTodoThreads,
+  // eller ett kalenderhändelse-formulär i CalendarView) och nollställer
+  // fliken till sin grundvy.
+  const [tabResetKey, setTabResetKey] = useState(0);
+
+  function handleTabClick(tab: HomeTab) {
+    setActiveTab(tab);
+    setTabResetKey((k) => k + 1);
+  }
   const [newListName, setNewListName] = useState("");
   // "+"-knapp (ny familjekategori) + import/export-panel (2026-08-03) — se
   // Props-kommentaren ovan.
@@ -446,7 +461,7 @@ export function MemberOverview({
                 className={`${styles.tabButton} ${activeTab === key ? styles.tabButtonActive : ""}`}
                 id={`home-tab-${key}`}
                 key={key}
-                onClick={() => setActiveTab(key)}
+                onClick={() => handleTabClick(key)}
                 role="tab"
                 title={label}
                 type="button"
@@ -461,7 +476,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "calendar" && canSeeCalendar && (
-        <div aria-labelledby="home-tab-calendar" className={styles.calendarWrap} id="home-panel-calendar" role="tabpanel" tabIndex={0}>
+        <div aria-labelledby="home-tab-calendar" className={styles.calendarWrap} id="home-panel-calendar" key={`calendar-${tabResetKey}`} role="tabpanel" tabIndex={0}>
           <div className={styles.calendarToolbar}>
             <span className={styles.calendarLabel}>Familjens kalender</span>
           </div>
@@ -483,7 +498,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "todos" && canSeeTodos && (
-        <article aria-labelledby="home-tab-todos" className="dashboard" id="home-panel-todos" role="tabpanel" tabIndex={0}>
+        <article aria-labelledby="home-tab-todos" className="dashboard" id="home-panel-todos" key={`todos-${tabResetKey}`} role="tabpanel" tabIndex={0}>
           {/* "+" (ny familjekategori) + import/export (2026-08-03, sökruta/
               titel/väntar-antal/Öppna-knapp borttagna 2026-08-04, Zaidas
               önskemål: "lägg ikonerna... och knapparna... bredvid varandra.
@@ -654,7 +669,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "shopping" && canSeeShopping && (
-        <article aria-labelledby="home-tab-shopping" className="dashboard" id="home-panel-shopping" role="tabpanel" tabIndex={0}>
+        <article aria-labelledby="home-tab-shopping" className="dashboard" id="home-panel-shopping" key={`shopping-${tabResetKey}`} role="tabpanel" tabIndex={0}>
           <header className="section-header">
             <div><p className="eyebrow">Inköp</p><h2>{activeLists.length} listor</h2></div>
             {onOpenShopping && (
@@ -731,7 +746,7 @@ export function MemberOverview({
 
       {effectiveTab === "mealplan" && (
         isOwnFamilySelected ? (
-          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" role="tabpanel" tabIndex={0}>
+          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
             <header className="section-header">
               <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
             </header>
@@ -747,7 +762,7 @@ export function MemberOverview({
           // Todos-flikens signa-upp-gest. ALDRIG en Familjeanslutning (Zaidas
           // rättelse: "man måste först göra en familj med dessa familjer
           // som medlemmar").
-          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" role="tabpanel" tabIndex={0}>
+          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
             <header className="section-header">
               <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
             </header>
@@ -757,7 +772,7 @@ export function MemberOverview({
             />
           </article>
         ) : (
-          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" role="tabpanel" tabIndex={0}>
+          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
             <header className="section-header">
               <div><p className="eyebrow">Måltidsplanering</p><h2>Inte tillgängligt</h2></div>
             </header>

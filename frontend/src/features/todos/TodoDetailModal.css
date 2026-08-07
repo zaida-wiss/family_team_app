@@ -53,6 +53,25 @@
   overflow: hidden;
 }
 
+/* Delmoment + Anteckningar delar EN gemensam scroll-yta (2026-08-09, Zaidas
+   fynd: en stor tom yta stod tom mot navbaren när listan var kort — och
+   Zaidas efterföljande rättelse: "hela listan skall synas först, även om
+   man inte ser anteckningar utan att skrolla först"). Checklistan har
+   INGET eget tak/scroll (se .todo-detail-modal__checklist nedan) — den
+   renderas i sin fulla längd, Anteckningar direkt efter i samma
+   dokumentflöde. Denna yta tar allt utrymme modalen har kvar (flex:1) och
+   är den ENDA som scrollar: är delmomenten fler än vad som får plats
+   skrollar man hela ytan för att nå Anteckningar; är listan kort ryms allt
+   utan skroll, ingen tom yta kvar mot navbaren. Ingen media-query — gäller
+   alla skärmstorlekar. */
+.todo-detail-modal__scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .todo-detail-modal__hdr {
   display: flex;
   align-items: flex-start;
@@ -113,12 +132,12 @@
 .todo-detail-modal__checklist {
   list-style: none;
   margin: 0;
-  /* Så mycket av listan som möjligt synlig på en gång (2026-07-07, Zaidas
-     begäran) — höjt tak, kompenserat av tätare rader/mindre chrome runtom. */
+  /* Inget eget tak/scroll (2026-07-07: 280px-tak; 2026-08-09, Zaidas fynd/
+     rättelse: taket lämnade resterande modalhöjd tom OCH gömde delar av
+     listan bakom en egen liten scrollruta — listan renderas nu i sin FULLA
+     längd, den delade .todo-detail-modal__scroll ovanför är den enda som
+     scrollar om allt inte får plats. */
   padding: 4px 18px 4px;
-  flex-shrink: 0;
-  max-height: 280px;
-  overflow-y: auto;
 }
 
 .todo-detail-modal__checklist-item {
@@ -185,8 +204,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow-y: auto;
-  min-height: 0;
+  /* Ingen egen overflow/min-height längre (2026-08-09) — ligger nu som ett
+     flex-barn INUTI .todo-detail-modal__scroll (ovan), som ensam äger
+     scrollningen för hela Delmoment+Anteckningar-ytan. flex-shrink:0 håller
+     den vid sin naturliga innehållshöjd istället för att pressas ihop. */
+  flex-shrink: 0;
   border-top: 1px solid var(--border);
 }
 
@@ -263,6 +285,10 @@
 .todo-detail-modal__section {
   display: grid;
   gap: 6px;
+  /* Flex-barn i BÅDA sina kontexter (Delmoment direkt i .todo-detail-
+     modal__scroll, Anteckningar inuti .todo-detail-modal__body) — hindrar
+     grid-innehållet från att klämmas ihop oförutsägbart (2026-08-09). */
+  flex-shrink: 0;
 }
 
 .todo-detail-modal__section-title {

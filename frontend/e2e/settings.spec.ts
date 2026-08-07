@@ -57,8 +57,9 @@ test.describe("Inställningar", () => {
   // jag är på en gren inne i inställningar så skall jag komma tillbaka till
   // inställningsmenyn". activePanel byter inte värde (redan "settings"), så
   // ett naivt onClick={() => onNavigate("settings")} gjorde ingenting —
-  // fixat med en egen settingsNavResetKey-räknare (useAppState.ts) som
-  // tvingar SettingsContent att ommonteras vid VARJE klick på ikonen.
+  // fixat med en egen panelNavResetKey-räknare (useAppState.ts, generaliserad
+  // 2026-08-09 till alla nav-ikoner) som tvingar panelen att ommonteras vid
+  // VARJE klick på ikonen.
   test("klick på Inställningar-ikonen mitt i en underkategori går tillbaka till kategori-rutnätet", async ({ page }) => {
     await page.goto("/");
     await page.locator('button[title="Inställningar"]').click();

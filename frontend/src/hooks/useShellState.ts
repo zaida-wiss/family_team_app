@@ -32,7 +32,7 @@ export function useShellState(
     currentMember, activeMembers,
     selectedDashboardMemberId, setSelectedDashboardMemberId,
     themePickerMemberId, setThemePickerMemberId,
-    activePanel, setActivePanel, settingsNavResetKey, apiError
+    activePanel, setActivePanel, panelNavResetKey, apiError
   } = useAppState(activeMembership);
 
   const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, purgeTodo, approveTodo, rejectTodo,
@@ -481,7 +481,7 @@ export function useShellState(
     currentMember,
     activePanel,
     setActivePanel,
-    settingsNavResetKey,
+    panelNavResetKey,
     themePickerMember,
     handleThemeSelect,
     handleDarkModeToggle,

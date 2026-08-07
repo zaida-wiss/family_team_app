@@ -114,7 +114,7 @@ export function Shell({
     currentMember,
     activePanel,
     setActivePanel,
-    settingsNavResetKey,
+    panelNavResetKey,
     themePickerMember,
     handleThemeSelect,
     handleDarkModeToggle,
@@ -199,13 +199,14 @@ export function Shell({
       />
 
       <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>
-        {/* key={activePanel}-settingsNavResetKey — en krasch i en panel ska inte permanent
+        {/* key={activePanel}-panelNavResetKey — en krasch i en panel ska inte permanent
             låsa hela appen; navigerar man till en annan panel får felgränsen en ny chans
-            (ommonteras). settingsNavResetKey (2026-07-26) tvingar SAMMA ommontering även när
-            man klickar Inställningar-ikonen medan man redan står i Inställningar (activePanel
-            byter då inte värde och skulle annars inte trigga en remount) — Zaidas önskemål om
-            att alltid komma tillbaka till inställningsmenyns kategori-rutnät vid klick. */}
-        <ErrorBoundary key={`${activePanel}-${settingsNavResetKey}`}>
+            (ommonteras). panelNavResetKey (2026-07-26, generaliserad 2026-08-09 till alla
+            nav-ikoner) tvingar SAMMA ommontering även när man klickar en ikon för en panel
+            man redan står i (activePanel byter då inte värde och skulle annars inte trigga
+            en remount) — Zaidas önskemål om att alltid komma tillbaka till panelens
+            grundvy och stänga eventuella öppna modaler vid ett sådant klick. */}
+        <ErrorBoundary key={`${activePanel}-${panelNavResetKey}`}>
           <Suspense fallback={<p className="empty-note">Laddar...</p>}>
             <RewardShopContext.Provider value={shopSettings}>
               <PanelRouter
