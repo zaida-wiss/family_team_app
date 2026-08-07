@@ -177,6 +177,28 @@
   padding: 6px 2px;
   max-height: 70vh;
   overflow-y: auto;
+  /* Ytterst smalt, nästan osynligt scroll-reglage (2026-08-08, Zaidas
+     önskemål: "inget vitt i reglaget och inte som döljer bubblorna") —
+     ersätter webbläsarens breda, vita standard-scrollbar (skymde bubblorna,
+     se skärmdump). scrollbar-color/-width för Firefox, ::-webkit-scrollbar
+     nedan för Chrome/Safari/Edge. Ingen egen bakgrundsfärg på spåret (helt
+     transparent) — bara ett svagt färgad "handtag", en liten anings-diff
+     mot bakgrunden, aldrig en hårdkodad vit/ljus färg oavsett tema/läge. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+}
+
+.todo-thread::-webkit-scrollbar {
+  width: 4px;
+}
+
+.todo-thread::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.todo-thread::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--foreground) 22%, transparent);
+  border-radius: 4px;
 }
 
 /* Fast (sticky) rubrik (2026-07-08, Zaidas begäran) — kategorinamnet syns
