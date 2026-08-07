@@ -143,8 +143,12 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   // Ändrad — TODO-fixturen saknar createdAt/updatedAt (gammal mock utan de
   // nya fälten), blir alltså tomma celler precis som en ej ommigrerad todo.
   // 2026-08-06: en ny tom Familj-kolumn allra sist.
+  // 2026-08-09: kolumnordningen omkastad (Emoji/Titel/Egen kategori/Delmoment/
+  // Anteckningar/Stjärnor/Timer/Timer (min)/Startdatum/Slutdatum/Fler
+  // tidsrutor/Återkommer/Intervall/Veckodagar/Slutar/Familj/Tilldelad/Id/
+  // Skapad/Ändrad/Radera) — bara ordningen i arrayen nedan behövde ändras.
   expect(lines[1]).toBe(
-    ["Min uppgift", "Star", "Mig själv", "", "", "", "", "", "", "", "", "", "", "", "", "", "todo-1", "", "", "", ""].join(",")
+    ["Star", "Min uppgift", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Mig själv", "todo-1", "", "", ""].join(",")
   );
 });
 
@@ -204,9 +208,11 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
   // Ändrad — fixturen saknar createdAt/updatedAt, blir tomma celler. 2026-08-06:
   // en ny tom Familj-kolumn allra sist (tom för mina egna uppgifter, bara
   // ifylld för todos exporterade från en annan familj — se todosToCsv).
+  // 2026-08-09: kolumnordningen omkastad, se motsvarande kommentar i testet
+  // ovan — bara ordningen i arrayen nedan behövde ändras.
   expect(exportedCsv.split(/\r?\n/)[1]).toBe(
     [
-      "Träna", "Star", "Mig själv", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "", "todo-1", "", "", "", ""
+      "Star", "Träna", "", "", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "Mig själv", "todo-1", "", "", ""
     ].join(",")
   );
 
