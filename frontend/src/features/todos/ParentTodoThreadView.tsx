@@ -11,6 +11,7 @@ import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { isRecurringTemplate } from "./recurringTodos";
 import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
+import { clearTodoTimer, readTodoTimerStartedAt } from "./useTodoTimer";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -51,7 +52,10 @@ type Props = {
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
-  onCompleteTodo: (todoId: Id) => void;
+  // elapsedMs (2026-08-07) — timerfunktionen tillgänglig för alla uppgifter
+  // nu, se TodoTimerSection (TodoDetailView.tsx) och handleConfirmComplete
+  // nedan.
+  onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;
   onRemoveCategory: (id: Id) => void;
@@ -698,7 +702,17 @@ export function ParentTodoThreadView({
   function handleConfirmComplete(todo: Todo) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
-    onCompleteTodo(todo.id);
+    // En eventuell pågående timer (2026-08-07, se TodoTimerSection i
+    // TodoDetailView.tsx — startas där, avslutas här via den redan
+    // befintliga håll-in-gesten) räknas ut och skickas med, oavsett om
+    // uppgiften faktiskt hann öppnas via visa-vyn eller ej.
+    const startedAt = readTodoTimerStartedAt(todo.id);
+    if (startedAt !== null) {
+      clearTodoTimer(todo.id);
+      onCompleteTodo(todo.id, Date.now() - startedAt);
+    } else {
+      onCompleteTodo(todo.id);
+    }
     const timer = setTimeout(() => {
       setDissolving((current) => {
         const next = new Map(current);

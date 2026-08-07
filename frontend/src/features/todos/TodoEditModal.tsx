@@ -123,11 +123,10 @@ export function TodoEditModal({
       })),
       recurrence,
       starValue,
-      // Tidtagning (2026-08-06, Zaidas fynd: "mallen saknade timer-fält")
-      // — samma isForChild-spärr som fältet självt redan har (rad ~282).
-      timerEnabled: isForChild ? timerEnabled : false,
+      // Tidtagning, alla uppgifter (2026-08-07, var tidigare bara isForChild).
+      timerEnabled,
       plannedDurationMinutes:
-        isForChild && timerEnabled && plannedDurationMinutesInput
+        timerEnabled && plannedDurationMinutesInput
           ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
           : null
     }).then(() => {
@@ -324,9 +323,10 @@ export function TodoEditModal({
       personalCategoryId: !familyScope && isFamilyRecipient ? null : categoryId,
       assignedTo: resolvedAssignedTo,
       starValue: isChildRecipient ? starValue : 0,
-      timerEnabled: isChildRecipient ? timerEnabled : false,
+      // Timer, alla mottagare (2026-08-07, var tidigare bara barn).
+      timerEnabled,
       plannedDurationMinutes:
-        isChildRecipient && timerEnabled && plannedDurationMinutesInput
+        timerEnabled && plannedDurationMinutesInput
           ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
           : null,
       recurrence,
@@ -576,18 +576,18 @@ export function TodoEditModal({
             </label>
           )}
 
-          {isForChild && (
-            <label className="todo-timer-toggle">
-              <input
-                checked={timerEnabled}
-                onChange={(e) => setTimerEnabled(e.target.checked)}
-                type="checkbox"
-              />
-              Använd en timer för uppgiften
-            </label>
-          )}
+          {/* Timer, alla uppgifter (2026-08-07, var tidigare bara isForChild)
+              — se TodoCreatorModal.tsx:s motsvarande kommentar. */}
+          <label className="todo-timer-toggle">
+            <input
+              checked={timerEnabled}
+              onChange={(e) => setTimerEnabled(e.target.checked)}
+              type="checkbox"
+            />
+            Använd en timer för uppgiften
+          </label>
 
-          {isForChild && timerEnabled && (
+          {timerEnabled && (
             <label className="field-label">
               Planerad tid (minuter)
               <input
@@ -600,7 +600,7 @@ export function TodoEditModal({
                 value={plannedDurationMinutesInput}
               />
               <span className="field-hint field-hint--neutral">
-                Barnet dubbelklickar för att starta nedräkningen. Lämnas det tomt visas en vanlig tidtagning istället.
+                Visar en nedräkning där uppgiften används. Lämnas det tomt visas en vanlig tidtagning istället.
               </span>
             </label>
           )}

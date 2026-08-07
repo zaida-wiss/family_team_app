@@ -409,9 +409,10 @@ export function TodoCreatorModal({
           personalCategoryId: isFamilyRecipient ? null : categoryId,
           notes: notes.trim() || null,
           subtasks: cleanedSubtasks.map((s) => ({ ...s, id: generateId() })),
-          timerEnabled: isChildRecipient ? timerEnabled : false,
+          // Timer, alla mottagare (2026-08-07, var tidigare bara barn).
+          timerEnabled,
           plannedDurationMinutes:
-            isChildRecipient && timerEnabled && plannedDurationMinutesInput
+            timerEnabled && plannedDurationMinutesInput
               ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
               : null,
           elapsedMs: null
@@ -639,18 +640,21 @@ export function TodoCreatorModal({
                 </label>
               )}
 
-              {isForChild && (
-                <label className="todo-timer-toggle">
-                  <input
-                    checked={timerEnabled}
-                    onChange={(e) => setTimerEnabled(e.target.checked)}
-                    type="checkbox"
-                  />
-                  Använd en timer för uppgiften
-                </label>
-              )}
+              {/* Timer, alla uppgifter (2026-08-07, Zaidas önskemål — var
+                  tidigare bara isForChild). Barnets EGET uppdragskort startar
+                  timern med dubbelklick; övriga vyer (Todos-panelen/Hem-vyns
+                  familjetrådar) startar den istället via en knapp i visa-vyn,
+                  se TodoTimerSection i TodoDetailView.tsx. */}
+              <label className="todo-timer-toggle">
+                <input
+                  checked={timerEnabled}
+                  onChange={(e) => setTimerEnabled(e.target.checked)}
+                  type="checkbox"
+                />
+                Använd en timer för uppgiften
+              </label>
 
-              {isForChild && timerEnabled && (
+              {timerEnabled && (
                 <label className="field-label">
                   Planerad tid (minuter)
                   <input
@@ -663,8 +667,7 @@ export function TodoCreatorModal({
                     value={plannedDurationMinutesInput}
                   />
                   <span className="field-hint field-hint--neutral">
-                    Barnet dubbelklickar för att starta nedräkningen. Lämnas det tomt visas en vanlig tidtagning
-                    istället.
+                    Visar en nedräkning där uppgiften används. Lämnas det tomt visas en vanlig tidtagning istället.
                   </span>
                 </label>
               )}

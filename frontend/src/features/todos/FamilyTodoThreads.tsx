@@ -6,6 +6,7 @@ import { TodoDetailView } from "./TodoDetailView";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useNowTick } from "../../hooks/useNowTick";
 import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
+import { clearTodoTimer, readTodoTimerStartedAt } from "./useTodoTimer";
 import {
   applyBubbleOrder,
   assigneeColorFor,
@@ -46,7 +47,11 @@ export type FamilyThreadSource = {
   // onToggleInProgress osatt) = ingen signup-gest för den här tråden — t.ex.
   // en Familjeanslutning, där jag saknar en riktig identitet i målkontot.
   members: { id: Id; name: string; color: string | null }[];
-  onComplete: (todoId: Id) => void;
+  // elapsedMs (2026-08-07) — bara faktiskt använd av LOKALA källors
+  // onComplete (completeOwnFamilyTodo i MemberShellContent.tsx); cross-
+  // account/anslutna källors implementationer ignorerar tyst ett extra,
+  // oanvänt argument.
+  onComplete: (todoId: Id, elapsedMs?: number | null) => void;
   onToggleInProgress?: (todoId: Id, targetMemberId: Id) => void;
   onToggleSubtask?: (todoId: Id, subtaskId: Id) => void;
   onCreateTodo?: (title: string, visual: string | null) => void;
@@ -281,7 +286,17 @@ export function FamilyTodoThreads({
   function handleConfirmComplete(source: FamilyThreadSource, todo: Todo) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
-    source.onComplete(todo.id);
+    // En eventuell pågående timer (2026-08-07, se TodoTimerSection i
+    // TodoDetailView.tsx) — samma mönster som ParentTodoThreadView.tsx.
+    // Bara meningsfullt för LOKALA källor (cross-account/anslutna källors
+    // onComplete ignorerar redan tyst ett extra argument de inte förväntar).
+    const startedAt = readTodoTimerStartedAt(todo.id);
+    if (startedAt !== null) {
+      clearTodoTimer(todo.id);
+      source.onComplete(todo.id, Date.now() - startedAt);
+    } else {
+      source.onComplete(todo.id);
+    }
     const timer = setTimeout(() => {
       setDissolving((current) => {
         const next = new Map(current);

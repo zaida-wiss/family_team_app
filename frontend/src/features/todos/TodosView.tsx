@@ -54,7 +54,9 @@ type Props = {
   onToggleTodoInProgress: (todoId: Id, targetMemberId: Id) => void;
   onUpdateTodo: (todoId: Id, patch: Partial<Todo>) => void;
   onRefreshRoutine: (routineId: Id) => void;
-  onCompleteTodo: (todoId: Id) => void;
+  // elapsedMs (2026-08-07) — timerfunktionen (ADR-0018) tillgänglig för alla
+  // uppgifter nu, inte bara barn-tilldelade (se ParentTodoThreadView.tsx).
+  onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
   personalCategories: TodoCategory[];
   onCreateCategory: (name: string) => Promise<TodoCategory>;
   onRenameCategory: (id: Id, name: string) => void;

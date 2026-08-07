@@ -184,6 +184,47 @@
   line-height: 1.5;
 }
 
+/* Timerkontroll för en ännu ej avklarad uppgift (2026-08-07), se
+   TodoTimerSection i TodoDetailView.tsx — timern gäller nu alla uppgifter,
+   inte bara barn-tilldelade. */
+.todo-detail-modal__timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.todo-detail-modal__timer span {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.todo-detail-modal__timer-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.todo-detail-modal__timer-reset {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
 /* Anteckningar/Delmoment visas alltid med egen rubrik i visa-vyn (2026-07-06,
    Zaidas begäran) — även när tomma, med en tydlig platshållartext, istället
    för att sektionerna bara försvinner helt när det inte finns något ännu. */

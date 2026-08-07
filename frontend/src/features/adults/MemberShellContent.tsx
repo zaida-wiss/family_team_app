@@ -297,10 +297,10 @@ export function MemberShellContent({
   // tråd hör till). Egen resolveringslogik för mitt eget kontos onComplete,
   // samma som TodosView.tsx:s onCompleteTodo-closure ovan (assignee = jag
   // själv om otilldelad, annars den faktiskt tilldelade vuxna).
-  function completeOwnFamilyTodo(todoId: Id) {
+  function completeOwnFamilyTodo(todoId: Id, elapsedMs?: number | null) {
     const todo = todos.find((t) => t.id === todoId);
     const assignee = todo?.assignedTo === null ? currentMember : members.find((m) => m.id === todo?.assignedTo);
-    if (assignee) onCompleteTodo(assignee, todoId, roles);
+    if (assignee) onCompleteTodo(assignee, todoId, roles, elapsedMs);
   }
 
   const homeFamilyThreadSources = useMemo(() => {
@@ -773,7 +773,7 @@ export function MemberShellContent({
           onToggleTodoInProgress={onToggleTodoInProgress}
           onUpdateTodo={onUpdateTodo}
           onRefreshRoutine={onRefreshRoutine}
-          onCompleteTodo={(todoId) => {
+          onCompleteTodo={(todoId, elapsedMs) => {
             // Långtryck i "bollar i tråd" (Sprint 6 S4) markerar en todo klar på ett
             // barns vägnar. Samma etablerade mönster som ChildDashboards onCompleteTodo
             // nedan: skickar med den TILLDELADE medlemmen (inte den inloggade föräldern)
@@ -786,7 +786,7 @@ export function MemberShellContent({
             // duger här).
             const todo = todos.find((t) => t.id === todoId);
             const assignee = todo?.assignedTo === null ? currentMember : members.find((m) => m.id === todo?.assignedTo);
-            if (assignee) onCompleteTodo(assignee, todoId, roles);
+            if (assignee) onCompleteTodo(assignee, todoId, roles, elapsedMs);
           }}
           personalCategories={personalCategories}
           onCreateCategory={onCreateCategory}
