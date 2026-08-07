@@ -207,3 +207,36 @@ test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning,
   expect(sentElapsedMs).not.toBeNull();
   expect(sentElapsedMs as number).toBeGreaterThan(1800);
 });
+
+// 2026-08-08, Zaidas fynd: "om man trycker på uppdragskortet i barnvyn 3 ggr
+// när timern redan är igång nollställs den" — trippel-tryck-gesten anropade
+// tidigare alltid startTodoTimer() oavsett om en timer redan pågick, vilket
+// skrev över den befintliga starttiden med en NY Date.now(). Verifierar att
+// ett andra trippel-tryck MEDAN timern redan går INTE hoppar tillbaka till
+// startvärdet.
+test("Barnets uppgifter: ett andra trippel-tryck medan timern redan går startar INTE om den", async ({ page }) => {
+  await mockChildSession(page);
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [COUNTDOWN_TODO] }));
+
+  await page.goto("/");
+  const card = page.getByRole("button", { name: /Plocka undan leksaker/ });
+  await expect(card).toBeVisible();
+
+  await card.click({ clickCount: 3 });
+  await expect(card).toHaveAccessibleName(/0:5\d kvar|1:00 kvar/);
+
+  // Låt nedräkningen hinna gå en bit (minst någon sekund), så en felaktig
+  // omstart (tillbaka till 1:00) blir mätbart skild från "fortsätter räkna ner".
+  await page.waitForTimeout(2200);
+  const beforeSecondTriple = await card.getAttribute("aria-label");
+  const secondsBefore = Number(beforeSecondTriple?.match(/(\d+):(\d+)/)?.[2] ?? "60");
+
+  await card.click({ clickCount: 3 });
+  await page.waitForTimeout(300);
+  const afterSecondTriple = await card.getAttribute("aria-label");
+  const secondsAfter = Number(afterSecondTriple?.match(/(\d+):(\d+)/)?.[2] ?? "60");
+
+  // Om timern felaktigt startats om skulle "kvar"-tiden ha hoppat TILLBAKA
+  // uppåt (närmare 1:00) — den ska istället fortsätta vara samma eller lägre.
+  expect(secondsAfter).toBeLessThanOrEqual(secondsBefore);
+});

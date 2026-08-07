@@ -282,9 +282,13 @@ export function FamilyTodoThreads({
     }
 
     if (count >= 3) {
-      // Tre snabba tryck (2026-08-08) startar timern.
+      // Tre snabba tryck (2026-08-08) startar timern. En redan PÅGÅENDE
+      // timer ska inte startas om (2026-08-08, Zaidas fynd: "trycker man 3
+      // ggr när timern redan är igång nollställs den").
       lastTapRef.current = null;
-      if (todo.timerEnabled) startTodoTimer(todo.id);
+      if (todo.timerEnabled && readTodoTimerStartedAt(todo.id, timerCapMinutes(todo)) === null) {
+        startTodoTimer(todo.id);
+      }
       return;
     }
 

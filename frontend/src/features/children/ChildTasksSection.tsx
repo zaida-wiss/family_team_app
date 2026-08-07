@@ -190,6 +190,10 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
       suppressClickRef.current = false;
       return;
     }
+    // En redan PÅGÅENDE timer ska inte startas om av ett nytt trippel-tryck
+    // (2026-08-08, Zaidas fynd: "trycker man 3 ggr när timern redan är igång
+    // nollställs den") — no-op, ingen räkning görs ens.
+    if (startedAt !== null) return;
     tapCountRef.current += 1;
     if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
     if (tapCountRef.current >= 3) {
