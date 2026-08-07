@@ -14,10 +14,11 @@
 }
 
 @media (max-width: 1023px) {
-  /* 124px — se samma kommentar i TodoDetailModal.css (HeroBar 64px + Hem-
-     vyns .controlRow ~60px, staplade på mobil). */
+  /* --modal-bottom-reserve — se samma kommentar i TodoDetailModal.css
+     (2026-08-09-fixet: reserverar bara Hem-vyns .controlRow när den
+     faktiskt finns, annars bara HeroBar). */
   .todo-creator-overlay {
-    bottom: calc(124px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
   }
 }
 

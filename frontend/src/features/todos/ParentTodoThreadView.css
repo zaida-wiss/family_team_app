@@ -820,10 +820,15 @@
    (2026-08-07, Zaidas fynd) — dessa mindre modaler (Återanvänd/Filtrera/
    Statistik/Dela kategori/Info) är oftast korta nog att aldrig nå ner till
    navbaren, men en lång medlemslista i Filtrera-modalen kan göra det på en
-   kort mobilskärm — samma 124px-reservering ändå, för säkerhets skull. */
+   kort mobilskärm. --modal-bottom-reserve, inte ett hårdkodat 124px
+   (2026-08-09-fixet i TodoDetailModal.css) — ParentTodoThreadView.tsx (den
+   enda som renderar den här overlayn) öppnas aldrig från Hem-vyn, så
+   variabeln faller alltid tillbaka på 64px (bara HeroBar) här, men delar
+   samma formel/variabel som resten av modalerna istället för ett eget,
+   separat hårdkodat tal. */
 @media (max-width: 1023px) {
   .todo-thread-view__reuse-overlay {
-    padding: 10px 8px calc(124px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 8px calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
     align-items: flex-start;
   }
 }

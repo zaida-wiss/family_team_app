@@ -1115,6 +1115,20 @@
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
 }
 
+/* --modal-bottom-reserve (2026-08-09, samma fynd/fix som TodoDetailModal.css)
+   — ThemePicker öppnas via HeroBar:s egen knapp, oberoende av aktiv panel,
+   och kan alltså öppnas medan man står på Hem (där MemberOverview.tsx:s
+   .controlRow lägger en andra fast rad ovanpå HeroBar). Det hårdkodade
+   80px (64px navbar + 16px marginal) ovan räknade aldrig med den — pickern
+   kunde hamna delvis bakom/överlappande familjeraden. Bara mobil (samma
+   1023px-brytpunkt som övriga modaler) — desktop har ingen fast bottenrad
+   att undvika, .controlRow är där bara sticky:top, inte fixed:bottom. */
+@media (max-width: 1023px) {
+  .theme-picker {
+    bottom: calc(var(--modal-bottom-reserve, 64px) + 16px);
+  }
+}
+
 .theme-picker-inline {
   width: 100%;
   background: var(--card);

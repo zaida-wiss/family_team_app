@@ -397,7 +397,27 @@ export function MemberOverview({
   );
 
   return (
-    <div className={styles.home}>
+    <div
+      className={styles.home}
+      // --modal-bottom-reserve (2026-08-09, Zaidas fynd: "när jag är inne på
+      // min egen todo och familjebaren inte finns så skall modalen fylla
+      // skärmen hela vägen ner till första navbaren") — uppgiftsmodalerna
+      // (TodoDetailModal.css/TodoCreatorModal.css/ParentTodoThreadView.css:s
+      // reuse-overlay) reserverade tidigare ALLTID 124px under sig på mobil
+      // (HeroBar 64px + Hem-vyns egen .controlRow ~60px, staplade), oavsett
+      // om .controlRow faktiskt fanns i vyn eller inte — samma delade
+      // CSS-klasser används av modaler öppnade från BÅDE Hem (där raden
+      // finns) och den personliga Todos-panelen/Inställningar (där den
+      // aldrig gör det), och en ren CSS-media-query kan inte se om en
+      // fixed-positionerad rad råkar finnas i DOM:en. Löst genom att bara
+      // Hem-vyn (och bara när dess egen controlRow faktiskt RENDERAS, se
+      // enableTabs nedan) sätter en CSS-variabel på sin rot — modalerna är
+      // vanliga (icke-porterade) DOM-barn till den här komponenten när de
+      // öppnas härifrån, så variabeln ärvs ner till dem via vanlig CSS-
+      // cascade. Ingen variabel satt (TodosView.tsx/Inställningar m.fl.) ger
+      // CSS:ns egna, mindre default (64px) — HeroBar ensam.
+      style={enableTabs ? ({ "--modal-bottom-reserve": "124px" } as React.CSSProperties) : undefined}
+    >
       {enableTabs ? (
         <div className={styles.controlRow}>
           {showFamilyFilter && (

@@ -20,14 +20,18 @@
 }
 
 @media (max-width: 1023px) {
-  /* 124px, inte bara HeroBar (64px) ensamt — modalen kan öppnas från
-     Hem-vyns familjetrådar, där MemberOverview.module.css:s .controlRow
-     lägger en ANDRA fast rad (~60px) ovanpå HeroBar på mobil. Samma
-     kombinerade mått som den tidigare stora padding-reservationen redan
-     räknade ut (2026-08-07), bara uttryckt som var overlayn SLUTAR nu
-     istället för hur mycket luft den lägger runt en mindre modal. */
+  /* --modal-bottom-reserve (2026-08-09, Zaidas fynd: "när jag är inne på min
+     egen todo och familjebaren inte finns så skall modalen fylla skärmen
+     hela vägen ner till första navbaren") — 124px (HeroBar 64px + Hem-vyns
+     .controlRow ~60px) var tidigare ALLTID reserverat, oavsett om modalen
+     öppnades från Hem (där raden finns) eller den personliga Todos-panelen/
+     Inställningar (där den aldrig gör det) — samma delade klass används av
+     båda. MemberOverview.tsx sätter nu variabeln på sin rot bara när dess
+     egen controlRow faktiskt renderas; modalen ärver den via vanlig CSS-
+     cascade (ingen React-portal i vägen) — annars faller den tillbaka på
+     bara HeroBar (64px). */
   .todo-detail-overlay {
-    bottom: calc(124px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
   }
 }
 

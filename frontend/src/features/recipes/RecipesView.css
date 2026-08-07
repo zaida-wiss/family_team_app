@@ -113,8 +113,15 @@
 }
 
 @media (max-width: 1023px) {
+  /* --modal-bottom-reserve, inte ett hårdkodat 64px (2026-08-09) — samma
+     delade variabel som övriga fullskärmsmodaler nu använder (se
+     TodoDetailModal.css). Receptmodalerna öppnas idag aldrig från Hem-vyn
+     (dit går bara ett läsbart recept-urval, ConnectionRecipesSection),
+     faller alltså alltid tillbaka på 64px precis som förut — men delar nu
+     samma formel istället för ett eget separat hårdkodat tal, ifall det
+     ändras. */
   .recipe-modal-overlay {
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
   }
 }
 
