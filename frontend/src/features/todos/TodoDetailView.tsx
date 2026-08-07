@@ -103,12 +103,18 @@ function TodoTimerSection({ todo }: { todo: Todo }) {
 
   let liveLabel: string | null = null;
   if (isRunning) {
+    // Golvat på 0 (2026-08-08, Zaidas önskemål: "Timern skall inte starta
+    // på minus") — now (denna komponents egen 1s-tickande klocka) kan ligga
+    // strax FÖRE startedAt (satt till Date.now() exakt när knappen trycktes,
+    // mitt emellan två tick) tills nästa tick hinner ikapp, annars visas ett
+    // kort negativt värde precis vid start.
+    const elapsedMs = Math.max(0, now - startedAt);
     if (isCountdown) {
       const totalMs = (todo.plannedDurationMinutes as number) * 60_000;
-      const remainingMs = Math.max(0, totalMs - (now - startedAt));
+      const remainingMs = Math.max(0, totalMs - elapsedMs);
       liveLabel = `${formatElapsed(remainingMs)} kvar`;
     } else {
-      liveLabel = formatElapsed(now - startedAt);
+      liveLabel = formatElapsed(elapsedMs);
     }
   }
 

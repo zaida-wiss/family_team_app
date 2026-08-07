@@ -1229,27 +1229,57 @@ export async function purgeTodo(id: string, accountId: string, memberId: string 
 // Föräldravyn med delmoment (Sprint 6 S1) — bockar av/på ett enskilt delmoment,
 // oberoende av complete/approve/reject-flödet. Lika vikt, ingen viktning (se
 // discussions/2026-07-04-designspike-medaljer-och-foraldravy.md).
+//
+// Atomisk toggle (2026-08-08, Zaidas fynd: "jag hinner kryssa i två rutor,
+// sedan stängs modalen och öppnas igen med alla delmomenten ogjorda") —
+// grundorsaken var INTE en klientsidig sync-bugg (se pendingMutationIds-
+// fixen i useTodosState.ts samma dag, som löste ett ANNAT, mindre bidragande
+// race men inte huvudproblemet) utan en klassisk read-modify-write-race HÄR:
+// findOne() → mutera ETT delmoment i JS-minnet → .save() (med
+// markModified("subtasks"), vilket skriver HELA subtasks-arrayen). Kryssar
+// man i två OLIKA delmoment snabbt efter varandra hinner båda requesterna
+// göra sin egen findOne() INNAN någonderas save() committat — den SENARE
+// sparningen skriver då över HELA arrayen med sin egen, redan INAKTUELLA
+// kopia och tystar bort den FÖRRA ändringen (även om den redan var
+// persisterad). En riktig databas-race, inte något en klientsidig fix kunde
+// lösa. Löst med updateOne + positionsoperatorn ($, via $elemMatch) — rör
+// bara DET MATCHADE delmomentets EGNA fält, aldrig hela arrayen, så två
+// samtidiga anrop mot OLIKA delmoment kan aldrig clobbra varandra. matchCount
+// === 0 (två samtidiga anrop mot SAMMA delmoment) hanteras med en kort
+// omläsning-och-försök-igen-loop (optimistisk concurrency, standardmönster).
 export async function toggleSubtask(id: string, accountId: string, subtaskId: string) {
-  const todo = await TodoModel.findOne({ id, accountId });
-  if (!todo) {
-    throw new AppError(404, "Todo hittades inte");
+  const MAX_ATTEMPTS = 5;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const todo = await TodoModel.findOne({ id, accountId }, { _id: 0, subtasks: 1 }).lean();
+    if (!todo) {
+      throw new AppError(404, "Todo hittades inte");
+    }
+    const subtask = todo.subtasks?.find((s) => s.id === subtaskId);
+    if (!subtask) {
+      throw new AppError(404, "Delmoment hittades inte");
+    }
+
+    const nextDone = !subtask.done;
+    // Recept-integration (2026-07-25, ADR-0028) — ett tidsstyrt delmoment
+    // (t.ex. "sätt in i ugnen, 25 min") startar sin nedräkning automatiskt
+    // här, samma stund det bockas av. Klienten mäter/visar (samma princip
+    // som ADR-0018), servern bara stämplar start-/nollställningstiden.
+    const nextTimerStartedAt =
+      subtask.timedMinutes != null ? (nextDone ? new Date().toISOString() : null) : subtask.timerStartedAt ?? null;
+
+    const result = await TodoModel.updateOne(
+      { id, accountId, subtasks: { $elemMatch: { id: subtaskId, done: subtask.done } } },
+      { $set: { "subtasks.$.done": nextDone, "subtasks.$.timerStartedAt": nextTimerStartedAt } }
+    );
+
+    if (result.matchedCount > 0) {
+      broadcastTodosChanged();
+      return { done: nextDone, timerStartedAt: nextTimerStartedAt };
+    }
+    // Ingen träff — done-värdet hann ändras av ett annat samtidigt anrop
+    // mellan vår läsning och skrivning. Läs om och försök igen.
   }
-  const subtask = todo.subtasks?.find((s) => s.id === subtaskId);
-  if (!subtask) {
-    throw new AppError(404, "Delmoment hittades inte");
-  }
-  subtask.done = !subtask.done;
-  // Recept-integration (2026-07-25, ADR-0028) — ett tidsstyrt delmoment
-  // (t.ex. "sätt in i ugnen, 25 min") startar sin nedräkning automatiskt
-  // här, samma stund det bockas av. Klienten mäter/visar (samma princip
-  // som ADR-0018), servern bara stämplar start-/nollställningstiden.
-  if (subtask.timedMinutes != null) {
-    subtask.timerStartedAt = subtask.done ? new Date().toISOString() : null;
-  }
-  todo.markModified("subtasks");
-  await todo.save();
-  broadcastTodosChanged();
-  return { done: subtask.done, timerStartedAt: subtask.timerStartedAt ?? null };
+  throw new AppError(409, "Kunde inte uppdatera delmomentet just nu, försök igen");
 }
 
 // Automatisk mjuk-radering av gamla, avslutade återkommande OCCURRENCES

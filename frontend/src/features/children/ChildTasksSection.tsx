@@ -221,7 +221,12 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   if (isCountdown) {
     const isHeld = timerHeldId === todo.id;
     const totalMs = (todo.plannedDurationMinutes as number) * 60000;
-    const remainingMs = isRunning ? Math.max(0, totalMs - (timerNow - startedAt)) : totalMs;
+    // Golvat på 0 (2026-08-08, Zaidas önskemål: "Timern skall inte starta på
+    // minus") — timerNow (förälderns 1s-tickande klocka) kan ligga strax
+    // FÖRE startedAt (satt till Date.now() exakt vid start) tills nästa tick
+    // hinner ikapp.
+    const elapsedMs = isRunning ? Math.max(0, timerNow - startedAt) : 0;
+    const remainingMs = isRunning ? Math.max(0, totalMs - elapsedMs) : totalMs;
     return (
       <div
         className={[
@@ -291,7 +296,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
       {starBadge}
       {isRunning && (
         <span aria-live="polite" className="child-task-timer-digital">
-          {formatElapsed(timerNow - startedAt)}
+          {formatElapsed(Math.max(0, timerNow - startedAt))}
         </span>
       )}
       <button
