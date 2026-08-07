@@ -106,6 +106,10 @@ type Thread = {
   todos: Todo[];
   deletable: boolean;
   accentColor?: string;
+  // Bollarnas egen färgblandning (2026-08-09, Zaidas önskemål: "varje
+  // kategori som visas skall ha en egen blandning av färgerna från
+  // färgtema") — samma index som accentColor ovan, se ballAccentStyleForIndex.
+  ballAccent?: React.CSSProperties;
   // Distinkta mottagare bland trådens EGNA uppgifter (innan ett ev. eget
   // person-filter appliceras) — används för att bygga filtreringsmenyn och
   // för att avgöra om den ens ska visas (ingen mening att filtrera en tråd
@@ -126,10 +130,35 @@ type Thread = {
 // TEMAT (2026-07-05, Zaidas beslut) — cyklar genom temats åtta redan
 // definierade accentvariabler (--c0…--c7, se themes.css) istället för att
 // hårdkoda egna hex-färger. Byter man tema byts kategorifärgerna med.
-const THEME_ACCENT_COUNT = 8;
+export const THEME_ACCENT_COUNT = 8;
 
-function accentColorForIndex(index: number): string {
+export function accentColorForIndex(index: number): string {
   return `var(--c${index % THEME_ACCENT_COUNT})`;
+}
+
+// Varje kategoris bubblor får sin EGEN blandning av temats åtta färger
+// (2026-08-09, Zaidas önskemål: "varje kategori som visas skall ha en egen
+// blandning av färgerna från färgtema, utan att kontrasten till texten blir
+// för låg") — ett fönster av fem på varandra följande --cN-variabler
+// (fyra hörn + en bottenfärg), skiftat per kategoriindex så grannkategorier
+// aldrig ser identiska ut. `offset` (default 0) låter FamilyTodoThreads.tsx
+// ankra sina egna trådar i den ANDRA halvan av hjulet (samma "c4…c7 istället
+// för c0…c3"-princip som redan skiljde familjevyns bubblor från de
+// personliga sedan 2026-08-01), utan att duplicera formeln.
+// Bottenfärgen (--ball-base) späds alltid ut mot vitt i själva CSS-formeln
+// (.todo-thread__ball) — den kan annars rotera in på temats MÖRKARE kvartett
+// (c0…c3, avsiktligt valda för vit knapptext) som bottenfärg, vilket hade
+// kunnat bryta kontrasten mot bubblans alltid SVARTA titel.
+export function ballAccentStyleForIndex(index: number, offset = 0): React.CSSProperties {
+  const base = (index + offset) % THEME_ACCENT_COUNT;
+  const at = (step: number) => `var(--c${(base + step) % THEME_ACCENT_COUNT})`;
+  return {
+    "--ball-a": at(0),
+    "--ball-b": at(1),
+    "--ball-c": at(2),
+    "--ball-d": at(3),
+    "--ball-base": at(4)
+  } as React.CSSProperties;
 }
 
 export function computeProgress(todo: Todo): number | null {
@@ -605,6 +634,7 @@ export function ParentTodoThreadView({
           label: category.name,
           deletable: true,
           accentColor: accentColorForIndex(index),
+          ballAccent: ballAccentStyleForIndex(index),
           assignees: uniqueAssignees(categoryBaseTodos, members),
           todos: applyBubbleOrder(
             sortByEndThenStartTime(applyAssigneeFilter(category.id, categoryBaseTodos)),
@@ -983,7 +1013,12 @@ export function ParentTodoThreadView({
             (editingThreadId === thread.id ? " todo-thread--editing" : "")
           }
           aria-label={`Tråd: ${thread.label}`}
-          style={thread.accentColor ? ({ "--thread-accent": thread.accentColor } as React.CSSProperties) : undefined}
+          style={
+            {
+              ...(thread.accentColor ? { "--thread-accent": thread.accentColor } : {}),
+              ...(thread.ballAccent ?? {})
+            } as React.CSSProperties
+          }
         >
           <div className="todo-thread__header">
             {editingCategoryId === thread.id ? (
@@ -1030,18 +1065,29 @@ export function ParentTodoThreadView({
                 tidigare procenttext längst ner i kolumnen som lätt missades).
                 null = inga uppgifter i perioden alls, visar då ingen stapel
                 istället för en missvisande tom/full stapel. */}
-            {thread.completedPercent !== null && (
-              <div
-                aria-label={`${thread.completedPercent}% avklarat`}
-                aria-valuemax={100}
-                aria-valuemin={0}
-                aria-valuenow={thread.completedPercent}
-                className="todo-thread__progress-track"
-                role="progressbar"
-              >
-                <div className="todo-thread__progress-fill" style={{ width: `${thread.completedPercent}%` }} />
-              </div>
-            )}
+            {/* Alltid renderad, oavsett om thread.completedPercent finns
+                (2026-08-09, Zaidas fynd: "kategorierna skall vara i samma
+                höjd") — annars blev en kolumns rubrik kortare för en tom
+                kategori (ingen stapel alls) än en med data, vilket lät
+                bollarna starta på olika höjd sida vid sida. Osynlig
+                (--empty) men lika hög istället för helt borttagen. */}
+            <div
+              {...(thread.completedPercent !== null
+                ? {
+                    "aria-label": `${thread.completedPercent}% avklarat`,
+                    "aria-valuemax": 100,
+                    "aria-valuemin": 0,
+                    "aria-valuenow": thread.completedPercent,
+                    role: "progressbar"
+                  }
+                : {})}
+              className={
+                "todo-thread__progress-track" +
+                (thread.completedPercent === null ? " todo-thread__progress-track--empty" : "")
+              }
+            >
+              <div className="todo-thread__progress-fill" style={{ width: `${thread.completedPercent ?? 0}%` }} />
+            </div>
 
             {/* Den gemensamma Barn-tråden är varken döpbar/raderbar/nedladdningsbar
                 (ingen riktig TodoCategory-post) — bara "Lägg till uppgift" (utan

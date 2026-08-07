@@ -240,6 +240,15 @@
   transition: width 0.3s ease;
 }
 
+/* Ingen procentandel att visa just nu (thread.completedPercent === null,
+   t.ex. en tom kolumn) — stapeln finns kvar i DOM:en och tar samma plats
+   som en fylld, bara osynlig (2026-08-09, Zaidas fynd: "kategorierna skall
+   vara i samma höjd"). visibility:hidden (inte display:none) behåller
+   layout-boxen så headerns höjd blir identisk oavsett data. */
+.todo-thread__progress-track--empty {
+  visibility: hidden;
+}
+
 /* Kategorinamnets meny (2026-07-05, Zaidas beslut, utökad senare samma dag)
    — "Byt namn", "Lägg till uppgift", "Ladda ner" (CSV av kategorins
    uppgifter), "Göm" eller "Radera". Ersätter den tidigare håll-intryckt (2s)
@@ -513,14 +522,24 @@
      till ett pastelligt svirl istället för ett hårt konisk-regnbågsband, plus
      en stor mjuk diffus glans uppe till vänster och en liten skarp blank
      prick nere till höger — som en riktig såpbubblas skiftande, glasiga sken. */
+  /* Fyra hörnfärger + en bottenfärg, per kategori (2026-08-09, se
+     ballAccentStyleForIndex i ParentTodoThreadView.tsx) — --ball-a…--ball-d/
+     --ball-base sätts inline per tråd, roterar genom temats åtta färger så
+     grannkategorier aldrig får identisk blandning. Fallback (var(--c0) osv)
+     = exakt den tidigare, oföränderliga formeln, för trådar utan egen
+     blandning (Barn-tråden). Bottenfärgen späds ALLTID ut mot vitt — den kan
+     annars rotera in på temats mörkare kvartett (c0…c3, avsiktligt valda
+     för vit knapptext), vilket hade kunnat bryta kontrasten mot bubblans
+     alltid SVARTA titel (Zaidas krav: "utan att kontrasten till texten blir
+     för låg"). */
   background:
     radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
     radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
-    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--c0) 92%, transparent) 0%, transparent 62%),
-    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--c1) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--c2) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--c3) 88%, transparent) 0%, transparent 66%),
-    var(--c4);
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--ball-a, var(--c0)) 92%, transparent) 0%, transparent 62%),
+    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--ball-b, var(--c1)) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--ball-c, var(--c2)) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--ball-d, var(--c3)) 88%, transparent) 0%, transparent 66%),
+    color-mix(in srgb, var(--ball-base, var(--c4)) 45%, white 55%);
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--primary))) 25%, transparent),
     0 3px 6px color-mix(in srgb, var(--thread-accent, var(--primary)) 35%, transparent),
@@ -550,14 +569,19 @@
    egna, oavsett vilket tema man valt — fortfarande temats egna färger, inga
    hårdkodade kulörer.  */
 .todo-thread__ball--home {
+  /* Samma per-kategori-rotation som .todo-thread__ball ovan (2026-08-09) —
+     fallback (var(--c4)…var(--c7)) = den tidigare, oföränderliga formeln
+     för trådar utan egen blandning. FamilyTodoThreads.tsx ankrar sina
+     --ball-*-variabler med offset 4 (ballAccentStyleForIndex), så
+     familjevyns bubblor fortsatt går att skilja från de personliga. */
   background:
     radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
     radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
-    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--c4) 92%, transparent) 0%, transparent 62%),
-    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--c5) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--c6) 88%, transparent) 0%, transparent 66%),
-    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--c7) 88%, transparent) 0%, transparent 66%),
-    var(--c4);
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--ball-a, var(--c4)) 92%, transparent) 0%, transparent 62%),
+    radial-gradient(circle at 82% 28%, color-mix(in srgb, var(--ball-b, var(--c5)) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 24% 82%, color-mix(in srgb, var(--ball-c, var(--c6)) 88%, transparent) 0%, transparent 66%),
+    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--ball-d, var(--c7)) 88%, transparent) 0%, transparent 66%),
+    color-mix(in srgb, var(--ball-base, var(--c4)) 45%, white 55%);
 }
 
 /* Barnens bubblor (Barn-tråden) mycket mindre än vuxnas egna kategori-trådar

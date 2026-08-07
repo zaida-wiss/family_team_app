@@ -9,9 +9,12 @@ import { isRecurringTemplate } from "./recurringTodos";
 import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
 import { clearTodoTimer, readTodoTimerStartedAt, startTodoTimer, timerCapMinutes } from "./useTodoTimer";
 import {
+  accentColorForIndex,
   applyBubbleOrder,
   assigneeColorFor,
   assigneeNameFor,
+  ballAccentStyleForIndex,
+  computeCompletedPercent,
   computeProgress,
   formatElapsed,
   sortByEndThenStartTime,
@@ -522,7 +525,7 @@ export function FamilyTodoThreads({
         } as React.CSSProperties
       }
     >
-      {orderedSources.map((source) => {
+      {orderedSources.map((source, index) => {
         const showExpired = showExpiredThreadIds.has(source.id);
         const query = searchQuery.trim().toLowerCase();
         // Utgångna (missade) uppgifter är medvetet UTANFÖR range-filtret,
@@ -562,6 +565,26 @@ export function FamilyTodoThreads({
         );
         const threadTodos = applyBubbleOrder(sortByEndThenStartTime(baseTodos), todoBubbleOrder[source.id]);
 
+        // Samlad andel avklarat (2026-08-09) — samma beräkning/markup som
+        // ParentTodoThreadView.tsx:s kategoritrådar, tidigare helt saknad
+        // här. Utan den blev headern kortare för en familjetråd än för en
+        // personlig kategori (ingen påfyllnadsstapel alls), vilket lät
+        // bubblorna starta på olika höjd sida vid sida (Zaidas fynd). Ofiltrerat
+        // på status (till skillnad från threadTodos) så avklarade uppgifter
+        // räknas med, samma dag-baserade fönster oavsett "idag"/vecka/månad/allt.
+        const allDueSourceTodos = source.todos.filter(
+          (t) => !isRecurringTemplate(t) && isDueWithinRange(t, today, range)
+        );
+        const completedPercent = computeCompletedPercent(allDueSourceTodos);
+        // Egen färgblandning per tråd (2026-08-09, Zaidas önskemål: "varje
+        // kategori som visas skall ha en egen blandning") — ankrad i temats
+        // ANDRA halva (offset 4) så familjevyns bubblor fortsatt går att
+        // skilja från de personliga trådarnas (se ballAccentStyleForIndex).
+        const threadStyle = {
+          "--thread-accent": accentColorForIndex(index + 4),
+          ...ballAccentStyleForIndex(index, 4)
+        } as React.CSSProperties;
+
         // Tomma kategorier döljs, samma princip som ParentTodoThreadView.tsx
         // (2026-08-05, Zaidas önskemål: parity med den personliga Todos-vyn
         // — "familjens todovys tomma kategorier skall gömmas, precis som i
@@ -593,6 +616,7 @@ export function FamilyTodoThreads({
             }
             data-thread-id={source.id}
             key={source.id}
+            style={threadStyle}
           >
             <div className="todo-thread__header">
               {isRenaming ? (
@@ -644,6 +668,27 @@ export function FamilyTodoThreads({
                   </button>
                 </h3>
               )}
+
+              {/* Samma alltid-renderade stapel som ParentTodoThreadView.tsx
+                  (2026-08-09) — garanterar identisk headerhöjd oavsett om
+                  tråden har någon procentandel att visa, så bubblorna alltid
+                  hamnar i linje med de personliga kategoriernas. */}
+              <div
+                {...(completedPercent !== null
+                  ? {
+                      "aria-label": `${completedPercent}% avklarat`,
+                      "aria-valuemax": 100,
+                      "aria-valuemin": 0,
+                      "aria-valuenow": completedPercent,
+                      role: "progressbar"
+                    }
+                  : {})}
+                className={
+                  "todo-thread__progress-track" + (completedPercent === null ? " todo-thread__progress-track--empty" : "")
+                }
+              >
+                <div className="todo-thread__progress-fill" style={{ width: `${completedPercent ?? 0}%` }} />
+              </div>
 
               {menuThreadId === source.id &&
                 createPortal(
