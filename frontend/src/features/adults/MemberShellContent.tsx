@@ -342,7 +342,11 @@ export function MemberShellContent({
     const familyCategoryThreads = familyCategories
       .filter((category) => {
         const categoryTodos = todos.filter((t) => t.personalCategoryId === category.id && t.deletedAt === null);
-        return categoryTodos.some((t) => t.status === "pending");
+        // "expired" räknas nu med (2026-08-08, samma önskemål som
+        // FamilyTodoThreads.tsx:s baseTodos-fix) — annars konstrueras aldrig
+        // ens tråd-objektet för en kategori vars enda uppgift råkar ha
+        // statusen "expired" men vars tidsfönster faktiskt är aktuellt igen.
+        return categoryTodos.some((t) => t.status === "pending" || t.status === "expired");
       })
       .map((category) => ({
         id: category.id,
@@ -608,12 +612,17 @@ export function MemberShellContent({
     // nått sitt klockslag idag aldrig kunnat förhandsvisas för en vecka
     // framåt.
     const useRangeAwareVisibility = !selectedMemberIsChild && todoThreadRange !== "today";
+    // "expired" behandlas som "pending" (2026-08-08, Zaidas önskemål: "alla
+    // todos som inte markerats som slutförda skall visas om tiden är efter
+    // starttid, och före sluttid, oavsett när jag redigerar") — statusfältet
+    // är bara en ögonblicksbild, isTodoVisibleNow/isDueWithinRange (nedan)
+    // avgör redan om tidsfönstret faktiskt är aktuellt just nu.
     const activeChildTodos = todos
       .filter(
         (t) =>
           (t.assignedTo === selectedDashboardMember.id ||
             (t.assignedTo === null && t.inProgressBy?.includes(selectedDashboardMember.id))) &&
-          t.status === "pending" &&
+          (t.status === "pending" || t.status === "expired") &&
           t.recurrence.type === "none" &&
           t.deletedAt === null &&
           (useRangeAwareVisibility

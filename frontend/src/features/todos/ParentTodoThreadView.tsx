@@ -474,21 +474,38 @@ export function ParentTodoThreadView({
   // samma dag. nowTick (redan tickande varje sekund för den delade klockan i
   // "någon håller på med den här"-indikatorn) gör att en uppgift dyker upp
   // automatiskt i realtid när dess klockslag inträffar, ingen omladdning krävs.
+  // 2026-08-08, Zaidas önskemål: "alla todos som inte markerats som
+  // slutförda skall visas om tiden är efter starttid, och före sluttid,
+  // oavsett när jag redigerar" — en todo vars STATUS råkar vara "expired"
+  // (satt av backendens periodiska expireOverdueTodos-jobb, eller en ännu ej
+  // hunnen klientomräkning) räknas nu som aktiv HÄR om dess tidsfönster just
+  // nu faktiskt innehåller "nu" — statusfältet är bara en ögonblicksbild,
+  // tidsfönstret är sanningen. "expired" behandlas alltså identiskt med
+  // "pending" nedan; en genuint avklarad status (done/approved/rejected)
+  // exkluderas redan uppströms (TodosView.tsx:s visibleTodos-filter).
   const pendingTodos = todos.filter(
     (t) =>
-      t.status === "pending" &&
+      (t.status === "pending" || t.status === "expired") &&
       !isRecurringTemplate(t) &&
       (range === "today" ? isTodoVisibleNow(t, nowTick) : isDueWithinRange(t, today, range))
   );
+  // Stabila id:n för "aktuellt aktiv oavsett lagrad status" (se ovan) —
+  // används av per-tråd-filtren nedan (childBaseTodos/categoryBaseTodos) för
+  // att inte kräva "Visa utgångna" för en uppgift som redan räknas som aktiv.
+  const currentlyDueIds = new Set(pendingTodos.map((t) => t.id));
   // Utgångna (missade) uppgifter är medvetet UTANFÖR range-filtret ovan — de
   // ska gå att hitta oavsett vilket tidsspann (idag/vecka/månad) som är valt,
   // eftersom hela poängen är att se det man missade, inte bara det som råkar
   // falla inom det vanliga fönstret. Visas bara för trådar där man aktivt
   // slagit på "Visa utgångna" (se showExpiredThreadIds), filtreras in per
   // tråd nedan. Läses från allTodos (ofiltrerad), inte todos — TodosView.tsx
-  // filtrerar redan bort status "expired" via isTodoHistory innan den vanliga
-  // todos-propen ens når hit.
-  const expiredTodos = allTodos.filter((t) => t.status === "expired" && !isRecurringTemplate(t));
+  // filtrerar redan bort status "approved"/"rejected" innan den vanliga
+  // todos-propen ens når hit. Dedupat mot currentlyDueIds (ovan) — en
+  // expired-status-uppgift som just blivit aktuell igen (tidsfönstret
+  // omfattar nu "nu") visas bara en gång, som en vanlig bubbla.
+  const expiredTodos = allTodos.filter(
+    (t) => t.status === "expired" && !isRecurringTemplate(t) && !currentlyDueIds.has(t.id)
+  );
   const visibleTodos = [
     ...pendingTodos,
     ...expiredTodos,
@@ -512,7 +529,7 @@ export function ParentTodoThreadView({
     const childBaseTodos = visibleTodos.filter(
       (t) =>
         isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
-        (t.status !== "expired" || showChildExpired)
+        (t.status !== "expired" || showChildExpired || currentlyDueIds.has(t.id))
     );
     const childAllTodos = applyAssigneeFilter(
       CHILDREN_THREAD_ID,
@@ -553,7 +570,7 @@ export function ParentTodoThreadView({
             // tråden (2026-07-23) — en otilldelad todo hör bara hemma där.
             t.assignedTo !== null &&
             !isChildMember(members.find((m) => m.id === t.assignedTo), roles) &&
-            (t.status !== "expired" || showExpired)
+            (t.status !== "expired" || showExpired || currentlyDueIds.has(t.id))
         );
         const categoryAllTodos = applyAssigneeFilter(
           category.id,

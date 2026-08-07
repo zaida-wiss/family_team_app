@@ -7,7 +7,7 @@ import { ParentTodoThreadView } from "./ParentTodoThreadView";
 import { TodoThreadToolbar } from "./TodoThreadToolbar";
 import { FamilyTodoThreads } from "./FamilyTodoThreads";
 import type { FamilyThreadSource } from "./FamilyTodoThreads";
-import { getAssigneeName, getMyTodosViewTodos, isDueWithinRange, isTodoHistory } from "./selectors";
+import { getAssigneeName, getMyTodosViewTodos, isDueWithinRange } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
 
@@ -129,24 +129,33 @@ export function TodosView({
   // dagliga occurrence gör det (samma exkludering som barnens egen dashboard,
   // se ChildShellContent.tsx). Utan detta syntes mallen som en till synes
   // duplicerad todo bredvid sin egen occurrence (Zaida, 2026-07-06).
+  //
+  // 2026-08-08, Zaidas önskemål: "alla todos som inte markerats som
+  // slutförda skall visas... oavsett när jag redigerar" — status "expired"
+  // exkluderades tidigare helt härifrån (via isTodoHistory), vilket krävde
+  // en explicit redigering för att en förfallen-men-nu-återigen-aktuell
+  // uppgift skulle synas igen. "expired" flödar nu igenom precis som
+  // "pending"/"done" — det är bara EN ÖGONBLICKSBILD av statusfältet, den
+  // faktiska "är den aktuell nu"-bedömningen görs live nedan (rangeFilteredTodos)
+  // och i ParentTodoThreadView.tsx. Bara genuint AVGJORDA statusar
+  // (godkänd/nekad) räknas fortfarande som historik och utesluts här.
   const visibleTodos = canSeeTodos
     ? getMyTodosViewTodos(currentMember, roles, allMembers, todos, showChildTodosInOwnView).filter(
-        (t) => !isTodoHistory(t) && !isRecurringTemplate(t)
+        (t) => t.status !== "approved" && t.status !== "rejected" && !isRecurringTemplate(t)
       )
     : [];
   // Tidsspannet (idag/vecka/månad/allt, Inställningar → Utseende) gäller nu
   // även listläget (2026-07-27, Zaidas önskemål) — tidigare visade listläget
   // ALLTID allt oavsett Syns från/Försvinner, medvetet, för att kunna hitta
   // en felaktigt daterad engångsuppgift. Det går fortfarande: väljer man
-  // "Allt i framtiden" är beteendet identiskt med det gamla. Bara "pending"-
-  // uppgifter filtreras mot spannet — en redan avklarad men ej godkänd
-  // uppgift ("done") ska alltid synas oavsett datum, samma princip som i
-  // tråd-vyn (som aldrig ens tar med "done" i sin egen spann-filtrerade
-  // bollista, den har redan "löst upp" ur den vanliga vyn).
+  // "Allt i framtiden" är beteendet identiskt med det gamla. Bara "done"
+  // (avklarad men ej godkänd) ska alltid synas oavsett datum — "pending"
+  // OCH "expired" (se kommentaren ovan) filtreras båda mot samma live
+  // datumspann, samma princip som tråd-vyn.
   const today = new Date();
   const rangeFilteredTodos =
     todoViewMode === "list"
-      ? visibleTodos.filter((t) => t.status !== "pending" || isDueWithinRange(t, today, todoThreadRange))
+      ? visibleTodos.filter((t) => t.status === "done" || isDueWithinRange(t, today, todoThreadRange))
       : visibleTodos;
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
   const suggestedRewards = canApproveTodos

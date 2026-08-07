@@ -173,6 +173,18 @@
   font-family: inherit;
 }
 
+/* Anteckningsfältet i redigera-modalen (2026-08-08, Zaidas önskemål: "det
+   skall gå att göra fönstret större genom att dra i ett reglage nere i
+   högra hörnet") — en egen, mer specifik regel utöver den generiska ovan,
+   så resize-handtaget garanterat fungerar oavsett flex-layoutens övriga
+   krympning (flex-shrink:0 hindrar `__body`s flex-column från att pressa
+   ihop fältet igen efter en manuell förstoring). */
+.todo-edit-modal__notes {
+  resize: vertical;
+  flex-shrink: 0;
+  min-height: 60px;
+}
+
 .todo-detail-modal__body--view {
   gap: 10px;
 }

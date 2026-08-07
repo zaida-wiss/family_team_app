@@ -528,10 +528,18 @@ export function FamilyTodoThreads({
         // "Idag" = exakt klockslag (2026-08-04, Zaidas önskemål) — samma
         // hybrid som ParentTodoThreadView.tsx: "vecka"/"månad"/"allt" är
         // fortsatt dag-baserade (isDueWithinRange).
+        //
+        // 2026-08-08, Zaidas önskemål: "alla todos som inte markerats som
+        // slutförda skall visas... oavsett när jag redigerar" — status
+        // "expired" behandlas nu identiskt med "pending" i den första grenen
+        // (statusfältet är bara en ögonblicksbild, tidsfönstret är
+        // sanningen) — "Visa utgångna" (andra grenen) behövs alltså bara
+        // för en genuint FORTFARANDE utgången uppgift, inte längre för en
+        // vars fönster råkar innehålla "nu" igen.
         const baseTodos = source.todos.filter(
           (t) =>
             (dissolving.has(t.id) ||
-              (t.status === "pending" &&
+              ((t.status === "pending" || t.status === "expired") &&
                 (range === "today" ? isTodoVisibleNow(t, nowTick) : isDueWithinRange(t, today, range))) ||
               (t.status === "expired" && showExpired)) &&
             (!query || t.title.toLowerCase().includes(query))

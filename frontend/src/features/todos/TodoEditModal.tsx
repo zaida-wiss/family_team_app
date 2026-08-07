@@ -689,7 +689,7 @@ export function TodoEditModal({
           <label className="field-label">
             Anteckningar
             <textarea
-              className="text-input"
+              className="text-input todo-edit-modal__notes"
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Valfritt"
               rows={3}
