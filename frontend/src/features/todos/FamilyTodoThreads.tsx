@@ -13,6 +13,7 @@ import {
   applyBubbleOrder,
   assigneeColorFor,
   assigneeNameFor,
+  bubbleTimerLabel,
   computeCompletedPercent,
   computeProgress,
   formatElapsed,
@@ -856,6 +857,14 @@ export function FamilyTodoThreads({
                         )}
                         <span className="todo-thread__ball-title">{todo.title}</span>
                         {progress !== null && <span className="todo-thread__ball-progress">{progress}%</span>}
+                        {(() => {
+                          const timerLabel = bubbleTimerLabel(todo, nowTick);
+                          return timerLabel !== null ? (
+                            <span aria-live="polite" className="todo-thread__ball-timer">
+                              ⏱ {timerLabel}
+                            </span>
+                          ) : null;
+                        })()}
                       </button>
 
                       {inProgressMembers.length >= 2 && (

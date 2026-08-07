@@ -2686,6 +2686,29 @@ test("Bollar i tråd: ett stillastående 2s-håll på kategorinamnet markerar in
   expect(selectionText).toBe("");
 });
 
+// 2026-08-09, Zaidas önskemål: "när en timer är igång på en uppgiftsbubbla
+// så vill jag även kunna se timern längst ner i bubblan med tydlig kontrast
+// mot bakgrunden" — tre snabba tryck på bubblan (samma gest som redan
+// startar/nollställer timern, se handleBallClick) ska visa en ny, digital
+// sifferbadge (.todo-thread__ball-timer) längst ner i bubblan medan den går.
+test("Bollar i tråd: en igångsatt timer visas som en digital badge längst ner i bubblan", async ({ page }) => {
+  const TIMER_TODO = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-timer", title: "Diska", timerEnabled: true };
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TIMER_TODO] }));
+
+  await openThreadView(page);
+  const ball = page.getByRole("button", { name: /^Diska/ });
+  await expect(ball).toBeVisible();
+  await expect(ball.locator(".todo-thread__ball-timer")).toHaveCount(0);
+
+  await ball.click({ clickCount: 3 });
+
+  const badge = ball.locator(".todo-thread__ball-timer");
+  await expect(badge).toBeVisible();
+  await expect(badge).toHaveText(/^⏱ \d+:\d{2}$/);
+});
+
 // 2026-07-08 (Zaidas fynd: "i bolltrådsvyn står den som inte återkommande om
 // man redigerar, medans den i återkommande på inställningar står som
 // återkommande", följt av "det ska vara samma i redigera som i skapa. samma

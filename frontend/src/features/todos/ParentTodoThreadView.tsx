@@ -36,6 +36,28 @@ export function formatElapsed(ms: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+// Timern längst ner i en bubbla (2026-08-09, Zaidas önskemål: "när en timer
+// är igång på en uppgiftsbubbla så vill jag även kunna se timern längst ner
+// i bubblan") — läser samma localStorage-nyckel som TodoTimerSection
+// (TodoDetailView.tsx) via readTodoTimerStartedAt, en icke-reaktiv
+// funktion; komponenten renderas om varje sekund via den delade nowTick-
+// klockan (useNowTick) som redan tickar för "någon håller på med den
+// här"-klockan, så ingen egen timer/effekt behövs bara för detta. Delad
+// mellan ParentTodoThreadView.tsx och FamilyTodoThreads.tsx (samma
+// bubbel-markup, samma --home-modifier-mönster som formatElapsed ovan).
+export function bubbleTimerLabel(todo: Todo, now: number): string | null {
+  if (!todo.timerEnabled) return null;
+  const startedAt = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
+  if (startedAt === null) return null;
+  const elapsedMs = Math.max(0, now - startedAt);
+  if (todo.plannedDurationMinutes) {
+    const totalMs = todo.plannedDurationMinutes * 60_000;
+    const remainingMs = Math.max(0, totalMs - elapsedMs);
+    return formatElapsed(remainingMs);
+  }
+  return formatElapsed(elapsedMs);
+}
+
 type Props = {
   todos: Todo[];
   // Ofiltrerad lista (2026-07-08) — den vanliga todos-propen ovan är redan
@@ -1222,6 +1244,14 @@ export function ParentTodoThreadView({
                       {progress !== null && (
                         <span className="todo-thread__ball-progress">{progress}%</span>
                       )}
+                      {(() => {
+                        const timerLabel = bubbleTimerLabel(todo, nowTick);
+                        return timerLabel !== null ? (
+                          <span aria-live="polite" className="todo-thread__ball-timer">
+                            ⏱ {timerLabel}
+                          </span>
+                        ) : null;
+                      })()}
                     </button>
 
                     {inProgressMembers.length >= 2 && (

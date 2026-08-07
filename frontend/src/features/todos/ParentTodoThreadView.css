@@ -755,6 +755,37 @@
   color: #000;
 }
 
+/* Timern längst ner i bubblan (2026-08-09, Zaidas önskemål: "när en timer är
+   igång på en uppgiftsbubbla så vill jag även kunna se timern längst ner i
+   bubblan med tydlig kontrast mot bakgrunden") — samma "mörk botten + ljusa
+   siffror"-digitalklocke-look som barnens uppdragskort redan använder
+   (.child-task-timer-digital, ChildTasks.css) och av samma anledning: en
+   enda garanterat hög kontrast OAVSETT vilken kategorifärg bubblans egen
+   runda gradient råkar ha just nu, istället för att behöva räkna om en
+   "säker" textfärg per bubbla. Sist i flex-kolumnen (.todo-thread__ball är
+   redan display:flex; flex-direction:column) — hamnar därmed naturligt
+   under titel/procent, ingen absolut positionering behövs i den redan
+   trånga runda ytan. */
+.todo-thread__ball-timer {
+  margin-top: 1px;
+  padding: 1px clamp(4px, calc(var(--ball-size) * 0.05), 7px);
+  border-radius: 5px;
+  background: #0b0b0b;
+  color: #39ff6a;
+  font-family: "Courier New", ui-monospace, monospace, var(--font-display);
+  font-size: clamp(0.45rem, calc(var(--ball-size) * 0.08), 0.78rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.todo-thread__ball--small .todo-thread__ball-timer {
+  font-size: clamp(0.34rem, calc(var(--ball-size-small) * 0.09), 0.48rem);
+  padding: 0 3px;
+}
+
 /* Återanvänd kategori (2026-07-08) — en liten fristående modal, samma
    overlay-princip som TodoDetailModal.css men egna klassnamn (inget
    cross-file-beroende, minsta diff). */
