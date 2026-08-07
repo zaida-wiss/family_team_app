@@ -528,6 +528,26 @@ export type ParsedTodoRow = {
   // för att skapa/uppdatera. Övriga fält på raden är då oanvända defaults,
   // aldrig lästa.
   deleteRow: boolean;
+  // Familj-kolumnen matchade en känd ANNAN familj (2026-08-08, Zaidas
+  // önskemål: "om det står en familj jag är med i... då innebär det att
+  // den inte skall vara min egen todo, utan just den familjens todo") —
+  // satt bara vid en genuin match mot otherFamiliesForImport (se
+  // parseTodoCsv). TodoImportExport.tsx:s runImport routar raden till
+  // importCrossAccountTodo/updateCrossAccountTodo istället för den vanliga
+  // onCreateTodo/onUpdateTodo när detta är satt. null = mitt eget konto
+  // (oförändrat beteende, den absoluta majoriteten av rader).
+  targetFamily: { accountId: Id; accountName: string } | null;
+};
+
+// En känd "annan familj" jag kan importera till (2026-08-08) — bara Mina
+// familjekonton (genuint medlemskap, samma "jag är en riktig medlem
+// där"-princip som redan gäller ALLA andra cross-account-skapande-vägar i
+// appen), aldrig en Familjeanslutning (ingen egen identitet att tilldela
+// uppgifter till/skapa som där).
+export type OtherFamilyForImport = {
+  accountId: Id;
+  accountName: string;
+  members: { id: Id; name: string }[];
 };
 
 export type TodoCsvParseResult = {
@@ -566,7 +586,8 @@ export function parseTodoCsv(
   categories: TodoCategory[],
   currentMemberId: Id,
   defaultAssignee: Id | null = currentMemberId,
-  isFamilyScope = false
+  isFamilyScope = false,
+  otherFamiliesForImport: OtherFamilyForImport[] = []
 ): TodoCsvParseResult {
   const table = parseCsvText(text);
   if (table.length === 0) {
@@ -619,6 +640,7 @@ export function parseTodoCsv(
   const notesCol = col("Anteckningar");
   const idCol = col("Id");
   const deleteCol = col("Radera");
+  const familyCol = col("Familj");
 
   const rows: ParsedTodoRow[] = [];
   const errors: string[] = [];
@@ -633,6 +655,27 @@ export function parseTodoCsv(
     }
 
     const sourceId = cellValue(cells, idCol) || null;
+
+    // Familj (2026-08-08) — en ifylld cell som matchar en känd ANNAN familj
+    // (Mina familjekonton) routar HELA raden dit, se targetFamily-kommentaren
+    // på ParsedTodoRow. En ifylld cell som INTE matchar någon känd familj
+    // (fel stavning, eller en familj jag inte längre är medlem i) hoppas
+    // över med ett tydligt fel — tyst falla tillbaka på mitt eget konto hade
+    // riskerat att en avsedd-för-någon-annan-uppgift av misstag hamnar hos mig.
+    const familyLabel = cellValue(cells, familyCol);
+    let targetFamily: { accountId: Id; accountName: string } | null = null;
+    let effectiveMembers = members;
+    if (familyLabel) {
+      const match = otherFamiliesForImport.find((f) => f.accountName.toLowerCase() === familyLabel.toLowerCase());
+      if (!match) {
+        errors.push(
+          `Rad ${rowNumber} ("${title}"): okänd familj "${familyLabel}" i Familj-kolumnen — du måste vara medlem där via Mina familjekonton för att importera dit, raden hoppas över.`
+        );
+        return;
+      }
+      targetFamily = { accountId: match.accountId, accountName: match.accountName };
+      effectiveMembers = match.members.map((m) => ({ ...m, deletedAt: null }) as Member);
+    }
 
     // Radera (2026-08-04, Zaidas önskemål: "ladda ner alla todos, uppdatera,
     // lägga till nya och radera de jag inte vill ha kvar längre, sedan
@@ -664,7 +707,8 @@ export function parseTodoCsv(
         timeWindows: undefined,
         subtasks: [],
         notes: null,
-        deleteRow: true
+        deleteRow: true,
+        targetFamily
       });
       return;
     }
@@ -673,18 +717,34 @@ export function parseTodoCsv(
     const emoji = emojiRaw && EMOJI_PATTERN.test(emojiRaw) ? emojiRaw : DEFAULT_EMOJI;
 
     const assignedLabel = cellValue(cells, assignedCol);
-    let assignedTo: Id | null = defaultAssignee;
+    // En cross-account-rads DEFAULT (tom Tilldelad-cell) är Familjen i
+    // MÅLKONTOT, aldrig mitt eget defaultAssignee — mitt medlems-id existerar
+    // inte där, och "mig själv" är meningslöst för en annan familjs uppgift.
+    let assignedTo: Id | null = targetFamily ? null : defaultAssignee;
     let unresolvedAssigneeLabel: string | null = null;
     if (assignedLabel && assignedLabel.toLowerCase() === FAMILY_LABEL.toLowerCase()) {
       assignedTo = null;
-    } else if (assignedLabel && assignedLabel.toLowerCase() !== SELF_LABEL.toLowerCase()) {
-      const matches = members.filter(
+    } else if (assignedLabel && (targetFamily || assignedLabel.toLowerCase() !== SELF_LABEL.toLowerCase())) {
+      // "Mig själv" är bara en giltig genväg i MITT EGET konto (targetFamily
+      //===null) — för en cross-account-rad finns inget sådant, ett namn
+      // måste matchas mot en riktig medlem i målfamiljen precis som alla
+      // andra namn.
+      const matches = effectiveMembers.filter(
         (m) => m.deletedAt === null && m.name.toLowerCase() === assignedLabel.toLowerCase()
       );
       if (matches.length === 1) {
         assignedTo = matches[0].id;
       } else if (matches.length > 1) {
         errors.push(`Rad ${rowNumber} ("${title}"): flera medlemmar heter "${assignedLabel}", hoppas över — döp om eller lämna tomt för dig själv.`);
+        return;
+      } else if (targetFamily) {
+        // Okänt namn i EN ANNAN familj (2026-08-08) — ingen namn-mappnings-
+        // dialog finns för andras medlemmar (till skillnad från grenen
+        // nedan, som gäller MIN EGEN familj) — raden hoppas över med ett
+        // tydligt fel istället för att gissa fel person i en annan familj.
+        errors.push(
+          `Rad ${rowNumber} ("${title}"): "${assignedLabel}" är ingen medlem i ${targetFamily.accountName}, raden hoppas över.`
+        );
         return;
       } else {
         // Okänt namn — troligen en fil importerad från en ANNAN familj (2026-07-07,
@@ -707,7 +767,12 @@ export function parseTodoCsv(
     // Zaidas beslut: "kategorierna kan vara samma, vi behöver ingen
     // rutinkategori, det räcker med kategori") — tidigare gällde det bara
     // Mig själv-rader.
-    const categoryLabel = cellValue(cells, categoryCol);
+    // Egen kategori medvetet IGNORERAD för en cross-account-rad (2026-08-08)
+    // — mina personliga/familjekategorier finns i MITT konto, kan aldrig
+    // matchas mot eller skapas i en annan familjs konto utan en egen,
+    // separat kategori-hanteringsväg dit (inte byggd denna gång). Uppgiften
+    // hamnar okategoriserad i målkontot istället för att gissa fel.
+    const categoryLabel = targetFamily ? "" : cellValue(cells, categoryCol);
     let personalCategoryId: Id | null = null;
     let newCategoryName: string | null = null;
     if (categoryLabel) {
@@ -864,7 +929,8 @@ export function parseTodoCsv(
       timeWindows,
       subtasks,
       notes,
-      deleteRow: false
+      deleteRow: false,
+      targetFamily
     });
   });
 

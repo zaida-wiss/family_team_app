@@ -13,6 +13,13 @@ export type ImportUndo = {
   updated: { id: Id; previous: Partial<Todo> }[];
   // Nyskapade rader: bara deras id, ångras med en mjuk radering.
   createdIds: Id[];
+  // Cross-account-rader (2026-08-08, Familj-kolumnen routad till ETT AV
+  // MINA ANDRA konton) — spåras separat eftersom de kräver ett accountId
+  // för att ångras korrekt (deleteCrossAccountTodo/updateCrossAccountTodo
+  // istället för de lokala onDeleteTodo/onUpdateTodo). Optional/additiv,
+  // ingen brytande ändring för befintlig kod.
+  crossAccountCreated?: { id: Id; accountId: Id }[];
+  crossAccountUpdated?: { id: Id; accountId: Id; previous: Partial<Todo> }[];
 };
 
 // deleted (2026-08-04, Zaidas önskemål: en Radera-kolumn i CSV:n) — raderade

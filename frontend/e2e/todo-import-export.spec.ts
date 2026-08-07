@@ -1149,3 +1149,58 @@ test("Todos-import/export: 'Ångra senaste import' återställer en uppdaterad u
   await expect.poll(() => patches[1]?.title).toBe("Gammal titel");
   expect(patches[1]?.notes).toBe("Gamla anteckningar");
 });
+
+// 2026-08-08, Zaidas önskemål: "om det står en familj jag är med i t.ex.
+// 'Wiss Kolmodin'. Då innebär det att den inte skall vara min egen todo,
+// utan just den familjens todo. Om den dessutom är tilldelad någon i
+// familjen så syns den uppgiften även i den personliga todo-vyn" — en
+// Familj-cell som matchar en av Mina familjekonton routar HELA raden dit
+// via de nya family-across-accounts/.../import-endpointerna, istället för
+// den vanliga POST /api/todos mot mitt eget konto.
+test("Todos-import/export: en Familj-cell som matchar Mina familjekonton skapar uppgiften i DET kontot, inte mitt eget", async ({ page }) => {
+  let crossAccountImportBody: Record<string, unknown> | null = null;
+  let ownAccountPostCalled = false;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todos/family-across-accounts", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        json: [{ accountId: "acc-2", accountName: "Wiss Kolmodin", myMemberId: "mem-x", todos: [], categoryNames: {} }]
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/members/cross-account", (route) =>
+    route.fulfill({
+      json: [
+        {
+          accountId: "acc-2",
+          accountName: "Wiss Kolmodin",
+          members: [{ id: "mem-lars", name: "Lars", avatarUrl: null, color: null, isChild: false }]
+        }
+      ]
+    })
+  );
+  await page.route("**/api/todos/family-across-accounts/acc-2/import", (route) => {
+    crossAccountImportBody = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({ status: 201, json: { id: "todo-new-cross" } });
+  });
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    if (route.request().method() === "POST") ownAccountPostCalled = true;
+    return route.fulfill({ status: 201, json: { id: "should-not-happen" } });
+  });
+  await openImportExportSettings(page);
+
+  const csv = ["Titel,Tilldelad,Familj", "Klippa gräset,Lars,Wiss Kolmodin"].join("\r\n");
+  await page.getByLabel("Importera CSV-fil").setInputFiles({
+    name: "import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8")
+  });
+
+  await expect(page.getByText("1 uppgift importerade.")).toBeVisible();
+  await expect.poll(() => crossAccountImportBody?.title).toBe("Klippa gräset");
+  expect(crossAccountImportBody?.assignedTo).toBe("mem-lars");
+  expect(ownAccountPostCalled).toBe(false);
+});

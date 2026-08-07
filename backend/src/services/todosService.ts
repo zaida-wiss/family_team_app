@@ -559,6 +559,58 @@ export async function createCrossAccountFamilyTodo(
   return buildFamilyWideTodo(targetAccountId, memberInTarget.id, title, visualValue);
 }
 
+// Full CSV-baserad import till ETT AV MINA ANDRA konton (2026-08-08, Zaidas
+// önskemål: "om det står en familj jag är med i... då innebär det att den
+// inte skall vara min egen todo, utan just den familjens todo") — till
+// skillnad från createCrossAccountFamilyTodo ovan (bara titel+emoji, en
+// snabb-lägg-till-knapp) accepterar denna en FULLSTÄNDIG Todo-payload, exakt
+// samma form som den vanliga POST /api/todos redan tar — återanvänder
+// createTodo rakt av, bara med accountId satt till målkontot istället för
+// anroparens eget. assignedTo (om satt) valideras höra till MÅLKONTOT, inte
+// en godtycklig medlems-id (annars kunde man tilldela en uppgift till vem
+// som helst, oavsett konto — mass-assignment-skydd, samma ADR-0008-princip).
+export async function importCrossAccountFamilyTodo(callerUserId: string, targetAccountId: string, data: unknown) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const input = data as Partial<Todo>;
+  if (input.assignedTo) {
+    const assignee = await MemberModel.findOne({ id: input.assignedTo, accountId: targetAccountId, deletedAt: null });
+    if (!assignee) {
+      throw new AppError(400, "Den tilldelade medlemmen hör inte till den familjen");
+    }
+  }
+  return createTodo({ ...input, accountId: targetAccountId, createdBy: memberInTarget.id });
+}
+
+// Uppdatera (matchning via Id vid en omimport) en tidigare CSV-importerad
+// todo i ETT AV MINA ANDRA konton — återanvänder updateTodo rakt av med min
+// RIKTIGA medlemspost DÄR, samma behörighetsregler (canEditTodo) gäller
+// alltså som för vilken annan uppdatering i det kontot som helst.
+export async function updateCrossAccountFamilyTodo(
+  callerUserId: string,
+  targetAccountId: string,
+  id: string,
+  data: unknown
+) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return updateTodo(id, targetAccountId, data, memberInTarget.id);
+}
+
+// Radera (matchning via Id vid Radera=Ja-kolumnen) en tidigare CSV-
+// importerad todo i ETT AV MINA ANDRA konton — samma mönster som ovan.
+export async function deleteCrossAccountFamilyTodo(callerUserId: string, targetAccountId: string, id: string) {
+  const memberInTarget = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!memberInTarget) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return deleteTodo(id, targetAccountId, memberInTarget.id);
+}
+
 export async function createConnectionTodo(
   targetAccountId: string,
   callerAccountId: string,

@@ -120,6 +120,28 @@ todosRouter.post("/family-across-accounts/:targetAccountId", requireAuth, async 
   res.status(201).json(await todos.createCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, title, visual ?? null));
 });
 
+// Full CSV-import/uppdatering/radering riktad mot ETT AV MINA ANDRA konton
+// (2026-08-08, Zaidas önskemål: "om det står en familj jag är med i...
+// då innebär det att den inte skall vara min egen todo, utan just den
+// familjens todo") — accepterar samma fullständiga payload som den vanliga
+// POST/PATCH mot / ovan, ingen egen Zod-validering (samma mönster som den
+// vanliga skapa-vägen). Måste registreras FÖRE PATCH .../:id/complete-
+// mönstret ovan är redan specifikt nog (suffix /import kolliderar aldrig
+// med /complete eller /in-progress).
+todosRouter.post("/family-across-accounts/:targetAccountId/import", requireAuth, async (req, res) => {
+  res.status(201).json(await todos.importCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.body));
+});
+
+todosRouter.patch("/family-across-accounts/:targetAccountId/:id/import", requireAuth, async (req, res) => {
+  await todos.updateCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id, req.body);
+  res.json({ ok: true });
+});
+
+todosRouter.delete("/family-across-accounts/:targetAccountId/:id/import", requireAuth, async (req, res) => {
+  await todos.deleteCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id);
+  res.json({ ok: true });
+});
+
 // Signa upp sig / lämna en Familjen-uppgift i ETT AV MINA ANDRA konton
 // (2026-08-01) — samma "vem håller på med den här"-dubbeltryck-mekanik som
 // redan finns lokalt, se todosService.ts.

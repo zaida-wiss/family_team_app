@@ -3,7 +3,9 @@ import { accountsApi, membersApi, recipesApi, shoppingApi, todosApi } from "../.
 import type { CrossAccountShoppingLists } from "../../api/shopping";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import { generateId } from "../../utils/uuid";
-import type { CrossAccountFamilyThread, FamilyMembersGroup, Id, MembershipMemberSummary, MyMembership, ShoppingList } from "@shared/types";
+import type { CrossAccountFamilyThread, FamilyMembersGroup, Id, MembershipMemberSummary, MyMembership, ShoppingList, Todo } from "@shared/types";
+
+type ApiResult = { ok: true } | { ok: false; error: unknown };
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
 // familjer du är med i... kunna avmarkera dessa när de inte används...
@@ -83,7 +85,60 @@ export function useCrossAccountFamilyTodos() {
     });
   }
 
-  return { threads, completeCrossAccountTodo, createCrossAccountTodo, toggleCrossAccountInProgress };
+  // Full CSV-import/uppdatering/radering riktad mot ETT AV MINA ANDRA konton
+  // (2026-08-08, Zaidas önskemål: en "Familj"-kolumn som pekar på en familj
+  // jag är medlem i ska routa raden dit istället för mitt eget konto) —
+  // samma {ok:true}/{ok:false,error}-kontrakt som useTodosState.ts:s
+  // createTodo/updateTodo/softDeleteTodo, så TodoImportExport.tsx:s
+  // runImport kan hantera lokala och cross-account-rader enhetligt.
+  function importCrossAccountTodo(accountId: Id, todo: Todo): Promise<ApiResult> {
+    return todosApi.importFamilyAcrossAccounts(accountId, todo).then(
+      () => {
+        refresh();
+        return { ok: true as const };
+      },
+      (error: unknown) => {
+        console.error(error);
+        return { ok: false as const, error };
+      }
+    );
+  }
+
+  function updateCrossAccountTodo(accountId: Id, todoId: Id, patch: Partial<Todo>): Promise<ApiResult> {
+    return todosApi.updateFamilyAcrossAccounts(accountId, todoId, patch).then(
+      () => {
+        refresh();
+        return { ok: true as const };
+      },
+      (error: unknown) => {
+        console.error(error);
+        return { ok: false as const, error };
+      }
+    );
+  }
+
+  function deleteCrossAccountTodo(accountId: Id, todoId: Id): Promise<ApiResult> {
+    return todosApi.deleteFamilyAcrossAccounts(accountId, todoId).then(
+      () => {
+        refresh();
+        return { ok: true as const };
+      },
+      (error: unknown) => {
+        console.error(error);
+        return { ok: false as const, error };
+      }
+    );
+  }
+
+  return {
+    threads,
+    completeCrossAccountTodo,
+    createCrossAccountTodo,
+    toggleCrossAccountInProgress,
+    importCrossAccountTodo,
+    updateCrossAccountTodo,
+    deleteCrossAccountTodo
+  };
 }
 
 // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en

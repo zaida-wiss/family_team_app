@@ -3,13 +3,13 @@ import { useRef, useState } from "react";
 import { Download, FileSpreadsheet, Pencil, Trash2, Upload } from "lucide-react";
 import type { Id, Member, Role, Todo, TodoCategory, TodoTemplate, TodoTemplateTask } from "@shared/types";
 import { generateId } from "../../utils/uuid";
-import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type ParsedTodoRow } from "./todoCsv";
+import { buildTemplateCsv, downloadCsv, parseTodoCsv, todosToCsv, type OtherFamilyForImport, type ParsedTodoRow } from "./todoCsv";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { getAssigneeName, getVisibleTodos, groupByChildAssignee, isChildMember } from "./selectors";
 import { describeRecurrence, describeRecurrenceEnd } from "./recurringTodos";
 import { canDeleteTodo, canEditTodo } from "../../utils/permissions";
 import { TodoEditModal } from "./TodoEditModal";
-import { useCrossAccountFamilyTodos } from "./useCrossAccountFamilyState";
+import { useCrossAccountFamilyTodos, useCrossAccountMembers } from "./useCrossAccountFamilyState";
 import { useConnectionTodos } from "../accounts/useFamilyConnectionsState";
 import type { ImportResult, ImportUndo } from "./useTodosState";
 
@@ -239,7 +239,13 @@ export function TodoImportExport({
   // saker denna session). Mina familjekonton är ALLTID skapningsbara (samma
   // "genuint medlemskap"-regel som redan gäller i Hem-vyn); en
   // Familjeanslutning bara om den har redigera-åtkomst.
-  const { threads: crossAccountThreads, createCrossAccountTodo } = useCrossAccountFamilyTodos();
+  const {
+    threads: crossAccountThreads,
+    createCrossAccountTodo,
+    importCrossAccountTodo,
+    updateCrossAccountTodo,
+    deleteCrossAccountTodo
+  } = useCrossAccountFamilyTodos();
   const { threads: connectionThreads, createConnectionTodo } = useConnectionTodos();
   const otherFamilies = [
     ...crossAccountThreads.map((t) => ({
@@ -251,6 +257,22 @@ export function TodoImportExport({
     })),
     ...connectionThreads.map((t) => ({ accountId: t.accountId, accountName: t.accountName, todos: t.todos, creatable: t.access === "edit" }))
   ];
+  // CSV-import: en "Familj"-cell som matchar en av MINA familjekonton routar
+  // hela raden dit istället för mitt eget konto (2026-08-08, Zaidas
+  // önskemål) — bara Mina familjekonton (crossAccountThreads, genuint
+  // medlemskap, samma "jag är en riktig medlem där"-princip som redan
+  // gäller övriga cross-account-skapande-vägar), aldrig en Familjeanslutning.
+  // Medlemslistan för varje sådan familj krävs för att kunna mappa
+  // "Tilldelad"-namnet mot RÄTT konto, inte mitt eget.
+  const crossAccountMemberGroups = useCrossAccountMembers();
+  const otherFamiliesForImport: OtherFamilyForImport[] = crossAccountThreads.map((t) => ({
+    accountId: t.accountId,
+    accountName: t.accountName,
+    members: (crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? []).map((m) => ({
+      id: m.id,
+      name: m.name
+    }))
+  }));
   const [newFamilyTodoTitle, setNewFamilyTodoTitle] = useState("");
   const [newFamilyTodoTargets, setNewFamilyTodoTargets] = useState<Set<string>>(new Set(["__own__"]));
 
@@ -419,6 +441,8 @@ export function TodoImportExport({
       let deleted = 0;
       const undoUpdated: ImportUndo["updated"] = [];
       const undoCreatedIds: Id[] = [];
+      const undoCrossAccountCreated: NonNullable<ImportUndo["crossAccountCreated"]> = [];
+      const undoCrossAccountUpdated: NonNullable<ImportUndo["crossAccountUpdated"]> = [];
       const errors = [...parseErrors];
 
       // Steg 1: radera-rader och assignee-olösta hoppas över/hanteras
@@ -437,6 +461,26 @@ export function TodoImportExport({
       const prepared: PreparedRow[] = [];
       for (const row of rows) {
         if (row.deleteRow) {
+          // Familj-routad rad (2026-08-08) — matchar/raderar i MÅLKONTOT
+          // istället för mitt eget, ingen canDeleteTodo-kontroll behövs
+          // (backend gör motsvarande via min RIKTIGA medlemspost där).
+          if (row.targetFamily) {
+            const thread = crossAccountThreads.find((t) => t.accountId === row.targetFamily!.accountId);
+            const existingCross = row.sourceId ? thread?.todos.find((t) => t.id === row.sourceId) : undefined;
+            if (existingCross) {
+              const result = await deleteCrossAccountTodo(row.targetFamily.accountId, existingCross.id);
+              if (isFailure(result)) {
+                errors.push(`Rad markerad Radera ("${row.title}"): kunde inte raderas i ${row.targetFamily.accountName} — försök igen.`);
+                continue;
+              }
+              deleted++;
+            } else {
+              errors.push(
+                `Rad markerad Radera ("${row.title}"): hittade ingen uppgift med Id "${row.sourceId}" i ${row.targetFamily.accountName}, ingenting raderades.`
+              );
+            }
+            continue;
+          }
           // Matchar mot canDeleteTodo (samma funktion servern/softDeleteTodo
           // faktiskt använder, @shared/permissions) istället för ett eget,
           // för snävt villkor (2026-08-05, Zaidas fynd: en admin med
@@ -531,6 +575,38 @@ export function TodoImportExport({
           row.personalCategoryId ??
           (row.newCategoryName ? createdCategoryIds.get(row.newCategoryName.toLowerCase()) ?? null : null);
 
+        // Familj-routad rad (2026-08-08) — skapar/uppdaterar i MÅLKONTOT
+        // istället för mitt eget. Bara Id-matchning (ingen findContentMatch-
+        // fallback, som är byggd mot mitt EGET kontos matchTodos) — en
+        // medveten förenkling, se todoCsv.ts:s targetFamily-kommentar.
+        if (row.targetFamily) {
+          const thread = crossAccountThreads.find((t) => t.accountId === row.targetFamily!.accountId);
+          const existingCross = row.sourceId ? thread?.todos.find((t) => t.id === row.sourceId) : undefined;
+          if (existingCross) {
+            undoCrossAccountUpdated.push({
+              id: existingCross.id,
+              accountId: row.targetFamily.accountId,
+              previous: extractPatchFields(existingCross)
+            });
+            const result = await updateCrossAccountTodo(row.targetFamily.accountId, existingCross.id, buildUpdatePatch(row, null));
+            if (isFailure(result)) {
+              errors.push(`Rad ("${row.title}"): kunde inte sparas (uppdatering) i ${row.targetFamily.accountName} — försök igen.`);
+            } else {
+              updated++;
+            }
+          } else {
+            const newTodo = buildNewTodo(row, currentMember.id, null, assignedTo);
+            const result = await importCrossAccountTodo(row.targetFamily.accountId, newTodo);
+            if (isFailure(result)) {
+              errors.push(`Rad ("${row.title}"): kunde inte sparas i ${row.targetFamily.accountName} — försök igen.`);
+            } else {
+              undoCrossAccountCreated.push({ id: newTodo.id, accountId: row.targetFamily.accountId });
+              created++;
+            }
+          }
+          continue;
+        }
+
         // Matchar mot en egen, redigerbar, ej raderad todo med samma Id —
         // annars skapas en ny (samma fallback som om Id-kolumnen saknas
         // helt, t.ex. en mall). Använder canEditTodo (samma funktion servern
@@ -577,7 +653,12 @@ export function TodoImportExport({
       }
 
       setResult({ created, updated, deleted, errors });
-      setLastImportUndo({ updated: undoUpdated, createdIds: undoCreatedIds });
+      setLastImportUndo({
+        updated: undoUpdated,
+        createdIds: undoCreatedIds,
+        crossAccountCreated: undoCrossAccountCreated,
+        crossAccountUpdated: undoCrossAccountUpdated
+      });
       setPendingImport(null);
       setResolutions({});
     } finally {
@@ -598,6 +679,14 @@ export function TodoImportExport({
     for (const { id, previous } of lastImportUndo.updated) {
       onUpdateTodo(id, previous);
     }
+    // Cross-account-rader (2026-08-08) — samma ångra-princip, men riktad
+    // mot RÄTT konto istället för mitt eget.
+    for (const { id, accountId } of lastImportUndo.crossAccountCreated ?? []) {
+      deleteCrossAccountTodo(accountId, id);
+    }
+    for (const { id, accountId, previous } of lastImportUndo.crossAccountUpdated ?? []) {
+      updateCrossAccountTodo(accountId, id, previous);
+    }
     setLastImportUndo(null);
     setResult(null);
   }
@@ -612,7 +701,11 @@ export function TodoImportExport({
       categories,
       currentMember.id,
       isFamilyScope ? null : currentMember.id,
-      isFamilyScope
+      isFamilyScope,
+      // Familj-kolumnens routing till en annan familj är bara meningsfull i
+      // PERSONLIG scope (Inställningar) — Hem-vyns familje-import (isFamilyScope)
+      // handlar redan om en specifik, redan vald familj.
+      isFamilyScope ? [] : otherFamiliesForImport
     );
 
     const unresolvedLabels = [
@@ -943,7 +1036,11 @@ export function TodoImportExport({
               ))}
             </ul>
           )}
-          {lastImportUndo && (lastImportUndo.updated.length > 0 || lastImportUndo.createdIds.length > 0) && (
+          {lastImportUndo &&
+            (lastImportUndo.updated.length > 0 ||
+              lastImportUndo.createdIds.length > 0 ||
+              (lastImportUndo.crossAccountCreated?.length ?? 0) > 0 ||
+              (lastImportUndo.crossAccountUpdated?.length ?? 0) > 0) && (
             <button className="secondary-button" onClick={handleUndoLastImport} type="button">
               Ångra senaste import
             </button>

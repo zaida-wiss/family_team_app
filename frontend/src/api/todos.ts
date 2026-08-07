@@ -154,6 +154,26 @@ export const todosApi = {
       api(`todos/family-across-accounts/${targetAccountId}/${id}/in-progress`),
       { method: "PATCH", body: JSON.stringify({ targetMemberId }) }
     ),
+  // Full CSV-import/uppdatering/radering riktad mot ETT AV MINA ANDRA konton
+  // (2026-08-08, Zaidas önskemål: en "Familj"-kolumn som pekar på en familj
+  // jag är medlem i ska routa raden dit istället för mitt eget konto) —
+  // till skillnad från createFamilyAcrossAccounts ovan (bara titel+emoji)
+  // skickar denna en FULLSTÄNDIG Todo, samma form som den vanliga
+  // create/update ovan.
+  importFamilyAcrossAccounts: (targetAccountId: string, todo: Todo) =>
+    request<{ id: string }>(api(`todos/family-across-accounts/${targetAccountId}/import`), {
+      method: "POST",
+      body: JSON.stringify(todo)
+    }),
+  updateFamilyAcrossAccounts: (targetAccountId: string, id: string, patch: Partial<Todo>) =>
+    request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/import`), {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }),
+  deleteFamilyAcrossAccounts: (targetAccountId: string, id: string) =>
+    request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/import`), {
+      method: "DELETE"
+    }),
   // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
   // familjemedlemmar"), skiljer sig från getSharedChildren (ett helt barn)
   // och getFamilyAcrossAccounts (ett riktigt medlemskap) ovan.

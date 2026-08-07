@@ -322,11 +322,15 @@ describe("todoCsv", () => {
     expect(table[2][headerIndex.get("Familj")!]).toBe("Familjen Andersson");
     expect(table[2][headerIndex.get("Egen kategori")!]).toBe("Present");
 
-    // Ignoreras helt vid import — ingen ny import-mekanik, bara till
-    // information i en exporterad/nedladdad fil.
+    // En Familj-cell som inte matchar en KÄND annan familj (2026-08-08,
+    // otherFamiliesForImport tom här) flaggas nu som fel och hoppas över —
+    // se det egna testblocket "parseTodoCsv: Familj-kolumnen" nedan för det
+    // fullständiga, lyckade cross-account-flödet.
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
-    expect(errors).toEqual([]);
-    expect(rows).toHaveLength(2);
+    expect(errors).toEqual([
+      'Rad 3 ("Handla present"): okänd familj "Familjen Andersson" i Familj-kolumnen — du måste vara medlem där via Mina familjekonton för att importera dit, raden hoppas över.'
+    ]);
+    expect(rows).toHaveLength(1);
   });
 
   test("todosToCsv skriver Familjen som Tilldelad-etikett för en otilldelad uppgift", () => {
@@ -800,5 +804,63 @@ describe("todoCsv", () => {
     expect(rows[0].timeWindows).toBeUndefined();
     expect(rows[0].recurrence).toEqual({ type: "recurring", unit: "day", every: 1, daysOfWeek: null });
     expect(rows[0].notes).toBeNull();
+  });
+
+  // 2026-08-08, Zaidas önskemål: "om det står en familj jag är med i...
+  // då innebär det att den inte skall vara min egen todo, utan just den
+  // familjens todo. Om den dessutom är tilldelad någon i familjen så syns
+  // den uppgiften även i den personliga todo-vyn" — Familj-kolumnen blir en
+  // RIKTIG import-mekanik (routar raden till ett annat konto) när cellen
+  // matchar en känd "annan familj" (Mina familjekonton), tidigare ren visning.
+  describe("parseTodoCsv: Familj-kolumnen routar till en annan familj", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const otherFamilies = [
+      {
+        accountId: "acc-2",
+        accountName: "Wiss Kolmodin",
+        members: [
+          { id: "mem-lars", name: "Lars" },
+          { id: "mem-hanna", name: "Hanna" }
+        ]
+      }
+    ];
+
+    test("en känd familj + tilldelad medlem DÄR sätter targetFamily och rätt assignedTo", () => {
+      const csv = [
+        "Titel,Tilldelad,Familj",
+        "Klippa gräset,Lars,Wiss Kolmodin"
+      ].join("\r\n");
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1", "mem-1", false, otherFamilies);
+      expect(errors).toEqual([]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].targetFamily).toEqual({ accountId: "acc-2", accountName: "Wiss Kolmodin" });
+      expect(rows[0].assignedTo).toBe("mem-lars");
+    });
+
+    test("en känd familj utan Tilldelad-cell defaultar till Familjen DÄR, inte mig själv", () => {
+      const csv = ["Titel,Familj", "Handla mat,Wiss Kolmodin"].join("\r\n");
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1", "mem-1", false, otherFamilies);
+      expect(errors).toEqual([]);
+      expect(rows[0].targetFamily).not.toBeNull();
+      expect(rows[0].assignedTo).toBeNull();
+    });
+
+    test("Tilldelad matchas mot MÅLFAMILJENS medlemmar, inte mina egna — mitt eget namn ger inget träff", () => {
+      const csv = ["Titel,Tilldelad,Familj", "Klippa gräset,Zaida,Wiss Kolmodin"].join("\r\n");
+      const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1", "mem-1", false, otherFamilies);
+      expect(rows).toHaveLength(0);
+      expect(errors).toEqual([
+        'Rad 2 ("Klippa gräset"): "Zaida" är ingen medlem i Wiss Kolmodin, raden hoppas över.'
+      ]);
+    });
+
+    test("Egen kategori ignoreras helt för en cross-account-rad", () => {
+      const categories = [{ id: "cat-1", accountId: "acc-1", memberId: "mem-1", name: "Trädgård", isFamily: false, hidden: false, isUncategorizedCollector: false, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z" }];
+      const csv = ["Titel,Egen kategori,Familj", "Klippa gräset,Trädgård,Wiss Kolmodin"].join("\r\n");
+      const { rows, errors } = parseTodoCsv(csv, members, categories, "mem-1", "mem-1", false, otherFamilies);
+      expect(errors).toEqual([]);
+      expect(rows[0].personalCategoryId).toBeNull();
+      expect(rows[0].newCategoryName).toBeNull();
+    });
   });
 });
