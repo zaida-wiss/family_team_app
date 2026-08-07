@@ -715,13 +715,18 @@ export function ParentTodoThreadView({
     }
 
     if (count >= 3) {
-      // Tre snabba tryck (2026-08-08) startar timern — sista möjliga gesten
-      // i sekvensen, ingen ytterligare fördröjning behövs. En redan PÅGÅENDE
-      // timer ska inte startas om (2026-08-08, Zaidas fynd: "trycker man 3
-      // ggr när timern redan är igång nollställs den").
+      // Tre snabba tryck (2026-08-08) togglar timern — sista möjliga gesten
+      // i sekvensen, ingen ytterligare fördröjning behövs. Toggle, inte
+      // alltid en omstart (2026-08-08, Zaidas rättelse: "3 snabba tryck tar
+      // bort timern, ytterligare tre snabba tryck startar den igen") — redan
+      // PÅGÅENDE tas bort (från noll), annars startas den.
       lastTapRef.current = null;
-      if (todo.timerEnabled && readTodoTimerStartedAt(todo.id, timerCapMinutes(todo)) === null) {
-        startTodoTimer(todo.id);
+      if (todo.timerEnabled) {
+        if (readTodoTimerStartedAt(todo.id, timerCapMinutes(todo)) !== null) {
+          clearTodoTimer(todo.id);
+        } else {
+          startTodoTimer(todo.id);
+        }
       }
       return;
     }

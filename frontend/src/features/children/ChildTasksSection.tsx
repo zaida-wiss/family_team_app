@@ -190,16 +190,21 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
       suppressClickRef.current = false;
       return;
     }
-    // En redan PÅGÅENDE timer ska inte startas om av ett nytt trippel-tryck
-    // (2026-08-08, Zaidas fynd: "trycker man 3 ggr när timern redan är igång
-    // nollställs den") — no-op, ingen räkning görs ens.
-    if (startedAt !== null) return;
     tapCountRef.current += 1;
     if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
     if (tapCountRef.current >= 3) {
       tapCountRef.current = 0;
       tapTimerRef.current = null;
-      start();
+      // Toggle, inte alltid en omstart (2026-08-08, Zaidas rättelse: "3
+      // snabba tryck tar bort timern, ytterligare tre snabba tryck startar
+      // den igen") — tre nya tryck MEDAN timern redan går tar bort den (från
+      // noll), inte förlänger den nollställda tiden tyst vidare. En andra
+      // omgång tre tryck (nu från ett rensat läge) startar den på nytt.
+      if (startedAt !== null) {
+        clear();
+      } else {
+        start();
+      }
       return;
     }
     tapTimerRef.current = window.setTimeout(() => {
@@ -241,7 +246,15 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
           timeLeftPercent !== null ? "child-task-card--timed" : "",
         ].filter(Boolean).join(" ")}
         style={{ ...style, touchAction: "manipulation" }}
-        onClick={() => !isRunning && registerTap()}
+        // registerTap() körs numera även när timern redan går (2026-08-08,
+        // Zaidas rättelse: "3 snabba tryck tar bort timern, ytterligare tre
+        // snabba tryck startar den igen") — tidigare spärrat med !isRunning,
+        // vilket gjorde togglingen i registerTap() själv ouppnåelig. Ett
+        // KORT tryck (utan 2s-håll) hinner alltid fyra click innan
+        // startTimerHold nedan bekräftar och sätter suppressClickRef, så
+        // gesterna krockar inte — samma redan etablerade mönster som
+        // ParentTodoThreadView.tsx/FamilyTodoThreads.tsx bygger på.
+        onClick={registerTap}
         onPointerDown={() => {
           if (!isRunning) return;
           startTimerHold(todo.id, () => {
