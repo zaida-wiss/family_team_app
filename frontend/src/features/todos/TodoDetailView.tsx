@@ -8,7 +8,7 @@ import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
 import { sortSubtasksForDisplay } from "./selectors";
-import { useTodoTimer } from "./useTodoTimer";
+import { timerCapMinutes, useTodoTimer } from "./useTodoTimer";
 
 type Props = {
   todo: Todo;
@@ -78,18 +78,18 @@ function formatElapsed(ms: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
 }
 
-// Timerkontroll för en ännu ej avklarad uppgift (2026-08-07, Zaidas
+// Timerkontroll för en ännu ej avklarad uppgift (2026-08-07/08, Zaidas
 // önskemål: timern ska gå att välja för ALLA uppgifter, inte bara
-// barn-tilldelade — barnets EGET uppdragskort har redan sin egen
-// dubbelklick-/håll-in-baserade timer, ChildTasksSection.tsx, oförändrad och
-// orörd). Adult-vyerna (Todos-panelen/Hem-vyns familjetrådar) saknar
-// gestutrymme för "starta timer" på själva bubblan (dubbeltryck är redan
-// "vem håller på med den här", 2S-håll är redan avklarmarkering) — start/
-// nedräkning visas istället här, i visa-vyn. Avklarmarkering sker FORTFARANDE
-// via den befintliga håll-in-gesten på bubblan (oförändrad) — den läser av
-// samma localStorage-timer (useTodoTimer.ts) för att räkna ut elapsedMs.
+// barn-tilldelade, och startas med TRE SNABBA TRYCK direkt på bubblan i
+// BÅDA barnvyn och vuxenvyn). Den löpande tiden VISAS här, inne i modalen
+// (Zaidas ord: "i vuxenvyn och familjevyn skall timern visas inne i
+// modalen") — men startas antingen via tre-tryck på bubblan (se
+// ParentTodoThreadView.tsx/FamilyTodoThreads.tsx) ELLER via knappen här,
+// båda skriver till samma localStorage-nyckel. Avklarmarkering sker
+// FORTFARANDE via den befintliga håll-in-gesten på bubblan (oförändrad) —
+// den läser av samma localStorage-timer för att räkna ut elapsedMs.
 function TodoTimerSection({ todo }: { todo: Todo }) {
-  const { startedAt, start, clear } = useTodoTimer(todo.id);
+  const { startedAt, start, clear } = useTodoTimer(todo.id, timerCapMinutes(todo));
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {

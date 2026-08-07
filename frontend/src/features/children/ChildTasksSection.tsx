@@ -1,9 +1,10 @@
-import type { CSSProperties } from "react";
-import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useRef } from "react";
 import { Play, Square, Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { readTodoTimerStartedAt, timerCapMinutes, useTodoTimer } from "../todos/useTodoTimer";
 import "./ChildTasks.css";
 
 // Formaterar millisekunder som mm:ss (eller h:mm:ss om det tar över en timme)
@@ -64,48 +65,15 @@ type Props = {
 };
 
 const HOLD_DURATION_MS = 2000;
+// Tre snabba tryck startar timern (2026-08-08, Zaidas önskemål: "tidtagning
+// skall starta om man trycker 3 snabba tryck på uppgiften i både barnvy och
+// vuxenvy") — samma tidsfönster som vuxenvyns motsvarande gest
+// (ParentTodoThreadView.tsx/FamilyTodoThreads.tsx).
+const TRIPLE_TAP_MS = 300;
 
 export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo }: Props) {
-  // Bara EN uppgift kan tidtas åt gången (samma begränsning som Medaljer/
-  // Rekord) — startedAt mäts lokalt (Date.now()), ingen pågående-status
-  // sparas server-side, se Todo.elapsedMs-kommentaren i shared/types.ts.
-  const [runningTimer, setRunningTimer] = useState<{ id: Id; startedAt: number } | null>(null);
-  useWakeLock(runningTimer !== null);
-
-  // Nedräkningsläget (plannedDurationMinutes satt, 2026-07-07 Zaidas
-  // förtydligande) avslutas med samma håll-in-2-sekunder-gest som vanliga
-  // uppgifter, INTE en Klar-knapp — men med sin egen useHoldToConfirm-instans
-  // (inte den delade heldTodoId/onStartHold som styr icke-timer-korten), så
-  // att elapsedMs kan räknas ut från runningTimer.startedAt vid bekräftelse-
-  // tillfället utan att ändra useChildCompleteHold.ts:s delade kontrakt.
-  const { heldId: timerHeldId, startHold: startTimerHold, clearHold: clearTimerHold } = useHoldToConfirm(HOLD_DURATION_MS);
-
   if (todos.length === 0) {
     return <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>;
-  }
-
-  function startTimer(id: Id) {
-    setRunningTimer({ id, startedAt: Date.now() });
-  }
-
-  // Öppen tidtagning (fallback när plannedDurationMinutes saknas) — Klar-
-  // knappen ÄR bekräftelsen, oförändrat sedan tidigare.
-  function stopTimer(id: Id) {
-    if (!runningTimer || runningTimer.id !== id) return;
-    const elapsedMs = Date.now() - runningTimer.startedAt;
-    setRunningTimer(null);
-    onCompleteTodo(id, elapsedMs);
-  }
-
-  // Nedräkning — bekräftas via 2s-håll, inte ett klick. Läser startedAt via
-  // funktionell uppdatering så den alltid är färsk, inte en gammal closure.
-  function confirmCountdownComplete(id: Id) {
-    setRunningTimer((current) => {
-      if (current && current.id === id) {
-        onCompleteTodo(id, Date.now() - current.startedAt);
-      }
-      return null;
-    });
   }
 
   return (
@@ -115,143 +83,233 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
         <span>{getTodayHeading(today)}</span>
       </div>
       <div className="child-tasks-grid">
-        {todos
-          .map((todo, i) => {
-            const category = categories.find((c) => c.id === todo.personalCategoryId)?.name ?? "";
-            const timeLeftPercent = getTimeLeftPercent(todo, timerNow);
-            const style: TaskCardStyle = {
-              animationDelay: `${i * 80}ms`,
-              ...getTaskStyle(category),
-              ...(timeLeftPercent === null ? {} : { "--task-time-fraction": timeLeftPercent / 100 }),
-            };
-            const nameClass = `child-task-name${todo.title.length > 30 ? " child-task-name--long" : todo.title.length > 18 ? " child-task-name--medium" : ""}`;
-            const starBadge = (
-              <span className="child-task-star-badge">
-                {Array.from({ length: Math.min(todo.starValue, 10) }, (_, j) => (
-                  <Star key={j} size={12} fill="currentColor" />
-                ))}
-              </span>
-            );
+        {todos.map((todo, i) => {
+          const category = categories.find((c) => c.id === todo.personalCategoryId)?.name ?? "";
+          const timeLeftPercent = getTimeLeftPercent(todo, timerNow);
+          const style: TaskCardStyle = {
+            animationDelay: `${i * 80}ms`,
+            ...getTaskStyle(category),
+            ...(timeLeftPercent === null ? {} : { "--task-time-fraction": timeLeftPercent / 100 }),
+          };
+          const nameClass = `child-task-name${todo.title.length > 30 ? " child-task-name--long" : todo.title.length > 18 ? " child-task-name--medium" : ""}`;
+          const starBadge = (
+            <span className="child-task-star-badge">
+              {Array.from({ length: Math.min(todo.starValue, 10) }, (_, j) => (
+                <Star key={j} size={12} fill="currentColor" />
+              ))}
+            </span>
+          );
 
-            // Nedräkning (2026-07-07, Zaidas förtydligande: "jag menar en
-            // timer, där bordet visar hur lång tid som är kvar efter att man
-            // tryckt på knappen med dubbelklick. Sedan markerar man den som
-            // klar med två sekunderstryck.") — dubbelklick startar, håll-in-2s
-            // avslutar, precis som en vanlig uppgift. Kräver plannedDuration-
-            // Minutes (satt av föräldern); saknas den faller kortet tillbaka
-            // på den öppna Starta/Klar-tidtagningen (nedan), som Zaida bad få
-            // stå kvar ("den får gärna stå kvar").
-            if (todo.timerEnabled && todo.plannedDurationMinutes) {
-              const isRunning = runningTimer?.id === todo.id;
-              const isHeld = timerHeldId === todo.id;
-              const totalMs = todo.plannedDurationMinutes * 60000;
-              const remainingMs = isRunning ? Math.max(0, totalMs - (timerNow - runningTimer.startedAt)) : totalMs;
-              return (
-                <div
-                  key={todo.id}
-                  className={[
-                    "child-task-card",
-                    "child-task-card--timer",
-                    isRunning ? "child-task-card--timer-running" : "",
-                    isHeld ? "child-task-card--holding" : "",
-                    timeLeftPercent !== null ? "child-task-card--timed" : "",
-                  ].filter(Boolean).join(" ")}
-                  style={{ ...style, touchAction: "manipulation" }}
-                  onDoubleClick={() => !isRunning && startTimer(todo.id)}
-                  onPointerDown={() => isRunning && startTimerHold(todo.id, () => confirmCountdownComplete(todo.id))}
-                  onPointerLeave={clearTimerHold}
-                  onPointerCancel={clearTimerHold}
-                  onPointerUp={clearTimerHold}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={
-                    isRunning
-                      ? `${todo.title}, ${formatElapsed(remainingMs)} kvar. Håll intryckt i två sekunder för att markera klar.`
-                      : `${todo.title}. Dubbelklicka för att starta nedräkningen på ${todo.plannedDurationMinutes} minuter.`
-                  }
-                >
-                  <div className="child-task-icon-circle">
-                    <span className="child-task-icon">{todo.visual.value}</span>
-                  </div>
-                  <span className="child-task-copy">
-                    <span className={nameClass}>{todo.title}</span>
-                    <span className="child-task-timer-elapsed" aria-live="polite">
-                      {isRunning ? formatElapsed(remainingMs) + " kvar" : "Dubbelklicka för att starta"}
-                    </span>
-                  </span>
-                  {starBadge}
-                </div>
-              );
-            }
-
-            // Öppen tidtagning (fallback, oförändrad sedan tidigare) — bara
-            // för uppgifter med timerEnabled men UTAN plannedDurationMinutes.
-            if (todo.timerEnabled) {
-              const isRunning = runningTimer?.id === todo.id;
-              return (
-                <div
-                  key={todo.id}
-                  className={[
-                    "child-task-card",
-                    "child-task-card--timer",
-                    isRunning ? "child-task-card--timer-running" : "",
-                    timeLeftPercent !== null ? "child-task-card--timed" : "",
-                  ].filter(Boolean).join(" ")}
-                  style={style}
-                >
-                  <div className="child-task-icon-circle">
-                    <span className="child-task-icon">{todo.visual.value}</span>
-                  </div>
-                  <span className="child-task-copy">
-                    <span className={nameClass}>{todo.title}</span>
-                    {isRunning && (
-                      <span className="child-task-timer-elapsed" aria-live="polite">
-                        {formatElapsed(timerNow - runningTimer.startedAt)}
-                      </span>
-                    )}
-                  </span>
-                  {starBadge}
-                  <button
-                    aria-label={isRunning ? `Klar med ${todo.title}` : `Starta ${todo.title}`}
-                    className={"child-task-timer-btn" + (isRunning ? " child-task-timer-btn--stop" : "")}
-                    onClick={() => (isRunning ? stopTimer(todo.id) : startTimer(todo.id))}
-                    type="button"
-                  >
-                    {isRunning ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                    {isRunning ? "Klar" : "Starta"}
-                  </button>
-                </div>
-              );
-            }
-
+          if (todo.timerEnabled) {
             return (
-              <button
+              <ChildTimerTaskCard
                 key={todo.id}
-                className={[
-                  "child-task-card",
-                  heldTodoId === todo.id ? "child-task-card--holding" : "",
-                  timeLeftPercent !== null ? "child-task-card--timed" : "",
-                ].filter(Boolean).join(" ")}
+                nameClass={nameClass}
+                onCompleteTodo={onCompleteTodo}
+                starBadge={starBadge}
                 style={style}
-                onPointerDown={() => onStartHold(todo.id)}
-                onPointerLeave={onClearHold}
-                onPointerCancel={onClearHold}
-                onPointerUp={onClearHold}
-                type="button"
-              >
-                <div className="child-task-icon-circle">
-                  <span className="child-task-icon">{todo.visual.value}</span>
-                </div>
-                <span className="child-task-copy">
-                  <span className={nameClass}>
-                    {todo.title}
-                  </span>
-                </span>
-                {starBadge}
-              </button>
+                timeLeftPercent={timeLeftPercent}
+                timerNow={timerNow}
+                todo={todo}
+              />
             );
-          })}
+          }
+
+          return (
+            <button
+              key={todo.id}
+              className={[
+                "child-task-card",
+                heldTodoId === todo.id ? "child-task-card--holding" : "",
+                timeLeftPercent !== null ? "child-task-card--timed" : "",
+              ].filter(Boolean).join(" ")}
+              style={style}
+              onPointerDown={() => onStartHold(todo.id)}
+              onPointerLeave={onClearHold}
+              onPointerCancel={onClearHold}
+              onPointerUp={onClearHold}
+              type="button"
+            >
+              <div className="child-task-icon-circle">
+                <span className="child-task-icon">{todo.visual.value}</span>
+              </div>
+              <span className="child-task-copy">
+                <span className={nameClass}>
+                  {todo.title}
+                </span>
+              </span>
+              {starBadge}
+            </button>
+          );
+        })}
       </div>
     </section>
+  );
+}
+
+type ChildTimerTaskCardProps = {
+  todo: Todo;
+  style: TaskCardStyle;
+  nameClass: string;
+  starBadge: ReactNode;
+  timeLeftPercent: number | null;
+  timerNow: number;
+  onCompleteTodo: (id: Id, elapsedMs: number | null) => void;
+};
+
+// Egen komponent PER uppgift (2026-08-08) — krävs för att useTodoTimer (en
+// hook) ska kunna anropas en gång per todo-id utan att bryta mot Hooks-
+// reglerna (kan inte anropas villkorligt/dynamiskt inne i en .map()-closure
+// i förälderkomponenten). Samtidigt bytet från lokal, förlorad-vid-
+// ommontering React-state (det gamla runningTimer i ChildTasksSection) till
+// den delade, localStorage-backade useTodoTimer-hooken — "timern får inte
+// avbrytas när man växlar mellan sidor" (Zaidas önskemål), och flera
+// uppgifters timers kan nu gå SAMTIDIGT (ingen "bara en åt gången"-spärr
+// längre, samma princip som vuxenvyn: "startar andra timers" ska inte
+// avbryta en redan pågående).
+function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent, timerNow, onCompleteTodo }: ChildTimerTaskCardProps) {
+  const { startedAt, start, clear } = useTodoTimer(todo.id, timerCapMinutes(todo));
+  useWakeLock(startedAt !== null);
+
+  // Nedräkningsläget avslutas med samma håll-in-2-sekunder-gest som vanliga
+  // uppgifter, INTE en Klar-knapp — egen useHoldToConfirm-instans (inte den
+  // delade heldTodoId/onStartHold som styr icke-timer-korten).
+  const { heldId: timerHeldId, startHold: startTimerHold, clearHold: clearTimerHold } = useHoldToConfirm(HOLD_DURATION_MS);
+
+  // Tryck-räknare för "tre snabba tryck startar timern" — samma mönster som
+  // ParentTodoThreadView.tsx/FamilyTodoThreads.tsx. suppressClickRef
+  // förhindrar att det klick som naturligt följer en lyckad håll-in-
+  // bekräftelse (pointerdown+pointerup på samma element) räknas som ett
+  // vanligt tryck.
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressClickRef = useRef(false);
+
+  function registerTap() {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    tapCountRef.current += 1;
+    if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      tapTimerRef.current = null;
+      start();
+      return;
+    }
+    tapTimerRef.current = window.setTimeout(() => {
+      tapCountRef.current = 0;
+      tapTimerRef.current = null;
+    }, TRIPLE_TAP_MS);
+  }
+
+  // Läser av startedAt DIREKT från localStorage vid bekräftelsetillfället
+  // (inte från hookens React-state, som annars kan vara ett render bakom —
+  // samma "läs alltid färskt vid confirm"-princip som vuxenvyns
+  // handleConfirmComplete) — gäller BÅDA nedräkning (2s-håll) och öppen
+  // tidtagning ("Klar"-knapp).
+  function handleConfirmComplete() {
+    const at = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
+    clear();
+    onCompleteTodo(todo.id, at !== null ? Date.now() - at : null);
+  }
+
+  const isRunning = startedAt !== null;
+  const isCountdown = Boolean(todo.plannedDurationMinutes);
+
+  if (isCountdown) {
+    const isHeld = timerHeldId === todo.id;
+    const totalMs = (todo.plannedDurationMinutes as number) * 60000;
+    const remainingMs = isRunning ? Math.max(0, totalMs - (timerNow - startedAt)) : totalMs;
+    return (
+      <div
+        className={[
+          "child-task-card",
+          "child-task-card--timer",
+          isRunning ? "child-task-card--timer-running" : "",
+          isHeld ? "child-task-card--holding" : "",
+          timeLeftPercent !== null ? "child-task-card--timed" : "",
+        ].filter(Boolean).join(" ")}
+        style={{ ...style, touchAction: "manipulation" }}
+        onClick={() => !isRunning && registerTap()}
+        onPointerDown={() => {
+          if (!isRunning) return;
+          startTimerHold(todo.id, () => {
+            suppressClickRef.current = true;
+            handleConfirmComplete();
+          });
+        }}
+        onPointerLeave={clearTimerHold}
+        onPointerCancel={clearTimerHold}
+        onPointerUp={clearTimerHold}
+        role="button"
+        tabIndex={0}
+        aria-label={
+          isRunning
+            ? `${todo.title}, ${formatElapsed(remainingMs)} kvar. Håll intryckt i två sekunder för att markera klar.`
+            : `${todo.title}. Tre snabba tryck startar nedräkningen på ${todo.plannedDurationMinutes} minuter.`
+        }
+      >
+        <div className="child-task-icon-circle">
+          <span className="child-task-icon">{todo.visual.value}</span>
+        </div>
+        <span className="child-task-copy">
+          <span className={nameClass}>{todo.title}</span>
+        </span>
+        {starBadge}
+        {isRunning && (
+          <span aria-live="polite" className="child-task-timer-digital">
+            {formatElapsed(remainingMs)}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // Öppen tidtagning (fallback, oförändrad sedan tidigare) — för uppgifter
+  // med timerEnabled men UTAN plannedDurationMinutes. Avslutas med samma
+  // Klar-knapp som tidigare (bekräftelsen ÄR knapptrycket), startas nu med
+  // antingen tre snabba tryck på kortet eller Starta-knappen.
+  return (
+    <div
+      className={[
+        "child-task-card",
+        "child-task-card--timer",
+        isRunning ? "child-task-card--timer-running" : "",
+        timeLeftPercent !== null ? "child-task-card--timed" : "",
+      ].filter(Boolean).join(" ")}
+      style={style}
+      onClick={() => !isRunning && registerTap()}
+    >
+      <div className="child-task-icon-circle">
+        <span className="child-task-icon">{todo.visual.value}</span>
+      </div>
+      <span className="child-task-copy">
+        <span className={nameClass}>{todo.title}</span>
+      </span>
+      {starBadge}
+      {isRunning && (
+        <span aria-live="polite" className="child-task-timer-digital">
+          {formatElapsed(timerNow - startedAt)}
+        </span>
+      )}
+      <button
+        aria-label={isRunning ? `Klar med ${todo.title}` : `Starta ${todo.title}`}
+        className={"child-task-timer-btn" + (isRunning ? " child-task-timer-btn--stop" : "")}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isRunning) {
+            handleConfirmComplete();
+          } else {
+            start();
+          }
+        }}
+        type="button"
+      >
+        {isRunning ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+        {isRunning ? "Klar" : "Starta"}
+      </button>
+    </div>
   );
 }

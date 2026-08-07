@@ -85,6 +85,9 @@ const todoSchema = new Schema<Todo>({
   timerEnabled: { type: Boolean, default: undefined },
   plannedDurationMinutes: { type: Number, default: null },
   elapsedMs: { type: Number, default: null },
+  // Auto-stopp för en öppen tidtagning (2026-08-08) — se Todo.timerMaxMinutes
+  // i shared/types.ts. null = standardvärdet (120 min) i useTodoTimer.ts.
+  timerMaxMinutes: { type: Number, default: null },
   // "Någon håller på med den här"-indikator (2026-07-22) — se shared/types.ts.
   inProgressBy: { type: [String], default: [] },
   inProgressSince: { type: String, default: null }

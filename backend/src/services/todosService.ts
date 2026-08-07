@@ -10,6 +10,7 @@ import { TodoPatchSchema } from "../../../shared/schemas.js";
 import { decryptField, decryptNullable, encryptField, encryptNullable } from "../utils/fieldEncryption.js";
 import { writeAuditLog } from "./auditLogService.js";
 import { getAllRoles } from "./rolesService.js";
+import { recordAutoTimedAttempt } from "./timedTasksService.js";
 import {
   canCompleteTodo,
   canDeleteTodo,
@@ -438,6 +439,18 @@ export async function completeSharedChildTodo(
   todo.completedAt = new Date().toISOString();
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
+    // Se completeTodo:s motsvarande kommentar (2026-08-08) — samma regel för
+    // ett delat barns egen tidtagning, i BARNETS eget konto (dit dess
+    // Medaljer/Rekord hör), inte den delande sharerns konto.
+    if (!todo.plannedDurationMinutes) {
+      await recordAutoTimedAttempt(
+        childAccountId,
+        childMemberId,
+        decryptField(childAccountId, todo.title),
+        todo.visual.value || null,
+        elapsedMs
+      );
+    }
   }
   todo.inProgressBy = [];
   todo.inProgressSince = null;
@@ -744,6 +757,16 @@ export async function completeSharedCategoryTodo(
   todo.completedAt = new Date().toISOString();
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
+    // Se completeTodo:s motsvarande kommentar (2026-08-08).
+    if (!todo.plannedDurationMinutes && todo.assignedTo) {
+      await recordAutoTimedAttempt(
+        categoryAccountId,
+        todo.assignedTo,
+        decryptField(categoryAccountId, todo.title),
+        todo.visual.value || null,
+        elapsedMs
+      );
+    }
   }
   todo.inProgressBy = [];
   todo.inProgressSince = null;
@@ -944,6 +967,20 @@ export async function completeTodo(
   // timerEnabled och klienten skickade med en uppmätt tid.
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
+    // Öppen tidtagning (ingen plannedDurationMinutes — en NEDRÄKNING mäter en
+    // FÖRUTBESTÄMD tid, inte ett personbästa värt att spara) skickas vidare
+    // till Medaljer/Rekord (2026-08-08, Zaidas önskemål). Kräver en riktig
+    // mottagare — en otilldelad Familjen-uppgift har ingen enskild person att
+    // sätta ett personbästa för.
+    if (!todo.plannedDurationMinutes && todo.assignedTo) {
+      await recordAutoTimedAttempt(
+        accountId,
+        todo.assignedTo,
+        decryptField(accountId, todo.title),
+        todo.visual.value || null,
+        elapsedMs
+      );
+    }
   }
   // "Någon håller på med den här"-indikatorn är bara meningsfull medan
   // uppgiften faktiskt är pending — rensas här, samma mönster som övriga

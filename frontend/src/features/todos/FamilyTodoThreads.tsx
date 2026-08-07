@@ -6,7 +6,7 @@ import { TodoDetailView } from "./TodoDetailView";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useNowTick } from "../../hooks/useNowTick";
 import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
-import { clearTodoTimer, readTodoTimerStartedAt } from "./useTodoTimer";
+import { clearTodoTimer, readTodoTimerStartedAt, startTodoTimer, timerCapMinutes } from "./useTodoTimer";
 import {
   applyBubbleOrder,
   assigneeColorFor,
@@ -120,7 +120,10 @@ export function FamilyTodoThreads({
   const [detailTodoId, setDetailTodoId] = useState<Id | null>(null);
   const { heldId, startHold, clearHold } = useHoldToConfirm(HOLD_DURATION_MS);
   const suppressClickRef = useRef(false);
-  const lastTapRef = useRef<{ id: Id; time: number } | null>(null);
+  // Tryck-räknare (2026-08-08) — ett tredje snabbt tryck (inom samma
+  // DOUBLE_TAP_MS-fönster från föregående tryck) startar timern, samma
+  // mönster som ParentTodoThreadView.tsx.
+  const lastTapRef = useRef<{ id: Id; time: number; count: number; rect: DOMRect } | null>(null);
   const pendingClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inProgressPickerTodoId, setInProgressPickerTodoId] = useState<Id | null>(null);
   const [inProgressPickerPos, setInProgressPickerPos] = useState({ top: 0, left: 0 });
@@ -250,6 +253,17 @@ export function FamilyTodoThreads({
     setBubbleDragOverKey(null);
   }
 
+  function openInProgressPickerAt(source: FamilyThreadSource, todo: Todo, rect: DOMRect) {
+    if (!source.onToggleInProgress || source.members.length === 0) return;
+    const ESTIMATED_WIDTH = 220;
+    const ESTIMATED_HEIGHT = 260;
+    setInProgressPickerPos({
+      top: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - ESTIMATED_HEIGHT)),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - ESTIMATED_WIDTH))
+    });
+    setInProgressPickerTodoId(todo.id);
+  }
+
   function handleBallClick(source: FamilyThreadSource, todo: Todo, e: React.MouseEvent<HTMLButtonElement>) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
@@ -258,28 +272,32 @@ export function FamilyTodoThreads({
 
     const now = Date.now();
     const last = lastTapRef.current;
-    if (last && last.id === todo.id && now - last.time < DOUBLE_TAP_MS) {
-      if (pendingClickTimerRef.current) {
-        window.clearTimeout(pendingClickTimerRef.current);
-        pendingClickTimerRef.current = null;
-      }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const count = last && last.id === todo.id && now - last.time < DOUBLE_TAP_MS ? last.count + 1 : 1;
+
+    if (pendingClickTimerRef.current) {
+      window.clearTimeout(pendingClickTimerRef.current);
+      pendingClickTimerRef.current = null;
+    }
+
+    if (count >= 3) {
+      // Tre snabba tryck (2026-08-08) startar timern.
       lastTapRef.current = null;
-      if (!source.onToggleInProgress || source.members.length === 0) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const ESTIMATED_WIDTH = 220;
-      const ESTIMATED_HEIGHT = 260;
-      setInProgressPickerPos({
-        top: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - ESTIMATED_HEIGHT)),
-        left: Math.max(8, Math.min(rect.left, window.innerWidth - ESTIMATED_WIDTH))
-      });
-      setInProgressPickerTodoId(todo.id);
+      if (todo.timerEnabled) startTodoTimer(todo.id);
       return;
     }
 
-    lastTapRef.current = { id: todo.id, time: now };
+    lastTapRef.current = { id: todo.id, time: now, count, rect };
     pendingClickTimerRef.current = window.setTimeout(() => {
-      setDetailTodoId(todo.id);
+      const pending = lastTapRef.current;
+      lastTapRef.current = null;
       pendingClickTimerRef.current = null;
+      if (!pending) return;
+      if (pending.count >= 2) {
+        openInProgressPickerAt(source, todo, pending.rect);
+      } else {
+        setDetailTodoId(todo.id);
+      }
     }, DOUBLE_TAP_MS);
   }
 
@@ -290,7 +308,7 @@ export function FamilyTodoThreads({
     // TodoDetailView.tsx) — samma mönster som ParentTodoThreadView.tsx.
     // Bara meningsfullt för LOKALA källor (cross-account/anslutna källors
     // onComplete ignorerar redan tyst ett extra argument de inte förväntar).
-    const startedAt = readTodoTimerStartedAt(todo.id);
+    const startedAt = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
     if (startedAt !== null) {
       clearTodoTimer(todo.id);
       source.onComplete(todo.id, Date.now() - startedAt);

@@ -161,6 +161,61 @@ export async function getAttemptsForTask(
 // Mjuk radering (aldrig hard delete, se CLAUDE.md) — timedTaskId i frågan
 // (inte bara attemptId) förhindrar att en manipulerad :id i URL:en raderar
 // ett försök som hör till en ANNAN tidtagen uppgift.
+// Automatisk koppling mellan en todos ÖPPNA tidtagning (Todo.timerEnabled
+// utan plannedDurationMinutes) och Medaljer/Rekord (2026-08-08, Zaidas
+// önskemål: "resultatet på den tidtagningen skall skickas till rekord och
+// medaljer och ligga under sin kategori där... där ska jag kunna se mina
+// tidtagningar över tid, med statistiken"). Anropas INIFRÅN completeTodo
+// (todosService.ts), inte via en klient-vänd endpoint — INGEN av de vanliga
+// behörighetskontrollerna (requireAdultMember/requireAttemptCaller) gäller
+// här, det är servern själv som utför en sidoeffekt av en redan godkänd
+// completeTodo-anrop, inte en ny användarinitierad handling. Ett barn som
+// slutför sin EGEN tidtagna uppgift (den vanligaste vägen hit) skulle annars
+// blockerats av requireAdultMember. "Sin kategori" tolkas som uppgiftens
+// EGEN titel — get-or-create en TimedTask per (accountId, assignedTo,
+// title), samma namn varje gång samma återkommande uppgift slutförs, så
+// resultaten samlas under EN kategori över tid istället för en ny per
+// tillfälle.
+export async function recordAutoTimedAttempt(
+  accountId: string,
+  assignedTo: string,
+  title: string,
+  symbol: string | null,
+  durationMs: number
+): Promise<void> {
+  let task = await TimedTaskModel.findOne({ accountId, assignedTo, title, deletedAt: null });
+  if (!task) {
+    task = new TimedTaskModel({
+      id: `tt-${crypto.randomUUID()}`,
+      accountId,
+      title,
+      symbol,
+      assignedTo,
+      createdBy: assignedTo,
+      deletedAt: null,
+      deletedBy: null
+    });
+    await task.save();
+  }
+
+  const best = await TimedAttemptModel.findOne({ timedTaskId: task.id, deletedAt: null })
+    .sort({ durationMs: 1 })
+    .lean();
+  const isNewRecord = !best || durationMs < best.durationMs;
+
+  const attempt = new TimedAttemptModel({
+    id: `ta-${crypto.randomUUID()}`,
+    timedTaskId: task.id,
+    memberId: assignedTo,
+    durationMs,
+    achievedAt: new Date().toISOString(),
+    isNewRecord,
+    deletedAt: null,
+    deletedBy: null
+  });
+  await attempt.save();
+}
+
 export async function deleteAttempt(
   attemptId: string,
   timedTaskId: string,

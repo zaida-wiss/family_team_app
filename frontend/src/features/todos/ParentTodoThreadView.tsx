@@ -11,7 +11,7 @@ import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { isRecurringTemplate } from "./recurringTodos";
 import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
-import { clearTodoTimer, readTodoTimerStartedAt } from "./useTodoTimer";
+import { clearTodoTimer, readTodoTimerStartedAt, startTodoTimer, timerCapMinutes } from "./useTodoTimer";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -278,8 +278,12 @@ export function ParentTodoThreadView({
   // enkelt tryck fördröjs medvetet DOUBLE_TAP_MS (standard disambiguerings-
   // mönster mellan klick/dubbelklick) — det gör detaljvyn en aning senare
   // att öppna, en medveten avvägning för att kunna särskilja gesterna.
+  // Utökad (2026-08-08) till en riktig tryck-RÄKNARE (inte bara två) — ett
+  // tredje snabbt tryck (inom samma DOUBLE_TAP_MS-fönster från FÖREGÅENDE
+  // tryck) startar timern istället, Zaidas önskemål: "tidtagning skall
+  // starta om man trycker 3 snabba tryck på uppgiften".
   const DOUBLE_TAP_MS = 300;
-  const lastTapRef = useRef<{ id: Id; time: number } | null>(null);
+  const lastTapRef = useRef<{ id: Id; time: number; count: number; rect: DOMRect } | null>(null);
   const pendingClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inProgressPickerTodoId, setInProgressPickerTodoId] = useState<Id | null>(null);
   const [inProgressPickerPos, setInProgressPickerPos] = useState({ top: 0, left: 0 });
@@ -658,6 +662,25 @@ export function ParentTodoThreadView({
   // Dubbeltryck öppnar avatarväljaren istället för detaljvyn (2026-07-22) —
   // ett vanligt enkelt tryck fördröjs medvetet DOUBLE_TAP_MS för att kunna
   // särskilja gesterna, samma standardmönster som klick-kontra-dubbelklick.
+  // Bugg fixad (2026-07-26, Zaidas fynd: "modalen hamnar utanför skärmen")
+  // — elementet positioneras med position:fixed (viewport-relativt), men
+  // koden lade ändå till window.scrollY/scrollX ovanpå getBoundingClientRect()s
+  // redan viewport-relativa koordinater, samma fel som redan var korrekt
+  // undvikt i kategorimenyns motsvarande kod (handleCategoryClick, ingen
+  // scroll-offset där). Klämmer dessutom in positionen mot fönstrets kanter
+  // — pickerns bredd/höjd är okänd innan render, en rimlig uppskattning
+  // (220×260px) räcker för att undvika att den klipps av när bubblan ligger
+  // nära höger/nedre kanten.
+  function openInProgressPickerAt(todo: Todo, rect: DOMRect) {
+    const ESTIMATED_WIDTH = 220;
+    const ESTIMATED_HEIGHT = 260;
+    setInProgressPickerPos({
+      top: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - ESTIMATED_HEIGHT)),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - ESTIMATED_WIDTH))
+    });
+    setInProgressPickerTodoId(todo.id);
+  }
+
   function handleBallClick(todo: Todo, e: React.MouseEvent<HTMLButtonElement>) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
@@ -666,47 +689,44 @@ export function ParentTodoThreadView({
 
     const now = Date.now();
     const last = lastTapRef.current;
-    if (last && last.id === todo.id && now - last.time < DOUBLE_TAP_MS) {
-      if (pendingClickTimerRef.current) {
-        window.clearTimeout(pendingClickTimerRef.current);
-        pendingClickTimerRef.current = null;
-      }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const count = last && last.id === todo.id && now - last.time < DOUBLE_TAP_MS ? last.count + 1 : 1;
+
+    if (pendingClickTimerRef.current) {
+      window.clearTimeout(pendingClickTimerRef.current);
+      pendingClickTimerRef.current = null;
+    }
+
+    if (count >= 3) {
+      // Tre snabba tryck (2026-08-08) startar timern — sista möjliga gesten
+      // i sekvensen, ingen ytterligare fördröjning behövs.
       lastTapRef.current = null;
-      const rect = e.currentTarget.getBoundingClientRect();
-      // Bugg fixad (2026-07-26, Zaidas fynd: "modalen hamnar utanför
-      // skärmen") — elementet positioneras med position:fixed (viewport-
-      // relativt), men koden lade ändå till window.scrollY/scrollX ovanpå
-      // getBoundingClientRect()s redan viewport-relativa koordinater, samma
-      // fel som redan var korrekt undvikt i kategorimenyns motsvarande kod
-      // (handleCategoryClick, ingen scroll-offset där). Klämmer dessutom in
-      // positionen mot fönstrets kanter — pickerns bredd/höjd är okänd innan
-      // render, en rimlig uppskattning (220×260px) räcker för att undvika
-      // att den klipps av när bubblan ligger nära höger/nedre kanten.
-      const ESTIMATED_WIDTH = 220;
-      const ESTIMATED_HEIGHT = 260;
-      setInProgressPickerPos({
-        top: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - ESTIMATED_HEIGHT)),
-        left: Math.max(8, Math.min(rect.left, window.innerWidth - ESTIMATED_WIDTH))
-      });
-      setInProgressPickerTodoId(todo.id);
+      if (todo.timerEnabled) startTodoTimer(todo.id);
       return;
     }
 
-    lastTapRef.current = { id: todo.id, time: now };
+    lastTapRef.current = { id: todo.id, time: now, count, rect };
     pendingClickTimerRef.current = window.setTimeout(() => {
-      setDetailTodoId(todo.id);
+      const pending = lastTapRef.current;
+      lastTapRef.current = null;
       pendingClickTimerRef.current = null;
+      if (!pending) return;
+      if (pending.count >= 2) {
+        openInProgressPickerAt(todo, pending.rect);
+      } else {
+        setDetailTodoId(todo.id);
+      }
     }, DOUBLE_TAP_MS);
   }
 
   function handleConfirmComplete(todo: Todo) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
-    // En eventuell pågående timer (2026-08-07, se TodoTimerSection i
-    // TodoDetailView.tsx — startas där, avslutas här via den redan
-    // befintliga håll-in-gesten) räknas ut och skickas med, oavsett om
-    // uppgiften faktiskt hann öppnas via visa-vyn eller ej.
-    const startedAt = readTodoTimerStartedAt(todo.id);
+    // En eventuell pågående timer (2026-08-07/08, startas med tre snabba
+    // tryck på bubblan eller via knappen i TodoDetailView, avslutas här via
+    // den redan befintliga håll-in-gesten) räknas ut och skickas med,
+    // oavsett om uppgiften faktiskt hann öppnas via visa-vyn eller ej.
+    const startedAt = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
     if (startedAt !== null) {
       clearTodoTimer(todo.id);
       onCompleteTodo(todo.id, Date.now() - startedAt);

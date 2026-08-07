@@ -167,6 +167,11 @@ export function TodoCreatorModal({
   // inte en tidtagning) — samma sträng-baserade mönster som starValueInput
   // (undviker den redan kända "envis nolla vid tömning"-buggen).
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState("");
+  // Auto-stopp för en ÖPPEN tidtagning (2026-08-08, Zaidas önskemål: "alla
+  // timer från 2do skall stanna automatiskt efter 2h, men det skall gå att
+  // ställa in detta") — bara relevant utan Planerad tid (en nedräkning har
+  // redan sin egen naturliga gräns). Tomt = standardvärdet (120 min).
+  const [timerMaxMinutesInput, setTimerMaxMinutesInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const isForChild = assigneeIds.some(isRecipientChild);
@@ -415,7 +420,12 @@ export function TodoCreatorModal({
             timerEnabled && plannedDurationMinutesInput
               ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
               : null,
-          elapsedMs: null
+          elapsedMs: null,
+          // Auto-stopp (2026-08-08) — bara relevant utan Planerad tid.
+          timerMaxMinutes:
+            timerEnabled && !plannedDurationMinutesInput && timerMaxMinutesInput
+              ? Math.max(1, Math.min(720, Math.floor(Number(timerMaxMinutesInput)) || 1))
+              : null
         });
       }
       onClose();
@@ -641,10 +651,10 @@ export function TodoCreatorModal({
               )}
 
               {/* Timer, alla uppgifter (2026-08-07, Zaidas önskemål — var
-                  tidigare bara isForChild). Barnets EGET uppdragskort startar
-                  timern med dubbelklick; övriga vyer (Todos-panelen/Hem-vyns
-                  familjetrådar) startar den istället via en knapp i visa-vyn,
-                  se TodoTimerSection i TodoDetailView.tsx. */}
+                  tidigare bara isForChild). Startas med tre snabba tryck
+                  direkt på uppgiften, i både barnvy och vuxenvy (2026-08-08)
+                  — vuxenvyn/Hem-vyns familjetrådar visar den löpande tiden i
+                  visa-vyn (TodoTimerSection, TodoDetailView.tsx). */}
               <label className="todo-timer-toggle">
                 <input
                   checked={timerEnabled}
@@ -668,6 +678,24 @@ export function TodoCreatorModal({
                   />
                   <span className="field-hint field-hint--neutral">
                     Visar en nedräkning där uppgiften används. Lämnas det tomt visas en vanlig tidtagning istället.
+                  </span>
+                </label>
+              )}
+
+              {timerEnabled && !plannedDurationMinutesInput && (
+                <label className="field-label">
+                  Stanna timern automatiskt efter (minuter)
+                  <input
+                    className="text-input"
+                    min={1}
+                    max={720}
+                    onChange={(e) => setTimerMaxMinutesInput(e.target.value)}
+                    placeholder="120 (2h) om tomt"
+                    type="number"
+                    value={timerMaxMinutesInput}
+                  />
+                  <span className="field-hint field-hint--neutral">
+                    Skyddar mot en bortglömd tidtagning — resultatet av en avslutad tidtagning sparas i Medaljer/Rekord.
                   </span>
                 </label>
               )}

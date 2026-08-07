@@ -807,21 +807,43 @@ export type Todo = {
   // Timerfunktion (2026-07-07, Zaidas önskemål: "hur lång tid det tar att
   // göra todo" — uttryckligen SKILT från visibleFrom/expiresAt, som styr NÄR
   // uppgiften visas). Helt separat, enklare system än TimedTask/TimedAttempt
-  // (Medaljer/Rekord) — ingen upprepad personbästa-jämförelse, bara EN
+  // (Medaljer/Rekord) — ingen upprepad personbästa-jämförelse här, bara EN
   // inspelad tid för just detta tillfälle. Samma "klienten mäter, ingen
-  // server-side pågående-status"-mönster som TimedTask redan använder —
-  // stänger man fliken mitt i en pågående timer förloras den bara, ingen
-  // återupptagning. Valfritt och bakåtkompatibelt.
+  // server-side pågående-status"-mönster som TimedTask redan använder — men
+  // sedan 2026-08-07/08 localStorage-backad (useTodoTimer.ts) i BÅDA barnvyn
+  // och vuxenvyn, så en pågående timer överlever en sidnavigering eller att
+  // man startar en ANNAN timer parallellt (flera kan gå samtidigt). Startas
+  // med tre snabba tryck på uppgiften; för barn/vuxen visas den löpande
+  // tiden på olika ställen (uppgiftskortet resp. TodoDetailView-modalen).
+  // Uppgifter tilldelade ett barn ANVÄNDER redan timerEnabled/
+  // plannedDurationMinutes för den egna nedräkningen (se nedan) — resultatet
+  // av en ÖPPEN tidtagning (utan plannedDurationMinutes) skickas dessutom
+  // vidare till Medaljer/Rekord (TimedTask/TimedAttempt) som ett nytt försök
+  // under en auto-skapad/återanvänd TimedTask med samma titel som uppgiften
+  // (2026-08-08, Zaidas önskemål — "resultatet... skall skickas till rekord
+  // och medaljer... där ska jag kunna se mina tidtagningar över tid").
   timerEnabled?: boolean;
   // Planerad tid i MINUTER (samma enhet/mönster som RewardShopItem.timerMinutes)
   // — sätts av föräldern vid skapande. Är detta satt visar barnets uppgiftskort
-  // en NEDRÄKNING (dubbelklick startar, räknar ner mot noll) istället för den
-  // öppna uppåträknande tidtagningen (2026-07-07, Zaidas förtydligande: "jag
-  // menar en timer, där bordet visar hur lång tid som är kvar" — inte en
-  // tidtagning). Saknas fältet (eller är null) faller kortet tillbaka på den
-  // ursprungliga öppna tidtagningen (Starta/Klar-knappar, räknar uppåt).
+  // en NEDRÄKNING (räknar ner mot noll) istället för den öppna uppåträknande
+  // tidtagningen (2026-07-07, Zaidas förtydligande: "jag menar en timer, där
+  // bordet visar hur lång tid som är kvar" — inte en tidtagning). Saknas
+  // fältet (eller är null) faller kortet tillbaka på den ursprungliga öppna
+  // tidtagningen (räknar uppåt) — och DEN öppna tidtagningens resultat är
+  // vad som skickas vidare till Medaljer/Rekord, se ovan.
   plannedDurationMinutes?: number | null;
   elapsedMs?: number | null;
+  // Automatiskt stopp för en ÖPPEN (stoppurs-)tidtagning utan
+  // plannedDurationMinutes (2026-08-08, Zaidas önskemål: "alla timer från
+  // 2do skall stanna automatiskt efter 2h, men det skall gå att ställa in
+  // detta") — en glömd, aldrig avslutad tidtagning ska inte kunna ackumulera
+  // orimliga tider (särskilt nu när resultatet sparas till Medaljer/Rekords
+  // personbästa-statistik). null/saknas = standardvärdet 120 minuter (2h),
+  // se DEFAULT_TIMER_MAX_MINUTES i useTodoTimer.ts. Påverkar bara läsningen
+  // av en pågående timer (useTodoTimer.ts rensar/ignorerar den tyst efter
+  // taket) — ingen server-side auto-completion, uppgiften måste fortfarande
+  // avslutas via den vanliga gesten.
+  timerMaxMinutes?: number | null;
   // "Någon håller på med den här"-indikator (2026-07-22, Zaidas önskemål,
   // Sprint 7:s motivation löst inom EGNA familjen först) — dubbeltryck på
   // bollen i vuxenvyns tråd-vy öppnar en avatarväljare (ParentTodoThreadView.tsx),

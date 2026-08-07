@@ -633,7 +633,13 @@ export function MemberShellContent({
         t.deletedAt === null
     );
 
-    if (selectedMemberIsChild && showChildRecords) {
+    // Rekord-sidan är inte längre bara för barn (2026-08-08) — en vuxens
+    // egna ÖPPNA tidtagningar (todos utan Planerad tid) skickar nu sitt
+    // resultat till Medaljer/Rekord precis som barnens (se completeTodo,
+    // todosService.ts), Zaidas önskemål: "där ska jag kunna se mina
+    // tidtagningar över tid, med statistiken". showChildRecords styr
+    // fortsatt samma delade state, bara namnet är en kvarleva.
+    if (showChildRecords) {
       return (
         <Suspense fallback={null}>
           <ChildRecordsPage
@@ -685,6 +691,7 @@ export function MemberShellContent({
           onDismissRejectedTodo={(todoId) =>
             onDismissRejectedTodo(todoId, selectedDashboardMember.id)
           }
+          onOpenRecords={() => setShowChildRecords(true)}
         />
       </Suspense>
     );

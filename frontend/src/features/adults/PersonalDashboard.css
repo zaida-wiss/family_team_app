@@ -1,0 +1,13 @@
+/* Rekord-knappen (2026-08-08) — PersonalDashboard saknar ChildStarsPanel
+   (stjärnor/belöningar gäller inte en vuxens egna uppgifter), så pokal-
+   knappen som annars ligger där behöver en egen, liten placering här i
+   stället, uppe i höger hörn ovanför ChildHero. */
+.personal-dashboard__hero-row {
+  position: relative;
+}
+
+.personal-dashboard__records-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+}

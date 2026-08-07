@@ -173,7 +173,13 @@ test("Barnets uppgifter: begär skärm-wake-lock medan en todo-timer pågår, sl
   ).toContain("release");
 });
 
-test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning, dubbelklick startar, 2s-håll avslutar", async ({ page }) => {
+// 2026-08-08: tre snabba tryck startar (var dubbelklick) — samma gest som
+// vuxenvyns bubblor (Zaidas önskemål: "tidtagning skall starta om man
+// trycker 3 snabba tryck på uppgiften i både barnvy och vuxenvy"). Den
+// löpande tiden visas nu som en digital sifferbadge längst ner till höger
+// (ingen "kvar"-text i själva badgen — aria-label på kortet bär fortsatt
+// den fullständiga, tillgängliga beskrivningen).
+test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning, tre snabba tryck startar, 2s-håll avslutar", async ({ page }) => {
   let sentElapsedMs: number | null | undefined;
   await mockChildSession(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [COUNTDOWN_TODO] }));
@@ -186,11 +192,12 @@ test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning,
   await page.goto("/");
   const card = page.getByRole("button", { name: /Plocka undan leksaker/ });
   await expect(card).toBeVisible();
-  // Innan start: ingen Starta/Klar-knapp — hela kortet är dubbelklicksytan.
+  // Innan start: ingen Starta/Klar-knapp — hela kortet är tryckytan.
   await expect(page.getByRole("button", { name: "Starta Plocka undan leksaker" })).toHaveCount(0);
 
-  await card.dblclick();
-  await expect(page.getByText(/0:5\d kvar|1:00 kvar/)).toBeVisible();
+  await card.click({ clickCount: 3 });
+  await expect(card).toHaveAccessibleName(/0:5\d kvar|1:00 kvar/);
+  await expect(page.getByText(/^0:5\d$|^1:00$/)).toBeVisible();
 
   // Simulerar ett 2+ sekunders håll, samma dispatchEvent-mönster som det
   // befintliga långtryck-testet i parent-todo-thread-view.spec.ts (undviker

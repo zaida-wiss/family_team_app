@@ -1,4 +1,5 @@
 import type { Calendar, Id, Member, Role, Todo, TodoCategory } from "@shared/types";
+import { Trophy } from "lucide-react";
 
 import { ChildTimeline } from "../children/ChildTimeline";
 import { ChildHero } from "../children/ChildHero";
@@ -10,6 +11,8 @@ import { useState, useEffect } from "react";
 
 import "../children/ChildDashboard.css";
 import "../children/ChildResponsive.css";
+import "../children/ChildStarsPanel.css";
+import "./PersonalDashboard.css";
 
 // En vuxen medlems uppgifter+kalender-vy (2026-07-22, Zaidas önskemål: "jag
 // vill kunna se mina uppgifter och kalendrar på samma sätt som barnen gör
@@ -35,6 +38,12 @@ type Props = {
   rejectedTodos: Todo[];
   onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
+  // Rekord-sidan (2026-08-08, Zaidas önskemål: en öppen tidtagnings resultat
+  // skickas till Medaljer/Rekord — "där ska jag kunna se mina tidtagningar
+  // över tid") — PersonalDashboard saknar ChildStarsPanel (stjärnor/
+  // belöningar gäller inte en vuxens egna uppgifter), så pokal-knappen ligger
+  // istället som en egen, liten knapp här.
+  onOpenRecords: () => void;
 };
 
 function getWeekStripDays(anchor: Date) {
@@ -58,7 +67,8 @@ export function PersonalDashboard({
   activeTodos,
   rejectedTodos,
   onCompleteTodo,
-  onDismissRejectedTodo
+  onDismissRejectedTodo,
+  onOpenRecords
 }: Props) {
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -109,11 +119,22 @@ export function PersonalDashboard({
             onNextWeek={() => moveWeek(1)}
           />
 
-          <ChildHero
-            childName={member.name}
-            avatarUrl={member.avatarUrl}
-            today={today}
-          />
+          <div className="personal-dashboard__hero-row">
+            <ChildHero
+              childName={member.name}
+              avatarUrl={member.avatarUrl}
+              today={today}
+            />
+            <button
+              aria-label="Rekord"
+              className="child-theme-button child-records-button personal-dashboard__records-btn"
+              onClick={onOpenRecords}
+              title="Rekord"
+              type="button"
+            >
+              <Trophy size={18} />
+            </button>
+          </div>
 
           <ChildTasksSection
             todos={activeTodos}

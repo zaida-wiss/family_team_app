@@ -200,6 +200,10 @@ export function TodoEditModal({
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState(
     seriesSource.plannedDurationMinutes ? String(seriesSource.plannedDurationMinutes) : ""
   );
+  // Auto-stopp för en ÖPPEN tidtagning (2026-08-08) — se TodoCreatorModal.tsx.
+  const [timerMaxMinutesInput, setTimerMaxMinutesInput] = useState(
+    seriesSource.timerMaxMinutes ? String(seriesSource.timerMaxMinutes) : ""
+  );
   // "Uppdaterat"-bekräftelsen (2026-07-08, Zaidas önskemål) — kort, tyst
   // bekräftelse istället för en Spara-knapp att trycka på.
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
@@ -329,6 +333,11 @@ export function TodoEditModal({
         timerEnabled && plannedDurationMinutesInput
           ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
           : null,
+      // Auto-stopp (2026-08-08) — bara relevant utan Planerad tid.
+      timerMaxMinutes:
+        timerEnabled && !plannedDurationMinutesInput && timerMaxMinutesInput
+          ? Math.max(1, Math.min(720, Math.floor(Number(timerMaxMinutesInput)) || 1))
+          : null,
       recurrence,
       // Återkommande: visibleFrom är bara ankardatumet för förfallo-
       // beräkningen (recurringTodos.ts), de faktiska klockslagen kommer från
@@ -392,7 +401,7 @@ export function TodoEditModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     title, emoji, selectedCategoryId, newCategoryName, assigneeId, starValueInput, timerEnabled,
-    plannedDurationMinutesInput, recurrence, visibleFrom, expiresAt, startDate, timeWindows,
+    plannedDurationMinutesInput, timerMaxMinutesInput, recurrence, visibleFrom, expiresAt, startDate, timeWindows,
     notes, subtasks
   ]);
 
@@ -601,6 +610,24 @@ export function TodoEditModal({
               />
               <span className="field-hint field-hint--neutral">
                 Visar en nedräkning där uppgiften används. Lämnas det tomt visas en vanlig tidtagning istället.
+              </span>
+            </label>
+          )}
+
+          {timerEnabled && !plannedDurationMinutesInput && (
+            <label className="field-label">
+              Stanna timern automatiskt efter (minuter)
+              <input
+                className="text-input"
+                min={1}
+                max={720}
+                onChange={(e) => setTimerMaxMinutesInput(e.target.value)}
+                placeholder="120 (2h) om tomt"
+                type="number"
+                value={timerMaxMinutesInput}
+              />
+              <span className="field-hint field-hint--neutral">
+                Skyddar mot en bortglömd tidtagning — resultatet av en avslutad tidtagning sparas i Medaljer/Rekord.
               </span>
             </label>
           )}

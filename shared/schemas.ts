@@ -346,6 +346,9 @@ export const TodoSchema = z.object({
   timerEnabled: z.boolean().optional(),
   plannedDurationMinutes: z.number().int().min(1).max(480).nullable().optional(),
   elapsedMs: z.number().int().min(0).nullable().optional(),
+  // Auto-stopp för en öppen tidtagning (2026-08-08) — se Todo.timerMaxMinutes
+  // i shared/types.ts. 1–720 min (upp till 12h, en generös yttre gräns).
+  timerMaxMinutes: z.number().int().min(1).max(720).nullable().optional(),
   // Serverstyrda, se Todo i shared/types.ts — optional() så en klient som
   // INTE skickar dem (normalfallet) fortfarande validerar, servern sätter
   // dem alltid själv i createTodo/via Mongoose-hooken (Todo.ts). Medvetet
@@ -377,7 +380,8 @@ export const TodoPatchSchema = TodoSchema.pick({
   subtasks: true,
   timeWindows: true,
   timerEnabled: true,
-  plannedDurationMinutes: true
+  plannedDurationMinutes: true,
+  timerMaxMinutes: true
 }).partial().extend({
   status: z.literal("pending").optional(),
   completedAt: z.null().optional(),
