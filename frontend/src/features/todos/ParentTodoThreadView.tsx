@@ -168,6 +168,24 @@ export function computeProgress(todo: Todo): number | null {
   return Math.round((done / todo.subtasks.length) * 100);
 }
 
+// Bubblornas färgstyrka (2026-08-10, Zaidas önskemål: "de färgstarkaste
+// bubblorna skall indikera på att det finns gott om tid... ju mindre tid som
+// är kvar... skall bubblorna bli ljusare") — 0 = precis synlig (hela
+// tidsfönstret kvar, maximal färgmättnad), 1 = vid/förbi expiresAt (nästan
+// urblekt). Bygger på visibleFrom→expiresAt (samma fönster todos redan
+// filtreras mot, isTodoVisibleNow/isDueWithinRange) — null om något av dem
+// saknas (en uppgift utan tidsgräns ska inte se "bråttom" ut). Konsumeras av
+// CSS (--time-urgency, .todo-thread__ball) via en calc()-blandning, inte en
+// diskret stegskala, så övergången är mjuk minut för minut.
+export function computeTimeUrgency(todo: Todo, now: number): number | null {
+  if (!todo.visibleFrom || !todo.expiresAt) return null;
+  const start = new Date(todo.visibleFrom).getTime();
+  const end = new Date(todo.expiresAt).getTime();
+  const total = end - start;
+  if (total <= 0) return now >= end ? 1 : 0;
+  return Math.max(0, Math.min(1, (now - start) / total));
+}
+
 export function assigneeNameFor(todo: Todo, members: Member[]): string {
   if (todo.assignedTo === null) return "Familjen";
   return members.find((m) => m.id === todo.assignedTo)?.name ?? "Okänt barn";
@@ -1206,6 +1224,7 @@ export function ParentTodoThreadView({
                     ? formatElapsed(nowTick - new Date(todo.inProgressSince).getTime())
                     : null;
                 const bubbleKey = stableBubbleKey(todo);
+                const timeUrgency = computeTimeUrgency(todo, nowTick);
                 return (
                   <li
                     key={todo.id}
@@ -1221,7 +1240,8 @@ export function ParentTodoThreadView({
                     style={
                       {
                         ...(assigneeColor ? { "--assignee-color": assigneeColor } : {}),
-                        ...(inProgressColor ? { "--in-progress-color": inProgressColor } : {})
+                        ...(inProgressColor ? { "--in-progress-color": inProgressColor } : {}),
+                        ...(timeUrgency !== null ? { "--time-urgency": timeUrgency } : {})
                       } as React.CSSProperties
                     }
                   >

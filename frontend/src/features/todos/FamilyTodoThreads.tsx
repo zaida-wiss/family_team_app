@@ -16,6 +16,7 @@ import {
   bubbleTimerLabel,
   computeCompletedPercent,
   computeProgress,
+  computeTimeUrgency,
   formatElapsed,
   sortByEndThenStartTime,
   stableBubbleKey
@@ -791,6 +792,7 @@ export function FamilyTodoThreads({
                       ? formatElapsed(nowTick - new Date(todo.inProgressSince).getTime())
                       : null;
                   const bubbleKey = stableBubbleKey(todo);
+                  const timeUrgency = computeTimeUrgency(todo, nowTick);
 
                   return (
                     <li
@@ -807,7 +809,8 @@ export function FamilyTodoThreads({
                       style={
                         {
                           ...(assigneeColor ? { "--assignee-color": assigneeColor } : {}),
-                          ...(inProgressColor ? { "--in-progress-color": inProgressColor } : {})
+                          ...(inProgressColor ? { "--in-progress-color": inProgressColor } : {}),
+                          ...(timeUrgency !== null ? { "--time-urgency": timeUrgency } : {})
                         } as React.CSSProperties
                       }
                     >

@@ -561,14 +561,35 @@
      ljusare i mitten (40%) och mer mättad ut mot kanten (60%) — INTE en
      platt bottenfärg + fyra knappt synliga hörnfläckar som tidigare. De två
      vita glansfläckarna (uppe till vänster/nere till höger) oförändrade —
-     ger fortsatt en riktig såpbubblas skiftande, glasiga sken. */
+     ger fortsatt en riktig såpbubblas skiftande, glasiga sken.
+
+     --time-urgency (2026-08-10, Zaidas önskemål: "de färgstarkaste
+     bubblorna skall indikera på att det finns gott om tid... ju mindre tid
+     kvar... ljusare") — satt per bubbla (inte per tråd som --thread-accent)
+     av computeTimeUrgency(), 0 (nyss synlig, hela fönstret kvar) till 1 (vid/
+     förbi expiresAt). En ren calc()-driven förskjutning av samma två
+     accent/vit-andelar ovan mot MER vitt ju högre urgency — vid 0 identiskt
+     med baslinjen (ingen synlig skillnad för todos utan tidsgräns, där
+     variabeln aldrig sätts och alltid faller tillbaka på 0). Görs bara
+     LJUSARE, aldrig MER mättad än baslinjen — samma redan uträknade
+     40%/60%-golv gäller alltså fortsatt som sämsta tänkbara kontrast (vid
+     urgency 0), all ljusning ovanpå det ökar bara kontrasten mot den alltid
+     svarta title-texten ytterligare, aldrig tvärtom. */
   background:
     radial-gradient(circle at 28% 24%, color-mix(in srgb, white 88%, transparent) 0%, transparent 46%),
     radial-gradient(circle at 76% 76%, color-mix(in srgb, white 95%, transparent) 0%, transparent 9%),
     radial-gradient(
       circle at 50% 50%,
-      color-mix(in srgb, var(--thread-accent, var(--c0)) 40%, white 60%) 0%,
-      color-mix(in srgb, var(--thread-accent, var(--c0)) 60%, white 40%) 100%
+      color-mix(
+        in srgb,
+        var(--thread-accent, var(--c0)) calc(40% - var(--time-urgency, 0) * 32%),
+        white calc(60% + var(--time-urgency, 0) * 32%)
+      ) 0%,
+      color-mix(
+        in srgb,
+        var(--thread-accent, var(--c0)) calc(60% - var(--time-urgency, 0) * 45%),
+        white calc(40% + var(--time-urgency, 0) * 45%)
+      ) 100%
     );
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--assignee-color, var(--thread-accent, var(--primary))) 25%, transparent),
