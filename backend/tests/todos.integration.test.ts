@@ -110,7 +110,9 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
       .set("x-member-id", childId)
       .send({});
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ok: true });
+    // isNewRecord (2026-08-09) — svaret bär nu även detta fält, false här
+    // eftersom todon i den här testsviten saknar timerEnabled.
+    expect(res.body).toEqual({ ok: true, isNewRecord: false });
   });
 
   it("godkänner barnets todo (status → approved)", async () => {

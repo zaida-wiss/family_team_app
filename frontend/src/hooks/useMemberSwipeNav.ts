@@ -40,6 +40,20 @@ import { useCallback, useRef } from "react";
 // FÖRSTA, sedan länge bortkopplade diven efter en enda tur till Rekord och
 // tillbaka. En callback-ref anropas av React vid VARJE nod-byte (null vid
 // avmontering, elementet vid montering) och fäster/lösgör lyssnarna då.
+//
+// 2026-08-09, uppföljning (CI: musdrag-testet gick inte att slutföra, verifierat
+// deterministiskt två gånger inklusive en automatisk omkörning, ingen
+// slumpmässig instabilitet) — setPointerCapture saknades helt för mus. Utan
+// den avgör webbläsaren VILKET element ett pointerup landar på baserat på
+// var muspekaren FYSISKT befinner sig vid släppet — hamnar den ens någon
+// enstaka pixel utanför denna diven (t.ex. om en delpixel-avrundning gör att
+// dragets slutposition landar precis på en angränsande yta) bubblar
+// pointerup ALDRIG hit, och gesten avslutas tyst utan att växla, trots att
+// den visuellt såg klar ut. setPointerCapture (bara för mus — touch lämnas
+// medvetet ofångad, se filens huvudkommentar om varför) tvingar ALLA
+// efterföljande events för samma pointerId till DENNA nod oavsett var
+// pekaren fysiskt är, precis som useDragReorder.ts/useResizableTextarea.ts
+// redan gör av samma anledning.
 const TOUCH_SWIPE_THRESHOLD_PX = 60;
 const AXIS_LOCK_THRESHOLD_PX = 10;
 const DESKTOP_MARGIN_PX = 48;
@@ -82,6 +96,11 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         const inLeftMargin = e.clientX - rect.left <= DESKTOP_MARGIN_PX;
         const inRightMargin = rect.right - e.clientX <= DESKTOP_MARGIN_PX;
         if (!inLeftMargin && !inRightMargin) return;
+        // Garanterar att pointerup landar HÄR oavsett var muspekaren
+        // fysiskt slutar (se filens huvudkommentar) — bara för mus, aldrig
+        // touch (skulle annars kapa pekar-events från barn-element som
+        // ChildTasksSection.tsx:s håll-in-för-att-avklara).
+        el!.setPointerCapture(e.pointerId);
       }
       gestureRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, isMouse, axis: "unknown" };
     }
@@ -104,6 +123,9 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       const g = gestureRef.current;
       if (!g || g.pointerId !== e.pointerId) return;
       gestureRef.current = null;
+      if (g.isMouse && el!.hasPointerCapture(e.pointerId)) {
+        el!.releasePointerCapture(e.pointerId);
+      }
 
       const dx = e.clientX - g.x;
 
@@ -128,7 +150,13 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     }
 
     function onPointerCancel(e: PointerEvent) {
-      if (gestureRef.current?.pointerId === e.pointerId) gestureRef.current = null;
+      const g = gestureRef.current;
+      if (g?.pointerId === e.pointerId) {
+        gestureRef.current = null;
+        if (g.isMouse && el!.hasPointerCapture(e.pointerId)) {
+          el!.releasePointerCapture(e.pointerId);
+        }
+      }
     }
 
     el.addEventListener("pointerdown", onPointerDown);
