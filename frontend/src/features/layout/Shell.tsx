@@ -163,6 +163,28 @@ export function Shell({
   const visibleThemeMember =
     activePanel === "members" ? selectedDashboardMember : currentMember;
 
+  // Fast/kant-till-kant skal (2026-08-09, Zaidas fynd: "jag vill inte kunna
+  // skrolla bort bakgrunden så att det blir vitt... Den hoppat[e] upp och
+  // ner") — .app-shell-content.app-shell-full (overflow:hidden +
+  // overscroll-behavior:none, se layout.css) applicerades tidigare BARA när
+  // currentMember.isChild (ett riktigt inloggat barns EGEN vy). En vuxen
+  // som tittar på en vald medlems dashboard (samma ChildDashboard/
+  // PersonalDashboard-rotträd, samma .child-dashboard-klass) renderas dock
+  // inuti en VANLIG .app-shell-content — som på mobil har overflow-y:auto
+  // och ingen overscroll-behavior-spärr alls, vilket lät en elastisk
+  // bakgrundsstuds (iOS-panorering förbi kantens overflow) blotta
+  // webbläsarens tomma, ostylade vita duk bakom. Samma lås tillämpas nu
+  // även här — kräver en verkligt UPPLÖST medlem (inte bara ett satt id;
+  // matchar exakt samma villkor som MemberShellContent.tsx:s egen
+  // render-spärr för ChildDashboard/PersonalDashboard/ChildRecordsPage,
+  // annars hade en gammal/raderad medlems-id av misstag låst skalet trots
+  // att den panelen faller tillbaka på en helt annan vy).
+  const isViewingMemberDashboard =
+    activePanel === "members" &&
+    settingsProps.members.some(
+      (m) => m.id === memberContentProps.selectedDashboardMemberId && m.deletedAt === null
+    );
+
   const shellTheme =
     visibleThemeMember.dashboardTheme ?? (visibleThemeMember.isChild ? "space" : "clear");
   // Mörkt läge (2026-07-23) — bara vuxenteman, se ThemePicker.tsx.
@@ -198,7 +220,7 @@ export function Shell({
         onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
       />
 
-      <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>
+      <div className={`app-shell-content${currentMember.isChild || isViewingMemberDashboard ? " app-shell-full" : ""}`}>
         {/* key={activePanel}-panelNavResetKey — en krasch i en panel ska inte permanent
             låsa hela appen; navigerar man till en annan panel får felgränsen en ny chans
             (ommonteras). panelNavResetKey (2026-07-26, generaliserad 2026-08-09 till alla

@@ -1,21 +1,47 @@
-import type { PointerEvent as ReactPointerEvent } from "react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 
 // Bläddra mellan familjemedlemmar i barnets dashboard (2026-08-09, Zaidas
-// önskemål) — touch: ett enkelt vågrätt svep var som helst i vyn ("det
-// räcker med att svajpa med ett finger vågrät över skärmen", inte tre
-// fingrar). Mus/desktop: ett striktare, avsiktligt svårare-att-råka-göra
-// mönster — nedtryck måste ske i vänster/höger marginal, och markören måste
-// dras hela vägen över till andra sidan innan man släpper.
+// önskemål) — touch: ett enkelt vågrätt svep var som helst i vyn. Mus/
+// desktop: nedtryck måste ske i vänster/höger marginal, markören måste
+// dras hela vägen över till andra sidan innan man släpper. Bläddringen
+// cyklar runt i oändlighet (sista→första, första→sista) via
+// goToRelativeMember i MemberShellContent.tsx, inte den här hooken.
 //
-// Pointer Events (inte råa Touch Events) — samma konvention som
-// useDragReorder.ts/useResizableTextarea.ts redan etablerat i den här
-// kodbasen, en enda kodväg täcker mus OCH touch. Ingen setPointerCapture
-// här (till skillnad från de hookarna) — den här lyssnaren sitter på en
-// bred, hela-vyn-omslutande container och skulle annars kapa pekar-events
-// från barn-element (t.ex. uppgiftskortens egen håll-in-för-att-avklara-
-// gest i ChildTasksSection.tsx) innan de når sina egna onPointerDown/Up.
+// 2026-08-09, uppföljning (Zaidas fynd: "det är fortfarande svårt att
+// svajpa... kan det bero på att skärmen rör sig upp och ner?", sedan "om
+// fingret inte dras exakt vågrät utan några grader i en annan vinkel så
+// fungerar inte swipet") — en ren touch-action-begränsning
+// (se ChildDashboard.css) räcker INTE ensam: så fort fingret rör sig det
+// minsta lodrätt (helt normalt, ingen håller fingret perfekt vågrätt genom
+// hela gesten) kan webbläsaren hinna tolka rörelsen som sin EGEN, native
+// lodräta panorering/skroll INNAN gesten hunnit avslutas — det är just det
+// som UPPLEVS som "skärmen rör sig upp och ner", och webbläsaren skickar då
+// ofta ett pointercancel istället för ett rent pointerup, vilket tyst dödade
+// svepet. touch-action deklarerar bara VAD som är TILLÅTET, det stoppar
+// inte en redan pågående rörelse.
+//
+// Löst genom att själv lyssna på pointermove (native addEventListener,
+// INTE Reacts onPointerMove-props — måste kunna registreras med
+// passive:false för att preventDefault() garanterat ska stoppa webbläsarens
+// egen panorering) och tidigt (redan efter 10px rörelse) LÅSA gestens axel:
+// är den vågrätt dominant (bara |dx|>|dy|, INTE 1,5x eller mer — en
+// generös tröskel, ett par graders avvikelse ska fortfarande räknas som
+// ett vågrätt svep) tar vi över den direkt (preventDefault på VARJE
+// efterföljande pointermove, så webbläsaren aldrig hinner kapa den) — är
+// den lodrätt dominant släpper vi den helt (ingen preventDefault, vanlig
+// skroll i t.ex. uppgiftslistan fortsätter fungera precis som innan).
+//
+// Callback-ref, INTE en vanlig useRef+useEffect([]) (2026-08-09, fångat vid
+// granskning innan utskick) — MemberShellContent.tsx:s div (den denna hook
+// fästs på) monteras/avmonteras om varje gång man öppnar/stänger Rekord-
+// sidan (som returnerar en Suspense direkt, utan den omslutande diven) —
+// en effekt med tom beroendelista körs bara EN gång per KOMPONENTINSTANS,
+// inte en gång per DOM-nod, och hade lämnat lyssnarna dött fästa vid den
+// FÖRSTA, sedan länge bortkopplade diven efter en enda tur till Rekord och
+// tillbaka. En callback-ref anropas av React vid VARJE nod-byte (null vid
+// avmontering, elementet vid montering) och fäster/lösgör lyssnarna då.
 const TOUCH_SWIPE_THRESHOLD_PX = 60;
+const AXIS_LOCK_THRESHOLD_PX = 10;
 const DESKTOP_MARGIN_PX = 48;
 const DESKTOP_CROSS_RATIO = 0.6;
 
@@ -24,63 +50,102 @@ type Options = {
   onPrev: () => void;
 };
 
-type SwipeStart = {
+type GestureState = {
   pointerId: number;
   x: number;
   y: number;
   isMouse: boolean;
+  axis: "unknown" | "horizontal" | "vertical";
 };
 
-export function useMemberSwipeNav({ onNext, onPrev }: Options) {
-  const startRef = useRef<SwipeStart | null>(null);
+export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Options) {
+  const onNextRef = useRef(onNext);
+  const onPrevRef = useRef(onPrev);
+  onNextRef.current = onNext;
+  onPrevRef.current = onPrev;
 
-  function onPointerDown(e: ReactPointerEvent<HTMLElement>) {
-    // Ett spårat svep pågår redan — ignorera ytterligare fingrar/knappar
-    // tills det avslutas (samma "bara den FÖRSTA pekaren räknas"-princip
-    // som redan skyddar mot flera samtidiga tryck i andra gester i appen).
-    if (startRef.current) return;
-    const isMouse = e.pointerType === "mouse";
-    if (isMouse) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const inLeftMargin = e.clientX - rect.left <= DESKTOP_MARGIN_PX;
-      const inRightMargin = rect.right - e.clientX <= DESKTOP_MARGIN_PX;
-      if (!inLeftMargin && !inRightMargin) return;
-    }
-    startRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, isMouse };
-  }
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  function onPointerUp(e: ReactPointerEvent<HTMLElement>) {
-    const start = startRef.current;
-    if (!start || start.pointerId !== e.pointerId) return;
-    startRef.current = null;
+  const setRef = useCallback((el: T | null) => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    if (!el) return;
 
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
+    const gestureRef: { current: GestureState | null } = { current: null };
 
-    if (start.isMouse) {
-      // "dra den nedtryckta markören över till andra sidan innan man
-      // släpper" — kräver en stor andel av bredden, inte bara några pixlar,
-      // så en vanlig textmarkering eller ett litet muspekar-skutt aldrig
-      // räknas som en växling av misstag.
-      const rect = e.currentTarget.getBoundingClientRect();
-      const width = rect.width || 1;
-      if (Math.abs(dx) < width * DESKTOP_CROSS_RATIO) return;
-    } else {
-      // Vågrätt dominant och tillräckligt långt — skiljer ett avsiktligt
-      // svep från en vanlig vertikal skroll (t.ex. i uppgiftslistan).
-      if (Math.abs(dx) < TOUCH_SWIPE_THRESHOLD_PX) return;
-      if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    function onPointerDown(e: PointerEvent) {
+      // Ett spårat svep pågår redan — ignorera ytterligare fingrar/knappar.
+      if (gestureRef.current) return;
+      const isMouse = e.pointerType === "mouse";
+      if (isMouse) {
+        const rect = el!.getBoundingClientRect();
+        const inLeftMargin = e.clientX - rect.left <= DESKTOP_MARGIN_PX;
+        const inRightMargin = rect.right - e.clientX <= DESKTOP_MARGIN_PX;
+        if (!inLeftMargin && !inRightMargin) return;
+      }
+      gestureRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, isMouse, axis: "unknown" };
     }
 
-    // Svep/dra åt vänster = nästa medlem, åt höger = föregående — samma
-    // riktningskonvention som ett bildspel/karusell.
-    if (dx < 0) onNext();
-    else onPrev();
-  }
+    function onPointerMove(e: PointerEvent) {
+      const g = gestureRef.current;
+      if (!g || g.pointerId !== e.pointerId || g.isMouse) return;
+      const dx = e.clientX - g.x;
+      const dy = e.clientY - g.y;
+      if (g.axis === "unknown") {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_LOCK_THRESHOLD_PX) return;
+        g.axis = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+      }
+      if (g.axis === "horizontal") {
+        e.preventDefault();
+      }
+    }
 
-  function onPointerCancel(e: ReactPointerEvent<HTMLElement>) {
-    if (startRef.current?.pointerId === e.pointerId) startRef.current = null;
-  }
+    function onPointerUp(e: PointerEvent) {
+      const g = gestureRef.current;
+      if (!g || g.pointerId !== e.pointerId) return;
+      gestureRef.current = null;
 
-  return { onPointerDown, onPointerUp, onPointerCancel };
+      const dx = e.clientX - g.x;
+
+      if (g.isMouse) {
+        // "dra den nedtryckta markören över till andra sidan innan man
+        // släpper" — kräver en stor andel av bredden, inte bara några
+        // pixlar, så en vanlig textmarkering aldrig räknas som en växling.
+        const rect = el!.getBoundingClientRect();
+        const width = rect.width || 1;
+        if (Math.abs(dx) < width * DESKTOP_CROSS_RATIO) return;
+      } else {
+        // Axeln redan låst i onPointerMove — bara den totala vågräta
+        // sträckan behöver kollas här, ingen ny vinkel-kontroll.
+        if (g.axis !== "horizontal") return;
+        if (Math.abs(dx) < TOUCH_SWIPE_THRESHOLD_PX) return;
+      }
+
+      // Svep/dra åt vänster = nästa medlem, åt höger = föregående — samma
+      // riktningskonvention som ett bildspel/karusell.
+      if (dx < 0) onNextRef.current();
+      else onPrevRef.current();
+    }
+
+    function onPointerCancel(e: PointerEvent) {
+      if (gestureRef.current?.pointerId === e.pointerId) gestureRef.current = null;
+    }
+
+    el.addEventListener("pointerdown", onPointerDown);
+    // passive:false — krävs för att preventDefault() i onPointerMove
+    // garanterat ska hindra webbläsarens egen panorering, inte bara
+    // "försöka".
+    el.addEventListener("pointermove", onPointerMove, { passive: false });
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerCancel);
+
+    cleanupRef.current = () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerUp);
+      el.removeEventListener("pointercancel", onPointerCancel);
+    };
+  }, []);
+
+  return setRef;
 }

@@ -614,7 +614,7 @@ export function MemberShellContent({
     const next = activeMembers[nextIndex];
     if (next) onSelectMember(next.id);
   }
-  const memberSwipeNav = useMemberSwipeNav({
+  const memberSwipeNavRef = useMemberSwipeNav<HTMLDivElement>({
     onNext: () => goToRelativeMember(1),
     onPrev: () => goToRelativeMember(-1)
   });
@@ -703,7 +703,7 @@ export function MemberShellContent({
 
     if (selectedMemberIsChild) {
       return (
-        <div {...memberSwipeNav}>
+        <div ref={memberSwipeNavRef}>
           <Suspense fallback={null}>
             <ChildDashboard
               child={selectedDashboardMember}
@@ -727,7 +727,7 @@ export function MemberShellContent({
     }
 
     return (
-      <div {...memberSwipeNav}>
+      <div ref={memberSwipeNavRef}>
         <Suspense fallback={null}>
         <PersonalDashboard
           member={selectedDashboardMember}
