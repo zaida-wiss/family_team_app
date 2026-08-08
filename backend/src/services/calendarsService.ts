@@ -181,7 +181,7 @@ export async function getCrossAccountCalendars(
   const results = [];
   for (const m of memberDocs) {
     if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
-    const account = await AccountModel.findOne({ id: m.accountId });
+    const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
     if (!account) continue;
 
     // .lean() (2026-07-30-fyndet, Zaidas rapport: "RangeError: Invalid time
@@ -229,6 +229,7 @@ export async function getConnectionCalendars(
   const { fromStr, untilStr } = defaultMonthRange(from, until);
 
   const accountsExposingToMe = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
 

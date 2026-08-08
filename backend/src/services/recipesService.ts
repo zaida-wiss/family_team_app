@@ -31,7 +31,7 @@ export async function getCrossAccountRecipes(callerUserId: string, currentAccoun
   const results = [];
   for (const m of memberDocs) {
     if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
-    const account = await AccountModel.findOne({ id: m.accountId });
+    const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
     if (!account) continue;
     const recipes = await getAllRecipes(m.accountId);
     results.push({ accountId: m.accountId, accountName: account.name, recipes });

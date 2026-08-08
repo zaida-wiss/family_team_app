@@ -86,7 +86,7 @@ export async function lookupConnectionCandidate(accountId: string, callerMemberI
   }
   const members = await MemberModel.find({ userId: user.id, deletedAt: null, isChild: false });
   const accountIds = [...new Set(members.map((m) => m.accountId).filter((id) => id !== accountId))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 });
+  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 });
   return { accounts: accounts.map((a) => ({ accountId: a.id, accountName: a.name })) };
 }
 
@@ -99,7 +99,7 @@ export async function sendInvitation(accountId: string, callerMemberId: string |
   if (otherAccountId === accountId) {
     throw new AppError(400, "Kan inte ansluta ett konto till sig självt");
   }
-  const otherAccount = await AccountModel.findOne({ id: otherAccountId });
+  const otherAccount = await AccountModel.findOne({ id: otherAccountId, deletedAt: null });
   if (!otherAccount) {
     throw new AppError(404, "Kontot hittades inte");
   }
@@ -135,6 +135,7 @@ export async function sendInvitation(accountId: string, callerMemberId: string |
 export async function getPendingConnectionsForMe(accountId: string, callerMemberId: string | null) {
   await requireManager(accountId, callerMemberId);
   const accounts = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: accountId, status: "pending" } }
   });
   return accounts.flatMap((a) => {
@@ -160,7 +161,7 @@ export async function acceptConnection(accountId: string, callerMemberId: string
   const caller = await requireManager(accountId, callerMemberId);
   const { exposedMemberIds, access, dataScope } = RespondConnectionBodySchema.parse(data);
 
-  const fromAccount = await AccountModel.findOne({ id: fromAccountId });
+  const fromAccount = await AccountModel.findOne({ id: fromAccountId, deletedAt: null });
   if (!fromAccount) {
     throw new AppError(404, "Kontot hittades inte");
   }
@@ -254,12 +255,13 @@ export async function listMyConnections(accountId: string, callerMemberId: strin
   const mine = (myAccount?.familyConnections ?? []).filter((c) => c.status === "accepted");
 
   const others = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: accountId, status: "accepted" } }
   });
 
   const accountIds = [...new Set(mine.map((c) => c.otherAccountId))];
   const accountNameById = new Map(
-    (await AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 })).map((a) => [a.id, a.name])
+    (await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 })).map((a) => [a.id, a.name])
   );
 
   return {
@@ -291,6 +293,7 @@ export async function listMyConnections(accountId: string, callerMemberId: strin
 export async function getConnectionRecipes(callerAccountId: string, callerMemberId: string | null) {
   await requireMember(callerAccountId, callerMemberId);
   const accountsExposingToMe = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
@@ -306,6 +309,7 @@ export async function getConnectionRecipes(callerAccountId: string, callerMember
 export async function getConnectionShoppingLists(callerAccountId: string, callerMemberId: string | null) {
   await requireMember(callerAccountId, callerMemberId);
   const accountsExposingToMe = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
@@ -324,6 +328,7 @@ export async function getConnectionShoppingLists(callerAccountId: string, caller
 export async function getConnectionBirthdays(callerAccountId: string, callerMemberId: string | null) {
   await requireMember(callerAccountId, callerMemberId);
   const accountsExposingToMe = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];

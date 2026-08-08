@@ -59,7 +59,7 @@ export async function lookupShareCandidate(childId: string, accountId: string, c
 
   const members = await MemberModel.find({ userId: user.id, deletedAt: null, isChild: false });
   const accountIds = [...new Set(members.map((m) => m.accountId))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 });
+  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 });
 
   return {
     memberships: members.map((m) => ({
@@ -86,7 +86,7 @@ export async function listShares(childId: string, accountId: string, callerMembe
   const accountIds = [...new Set(shares.map((s) => s.accountId))];
   const [members, accounts] = await Promise.all([
     MemberModel.find({ id: { $in: memberIds } }),
-    AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 })
+    AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 })
   ]);
 
   return shares.map((s) => ({
@@ -172,7 +172,7 @@ export async function getPendingSharesForMe(callerMemberId: string, callerAccoun
     )
   ];
   const [accounts, granters] = await Promise.all([
-    AccountModel.find({ id: { $in: homeAccountIds } }, { _id: 0, __v: 0 }),
+    AccountModel.find({ id: { $in: homeAccountIds }, deletedAt: null }, { _id: 0, __v: 0 }),
     MemberModel.find({ id: { $in: grantedByIds } })
   ]);
 

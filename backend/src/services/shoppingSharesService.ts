@@ -55,7 +55,7 @@ export async function lookupShareCandidate(listId: string, accountId: string, ca
 
   const members = await MemberModel.find({ userId: user.id, deletedAt: null, isChild: false });
   const accountIds = [...new Set(members.map((m) => m.accountId))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 });
+  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 });
 
   return {
     memberships: members.map((m) => ({

@@ -189,8 +189,12 @@ export async function getSharedChildrenData(callerMemberId: string, callerAccoun
       getAllCalendars(child.accountId, fromStr, untilStr),
       getPurchasedRewardsForMember(child.accountId, child.id, 25),
       getAllTimedTasks(child.accountId),
-      AccountModel.findOne({ id: child.accountId })
+      AccountModel.findOne({ id: child.accountId, deletedAt: null })
     ]);
+    // Barnets hemkonto raderat (2026-08-09, samma fynd som Hem-vyns
+    // familjefilter/getCrossAccountMembers) — kontot är otillgängligt oavsett
+    // (assertAccountActive), fortsätt inte visa en "spöke"-delning mot det.
+    if (!homeAccount) continue;
 
     results.push({
       child: {
@@ -242,7 +246,7 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
   const results = [];
   for (const m of memberDocs) {
     if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
-    const account = await AccountModel.findOne({ id: m.accountId });
+    const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
     if (!account) continue;
     const accountTodos = await getAllTodos(m.accountId);
     // Inkluderar även todos jag redan är tilldelad ELLER signat upp på DÄR
@@ -482,6 +486,7 @@ export async function completeSharedChildTodo(
 export async function getConnectionTodos(callerAccountId: string, callerMemberId: string | null) {
   await requireMember(callerMemberId, callerAccountId);
   const accountsExposingToMe = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
 
@@ -621,7 +626,7 @@ export async function createConnectionTodo(
   visualValue: string | null
 ) {
   await requireMember(callerMemberId, callerAccountId);
-  const targetAccount = await AccountModel.findOne({ id: targetAccountId });
+  const targetAccount = await AccountModel.findOne({ id: targetAccountId, deletedAt: null });
   if (!targetAccount) {
     throw new AppError(404, "Kontot hittades inte");
   }
@@ -634,7 +639,7 @@ export async function createConnectionTodo(
 
 async function requireEditableConnectionTodo(targetAccountId: string, callerAccountId: string, callerMemberId: string) {
   await requireMember(callerMemberId, callerAccountId);
-  const targetAccount = await AccountModel.findOne({ id: targetAccountId });
+  const targetAccount = await AccountModel.findOne({ id: targetAccountId, deletedAt: null });
   if (!targetAccount) {
     throw new AppError(404, "Kontot hittades inte");
   }
@@ -743,9 +748,13 @@ export async function getSharedCategoryTodos(callerMemberId: string, callerAccou
     if (!grant) continue;
     const [accountTodos, ownerAccount, sharer] = await Promise.all([
       getAllTodos(category.accountId),
-      AccountModel.findOne({ id: category.accountId }),
+      AccountModel.findOne({ id: category.accountId, deletedAt: null }),
       MemberModel.findOne({ id: grant.grantedBy, accountId: category.accountId })
     ]);
+    // Ägarkontot raderat — kontot är otillgängligt oavsett (assertAccountActive),
+    // fortsätt inte visa en "spöke"-delning mot det (samma fynd som övriga
+    // cross-account-funktioner i denna fil, 2026-08-09).
+    if (!ownerAccount) continue;
     const todos = accountTodos.filter(
       (t) => t.personalCategoryId === category.id && t.recurrence.type === "none"
     );

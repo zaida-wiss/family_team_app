@@ -78,7 +78,7 @@ export async function getCrossAccountMealPlanEntries(
   const results = [];
   for (const m of memberDocs) {
     if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
-    const account = await AccountModel.findOne({ id: m.accountId });
+    const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
     if (!account) continue;
     const entries = await getEntriesForRange(m.accountId, fromStr, untilStr);
     results.push({ accountId: m.accountId, accountName: account.name, entries });

@@ -53,12 +53,25 @@ export function clearRefreshCookie(res: Response) {
   });
 }
 
+// deletedAt:null på Account-frågan tillagd 2026-08-09 (Zaidas fynd: ett
+// raderat konto — "Wiss -släkten", raderat 2026-07-30 via deleteAccount/
+// ADR-0007 — fortsatte synas som ett valbart konto i "Välj konto"
+// (AccountPicker), trots att membersService.getMyMemberships redan fick
+// motsvarande filter samma dag kontot raderades. Denna funktion (fetchMemberships)
+// missades då — den är den FAKTISKA källan till authState.memberships (körs
+// vid inloggning/refresh/barn-inloggning), en helt separat kodväg från
+// getMyMemberships (bara "Mina familjekonton"-inställningssidan). deleteAccount
+// rör aldrig Member-dokumenten (mjuk radering, ADR-0007), så min egen
+// medlemspost i det raderade kontot ligger kvar helt avsiktligt — det är
+// KONTOT som måste filtreras bort, inte medlemsposten.
 export async function fetchMemberships(userId: string) {
   const members = await MemberModel.find({ userId, deletedAt: null }, { _id: 0, __v: 0 });
   const accountIds = [...new Set(members.map((m) => m.accountId))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds } }, { _id: 0, __v: 0 });
-  return members.map((m) => ({
-    member: m.toObject(),
-    account: accounts.find((a) => a.id === m.accountId)
-  }));
+  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 });
+  return members
+    .filter((m) => accounts.some((a) => a.id === m.accountId))
+    .map((m) => ({
+      member: m.toObject(),
+      account: accounts.find((a) => a.id === m.accountId)
+    }));
 }

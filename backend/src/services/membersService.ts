@@ -84,7 +84,14 @@ export async function getCrossAccountMembers(callerUserId: string, currentAccoun
   const results = [];
   for (const m of memberDocs) {
     if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
-    const account = await AccountModel.findOne({ id: m.accountId });
+    // deletedAt:null (2026-08-09, Zaidas fynd: ett raderat konto — "Wiss
+    // -släkten" — fortsatte synas som en valbar familj i Hem-vyns
+    // "Visa familj"-filter, trots att getMyMemberships redan filtrerade
+    // bort det ur "Mina familjekonton"-inställningssidan sedan 2026-07-30.
+    // deleteAccount rör aldrig Member-dokumenten (mjuk radering, ADR-0007),
+    // så min egen medlemspost i det raderade kontot ligger kvar avsiktligt
+    // — det är kontot som måste filtreras bort.
+    const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
     if (!account) continue;
     const members = await MemberModel.find({ accountId: m.accountId, deletedAt: null });
     results.push({ accountId: m.accountId, accountName: account.name, members: members.map(toMemberSummary) });
@@ -102,6 +109,7 @@ export async function getConnectionMembers(callerAccountId: string, callerMember
   const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
   if (!caller) throw new AppError(403, "Åtkomst nekad");
   const accountsExposingToMe = await AccountModel.find({
+    deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
