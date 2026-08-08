@@ -77,14 +77,12 @@ test.describe("Inställningar", () => {
 
   // 2026-07-26, Zaidas önskemål: "i redigera todolistor ska vi även via ett
   // reglage kunna bestämma avståndet vågrät mellan kategoritrådarna".
+  // 2026-08-10, Zaidas önskemål: gjort enhetslokalt (localStorage, se
+  // useDeviceSetting.ts) — testet skrevs tidigare mot den gamla,
+  // kontosynkade PATCH-varianten och failade tyst i CI efter omläggningen
+  // (savedGap blev aldrig satt eftersom inget PATCH-anrop längre görs för
+  // detta fält). Kollar nu localStorage-nyckeln direkt istället.
   test("reglaget för avstånd mellan kategoritrådarna sparar ett nytt värde", async ({ page }) => {
-    let savedGap: number | null = null;
-    await page.route("**/api/members/mem-1", (route) => {
-      const body = route.request().postDataJSON() as { todoThreadGap?: number };
-      if (body.todoThreadGap !== undefined) savedGap = body.todoThreadGap;
-      return route.fulfill({ json: { ok: true } });
-    });
-
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
@@ -93,21 +91,19 @@ test.describe("Inställningar", () => {
     await expect(slider).toBeVisible();
     await slider.fill("20");
 
-    await expect.poll(() => savedGap).toBe(20);
-    await expect(page.getByText("Avstånd mellan kategoritrådarna (20 px)")).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("device-setting:todoThreadGap")))
+      .toBe("20");
+    await expect(
+      page.getByText("Avstånd mellan kategoritrådarna (20 px, bara på den här enheten)")
+    ).toBeVisible();
   });
 
   // 2026-07-27, Zaidas önskemål: "man måste även kunna bestämma storlek på
   // bubbelsysslornas bubblor under utseende, inte bara avståndet" — samma
-  // reglage-mönster som avstånds-slidern ovan.
+  // reglage-mönster som avstånds-slidern ovan, samma 2026-08-10-omläggning
+  // till localStorage (se kommentaren på testet ovan).
   test("reglaget för bubblornas storlek sparar ett nytt värde", async ({ page }) => {
-    let savedSize: number | null = null;
-    await page.route("**/api/members/mem-1", (route) => {
-      const body = route.request().postDataJSON() as { todoBubbleSize?: number };
-      if (body.todoBubbleSize !== undefined) savedSize = body.todoBubbleSize;
-      return route.fulfill({ json: { ok: true } });
-    });
-
     await page.goto("/");
     await page.getByRole("button", { name: "Inställningar" }).click();
     await page.getByRole("button", { name: "Utseende" }).click();
@@ -116,7 +112,11 @@ test.describe("Inställningar", () => {
     await expect(slider).toBeVisible();
     await slider.fill("140");
 
-    await expect.poll(() => savedSize).toBe(140);
-    await expect(page.getByText("Bubblornas storlek (140 px)")).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("device-setting:todoBubbleSize")))
+      .toBe("140");
+    await expect(
+      page.getByText("Bubblornas storlek (140 px, bara på den här enheten)")
+    ).toBeVisible();
   });
 });
