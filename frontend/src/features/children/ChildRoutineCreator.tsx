@@ -207,6 +207,14 @@ export function ChildRoutineCreator({
             onUpdateTodo(
               todaysOccurrence.id,
               applyTemplateToOccurrence(todaysOccurrence, {
+                // id/timeWindows (2026-08-09) — se windowForOccurrence i
+                // recurringTodos.ts. Den här enklare rutinskaparen hanterar
+                // aldrig flera tidsrutor själv (bara ett Start-/Sluttid-par),
+                // så existing.timeWindows skickas oförändrat vidare precis
+                // som innan — bara här för att uppfylla den nya, striktare
+                // typen.
+                id: existing.id,
+                timeWindows: existing.timeWindows,
                 ...templateFields,
                 assignedTo: childId,
                 timerEnabled: existing.timerEnabled,

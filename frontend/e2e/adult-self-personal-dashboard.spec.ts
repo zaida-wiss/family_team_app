@@ -78,11 +78,12 @@ test("vuxen som klickar sin egen profil ser sina uppgifter+kalender, inte Familj
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
-  // Skopat till innehållsytan (2026-07-31) — headerns "Byt vy"-knapp fick
-  // samma dag en aria-label som råkar innehålla medlemmens namn också
-  // ("Testförälder, Byt vy"), en strict-mode-krock mot ett bart sidövergripande sök annars.
-  await page.locator(".app-shell-content").getByRole("button", { name: /Testförälder/ }).click();
+  // Hem-vyns egen "Visa medlemmar"-popup (ersätter sedan 2026-08-09
+  // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
+  // document.body, scopad via role="group"-behållaren för att undvika en
+  // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
+  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Hej Testförälder!")).toBeVisible();
   await expect(page.getByText("Handla mat")).toBeVisible();
@@ -93,8 +94,8 @@ test("vuxen som klickar en ANNAN vuxens profil ser NU den personens uppgifter+ka
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
-  await page.getByRole("button", { name: /Lars/ }).click();
+  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   await expect(page.getByText("Hej Lars!")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();

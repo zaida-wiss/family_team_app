@@ -426,17 +426,27 @@ export function TodoEditModal({
         // seriesPatch bär redan alla fält funktionen behöver (byggs alltid
         // med dem ovan) — asserten är bara för att seriesPatch är brett
         // typad som Partial<Todo> (för att kunna spridas till onUpdateTodo),
-        // inte för att fälten faktiskt saknas vid körning.
+        // inte för att fälten faktiskt saknas vid körning. id/timeWindows
+        // (2026-08-09) läggs till explicit — seriesPatch självt saknar id
+        // (det är en PATCH mot template.id, inte templaten själv), men
+        // applyTemplateToOccurrence behöver det för att veta VILKET
+        // tidsfönster den öppnade occurrencen faktiskt hör till (se
+        // windowForOccurrence, recurringTodos.ts).
         ...applyTemplateToOccurrence(
           todo,
-          seriesPatch as Pick<
+          {
+            ...seriesPatch,
+            id: template.id
+          } as Pick<
             Todo,
+            | "id"
             | "title"
             | "starValue"
             | "visual"
             | "personalCategoryId"
             | "visibleFrom"
             | "expiresAt"
+            | "timeWindows"
             | "assignedTo"
             | "timerEnabled"
             | "plannedDurationMinutes"
@@ -533,6 +543,15 @@ export function TodoEditModal({
           </button>
         </div>
 
+        {/* .todo-detail-modal__scroll (2026-08-09) — sedan samma dags
+            TodoDetailView.tsx-ändring äger ENDAST den här klassen
+            overflow-y:auto, .todo-detail-modal__body fick uttryckligen
+            flex-shrink:0/ingen egen overflow (se TodoDetailModal.css:s
+            kommentar) och förutsätter numera alltid att ligga inuti denna
+            wrapper. Modalen saknade den helt (Zaidas fynd: "redigerings-
+            modalen inte gick att skrolla") — ingen scroll alls uppstod när
+            innehållet var längre än modalens synliga höjd. */}
+        <div className="todo-detail-modal__scroll">
         <div className="todo-detail-modal__body">
           {isGeneratedOccurrence && (
             <p className="field-hint field-hint--neutral">
@@ -855,6 +874,7 @@ export function TodoEditModal({
               Radera
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

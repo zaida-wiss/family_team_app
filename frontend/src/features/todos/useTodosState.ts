@@ -587,7 +587,14 @@ export function useTodosState(fixedTodoTimes = false) {
     const routine = templatePatch ? { ...routineBase, ...templatePatch } : routineBase;
 
     const today = getDateKey(new Date());
-    const existingOccurrence = current.find(
+    // En mall med flera tidsrutor (2026-08-09, samma fynd som
+    // windowForOccurrence i recurringTodos.ts: "jag uppdaterade
+    // anteckningar... och uppgiften försvann igen") kan ha FLERA occurrences
+    // samma dag (morgon+kväll) — .find() plockade tidigare bara EN, så en
+    // redigering synkade aldrig den andra rutans occurrence (den förblev
+    // osynlig/inaktuell tills den genererades om nästa dag). Synka ALLA
+    // redan existerande, generera de som fortfarande saknas.
+    const existingOccurrences = current.filter(
       (todo) => todo.recurringSourceId === routineId && todo.occurrenceDate === today
     );
     const pendingPatch: Partial<Todo> = {
@@ -601,20 +608,28 @@ export function useTodosState(fixedTodoTimes = false) {
       deletedBy: null
     };
 
-    if (existingOccurrence) {
+    for (const existingOccurrence of existingOccurrences) {
       // Synka samtidigt med mallens aktuella värden — annars visas fortsatt
       // gårdagens/en redigerad tid/titel trots att uppdraget "visas igen".
       updateTodo(existingOccurrence.id, {
         ...applyTemplateToOccurrence(existingOccurrence, routine, fixedTodoTimes),
         ...pendingPatch
       });
-      return;
     }
 
-    const [newOccurrence] = getDueRecurringTodoOccurrences([routine], new Date(), fixedTodoTimes);
-    if (newOccurrence) {
-      todosApi.create(newOccurrence).catch(console.error);
-      setTodos((items) => addMissingTodos(items, [newOccurrence]));
+    // getDueRecurringTodoOccurrences([routine], ...) känner bara till
+    // MALLEN själv (inte current) — dess egen "redan existerar"-koll ser
+    // därför alltid tom och skulle annars duplicera en ruta som redan
+    // synkades ovan. Filtrera bort dem explicit istället.
+    const existingIds = new Set(existingOccurrences.map((t) => t.id));
+    const missingOccurrences = getDueRecurringTodoOccurrences(
+      [routine], new Date(), fixedTodoTimes
+    ).filter((occ) => !existingIds.has(occ.id));
+    if (missingOccurrences.length > 0) {
+      for (const occ of missingOccurrences) {
+        todosApi.create(occ).catch(console.error);
+      }
+      setTodos((items) => addMissingTodos(items, missingOccurrences));
     }
   }
 

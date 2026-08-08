@@ -254,9 +254,8 @@ export function MemberOverview({
       // Uppskattad höjd (ingen exakt känd innan render) — räcker för att
       // avgöra om popupen ska öppnas neråt eller uppåt. På mobil ligger
       // ikonen numera i den fasta bottenraden (se .controlRow ovanför HeroBar,
-      // 2026-08-04) — under-plats saknas då nästan alltid, precis som
-      // HeroBar.tsx:s egen NavMemberPicker redan hanterar samma problem
-      // genom att öppna uppåt på mobil.
+      // 2026-08-04) — under-plats saknas då nästan alltid, löst genom att
+      // öppna uppåt istället.
       const ESTIMATED_HEIGHT = Math.min(filteredMembers.length * 48 + 12, 300);
       const openUpward = window.innerHeight - rect.bottom < ESTIMATED_HEIGHT + 8;
       setMemberPickerPos({

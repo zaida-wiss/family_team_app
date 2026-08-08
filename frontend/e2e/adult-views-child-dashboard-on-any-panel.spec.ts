@@ -6,11 +6,22 @@ import { test, expect } from "@playwright/test";
 // 2026-07-22-beslutet (som testades av just den här filen tidigare): att
 // välja ett barn i Medlemmar-panelen lät tidigare Kalender/Todos/Inköp/Hem
 // FORTSÄTTA visa barnets dashboard, med FEL nav-ikon markerad som aktiv.
-// Nu: ett val av en medlem (MembersView.tsx:s kort) visas bara HÄR, i
-// Medlemmar-panelen (activePanel förblir "members", se Shell.tsx:s
-// PanelRouter) — varje annat nav-klick (inklusive Medlemmar-ikonen igen)
-// rensar valet (useAppState.ts:s setActivePanel), vilket fungerar som en
-// implicit "tillbaka till min egen vy"-väg.
+// Nu: ett val av en medlem (ursprungligen MembersView.tsx:s kort) visas bara
+// HÄR, i Medlemmar-panelen (activePanel förblir "members", se Shell.tsx:s
+// PanelRouter) — varje annat nav-klick rensar valet (useAppState.ts:s
+// setActivePanel), vilket fungerar som en implicit "tillbaka till min egen
+// vy"-väg.
+//
+// 2026-08-09 (Zaidas beslut: "ta bort members från första navbaren och
+// använd member på andra navbaren istället"): HeroBar.tsx:s egen
+// Medlemmar-nav-ikon togs bort helt — Hem-vyns "Visa medlemmar"-popup
+// (MemberOverview.tsx) är nu enda vägen till en medlems dashboard, och
+// väljer man en medlem sätts activePanel till "members" i SAMMA klick
+// (MemberShellContent.tsx:s handleSelectMemberFromHome). Ingen av
+// HeroBar.tsx:s kvarvarande sex nav-ikoner (Hem/Kalender/Inköp/Todos/
+// Recept/Inställningar) motsvarar längre "members"-panelen, så INGEN av
+// dem visas som aktiv medan man tittar på en vald medlems dashboard — de
+// två sista testen nedan omskrivna för detta.
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -75,8 +86,8 @@ async function mockCommon(page: import("@playwright/test").Page) {
 
 async function selectChild(page: import("@playwright/test").Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
-  await page.getByRole("button", { name: /Nova/ }).click();
+  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 }
 
@@ -91,23 +102,25 @@ for (const [panelLabel] of [["Hem"], ["Kalender"], ["Todos"], ["Inköp"]] as con
   });
 }
 
-test("Medlemmar-ikonen är den enda markerade så länge man tittar på en vald medlems vy", async ({ page }) => {
+test("Ingen nav-ikon i första navbaren är markerad så länge man tittar på en vald medlems vy", async ({ page }) => {
   await mockCommon(page);
   await selectChild(page);
 
-  const membersBtn = page.getByRole("button", { name: "Medlemmar", exact: true });
-  await expect(membersBtn).toHaveClass(/active/);
-
-  const homeBtn = page.getByRole("button", { name: "Hem" });
-  await expect(homeBtn).not.toHaveClass(/active/);
+  // Ingen av de sex kvarvarande nav-ikonerna motsvarar "members"-panelen
+  // (den nås numera bara via Hem-vyns "Visa medlemmar"-popup) — ett
+  // regressionsskydd mot att någon av dem av misstag skulle visas som
+  // aktiv medan activePanel egentligen är "members".
+  for (const label of ["Hem", "Kalender", "Inköp", "Todos", "Recept", "Inställningar"]) {
+    await expect(page.getByRole("button", { name: label, exact: true })).not.toHaveClass(/active/);
+  }
 });
 
-test("Ett andra klick på Medlemmar-ikonen tar tillbaka till medlemslistan (avväljer)", async ({ page }) => {
+test("Ett klick på Hem tar tillbaka till den egna hemvyn (avväljer) och Visa medlemmar går att öppna igen", async ({ page }) => {
   await mockCommon(page);
   await selectChild(page);
 
-  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
+  await page.getByRole("button", { name: "Hem", exact: true }).click();
 
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Nova/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Visa medlemmar" })).toBeVisible();
 });

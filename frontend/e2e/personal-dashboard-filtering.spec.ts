@@ -81,11 +81,12 @@ test("PersonalDashboard visar bara riktigt tilldelade, synliga uppgifter — int
   await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Medlemmar", exact: true }).click();
-  // Skopat till innehållsytan (2026-07-31) — headerns "Byt vy"-knapp fick
-  // samma dag en aria-label som råkar innehålla medlemmens namn, en
-  // strict-mode-krock mot ett bart sidövergripande sök annars.
-  await page.locator(".app-shell-content").getByRole("button", { name: /Testförälder/ }).click();
+  // Hem-vyns egen "Visa medlemmar"-popup (ersätter sedan 2026-08-09
+  // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
+  // document.body, scopad via role="group"-behållaren för att undvika en
+  // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
+  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Handla mat")).toBeVisible();
   await expect(page.getByText("Familjens gemensamma syssla")).toHaveCount(0);

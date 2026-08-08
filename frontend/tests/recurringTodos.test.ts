@@ -371,5 +371,58 @@ describe("recurringTodos", () => {
       expect(patch.title).toBe("Läxor");
       expect(patch.starValue).toBe(5);
     });
+
+    // 2026-08-09 (Zaidas fynd: "jag uppdaterade anteckningar... och uppgiften
+    // försvann igen") — en mall med FLERA tidsrutor (morgon+kväll) har bara
+    // EN topnivå-visibleFrom/expiresAt (alltid den FÖRSTA rutan). Innan denna
+    // fix läste applyTemplateToOccurrence topnivå-fälten rakt av oavsett
+    // vilken occurrence som synkades — redigerar man KVÄLLENS occurrence
+    // (t.ex. bara Anteckningar) skrevs dess tid tyst om till MORGONENS tid.
+    test("synkar KVÄLLENS occurrence med kvällens EGET tidsfönster, inte mallens topnivå-fält (=morgonens)", () => {
+      const template = createTodo({
+        id: "todo-flera-rutor",
+        title: "Borsta tänderna",
+        // Topnivå-fälten representerar alltid bara den FÖRSTA rutan (morgon),
+        // se TodoCreatorModal.tsx/todoCsv.ts.
+        visibleFrom: "2026-06-08T07:00:00.000Z",
+        expiresAt: "2026-06-08T07:30:00.000Z",
+        timeWindows: [
+          { visibleFrom: "2026-06-08T07:00:00.000Z", expiresAt: "2026-06-08T07:30:00.000Z" }, // morgon
+          { visibleFrom: "2026-06-08T19:00:00.000Z", expiresAt: "2026-06-08T19:30:00.000Z" }  // kväll
+        ]
+      });
+      const eveningOccurrence = createTodo({
+        id: "todo-flera-rutor-occurrence-2026-06-08-1",
+        occurrenceDate: "2026-06-08",
+        recurringSourceId: "todo-flera-rutor"
+      });
+
+      const patch = applyTemplateToOccurrence(eveningOccurrence, template);
+
+      expect(patch.visibleFrom).toBe("2026-06-08T19:00:00.000Z");
+      expect(patch.expiresAt).toBe("2026-06-08T19:30:00.000Z");
+    });
+
+    test("synkar morgonens occurrence med morgonens eget tidsfönster (osuffigerat id faller tillbaka på index 0)", () => {
+      const template = createTodo({
+        id: "todo-flera-rutor",
+        visibleFrom: "2026-06-08T07:00:00.000Z",
+        expiresAt: "2026-06-08T07:30:00.000Z",
+        timeWindows: [
+          { visibleFrom: "2026-06-08T07:00:00.000Z", expiresAt: "2026-06-08T07:30:00.000Z" },
+          { visibleFrom: "2026-06-08T19:00:00.000Z", expiresAt: "2026-06-08T19:30:00.000Z" }
+        ]
+      });
+      const morningOccurrence = createTodo({
+        id: "todo-flera-rutor-occurrence-2026-06-08-0",
+        occurrenceDate: "2026-06-08",
+        recurringSourceId: "todo-flera-rutor"
+      });
+
+      const patch = applyTemplateToOccurrence(morningOccurrence, template);
+
+      expect(patch.visibleFrom).toBe("2026-06-08T07:00:00.000Z");
+      expect(patch.expiresAt).toBe("2026-06-08T07:30:00.000Z");
+    });
   });
 });

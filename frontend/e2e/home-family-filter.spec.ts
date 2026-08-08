@@ -65,10 +65,10 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
   // Medlemmar (2026-08-04: en ikon öppnar en popup istället för att visa
   // varje avatar inline, se MemberOverview.tsx — "medlemmarna tar för stor
   // plats i hemvyn"). Namnet visas som synlig text i popupen.
-  // "Visa medlemmar" (inte bara "Medlemmar") — HeroBar.tsx:s egen
-  // huvudnav-knapp heter redan "Medlemmar", samma "Visa X"-krockskydd som
-  // Hem-vyns övriga flikar (Visa kalender/Visa inköpslista/Visa todos) redan
-  // använder av samma anledning.
+  // "Visa medlemmar" (inte bara "Medlemmar") — samma "Visa X"-namnmönster
+  // som Hem-vyns övriga flikar (Visa kalender/Visa inköpslista/Visa todos)
+  // redan använder, sedan 2026-08-09 dessutom den ENDA vägen till en
+  // medlems dashboard (HeroBar.tsx:s egen Medlemmar-nav-ikon borttagen).
   const membersIcon = page.getByLabel("Visa medlemmar");
   async function openMembersPopup() {
     if ((await membersIcon.getAttribute("aria-expanded")) !== "true") await membersIcon.click();

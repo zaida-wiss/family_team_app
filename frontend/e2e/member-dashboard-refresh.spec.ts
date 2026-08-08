@@ -19,7 +19,16 @@ import { test, expect } from "@playwright/test";
 //    (MemberShellContent.tsx:s nya activePanel==="members"-spärr).
 // 2) Den NYA, korrekta vägen: lastActivePanel="members" (vilket är vad en
 //    riktig medlemsväljning nu faktiskt sparar) ska stå kvar på barnets
-//    dashboard efter en sidomladdning, med Medlemmar-ikonen markerad.
+//    dashboard efter en sidomladdning.
+//
+// 2026-08-09-uppdatering: HeroBar.tsx:s egen Medlemmar-nav-ikon (som tidigare
+// visades som "markerad"/aktiv i det här läget) togs bort — Hem-vyns egen
+// "Visa medlemmar"-popup (MemberOverview.tsx) är nu enda vägen in. Ingen
+// nav-ikon i första navbaren speglar längre activePanel==="members" (inget
+// av Hem/Kalender/Inköp/Todos/Recept/Inställningar matchar den panelen), så
+// test 2 verifierar numera bara att barnets dashboard faktiskt visas (vilket
+// per MemberShellContent.tsx:s activePanel==="members"-spärr redan bevisar
+// att panelen återställdes korrekt).
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -102,5 +111,4 @@ test("lastActivePanel=members + ett medlemsval stannar kvar på barnets dashboar
   await page.goto("/");
 
   await expect(page.getByText(`Hej ${CHILD.name}!`)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Medlemmar", exact: true })).toHaveClass(/active/);
 });

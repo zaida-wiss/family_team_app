@@ -188,6 +188,22 @@ export function MemberShellContent({
   onThemePickerOpen, onCompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
 }: Props) {
+  // Hem-vyns "Visa medlemmar"-popup (MemberOverview.tsx) är sedan
+  // HeroBar.tsx:s Medlemmar-nav-ikon togs bort (2026-08-09, Zaidas beslut:
+  // "ta bort members från första navbaren och använd member på andra
+  // navbaren istället... exakt samma logik") den enda vägen till en medlems
+  // dashboard/tidslinjevy. Popupens klick anropar bara onSelectMember
+  // (sätter selectedDashboardMemberId), men dashboard-grenarna nedan kräver
+  // explicit activePanel==="members" (samma spärr som redan skyddar mot
+  // gammal persisterad data, se kommentaren vid selectedDashboardMember).
+  // onNavigate("members") körs FÖRE onSelectMember eftersom setActivePanel
+  // (useAppState.ts) alltid nollställer selectedDashboardMemberId som en
+  // sidoeffekt — omvänd ordning hade omedelbart rensat bort valet igen.
+  function handleSelectMemberFromHome(memberId: string) {
+    onNavigate("members");
+    onSelectMember(memberId);
+  }
+
   const [calSearch, setCalSearch] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
   // Full redigering av en todo öppnad via Hem-vyns familjetrådar (2026-08-04)
@@ -860,7 +876,7 @@ export function MemberShellContent({
         calendars={canSeeCalendar ? calendars : []}
         canSeeCalendar={canSeeCalendar}
         calendarFilter={homeFilter}
-        onSelectMember={onSelectMember}
+        onSelectMember={handleSelectMemberFromHome}
         calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}
@@ -931,7 +947,7 @@ export function MemberShellContent({
         calendars={canSeeCalendar ? calendars : []}
         canSeeCalendar={canSeeCalendar}
         calendarFilter={homeFilter}
-        onSelectMember={onSelectMember}
+        onSelectMember={handleSelectMemberFromHome}
         calendarSettings={calendarSettings}
         onAddEvent={onAddCalendarEvent}
         onUpdateEvent={onUpdateCalendarEvent}

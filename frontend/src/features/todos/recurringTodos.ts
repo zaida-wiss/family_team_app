@@ -1,4 +1,4 @@
-import type { RecurrenceRule, RecurrenceUnit, Todo, TodoTimeWindow, Weekday } from "@shared/types";
+import type { Id, RecurrenceRule, RecurrenceUnit, Todo, TodoTimeWindow, Weekday } from "@shared/types";
 import { timeToAnchorISO as sharedTimeToAnchorISO, isoToTimeInput as sharedIsoToTimeInput, withWallClockOnDate } from "../../utils/fixedTimeZone";
 
 const weekdays: Weekday[] = [
@@ -314,6 +314,35 @@ function startOfLocalDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+// Vilket tidsfönster en redan genererad occurrence hör till (2026-08-09,
+// Zaidas fynd: "jag uppdaterade anteckningar... och uppgiften försvann
+// igen"). En mall med FLERA tidsrutor (t.ex. morgon+kväll, CSV:s "Fler
+// tidsrutor") har bara EN topnivå-visibleFrom/expiresAt — den representerar
+// ALLTID bara den FÖRSTA rutan (se TodoCreatorModal.tsx/todoCsv.ts), aldrig
+// den specifika rutan en given occurrence faktiskt genererades från.
+// applyTemplateToOccurrence läste tidigare topnivå-fälten rakt av oavsett
+// vilken occurrence som synkades — redigerade man KVÄLLENS occurrence (även
+// bara Anteckningar, autospara kör om HELA synken oavsett fält) skrevs dess
+// tid tyst om till MORGONENS tid. Var morgonens tid redan passerad blev den
+// nya expiresAt bakåt i tiden och occurrencen försvann direkt
+// (isTodoVisibleNow). occurrenceId (samma id-formel som
+// getDueRecurringTodoOccurrences redan använder för att GENERERA id:t) läses
+// här baklänges för att hitta rätt ruta.
+function windowForOccurrence(
+  template: Pick<Todo, "id" | "visibleFrom" | "expiresAt" | "timeWindows">,
+  occurrenceId_: Id,
+  dateKey: string
+): TodoTimeWindow {
+  const windows: TodoTimeWindow[] =
+    template.timeWindows && template.timeWindows.length > 0
+      ? template.timeWindows
+      : [{ visibleFrom: template.visibleFrom, expiresAt: template.expiresAt }];
+  const index = windows.findIndex(
+    (_, i) => occurrenceId_ === occurrenceId(template.id, dateKey, windows.length > 1 ? i : null)
+  );
+  return windows[index >= 0 ? index : 0];
+}
+
 /**
  * Ett redigerat rutinmall-fält (titel, stjärnor, tid m.m.) speglas inte automatiskt
  * på en redan skapad dagens-kopia av rutinen — den är en frusen ögonblicksbild.
@@ -321,15 +350,17 @@ function startOfLocalDay(date: Date) {
  * t.ex. direkt efter en redigering eller vid manuell "visa igen idag".
  */
 export function applyTemplateToOccurrence(
-  occurrence: Pick<Todo, "occurrenceDate">,
+  occurrence: Pick<Todo, "id" | "occurrenceDate">,
   template: Pick<
     Todo,
+    | "id"
     | "title"
     | "starValue"
     | "visual"
     | "personalCategoryId"
     | "visibleFrom"
     | "expiresAt"
+    | "timeWindows"
     | "assignedTo"
     | "timerEnabled"
     | "plannedDurationMinutes"
@@ -338,8 +369,9 @@ export function applyTemplateToOccurrence(
   fixedTodoTimes = false
 ): Partial<Todo> {
   const dateKey = occurrence.occurrenceDate ?? getDateKey(new Date());
-  const visibleFrom = withWallClockOnDate(template.visibleFrom, dateKey, fixedTodoTimes);
-  const expiresAt = createOccurrenceExpiresAt(template.visibleFrom, template.expiresAt, visibleFrom, dateKey, fixedTodoTimes);
+  const window = windowForOccurrence(template, occurrence.id, dateKey);
+  const visibleFrom = withWallClockOnDate(window.visibleFrom, dateKey, fixedTodoTimes);
+  const expiresAt = createOccurrenceExpiresAt(window.visibleFrom, window.expiresAt, visibleFrom, dateKey, fixedTodoTimes);
 
   return {
     title: template.title,

@@ -66,10 +66,16 @@ function PanelRouter({
   // Medlemmar-panelen visar listan bara när INGEN är vald (2026-07-23,
   // Zaidas beslut) — så fort en medlem väljs (MembersView.tsx:s kort)
   // renderas MemberShellContent istället, med activePanel fortsatt
-  // "members" (håller Medlemmar-ikonen markerad, se HeroBar.tsx). Samma
-  // MemberShellContent som redan hanterar barn-/själv-/annan-vuxen-dashboard
-  // internt utifrån selectedDashboardMemberId, bara nådd via en annan panel
-  // nu än tidigare (var alltid "home").
+  // "members". Samma MemberShellContent som redan hanterar
+  // barn-/själv-/annan-vuxen-dashboard internt utifrån
+  // selectedDashboardMemberId, bara nådd via en annan panel nu än tidigare
+  // (var alltid "home"). HeroBar.tsx:s egen Medlemmar-nav-ikon togs bort
+  // 2026-08-09 (Zaidas beslut) — Hem-vyns "Visa medlemmar"-popup
+  // (MemberOverview.tsx) är nu enda vägen in, och sätter activePanel till
+  // "members" OCH en vald medlem i samma klick (se MemberShellContent.tsx:s
+  // handleSelectMemberFromHome). Grenen nedan (listan UTAN vald medlem)
+  // finns numera kvar bara som ett säkerhetsnät mot gammal persisterad
+  // lastActivePanel:"members"-data — ingen kvarvarande UI leder hit direkt.
   if (activePanel === "members" && !memberContentProps.selectedDashboardMemberId) {
     return (
       <MembersView
@@ -187,15 +193,9 @@ export function Shell({
         activePanel={activePanel}
         accountName={activeAccount.name}
         currentMember={currentMember}
-        activeMembers={memberContentProps.activeMembers}
-        canSeeMembers={settingsProps.canSeeMembers}
         onNavigate={setActivePanel}
         onSwitchAccount={onSwitchAccount}
         onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
-        onSelectMemberProfile={(id) => {
-          memberContentProps.onSelectMember(id);
-          setActivePanel("home");
-        }}
       />
 
       <div className={`app-shell-content${currentMember.isChild ? " app-shell-full" : ""}`}>
