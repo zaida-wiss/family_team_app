@@ -101,7 +101,15 @@ test("håll intryckt i 2s på badgen ångrar klarmarkeringen, uppdragskortet kom
 
   await page.goto("/");
   const badge = await getBadge(page);
-  await expect(page.getByRole("button", { name: /Duka bordet/ })).toHaveCount(0);
+  // Scopat till uppgiftslistan, inte hela sidan — badgens EGEN aria-label
+  // ("Duka bordet, väntar på godkännande...") matchar annars också
+  // /Duka bordet/ (regex utan ankare = substrängsmatchning), så en global
+  // page-sökning kan aldrig bli 0 medan badgen finns kvar. Listan (och dess
+  // <section aria-label="Uppgifter idag">) renderas inte alls när todos är
+  // tomt, se ChildTasksSection.tsx — resolvear korrekt till 0 element.
+  await expect(
+    page.getByRole("region", { name: "Uppgifter idag" }).getByRole("button", { name: /Duka bordet/ })
+  ).toHaveCount(0);
 
   await badge.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
   // Håll-tiden är deterministiskt 2000ms (UNDO_HOLD_DURATION_MS) — pollfönstret
