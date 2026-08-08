@@ -2788,6 +2788,65 @@ test("Bollar i tråd: en igångsatt timer visas som en digital badge längst ner
   await expect(badge).toHaveText(/^⏱ \d+:\d{2}$/);
 });
 
+// 2026-08-09, Zaidas önskemål: "ett snabbt tryck stoppar tiden... ett långt
+// tryck stoppar både tiden och markerar uppgiften som slutförd" — ett
+// ENSAMT tryck (inte del av en tre-tryck-serie) på en bubbla UTAN delmoment
+// vars timer redan är aktiv pausar/återupptar direkt, istället för att
+// öppna visa-vyn som det annars gör.
+test("Bollar i tråd: ett ensamt tryck pausar/återupptar en aktiv timer på en uppgift utan delmoment", async ({ page }) => {
+  const TIMER_TODO = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-timer", title: "Diska", timerEnabled: true };
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TIMER_TODO] }));
+
+  await openThreadView(page);
+  const ball = page.getByRole("button", { name: /^Diska/ });
+  const badge = ball.locator(".todo-thread__ball-timer");
+
+  await ball.click({ clickCount: 3 });
+  await expect(badge).toBeVisible();
+  await page.waitForTimeout(1300);
+
+  // Ett ensamt tryck pausar — badgen ska inte längre öka.
+  await ball.click();
+  const frozenText = await badge.textContent();
+  await page.waitForTimeout(1300);
+  await expect(badge).toHaveText(frozenText ?? "");
+  // Ingen visa-vy öppnad (det ensamma trycket pausade istället för att
+  // öppna den, se handleBallClick).
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // Ett nytt ensamt tryck återupptar — badgen ökar igen.
+  await ball.click();
+  await page.waitForTimeout(1300);
+  await expect(badge).not.toHaveText(frozenText ?? "");
+});
+
+// 2026-08-09, Zaidas önskemål: "Två snabba tryck skall stoppa timern och ta
+// bort aktiveringen för tidtagningen till när man har bättre tid att göra
+// uppgiften" — till skillnad från ett tryck (pausar, bevarar tiden)
+// nollställer två tryck helt, badgen försvinner.
+test("Bollar i tråd: två snabba tryck nollställer helt en aktiv timer på en uppgift utan delmoment", async ({ page }) => {
+  const TIMER_TODO = { ...PERSONAL_TODO_NO_SUBTASKS, id: "todo-timer-2", title: "Dammsuga", timerEnabled: true };
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TIMER_TODO] }));
+
+  await openThreadView(page);
+  const ball = page.getByRole("button", { name: /^Dammsuga/ });
+  const badge = ball.locator(".todo-thread__ball-timer");
+
+  await ball.click({ clickCount: 3 });
+  await expect(badge).toBeVisible();
+  await page.waitForTimeout(1300);
+
+  await ball.click({ clickCount: 2 });
+  await expect(badge).toHaveCount(0, { timeout: 3000 });
+  // Ingen "vem håller på med den här"-väljare öppnad (det dubbla trycket
+  // nollställde istället för att öppna den, se handleBallClick).
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
 // 2026-07-08 (Zaidas fynd: "i bolltrådsvyn står den som inte återkommande om
 // man redigerar, medans den i återkommande på inställningar står som
 // återkommande", följt av "det ska vara samma i redigera som i skapa. samma

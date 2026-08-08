@@ -7,7 +7,7 @@ import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useNowTick } from "../../hooks/useNowTick";
 import { isRecurringTemplate } from "./recurringTodos";
 import { isDueWithinRange, isTodoVisibleNow } from "./selectors";
-import { clearTodoTimer, readTodoTimerStartedAt, startTodoTimer, timerCapMinutes } from "./useTodoTimer";
+import { clearTodoTimer, readTodoTimerElapsedMs, readTodoTimerIsActive, startTodoTimer, timerCapMinutes, toggleTodoTimerPause } from "./useTodoTimer";
 import {
   accentColorForIndex,
   applyBubbleOrder,
@@ -301,8 +301,23 @@ export function FamilyTodoThreads({
       lastTapRef.current = null;
       pendingClickTimerRef.current = null;
       if (!pending) return;
+      // Samma mönster som ParentTodoThreadView.tsx: bubbel-nivå
+      // timerkontroll bara för uppgifter UTAN delmoment med en aktiv timer.
+      const timerControlEligible =
+        todo.timerEnabled &&
+        (todo.subtasks?.length ?? 0) === 0 &&
+        readTodoTimerIsActive(todo.id, timerCapMinutes(todo));
       if (pending.count >= 2) {
-        openInProgressPickerAt(source, todo, pending.rect);
+        if (timerControlEligible) {
+          // Två snabba tryck nollställer HELT (2026-08-09, Zaidas
+          // önskemål) — till skillnad från ett tryck (pausar, bevarar
+          // tiden) kastas den förflutna tiden bort permanent här.
+          clearTodoTimer(todo.id);
+        } else {
+          openInProgressPickerAt(source, todo, pending.rect);
+        }
+      } else if (timerControlEligible) {
+        toggleTodoTimerPause(todo.id, timerCapMinutes(todo));
       } else {
         setDetailTodoId(todo.id);
       }
@@ -312,14 +327,15 @@ export function FamilyTodoThreads({
   function handleConfirmComplete(source: FamilyThreadSource, todo: Todo) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
-    // En eventuell pågående timer (2026-08-07, se TodoTimerSection i
-    // TodoDetailView.tsx) — samma mönster som ParentTodoThreadView.tsx.
-    // Bara meningsfullt för LOKALA källor (cross-account/anslutna källors
-    // onComplete ignorerar redan tyst ett extra argument de inte förväntar).
-    const startedAt = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
-    if (startedAt !== null) {
+    // En eventuell pågående ELLER PAUSAD timer (2026-08-07/09, se
+    // TodoTimerSection i TodoDetailView.tsx) — samma mönster som
+    // ParentTodoThreadView.tsx. Bara meningsfullt för LOKALA källor
+    // (cross-account/anslutna källors onComplete ignorerar redan tyst ett
+    // extra argument de inte förväntar).
+    const elapsedMs = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+    if (elapsedMs !== null) {
       clearTodoTimer(todo.id);
-      source.onComplete(todo.id, Date.now() - startedAt);
+      source.onComplete(todo.id, elapsedMs);
     } else {
       source.onComplete(todo.id);
     }
@@ -858,7 +874,7 @@ export function FamilyTodoThreads({
                         <span className="todo-thread__ball-title">{todo.title}</span>
                         {progress !== null && <span className="todo-thread__ball-progress">{progress}%</span>}
                         {(() => {
-                          const timerLabel = bubbleTimerLabel(todo, nowTick);
+                          const timerLabel = bubbleTimerLabel(todo);
                           return timerLabel !== null ? (
                             <span aria-live="polite" className="todo-thread__ball-timer">
                               ⏱ {timerLabel}

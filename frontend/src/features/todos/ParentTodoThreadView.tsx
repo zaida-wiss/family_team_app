@@ -11,7 +11,7 @@ import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { downloadCsv, todosToCsv } from "./todoCsv";
 import { isRecurringTemplate } from "./recurringTodos";
 import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
-import { clearTodoTimer, readTodoTimerStartedAt, startTodoTimer, timerCapMinutes } from "./useTodoTimer";
+import { clearTodoTimer, readTodoTimerElapsedMs, readTodoTimerIsActive, startTodoTimer, timerCapMinutes, toggleTodoTimerPause } from "./useTodoTimer";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -45,11 +45,19 @@ export function formatElapsed(ms: number) {
 // här"-klockan, så ingen egen timer/effekt behövs bara för detta. Delad
 // mellan ParentTodoThreadView.tsx och FamilyTodoThreads.tsx (samma
 // bubbel-markup, samma --home-modifier-mönster som formatElapsed ovan).
-export function bubbleTimerLabel(todo: Todo, now: number): string | null {
+// "now"-parametern (2026-08-09, borttagen) behövs inte längre för själva
+// uträkningen — readTodoTimerElapsedMs läser Date.now() internt — men
+// FUNKTIONEN anropas fortfarande på nytt varje sekund via den delade
+// nowTick-klockan i anroparna, vilket är det som faktiskt triggar
+// omrendering med ett färskt resultat.
+export function bubbleTimerLabel(todo: Todo): string | null {
   if (!todo.timerEnabled) return null;
-  const startedAt = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
-  if (startedAt === null) return null;
-  const elapsedMs = Math.max(0, now - startedAt);
+  // Räknar redan in ackumulerad tid från ev. tidigare pausade perioder — en
+  // PAUSAD timer ska fortsatt visa sin frusna tid här, inte försvinna
+  // (skiljer sig från den gamla readTodoTimerStartedAt, som bara kände till
+  // "körs den just nu").
+  const elapsedMs = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+  if (elapsedMs === null) return null;
   if (todo.plannedDurationMinutes) {
     const totalMs = todo.plannedDurationMinutes * 60_000;
     const remainingMs = Math.max(0, totalMs - elapsedMs);
@@ -755,8 +763,29 @@ export function ParentTodoThreadView({
       lastTapRef.current = null;
       pendingClickTimerRef.current = null;
       if (!pending) return;
+      // Bubbel-nivå timerkontroll (2026-08-09, Zaidas önskemål — samma
+      // gester som barnens todo-vy) gäller bara uppgifter UTAN delmoment
+      // (de behöver fortsatt modalen, för att bocka av dem) med en aktiv
+      // timer — annars faller enkel-/dubbeltryck tillbaka på sitt vanliga
+      // beteende (visa-vyn respektive "vem håller på med den här").
+      const timerControlEligible =
+        todo.timerEnabled &&
+        (todo.subtasks?.length ?? 0) === 0 &&
+        readTodoTimerIsActive(todo.id, timerCapMinutes(todo));
       if (pending.count >= 2) {
-        openInProgressPickerAt(todo, pending.rect);
+        if (timerControlEligible) {
+          // Två snabba tryck nollställer HELT (samma clear() som modalens
+          // Nollställ-knapp) — Zaidas ord: "stoppa timern och ta bort
+          // aktiveringen för tidtagningen till när man har bättre tid att
+          // göra uppgiften". Till skillnad från ett tryck (pausar, BEVARAR
+          // tiden) kastas den förflutna tiden bort permanent här.
+          clearTodoTimer(todo.id);
+        } else {
+          openInProgressPickerAt(todo, pending.rect);
+        }
+      } else if (timerControlEligible) {
+        // Ett ensamt tryck pausar/återupptar direkt i bubblan.
+        toggleTodoTimerPause(todo.id, timerCapMinutes(todo));
       } else {
         setDetailTodoId(todo.id);
       }
@@ -766,14 +795,15 @@ export function ParentTodoThreadView({
   function handleConfirmComplete(todo: Todo) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
-    // En eventuell pågående timer (2026-08-07/08, startas med tre snabba
-    // tryck på bubblan eller via knappen i TodoDetailView, avslutas här via
-    // den redan befintliga håll-in-gesten) räknas ut och skickas med,
+    // En eventuell pågående ELLER PAUSAD timer (2026-08-07/09, startas med
+    // tre snabba tryck på bubblan eller via knappen i TodoDetailView,
+    // avslutas här via den redan befintliga håll-in-gesten — fungerar
+    // oavsett om den råkar vara pausad just då) räknas ut och skickas med,
     // oavsett om uppgiften faktiskt hann öppnas via visa-vyn eller ej.
-    const startedAt = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
-    if (startedAt !== null) {
+    const elapsedMs = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+    if (elapsedMs !== null) {
       clearTodoTimer(todo.id);
-      onCompleteTodo(todo.id, Date.now() - startedAt);
+      onCompleteTodo(todo.id, elapsedMs);
     } else {
       onCompleteTodo(todo.id);
     }
@@ -1245,7 +1275,7 @@ export function ParentTodoThreadView({
                         <span className="todo-thread__ball-progress">{progress}%</span>
                       )}
                       {(() => {
-                        const timerLabel = bubbleTimerLabel(todo, nowTick);
+                        const timerLabel = bubbleTimerLabel(todo);
                         return timerLabel !== null ? (
                           <span aria-live="polite" className="todo-thread__ball-timer">
                             ⏱ {timerLabel}

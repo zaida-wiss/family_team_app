@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
-import { readTodoTimerStartedAt, timerCapMinutes, useTodoTimer } from "../todos/useTodoTimer";
+import { readTodoTimerElapsedMs, timerCapMinutes, useTodoTimer } from "../todos/useTodoTimer";
 import "./ChildTasks.css";
 
 // Formaterar millisekunder som mm:ss (eller h:mm:ss om det tar över en timme)
@@ -168,15 +168,18 @@ type ChildTimerTaskCardProps = {
 // längre, samma princip som vuxenvyn: "startar andra timers" ska inte
 // avbryta en redan pågående).
 function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent, timerNow, onCompleteTodo }: ChildTimerTaskCardProps) {
-  const { startedAt, start, clear } = useTodoTimer(todo.id, timerCapMinutes(todo));
-  useWakeLock(startedAt !== null);
+  const { startedAt, accumulatedMs, isPaused, isActive, start, clear, togglePause } = useTodoTimer(todo.id, timerCapMinutes(todo));
+  const isRunning = startedAt !== null;
+  useWakeLock(isRunning);
 
   // Nedräkningsläget avslutas med samma håll-in-2-sekunder-gest som vanliga
   // uppgifter, INTE en Klar-knapp — egen useHoldToConfirm-instans (inte den
   // delade heldTodoId/onStartHold som styr icke-timer-korten).
   const { heldId: timerHeldId, startHold: startTimerHold, clearHold: clearTimerHold } = useHoldToConfirm(HOLD_DURATION_MS);
 
-  // Tryck-räknare för "tre snabba tryck startar timern" — samma mönster som
+  // Tryck-räknare för "tre snabba tryck nollställer/startar", "ett tryck
+  // pausar/återupptar" (2026-08-09, Zaidas önskemål: "ett snabbt tryck
+  // stoppar tiden") — samma DOUBLE_TAP_MS-fönster-princip som
   // ParentTodoThreadView.tsx/FamilyTodoThreads.tsx. suppressClickRef
   // förhindrar att det klick som naturligt följer en lyckad håll-in-
   // bekräftelse (pointerdown+pointerup på samma element) räknas som ett
@@ -200,76 +203,89 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
       // innan man tryckte... en nollställning [ska] föra så att den går
       // tillbaka till just 2 min [för en nedräkning]... är det en tidtagning
       // så skall den börja om från 0") — start() skriver alltid en NY
-      // starttid, vilket redan ger exakt detta: en nedräkning visar direkt
-      // hela sin planerade tid igen (elapsed=0), en öppen tidtagning börjar
-      // om från 0 — och fortsätter räkna, oavsett om den redan gick eller
-      // inte. Inget separat "ta bort helt"-läge.
+      // starttid utan ackumulerad tid, vilket redan ger exakt detta,
+      // oavsett om timern innan var igång, pausad eller aldrig startad.
       start();
       return;
     }
+    // Ett ENSAMT tryck (räknaren hinner nollställas av timeouten utan att nå
+    // 2 eller 3) pausar/återupptar — men bara om timern faktiskt är aktiv;
+    // en aldrig startad timer gör ingenting av ett enda tryck (samma som
+    // innan, "tre snabba tryck startar" är den enda vägen att börja). TVÅ
+    // snabba tryck (2026-08-09, Zaidas önskemål: "skall stoppa timern och ta
+    // bort aktiveringen för tidtagningen till när man har bättre tid att
+    // göra uppgiften") nollställer HELT (samma clear() som modalens
+    // Nollställ-knapp) — till skillnad från ett tryck (pausar, BEVARAR
+    // tiden) kastas den förflutna tiden bort permanent här.
+    const countAtTimeout = tapCountRef.current;
     tapTimerRef.current = window.setTimeout(() => {
       tapCountRef.current = 0;
       tapTimerRef.current = null;
+      if (countAtTimeout === 1 && isActive) togglePause();
+      else if (countAtTimeout === 2 && isActive) clear();
     }, TRIPLE_TAP_MS);
   }
 
-  // Läser av startedAt DIREKT från localStorage vid bekräftelsetillfället
-  // (inte från hookens React-state, som annars kan vara ett render bakom —
-  // samma "läs alltid färskt vid confirm"-princip som vuxenvyns
-  // handleConfirmComplete) — gäller BÅDA nedräkning (2s-håll) och öppen
-  // tidtagning ("Klar"-knapp).
+  // Läser av den TOTALA förflutna tiden (ackumulerad + ev. nu körande
+  // period) DIREKT från localStorage vid bekräftelsetillfället, inte från
+  // hookens React-state som kan vara ett render bakom — samma "läs alltid
+  // färskt vid confirm"-princip som vuxenvyns handleConfirmComplete. isActive
+  // (inte bara isRunning) avgör om håll-in-gesten ska ge effekt — en
+  // PAUSAD timer med redan ackumulerad tid ska fortfarande gå att markera
+  // klar utan att först behöva återupptas.
   function handleConfirmComplete() {
-    const at = readTodoTimerStartedAt(todo.id, timerCapMinutes(todo));
+    const elapsed = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
     clear();
-    onCompleteTodo(todo.id, at !== null ? Date.now() - at : null);
+    onCompleteTodo(todo.id, elapsed);
   }
 
-  const isRunning = startedAt !== null;
   const isCountdown = Boolean(todo.plannedDurationMinutes);
+  const isHeld = timerHeldId === todo.id;
+  // Förfluten tid just nu — ackumulerad från ev. tidigare (pausade)
+  // perioder plus, om den körs just nu, tiden sedan senaste start/återupptag.
+  // Golvat på 0 (2026-08-08, Zaidas önskemål: "Timern skall inte starta på
+  // minus") — timerNow (förälderns 1s-tickande klocka) kan ligga strax FÖRE
+  // startedAt (satt till Date.now() exakt vid start) tills nästa tick hinner
+  // ikapp.
+  const elapsedMs = accumulatedMs + (isRunning ? Math.max(0, timerNow - (startedAt as number)) : 0);
+
+  const cardClassName = [
+    "child-task-card",
+    "child-task-card--timer",
+    isRunning ? "child-task-card--timer-running" : "",
+    isHeld ? "child-task-card--holding" : "",
+    timeLeftPercent !== null ? "child-task-card--timed" : "",
+  ].filter(Boolean).join(" ");
+
+  const sharedHandlers = {
+    onClick: registerTap,
+    onPointerDown: () => {
+      if (!isActive) return;
+      startTimerHold(todo.id, () => {
+        suppressClickRef.current = true;
+        handleConfirmComplete();
+      });
+    },
+    onPointerLeave: clearTimerHold,
+    onPointerCancel: clearTimerHold,
+    onPointerUp: clearTimerHold,
+  };
 
   if (isCountdown) {
-    const isHeld = timerHeldId === todo.id;
     const totalMs = (todo.plannedDurationMinutes as number) * 60000;
-    // Golvat på 0 (2026-08-08, Zaidas önskemål: "Timern skall inte starta på
-    // minus") — timerNow (förälderns 1s-tickande klocka) kan ligga strax
-    // FÖRE startedAt (satt till Date.now() exakt vid start) tills nästa tick
-    // hinner ikapp.
-    const elapsedMs = isRunning ? Math.max(0, timerNow - startedAt) : 0;
-    const remainingMs = isRunning ? Math.max(0, totalMs - elapsedMs) : totalMs;
+    const remainingMs = isActive ? Math.max(0, totalMs - elapsedMs) : totalMs;
     return (
       <div
-        className={[
-          "child-task-card",
-          "child-task-card--timer",
-          isRunning ? "child-task-card--timer-running" : "",
-          isHeld ? "child-task-card--holding" : "",
-          timeLeftPercent !== null ? "child-task-card--timed" : "",
-        ].filter(Boolean).join(" ")}
+        className={cardClassName}
         style={{ ...style, touchAction: "manipulation" }}
-        // registerTap() körs numera även när timern redan går (2026-08-08,
-        // Zaidas rättelse: "3 snabba tryck tar bort timern, ytterligare tre
-        // snabba tryck startar den igen") — tidigare spärrat med !isRunning,
-        // vilket gjorde togglingen i registerTap() själv ouppnåelig. Ett
-        // KORT tryck (utan 2s-håll) hinner alltid fyra click innan
-        // startTimerHold nedan bekräftar och sätter suppressClickRef, så
-        // gesterna krockar inte — samma redan etablerade mönster som
-        // ParentTodoThreadView.tsx/FamilyTodoThreads.tsx bygger på.
-        onClick={registerTap}
-        onPointerDown={() => {
-          if (!isRunning) return;
-          startTimerHold(todo.id, () => {
-            suppressClickRef.current = true;
-            handleConfirmComplete();
-          });
-        }}
-        onPointerLeave={clearTimerHold}
-        onPointerCancel={clearTimerHold}
-        onPointerUp={clearTimerHold}
+        {...sharedHandlers}
         role="button"
         tabIndex={0}
         aria-label={
-          isRunning
-            ? `${todo.title}, ${formatElapsed(remainingMs)} kvar. Håll intryckt i två sekunder för att markera klar.`
+          isPaused
+            ? `${todo.title}, pausad vid ${formatElapsed(remainingMs)} kvar. Ett tryck återupptar, håll intryckt i två sekunder för att markera klar.`
+            : isRunning
+            ? `${todo.title}, ${formatElapsed(remainingMs)} kvar. Ett tryck pausar, håll intryckt i två sekunder för att markera klar.`
             : `${todo.title}. Tre snabba tryck startar nedräkningen på ${todo.plannedDurationMinutes} minuter.`
         }
       >
@@ -280,7 +296,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
           <span className={nameClass}>{todo.title}</span>
         </span>
         {starBadge}
-        {isRunning && (
+        {isActive && (
           <span aria-live="polite" className="child-task-timer-digital">
             {formatElapsed(remainingMs)}
           </span>
@@ -290,45 +306,20 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   }
 
   // Öppen tidtagning (fallback) — för uppgifter med timerEnabled men UTAN
-  // plannedDurationMinutes. 2026-08-09, Zaidas fynd: "en gammal knapp för
-  // att starta timer har kommit tillbaka" — det HÄR läget hade av misstag
-  // aldrig fått samma ombyggnad som nedräkningsläget ovan (2026-08-08):
-  // en Starta/Klar-knapp fanns kvar, och att trycka Klar körde
-  // handleConfirmComplete DIREKT — dvs att stoppa timern MARKERADE
-  // uppgiften klar, exakt det Zaida nu uttryckligen inte vill. Knappen
-  // borttagen helt — samma mönster som nedräkningen: tre snabba tryck
-  // startar/nollställer (registerTap, unconditional onClick — inte
-  // spärrat med !isRunning, se samma rättelse-kommentar i
-  // nedräkningsgrenen), 2s-håll markerar klar (samma useHoldToConfirm-
-  // instans, delad med nedräkningsgrenen ovan). Bara klockan räknar UPPÅT
-  // istället för nedåt, oförändrad digital-klocka-stil.
-  const isHeld = timerHeldId === todo.id;
+  // plannedDurationMinutes. Klockan räknar UPPÅT istället för nedåt, i
+  // övrigt samma gester som nedräkningen ovan.
   return (
     <div
-      className={[
-        "child-task-card",
-        "child-task-card--timer",
-        isRunning ? "child-task-card--timer-running" : "",
-        isHeld ? "child-task-card--holding" : "",
-        timeLeftPercent !== null ? "child-task-card--timed" : "",
-      ].filter(Boolean).join(" ")}
+      className={cardClassName}
       style={{ ...style, touchAction: "manipulation" }}
-      onClick={registerTap}
-      onPointerDown={() => {
-        if (!isRunning) return;
-        startTimerHold(todo.id, () => {
-          suppressClickRef.current = true;
-          handleConfirmComplete();
-        });
-      }}
-      onPointerLeave={clearTimerHold}
-      onPointerCancel={clearTimerHold}
-      onPointerUp={clearTimerHold}
+      {...sharedHandlers}
       role="button"
       tabIndex={0}
       aria-label={
-        isRunning
-          ? `${todo.title}, ${formatElapsed(Math.max(0, timerNow - startedAt))} hittills. Håll intryckt i två sekunder för att markera klar.`
+        isPaused
+          ? `${todo.title}, pausad vid ${formatElapsed(elapsedMs)}. Ett tryck återupptar, håll intryckt i två sekunder för att markera klar.`
+          : isRunning
+          ? `${todo.title}, ${formatElapsed(elapsedMs)} hittills. Ett tryck pausar, håll intryckt i två sekunder för att markera klar.`
           : `${todo.title}. Tre snabba tryck startar tidtagningen.`
       }
     >
@@ -339,9 +330,9 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
         <span className={nameClass}>{todo.title}</span>
       </span>
       {starBadge}
-      {isRunning && (
+      {isActive && (
         <span aria-live="polite" className="child-task-timer-digital">
-          {formatElapsed(Math.max(0, timerNow - startedAt))}
+          {formatElapsed(elapsedMs)}
         </span>
       )}
     </div>

@@ -90,7 +90,7 @@ function formatElapsed(ms: number): string {
 // FORTFARANDE via den befintliga håll-in-gesten på bubblan (oförändrad) —
 // den läser av samma localStorage-timer för att räkna ut elapsedMs.
 function TodoTimerSection({ todo }: { todo: Todo }) {
-  const { startedAt, start, clear } = useTodoTimer(todo.id, timerCapMinutes(todo));
+  const { startedAt, accumulatedMs, isPaused, start, clear, togglePause } = useTodoTimer(todo.id, timerCapMinutes(todo));
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -101,15 +101,15 @@ function TodoTimerSection({ todo }: { todo: Todo }) {
 
   const isRunning = startedAt !== null;
   const isCountdown = Boolean(todo.plannedDurationMinutes);
+  // Ackumulerad tid från ev. tidigare pausade perioder (2026-08-09, "ett
+  // snabbt tryck stoppar tiden") + tiden sedan senaste start/återupptag, om
+  // den körs just nu — golvat på 0 (2026-08-08, "Timern skall inte starta
+  // på minus": now, denna komponents egen 1s-tickande klocka, kan ligga
+  // strax FÖRE startedAt tills nästa tick hinner ikapp).
+  const elapsedMs = accumulatedMs + (isRunning ? Math.max(0, now - (startedAt as number)) : 0);
 
   let liveLabel: string | null = null;
-  if (isRunning) {
-    // Golvat på 0 (2026-08-08, Zaidas önskemål: "Timern skall inte starta
-    // på minus") — now (denna komponents egen 1s-tickande klocka) kan ligga
-    // strax FÖRE startedAt (satt till Date.now() exakt när knappen trycktes,
-    // mitt emellan två tick) tills nästa tick hinner ikapp, annars visas ett
-    // kort negativt värde precis vid start.
-    const elapsedMs = Math.max(0, now - startedAt);
+  if (isRunning || isPaused) {
     if (isCountdown) {
       const totalMs = (todo.plannedDurationMinutes as number) * 60_000;
       const remainingMs = Math.max(0, totalMs - elapsedMs);
@@ -124,6 +124,20 @@ function TodoTimerSection({ todo }: { todo: Todo }) {
       {isRunning ? (
         <>
           <span aria-live="polite">⏱ {liveLabel}</span>
+          <button className="todo-detail-modal__timer-reset" onClick={togglePause} type="button">
+            Pausa
+          </button>
+          <button className="todo-detail-modal__timer-reset" onClick={clear} type="button">
+            Nollställ
+          </button>
+        </>
+      ) : isPaused ? (
+        <>
+          <span aria-live="polite">⏱ {liveLabel} (pausad)</span>
+          <button className="todo-detail-modal__timer-start" onClick={togglePause} type="button">
+            <Play size={14} fill="currentColor" />
+            Fortsätt
+          </button>
           <button className="todo-detail-modal__timer-reset" onClick={clear} type="button">
             Nollställ
           </button>
