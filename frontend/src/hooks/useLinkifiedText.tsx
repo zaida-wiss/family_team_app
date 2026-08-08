@@ -10,7 +10,22 @@ import { Fragment, useMemo, type ReactNode } from "react";
 // Rent textmönster, ingen HTML-parsning/sanitisering behövs — texten
 // kommer alltid in som en vanlig sträng (redan säker, React escape:ar allt
 // den renderar), aldrig `dangerouslySetInnerHTML`.
-const URL_PATTERN = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+)/gi;
+//
+// 2026-08-09, uppföljning (Zaidas fynd: "länken i todos anteckningar
+// blandad med text inte fungerar") — mönstret kände tidigare BARA igen
+// länkar som redan bar http(s):// eller www. framför sig. En vardaglig
+// svensk anteckning ("köp verktyg på biltema.se") skriver nästan aldrig ut
+// det, så en sådan länk blev aldrig klickbar alls, oavsett om den stod
+// ensam eller blandad med annan text. Tredje alternativet nedan fångar en
+// BAR domän (ord.tld, t.ex. "biltema.se" eller "ikea.com/rea") — kräver
+// minst två bokstäver/siffror per ledgren FÖRE toppdomänen och en
+// toppdomän på 2–24 rena bokstäver, vilket i praktiken utesluter vanliga
+// svenska förkortningar som råkar innehålla punkter ("t.ex.", "bl.a.",
+// "m.m.", "kl. 14.30") — de har alltid minst en enbokstavsled. (?<!@)
+// hindrar att domändelen av en e-postadress ("namn@exempel.se") av misstag
+// blir en (missvisande) webblänk.
+const URL_PATTERN =
+  /(https?:\/\/[^\s<>]+|www\.[^\s<>]+|(?<!@)\b(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,24}(?:\/[^\s<>]*)?)/gi;
 
 // Skiljetecken som ofta råkar hamna direkt efter en inklistrad länk (en
 // mening som avslutas med punkt, ett kommatecken innan nästa ord) hör inte

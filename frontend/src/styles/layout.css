@@ -45,6 +45,27 @@
 }
 
 @media (max-width: 1023px) {
+  /* Låser DOKUMENTET (inte bara .app-shell-content) vid viewporten på mobil
+     (2026-08-09, Zaidas fynd: "just nu flyttar sig skärmen. Jag vill att
+     den skall vara fast som navbaren") — .app-shell-content(.app-shell-full)
+     har redan sin egen overflow:hidden/overflow-y:auto-hantering, men
+     html/body (base.css sätter bara margin/bakgrund på body) saknade en
+     motsvarande spärr. Utan den kan minsta layout-avrundning (safe-area-
+     insets, 100dvh-precision) göra DOKUMENTET någon enstaka pixel högre än
+     viewporten — nog för att en mobil webbläsare ska tolka en pekrörelse
+     (t.ex. ett påbörjat svep i useMemberSwipeNav.ts) som en sidscroll och
+     animera bort/fram adressfältet, vilket upplevs som att "hela skärmen
+     hoppar" oavsett hur väl den egentliga gesten hanteras. Bara mobil —
+     desktop-brytpunkten nedan litar MEDVETET fortsatt på vanlig
+     sid-scroll för långt panelinnehåll (.app-shell-content saknar där en
+     egen overflow-y:auto). */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   /* Flex column: content grows, HeroBar (DOM first) pushed to bottom via column-reverse */
   .app-shell {
     display: flex;

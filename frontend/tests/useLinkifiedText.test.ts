@@ -51,4 +51,30 @@ describe("linkifyText", () => {
   it("null/undefined ger tom sträng vid rendering (samma som tidigare {text && ...}-mönster)", () => {
     expect(render("")).toBe("");
   });
+
+  // 2026-08-09, uppföljning (Zaidas fynd: "länken i todos anteckningar
+  // blandad med text inte fungerar") — en bar domän utan http(s):///www.
+  it("en bar domän blandad med text blir en klickbar länk", () => {
+    const html = render("Köp verktyg på biltema.se imorgon");
+    expect(html).toContain('href="https://biltema.se"');
+    expect(html).toContain(">biltema.se</a>");
+    expect(html).toContain("Köp verktyg på ");
+    expect(html).toContain(" imorgon");
+  });
+
+  it("en bar domän med path blandad med text blir en klickbar länk", () => {
+    const html = render("Boka på biltema.se/rea innan det tar slut.");
+    expect(html).toContain('href="https://biltema.se/rea"');
+    expect(html).toContain(">biltema.se/rea</a>");
+  });
+
+  it("vanliga svenska förkortningar med punkter blir INTE felaktigt länkade", () => {
+    expect(render("Vi ses kl. 14.30, t.ex. imorgon, bl.a. hemma")).toBe(
+      "Vi ses kl. 14.30, t.ex. imorgon, bl.a. hemma"
+    );
+  });
+
+  it("domändelen av en e-postadress blir INTE en (missvisande) webblänk", () => {
+    expect(render("Skriv till mig@exempel.se om det")).toBe("Skriv till mig@exempel.se om det");
+  });
 });
