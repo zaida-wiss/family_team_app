@@ -74,6 +74,32 @@ import { useCallback, useRef } from "react";
 // startar. Avvägning, medvetet accepterad: en genuint diagonal
 // skroll-avsikt i uppgiftslistan kan nu behöva vara tydligare lodrät än
 // innan för att räknas som skroll istället för ett svepförsök.
+//
+// 2026-08-09, uppföljning #10 (Zaidas fynd, samma dag: "Det går inte att
+// svajpa när det jag ska svajpa på rör på sig! Det behöver vara
+// fixerat!") — kvarvarande hål trots #9 och trots att .child-dashboard
+// (ChildDashboard.css) samma dag fick touch-action: pan-y pinch-zoom.
+// Enskilda uppgiftskort har sitt EGET touch-action:none (oförändrat,
+// krävs för håll-in/tre-tryck-gesterna) och är därmed redan immuna mot
+// nativ panorering — men grid-MELLANRUMMET runt korten (.child-tasks-grid
+// själv sätter aldrig egen touch-action, ärver bara pan-y pinch-zoom från
+// .child-dashboard) har INGET sådant skydd. touch-action:s använda värde
+// låses av webbläsaren VID TOUCHSTART utifrån elementet direkt under
+// fingret — träffar ett svep av misstag mellanrummet istället för själva
+// kortet (helt normalt, fingrar är inte pixelexakta) låstes den touchen
+// till pan-y pinch-zoom för HELA gestens duration, och om de allra första
+// rörelsemillimetrarna råkade ha en tillräckligt lodrät komponent (vanligt
+// för en mänsklig fingerrörelse, långt innan vår egen 8px-tröskel ens
+// hunnit avgöra något) kunde webbläsaren committa till nativ lodrät scroll
+// FÖRE vår axel-bedömning ens kört en gång — ett rent timing-race vi
+// tidigare inte skyddade oss mot under den OSÄKRA perioden (axis==
+// "unknown"). Fixat: preventDefault() anropas nu ÄVEN under den osäkra
+// perioden när insideScrollable är sant (inte bara efter att axeln
+// konkret slagits fast som vågrät) — håller webbläsaren borta tills
+// axeln antingen blir "horizontal" (svepet tar över helt) eller
+// definitivt "vertical" (bara då släpps native scroll fram). Kostar högst
+// AXIS_DECIDE_THRESHOLD_PX (8px) extra latens innan en genuin lodrät
+// skroll får starta — ett medvetet accepterat, i praktiken omärkbart pris.
 const VERTICAL_DOMINANCE_RATIO = 1.5;
 const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
@@ -216,12 +242,13 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       }
 
       // Ingen permanent låsning — räknas om varje rörelseevent utifrån
-      // KUMULATIVA dx/dy sedan gestens start. Väntar bara med att avgöra
-      // NÅGOT tills den initiala tröskeln nåtts, för att inte överreagera
-      // på enstaka delpixel-skakningar. Samma generösa kvot oavsett var
-      // gesten startade (se uppföljning #9) — svepet ska dominera överallt.
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_DECIDE_THRESHOLD_PX) return;
-      g.axis = Math.abs(dy) > Math.abs(dx) * VERTICAL_DOMINANCE_RATIO ? "vertical" : "horizontal";
+      // KUMULATIVA dx/dy sedan gestens start. Väntar bara med att FASTSTÄLLA
+      // axeln tills den initiala tröskeln nåtts, för att inte överreagera på
+      // enstaka delpixel-skakningar. Samma generösa kvot oavsett var gesten
+      // startade (se uppföljning #9) — svepet ska dominera överallt.
+      if (Math.max(Math.abs(dx), Math.abs(dy)) >= AXIS_DECIDE_THRESHOLD_PX) {
+        g.axis = Math.abs(dy) > Math.abs(dx) * VERTICAL_DOMINANCE_RATIO ? "vertical" : "horizontal";
+      }
 
       if (g.axis === "horizontal") {
         // Håller webbläsarens egen panorering borta (om inte redan gjort
@@ -231,6 +258,15 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         // sidvändningen sker bara vid släpp om tröskeln passerats.
         e.preventDefault();
         g.everHorizontal = true;
+      } else if (g.axis === "unknown" && g.insideScrollable) {
+        // 2026-08-09, uppföljning #10 — håll webbläsaren borta redan under
+        // den OSÄKRA perioden också (inte bara efter att axeln konkret
+        // slagits fast som vågrät). Utan detta kunde en gest som startade i
+        // grid-mellanrummet mellan korten (touch-action:none finns bara PÅ
+        // själva korten, inte i mellanrummet) committa till nativ lodrät
+        // scroll innan vår 8px-tröskel ens hunnit avgöra något — se
+        // filhuvudets uppföljning #10 för fullständig förklaring.
+        e.preventDefault();
       }
       // g.axis === "vertical" OCH insideScrollable: släpper helt (ingen
       // preventDefault) — vanlig skroll i uppgiftslistan fortsätter

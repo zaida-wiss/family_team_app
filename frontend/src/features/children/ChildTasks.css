@@ -43,6 +43,13 @@
      ChildDashboard.css), men just den här listan behöver kunna växa. */
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Uttryckligt (2026-08-09, uppföljning #10, se useMemberSwipeNav.ts) —
+     ärvs redan från .child-dashboard, men skrivs ut här explicit så det
+     inte av misstag tystnar om förälderns värde någon gång ändras. Bara
+     GRID-MELLANRUMMET mellan korten berörs egentligen (själva korten har
+     redan sitt eget, snävare touch-action:none) — men eftersom "snävast
+     vinner" i touch-action-arvet gör den extra deklarationen ingen skada. */
+  touch-action: pan-y pinch-zoom;
 }
 
 @container (min-width: 640px) {
