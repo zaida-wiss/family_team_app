@@ -286,7 +286,7 @@ export async function completeCrossAccountFamilyTodo(
   if (!memberInTarget) {
     throw new AppError(403, "Åtkomst nekad");
   }
-  await completeTodo(todoId, targetAccountId, memberInTarget.id, elapsedMs);
+  return completeTodo(todoId, targetAccountId, memberInTarget.id, elapsedMs);
 }
 
 // "Signa upp sig" på en Familjen-uppgift i ETT AV MINA ANDRA konton
@@ -437,13 +437,14 @@ export async function completeSharedChildTodo(
   }
 
   todo.completedAt = new Date().toISOString();
+  let recordResult: Awaited<ReturnType<typeof recordAutoTimedAttempt>> | null = null;
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
     // Se completeTodo:s motsvarande kommentar (2026-08-08) — samma regel för
     // ett delat barns egen tidtagning, i BARNETS eget konto (dit dess
     // Medaljer/Rekord hör), inte den delande sharerns konto.
     if (!todo.plannedDurationMinutes) {
-      await recordAutoTimedAttempt(
+      recordResult = await recordAutoTimedAttempt(
         childAccountId,
         childMemberId,
         decryptField(childAccountId, todo.title),
@@ -469,6 +470,7 @@ export async function completeSharedChildTodo(
 
   await todo.save();
   broadcastTodosChanged();
+  return recordResult;
 }
 
 // Familjeanslutningar (ADR-0030, 2026-07-29) — den LÄTTA formen ("bara
@@ -661,7 +663,7 @@ export async function completeConnectionTodo(
   // ren FamilyConnection (jag är inte medlem där) och completeTodo måste
   // därför köras med den TILLDELADE medlemmens egen identitet, samma mönster
   // som completeSharedChildTodo redan etablerat för barn.
-  await completeTodo(todoId, targetAccountId, todo.assignedTo, elapsedMs);
+  return completeTodo(todoId, targetAccountId, todo.assignedTo, elapsedMs);
 }
 
 export async function approveConnectionTodo(
@@ -807,11 +809,12 @@ export async function completeSharedCategoryTodo(
   await requireEditableSharedCategory(todo.personalCategoryId, categoryAccountId, callerMemberId, callerAccountId);
 
   todo.completedAt = new Date().toISOString();
+  let recordResult: Awaited<ReturnType<typeof recordAutoTimedAttempt>> | null = null;
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
     // Se completeTodo:s motsvarande kommentar (2026-08-08).
     if (!todo.plannedDurationMinutes && todo.assignedTo) {
-      await recordAutoTimedAttempt(
+      recordResult = await recordAutoTimedAttempt(
         categoryAccountId,
         todo.assignedTo,
         decryptField(categoryAccountId, todo.title),
@@ -837,6 +840,7 @@ export async function completeSharedCategoryTodo(
 
   await todo.save();
   broadcastTodosChanged();
+  return recordResult;
 }
 
 export async function toggleSharedCategorySubtask(
@@ -1017,6 +1021,11 @@ export async function completeTodo(
   todo.completedAt = new Date().toISOString();
   // Timerfunktion (2026-07-07) — sparas bara om uppgiften faktiskt hade
   // timerEnabled och klienten skickade med en uppmätt tid.
+  // recordResult (2026-08-09, Zaidas önskemål: "skulle det kunna komma en
+  // pokal med tiden över skärmen då?") — returneras nu till anroparen så
+  // svaret på PATCH .../complete kan tala om för klienten om det blev ett
+  // nytt personbästa, istället för att bara räkna ut det och kasta bort det.
+  let recordResult: Awaited<ReturnType<typeof recordAutoTimedAttempt>> | null = null;
   if (todo.timerEnabled && elapsedMs !== null) {
     todo.elapsedMs = elapsedMs;
     // Öppen tidtagning (ingen plannedDurationMinutes — en NEDRÄKNING mäter en
@@ -1025,7 +1034,7 @@ export async function completeTodo(
     // mottagare — en otilldelad Familjen-uppgift har ingen enskild person att
     // sätta ett personbästa för.
     if (!todo.plannedDurationMinutes && todo.assignedTo) {
-      await recordAutoTimedAttempt(
+      recordResult = await recordAutoTimedAttempt(
         accountId,
         todo.assignedTo,
         decryptField(accountId, todo.title),
@@ -1054,6 +1063,7 @@ export async function completeTodo(
 
   await todo.save();
   broadcastTodosChanged();
+  return recordResult;
 }
 
 // "Någon håller på med den här"-indikator (2026-07-22) — se shared/types.ts.

@@ -54,6 +54,12 @@ export type SharedChildData = {
   timedTasks: TimedTaskWithBest[];
 };
 
+// Svarsformen för samtliga complete-endpoints (2026-08-09, Zaidas önskemål:
+// "skulle det kunna komma en pokal med tiden över skärmen då?") — isNewRecord
+// speglar backendens redan uträknade personbästa-koll (todosService.ts:s
+// recordAutoTimedAttempt), tidigare bara kastad bort efter beräkning.
+export type CompleteTodoResponse = { ok: boolean; isNewRecord: boolean };
+
 export const todosApi = {
   getAll: () => request<Todo[]>(api("todos")),
   create: (todo: Todo) =>
@@ -64,7 +70,7 @@ export const todosApi = {
       body: JSON.stringify(patch)
     }),
   complete: (id: string, elapsedMs: number | null = null) =>
-    request<{ ok: boolean }>(api(`todos/${id}/complete`), {
+    request<CompleteTodoResponse>(api(`todos/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),
@@ -114,7 +120,7 @@ export const todosApi = {
     id: string,
     elapsedMs: number | null = null
   ) =>
-    request<{ ok: boolean }>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/complete`), {
+    request<CompleteTodoResponse>(api(`todos/shared/${childAccountId}/${childMemberId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),
@@ -135,7 +141,7 @@ export const todosApi = {
   // delnings-grant (skiljer sig från getSharedChildren ovan).
   getFamilyAcrossAccounts: () => request<CrossAccountFamilyThread[]>(api("todos/family-across-accounts")),
   completeFamilyAcrossAccounts: (targetAccountId: string, id: string, elapsedMs: number | null = null) =>
-    request<{ ok: boolean }>(api(`todos/family-across-accounts/${targetAccountId}/${id}/complete`), {
+    request<CompleteTodoResponse>(api(`todos/family-across-accounts/${targetAccountId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),
@@ -179,7 +185,7 @@ export const todosApi = {
   // och getFamilyAcrossAccounts (ett riktigt medlemskap) ovan.
   getConnectionTodos: () => request<ConnectionTodosThread[]>(api("todos/connections")),
   completeConnectionTodo: (targetAccountId: string, id: string, elapsedMs: number | null = null) =>
-    request<{ ok: boolean }>(api(`todos/connections/${targetAccountId}/${id}/complete`), {
+    request<CompleteTodoResponse>(api(`todos/connections/${targetAccountId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),
@@ -203,7 +209,7 @@ export const todosApi = {
   // Delade EGNA kategorier (2026-08-06) — se SharedCategoryThread ovan.
   getSharedCategories: () => request<SharedCategoryThread[]>(api("todos/shared-categories")),
   completeSharedCategory: (categoryAccountId: string, id: string, elapsedMs: number | null = null) =>
-    request<{ ok: boolean }>(api(`todos/shared-categories/${categoryAccountId}/${id}/complete`), {
+    request<CompleteTodoResponse>(api(`todos/shared-categories/${categoryAccountId}/${id}/complete`), {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),

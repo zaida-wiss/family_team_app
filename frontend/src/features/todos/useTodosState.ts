@@ -45,6 +45,14 @@ export function useTodosState(fixedTodoTimes = false) {
   // Lever här istället, i samma hook som redan överlever panelbyten.
   const [lastImportResult, setLastImportResult] = useState<ImportResult | null>(null);
   const [lastImportUndo, setLastImportUndo] = useState<ImportUndo | null>(null);
+  // Rekord-firande (2026-08-09, Zaidas önskemål: "skulle det kunna komma en
+  // pokal med tiden över skärmen då? och att det blinkar lite grönt i
+  // bakgrunden") — servern räknar redan ut isNewRecord när en ÖPPEN
+  // tidtagen uppgift avklaras (todosService.ts:s recordAutoTimedAttempt),
+  // men kastade det bort direkt. Nu skickas det med i completeTodo:s svar
+  // och sätts här, renderas som en overlay på Shell.tsx-nivå (oavsett vilken
+  // av barnets/vuxnas/familjens vyer uppgiften avklarades ifrån).
+  const [recordCelebration, setRecordCelebration] = useState<{ title: string; elapsedMs: number } | null>(null);
   // refreshTodos triggas från fyra oberoende källor (mount, SSE, visibilitychange,
   // efter godkänn/neka/avklara) som kan överlappa. Utan detta kan ett äldre svar
   // hinna komma in efter ett nyare och skriva över ett nyss godkänt uppdrag tillbaka
@@ -308,6 +316,11 @@ export function useTodosState(fixedTodoTimes = false) {
 
     persistTodoIfGeneratedOccurrence(todoToComplete)
       .then(() => todosApi.complete(todoId, elapsedMs))
+      .then((res) => {
+        if (res.isNewRecord && elapsedMs !== null) {
+          setRecordCelebration({ title: todoToComplete.title, elapsedMs });
+        }
+      })
       .catch(console.error);
     trackEvent("todo-completed");
 
@@ -652,7 +665,9 @@ export function useTodosState(fixedTodoTimes = false) {
     lastImportResult,
     setLastImportResult,
     lastImportUndo,
-    setLastImportUndo
+    setLastImportUndo,
+    recordCelebration,
+    setRecordCelebration
   };
 }
 

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { HeroBar } from "./HeroBar";
 import { ThemePicker } from "../../components/ThemePicker";
+import { RecordCelebration } from "../../components/RecordCelebration";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
 import { RewardShopContext } from "../rewards/RewardShopContext";
@@ -133,6 +134,8 @@ export function Shell({
     shopSettings,
     fontId,
     setFontId,
+    recordCelebration,
+    dismissRecordCelebration,
   } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated);
 
   // Medlemsvyn (2026-07-30) — om en roll får canSeeMembers avstängd EFTER
@@ -254,6 +257,14 @@ export function Shell({
             onSelectTextSize={(textSize) => handleTextSizeSelect(themePickerMember.id, textSize)}
             fontId={fontId}
             onSelectFont={setFontId}
+          />
+        )}
+
+        {recordCelebration && (
+          <RecordCelebration
+            title={recordCelebration.title}
+            elapsedMs={recordCelebration.elapsedMs}
+            onDismiss={dismissRecordCelebration}
           />
         )}
       </div>

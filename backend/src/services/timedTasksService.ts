@@ -176,13 +176,18 @@ export async function getAttemptsForTask(
 // title), samma namn varje gång samma återkommande uppgift slutförs, så
 // resultaten samlas under EN kategori över tid istället för en ny per
 // tillfälle.
+// Returnerar nu isNewRecord (2026-08-09, Zaidas önskemål: "skulle det kunna
+// komma en pokal med tiden över skärmen då? och att det blinkar lite grönt
+// i bakgrunden") — räknades redan ut här men kastades tidigare bort direkt,
+// completeTodo (todosService.ts) hade ingen väg att veta om det blev nytt
+// rekord eller inte. Samma returform som recordAttempt ovan.
 export async function recordAutoTimedAttempt(
   accountId: string,
   assignedTo: string,
   title: string,
   symbol: string | null,
   durationMs: number
-): Promise<void> {
+): Promise<{ isNewRecord: boolean; durationMs: number; title: string }> {
   let task = await TimedTaskModel.findOne({ accountId, assignedTo, title, deletedAt: null });
   if (!task) {
     task = new TimedTaskModel({
@@ -214,6 +219,8 @@ export async function recordAutoTimedAttempt(
     deletedBy: null
   });
   await attempt.save();
+
+  return { isNewRecord, durationMs, title };
 }
 
 export async function deleteAttempt(

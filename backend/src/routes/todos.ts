@@ -47,7 +47,7 @@ todosRouter.patch(
   attachAccountId,
   async (req, res) => {
     const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
-    await todos.completeSharedChildTodo(
+    const record = await todos.completeSharedChildTodo(
       req.params.id,
       req.params.childAccountId,
       req.params.childMemberId,
@@ -55,7 +55,7 @@ todosRouter.patch(
       req.accountId!,
       elapsedMs ?? null
     );
-    res.json({ ok: true });
+    res.json({ ok: true, isNewRecord: record?.isNewRecord ?? false });
   }
 );
 
@@ -107,8 +107,8 @@ todosRouter.patch(
   requireAuth,
   async (req, res) => {
     const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
-    await todos.completeCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id, elapsedMs ?? null);
-    res.json({ ok: true });
+    const record = await todos.completeCrossAccountFamilyTodo(req.userId!, req.params.targetAccountId, req.params.id, elapsedMs ?? null);
+    res.json({ ok: true, isNewRecord: record?.isNewRecord ?? false });
   }
 );
 
@@ -180,8 +180,8 @@ todosRouter.patch(
   attachAccountId,
   async (req, res) => {
     const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
-    await todos.completeConnectionTodo(req.params.targetAccountId, req.params.id, req.accountId!, req.memberId!, elapsedMs ?? null);
-    res.json({ ok: true });
+    const record = await todos.completeConnectionTodo(req.params.targetAccountId, req.params.id, req.accountId!, req.memberId!, elapsedMs ?? null);
+    res.json({ ok: true, isNewRecord: record?.isNewRecord ?? false });
   }
 );
 
@@ -219,14 +219,14 @@ todosRouter.patch(
   attachAccountId,
   async (req, res) => {
     const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
-    await todos.completeSharedCategoryTodo(
+    const record = await todos.completeSharedCategoryTodo(
       req.params.id,
       req.params.categoryAccountId,
       req.memberId!,
       req.accountId!,
       elapsedMs ?? null
     );
-    res.json({ ok: true });
+    res.json({ ok: true, isNewRecord: record?.isNewRecord ?? false });
   }
 );
 
@@ -261,8 +261,8 @@ todosRouter.patch("/:id", requireAuth, attachAccountId, async (req, res) => {
 
 todosRouter.patch("/:id/complete", requireAuth, attachAccountId, async (req, res) => {
   const { elapsedMs } = CompleteTodoBodySchema.parse(req.body ?? {});
-  await todos.completeTodo(req.params.id, req.accountId!, req.memberId ?? null, elapsedMs ?? null);
-  res.json({ ok: true });
+  const record = await todos.completeTodo(req.params.id, req.accountId!, req.memberId ?? null, elapsedMs ?? null);
+  res.json({ ok: true, isNewRecord: record?.isNewRecord ?? false });
 });
 
 todosRouter.patch("/:id/approve", requireAuth, attachAccountId, async (req, res) => {

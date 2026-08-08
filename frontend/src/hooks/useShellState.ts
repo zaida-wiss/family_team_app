@@ -37,7 +37,8 @@ export function useShellState(
 
   const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, purgeTodo, approveTodo, rejectTodo,
     dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, refreshRoutineOccurrence,
-    lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo } = todosState;
+    lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo,
+    recordCelebration, setRecordCelebration } = todosState;
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, updateCalendarShareAcrossMyAccounts, addCalendarEvent, updateCalendarEvent,
     deleteCalendarEvent, deleteCalendar, rsvpCalendarEvent, importCalendarEvents,
@@ -493,6 +494,8 @@ export function useShellState(
     settingsProps,
     fontId,
     setFontId,
+    recordCelebration,
+    dismissRecordCelebration: () => setRecordCelebration(null),
     shopSettings: {
       requireApprovalForCategories,
       updateSettings: updateShopSettings,

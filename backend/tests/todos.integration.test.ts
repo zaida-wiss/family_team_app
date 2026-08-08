@@ -271,4 +271,138 @@ describe.skipIf(!RUN)("Todo-flöde mot riktig MongoDB", () => {
       .find((t) => t.id === noTimerTodoId);
     expect(noTimerTodo?.elapsedMs ?? null).toBeNull();
   });
+
+  // Rekord-firande (2026-08-09, Zaidas önskemål: "skulle det kunna komma en
+  // pokal med tiden över skärmen då?") — /complete-svaret bär nu isNewRecord,
+  // tidigare uträknat i recordAutoTimedAttempt men aldrig returnerat.
+  it("svarar isNewRecord:true för en öppen tidtagnings FÖRSTA avklarande", async () => {
+    const todoId = `todo-int-record-first-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId,
+        title: `Springa runt huset ${todoId}`,
+        createdBy: memberId,
+        assignedTo: childId,
+        isShared: false,
+        status: "pending",
+        starValue: 1,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+        timerEnabled: true,
+        elapsedMs: null,
+      })
+      .expect(201);
+
+    const complete = await request(app)
+      .patch(`/api/todos/${todoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childId)
+      .send({ elapsedMs: 10000 });
+    expect(complete.status).toBe(200);
+    expect(complete.body.isNewRecord).toBe(true);
+  });
+
+  it("svarar isNewRecord:false när ett SENARE avklarande är LÅNGSAMMARE än det tidigare personbästat", async () => {
+    const title = `Diska tallrikarna ${crypto.randomUUID()}`;
+    const firstId = `todo-int-record-a-${crypto.randomUUID()}`;
+    const secondId = `todo-int-record-b-${crypto.randomUUID()}`;
+    const base = {
+      createdBy: memberId,
+      assignedTo: childId,
+      isShared: false,
+      status: "pending" as const,
+      starValue: 1,
+      visual: { type: "lucide-icon" as const, value: "Star" },
+      recurrence: { type: "none" as const },
+      visibleFrom: null,
+      expiresAt: null,
+      completedAt: null,
+      approvedBy: null,
+      approvedAt: null,
+      rejectedBy: null,
+      rejectedAt: null,
+      deletedAt: null,
+      deletedBy: null,
+      timerEnabled: true,
+      elapsedMs: null,
+    };
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ ...base, id: firstId, title })
+      .expect(201);
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ ...base, id: secondId, title })
+      .expect(201);
+
+    const firstComplete = await request(app)
+      .patch(`/api/todos/${firstId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childId)
+      .send({ elapsedMs: 5000 });
+    expect(firstComplete.body.isNewRecord).toBe(true);
+
+    const secondComplete = await request(app)
+      .patch(`/api/todos/${secondId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", childId)
+      .send({ elapsedMs: 9000 });
+    expect(secondComplete.status).toBe(200);
+    expect(secondComplete.body.isNewRecord).toBe(false);
+  });
+
+  it("svarar isNewRecord:false (aldrig krasch) för en tidtagen FAMILJEN-uppgift utan specifik mottagare", async () => {
+    const todoId = `todo-int-record-family-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: todoId,
+        title: `Vattna blommorna ${todoId}`,
+        createdBy: memberId,
+        assignedTo: null,
+        isShared: false,
+        status: "pending",
+        starValue: 0,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+        timerEnabled: true,
+        elapsedMs: null,
+      })
+      .expect(201);
+
+    const complete = await request(app)
+      .patch(`/api/todos/${todoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({ elapsedMs: 3000 });
+    expect(complete.status).toBe(200);
+    expect(complete.body.isNewRecord).toBe(false);
+  });
 });
