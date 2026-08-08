@@ -64,6 +64,12 @@ async function mockCommon(page: import("@playwright/test").Page) {
 }
 
 test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter till FÖREGÅENDE medlem", async ({ page }) => {
+  // TEMP DIAGNOSTIK (tas bort igen efter felsökning) — fångar de temporära
+  // [swipe-debug]-loggarna i useMemberSwipeNav.ts/MemberShellContent.tsx så
+  // de syns i CI-jobbets stdout.
+  page.on("console", (msg) => {
+    if (msg.text().includes("[swipe-debug]")) console.log("BROWSER: " + msg.text());
+  });
   await mockCommon(page);
   await page.goto("/");
 

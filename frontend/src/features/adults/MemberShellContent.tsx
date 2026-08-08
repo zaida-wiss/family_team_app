@@ -609,10 +609,18 @@ export function MemberShellContent({
   // onNavigate-ändring behövs) — activePanel är redan "members" när denna
   // vy visas, se handleSelectMemberFromHome ovan för samma resonemang.
   function goToRelativeMember(delta: number) {
+    // eslint-disable-next-line no-console
+    console.log(
+      "[swipe-debug] goToRelativeMember delta=" + delta +
+      " activeMembers=" + JSON.stringify(activeMembers.map((m) => m.id)) +
+      " selectedDashboardMember=" + (selectedDashboardMember ? selectedDashboardMember.id : "null")
+    );
     if (activeMembers.length === 0 || !selectedDashboardMember) return;
     const index = activeMembers.findIndex((m) => m.id === selectedDashboardMember.id);
     const nextIndex = ((index === -1 ? 0 : index) + delta + activeMembers.length) % activeMembers.length;
     const next = activeMembers[nextIndex];
+    // eslint-disable-next-line no-console
+    console.log("[swipe-debug] goToRelativeMember index=" + index + " nextIndex=" + nextIndex + " next=" + (next ? next.id : "undefined"));
     if (next) onSelectMember(next.id);
   }
   const memberSwipeNavRef = useMemberSwipeNav<HTMLDivElement>({
