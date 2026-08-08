@@ -1,10 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// Ångra klarmarkering (2026-08-10, Zaidas önskemål: barnet ska kunna ångra
-// ett håll-in-tryck som gjordes av misstag — samma håll-in-gest, men på den
-// lilla snurrande "väntar på godkännande"-badgen (ChildPendingBadges.tsx),
-// dragen uppåt mot uppdragskortens plats. Kortet ska bara komma tillbaka om
-// det fortfarande finns tid att utföra uppgiften på (visibleFrom/expiresAt).
+// Ångra klarmarkering (2026-08-10, förenklat samma dag — se
+// ChildPendingBadges.tsx: håll-in+dra-uppåt visade sig otillförlitligt,
+// Zaidas fynd: "det räcker att hålla in ikonen 2 sekunder så skall den hoppa
+// tillbaka") — samma raka håll-in-2-sekunder-gest som uppdragskortens egen
+// klarmarkeringsgest, på den lilla snurrande "väntar på godkännande"-badgen.
+// Kortet ska bara komma tillbaka om det fortfarande finns tid att utföra
+// uppgiften på (visibleFrom/expiresAt).
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-parent", deletedAt: null };
 const CHILD_ROLE = {
@@ -82,22 +84,13 @@ async function mockChildSession(page: Page) {
   await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
 }
 
-async function holdAndDragBadgeUp(page: Page, ms: number) {
+async function getBadge(page: Page) {
   const badge = page.getByRole("button", { name: /väntar på godkännande/ });
   await expect(badge).toBeVisible({ timeout: 15000 });
-  const box = await badge.boundingBox();
-  if (!box) throw new Error("Badgen hittades inte");
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  // Dra uppåt förbi tröskelvärdet (20px) — se useHoldDragConfirm.ts.
-  await page.mouse.move(x, y - 40, { steps: 6 });
-  await page.waitForTimeout(ms);
   return badge;
 }
 
-test("håll intryckt + dra uppåt i 2s ångrar klarmarkeringen, uppdragskortet kommer tillbaka", async ({ page }) => {
+test("håll intryckt i 2s på badgen ångrar klarmarkeringen, uppdragskortet kommer tillbaka", async ({ page }) => {
   let uncompleteCalled = false;
   await mockChildSession(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [doneTodo({})] }));
@@ -107,13 +100,12 @@ test("håll intryckt + dra uppåt i 2s ångrar klarmarkeringen, uppdragskortet k
   });
 
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /väntar på godkännande/ })).toBeVisible({ timeout: 15000 });
+  const badge = await getBadge(page);
   await expect(page.getByRole("button", { name: /Duka bordet/ })).toHaveCount(0);
 
-  await holdAndDragBadgeUp(page, 2200);
-  await page.mouse.up();
+  await badge.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await expect.poll(() => uncompleteCalled, { timeout: 3000 }).toBe(true);
 
-  expect(uncompleteCalled).toBe(true);
   await expect(page.getByRole("button", { name: /väntar på godkännande/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Duka bordet/ })).toBeVisible();
 });
@@ -128,32 +120,11 @@ test("släpper man innan 2s har gått ångras ingenting", async ({ page }) => {
   });
 
   await page.goto("/");
-  await holdAndDragBadgeUp(page, 800);
-  await page.mouse.up();
+  const badge = await getBadge(page);
+  await badge.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await page.waitForTimeout(800);
+  await badge.dispatchEvent("pointerup", { pointerId: 1, button: 0 });
   await page.waitForTimeout(1500);
-
-  expect(uncompleteCalled).toBe(false);
-  await expect(page.getByRole("button", { name: /väntar på godkännande/ })).toBeVisible();
-});
-
-test("ett rakt håll utan att dra uppåt bekräftar INTE ångra, trots 2s", async ({ page }) => {
-  let uncompleteCalled = false;
-  await mockChildSession(page);
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [doneTodo({})] }));
-  await page.route("**/api/todos/todo-done-1/uncomplete", (route) => {
-    uncompleteCalled = true;
-    return route.fulfill({ json: { ok: true } });
-  });
-
-  await page.goto("/");
-  const badge = page.getByRole("button", { name: /väntar på godkännande/ });
-  await expect(badge).toBeVisible({ timeout: 15000 });
-  const box = await badge.boundingBox();
-  if (!box) throw new Error("Badgen hittades inte");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(2200);
-  await page.mouse.up();
 
   expect(uncompleteCalled).toBe(false);
   await expect(badge).toBeVisible();
@@ -175,10 +146,10 @@ test("ångrar man en uppgift vars tidsfönster redan gått ut kommer kortet inte
   });
 
   await page.goto("/");
-  await holdAndDragBadgeUp(page, 2200);
-  await page.mouse.up();
+  const badge = await getBadge(page);
+  await badge.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await expect.poll(() => uncompleteCalled, { timeout: 3000 }).toBe(true);
 
-  expect(uncompleteCalled).toBe(true);
   await expect(page.getByRole("button", { name: /väntar på godkännande/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Duka bordet/ })).toHaveCount(0);
 });

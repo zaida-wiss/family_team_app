@@ -15,7 +15,7 @@
 }
 
 /* Ångra klarmarkering (2026-08-10) — badgen är nu en riktig knapp (håll
-   intryckt + dra uppåt), måste själv fånga pekar-events trots att den
+   intryckt i 2 sekunder), måste själv fånga pekar-events trots att den
    omgivande raden ovan medvetet har pointer-events: none. */
 .child-pending-badge {
   position: relative;
@@ -25,7 +25,6 @@
   display: block;
   background: none;
   border: none;
-  border-radius: 50%;
   margin: 0;
   padding: 6px;
   color: inherit;
@@ -34,7 +33,6 @@
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   pointer-events: auto;
-  transition: transform 0.15s ease-out;
 }
 
 .child-pending-badge-icon {
@@ -46,49 +44,22 @@
   to { transform: rotate(360deg); }
 }
 
-/* Solljus-glöd + gnistrande glitter under håll-in (2026-08-10, Zaidas
-   önskemål — ersätter den tidigare fyllande stapeln), samma teknik som
-   uppdragskortens motsvarande ChildTasks.css: en långsam 2s-glöd som byggs
-   upp (box-shadow, den runda border-radius:50% ovan gör den till en cirkulär
-   sol-halo) + en snabb, loopande glitter-pulsering (filter) — olika
-   CSS-egenskaper på samma element, stör aldrig varandra. */
-.child-pending-badge--holding {
-  animation:
-    child-pending-badge-hold-sunlight 2s ease-out forwards,
-    child-pending-badge-hold-sparkle 0.5s ease-in-out infinite;
+/* Fyller nerifrån under hela håll-in-tiden (2s), samma princip som
+   uppdragskortens eget håll-in-mönster (ChildTasks.css). */
+.child-pending-badge--holding::after {
+  content: "";
+  position: absolute;
+  inset: auto 4px 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c1, var(--primary));
+  transform: scaleX(0);
+  transform-origin: left;
+  opacity: 0.9;
+  animation: child-pending-badge-hold-progress 2s linear forwards;
 }
 
-@keyframes child-pending-badge-hold-sunlight {
-  0% {
-    box-shadow:
-      0 0 0 0 color-mix(in srgb, var(--c1, var(--primary)) 55%, transparent),
-      5px -7px 0 0 transparent,
-      -6px 5px 0 0 transparent,
-      6px 6px 0 0 transparent;
-  }
-  50% {
-    box-shadow:
-      0 0 10px 2px color-mix(in srgb, var(--c1, var(--primary)) 55%, transparent),
-      5px -7px 1px 0 color-mix(in srgb, var(--white, #fff) 75%, var(--c1, var(--primary)) 25%),
-      -6px 5px 1px 0 transparent,
-      6px 6px 1px 0 color-mix(in srgb, var(--white, #fff) 75%, var(--c1, var(--primary)) 25%);
-  }
-  100% {
-    box-shadow:
-      0 0 18px 6px color-mix(in srgb, var(--c1, var(--primary)) 78%, transparent),
-      5px -7px 1px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--c1, var(--primary)) 12%),
-      -6px 5px 1px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--c1, var(--primary)) 12%),
-      6px 6px 1px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--c1, var(--primary)) 12%);
-  }
-}
-
-@keyframes child-pending-badge-hold-sparkle {
-  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
-  50% { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--white, #fff) 75%, var(--c1, var(--primary)) 25%)); }
-}
-
-/* Dragit tillräckligt långt uppåt (2026-08-10) — kommunicerar "släpp inte,
-   det här kommer fungera" innan hållet hinner klart. */
-.child-pending-badge--armed .child-pending-badge-icon {
-  filter: drop-shadow(0 0 4px var(--c1, gold)) drop-shadow(0 0 8px var(--c1, gold));
+@keyframes child-pending-badge-hold-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
