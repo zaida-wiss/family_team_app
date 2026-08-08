@@ -85,7 +85,13 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
   await page.mouse.move(box.x + box.width - 10, box.y + box.height / 2, { steps: 10 });
   await page.mouse.up();
 
-  await expect(page.getByText("Hej Testförälder!")).toBeVisible();
+  // PersonalDashboard är lazy-laddad (MemberShellContent.tsx) och har ännu
+  // inte hämtats i den här testsessionen (bara ChildDashboard/Nova besökt
+  // hittills) — utöver commit()s egen 200ms-animation tillkommer en riktig
+  // JS-chunk-hämtning första gången, som under CI:s fulla parallellitet kan
+  // ta längre än standardens 5000ms. Generös timeout, samma resonemang som
+  // getBadge i child-uncomplete-badge.spec.ts.
+  await expect(page.getByText("Hej Testförälder!")).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
 });
 

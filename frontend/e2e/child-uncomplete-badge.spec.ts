@@ -104,7 +104,10 @@ test("håll intryckt i 2s på badgen ångrar klarmarkeringen, uppdragskortet kom
   await expect(page.getByRole("button", { name: /Duka bordet/ })).toHaveCount(0);
 
   await badge.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
-  await expect.poll(() => uncompleteCalled, { timeout: 3000 }).toBe(true);
+  // Håll-tiden är deterministiskt 2000ms (UNDO_HOLD_DURATION_MS) — pollfönstret
+  // ger utrymme för nätverksmocken/CI-belastning ovanpå det, inte bara en snäv
+  // marginal (samma resonemang som getBadge:s egna generösa timeout ovan).
+  await expect.poll(() => uncompleteCalled, { timeout: 8000 }).toBe(true);
 
   await expect(page.getByRole("button", { name: /väntar på godkännande/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Duka bordet/ })).toBeVisible();
@@ -148,7 +151,7 @@ test("ångrar man en uppgift vars tidsfönster redan gått ut kommer kortet inte
   await page.goto("/");
   const badge = await getBadge(page);
   await badge.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
-  await expect.poll(() => uncompleteCalled, { timeout: 3000 }).toBe(true);
+  await expect.poll(() => uncompleteCalled, { timeout: 8000 }).toBe(true);
 
   await expect(page.getByRole("button", { name: /väntar på godkännande/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Duka bordet/ })).toHaveCount(0);
