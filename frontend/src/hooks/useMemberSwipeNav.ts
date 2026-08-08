@@ -47,10 +47,15 @@ import { useCallback, useRef } from "react";
 // registrera startläget innan övergången som för den till 0 börjar, annars
 // riskerar de två stilsättningarna att slås ihop till en enda, osynlig
 // "övergång" utan rörelse).
-const TOUCH_SWIPE_THRESHOLD_PX = 60;
+// Tröskeln för att räknas som ett fullbordat svep (2026-08-09, Zaidas
+// önskemål: "det skall räcka att fingret dras över halva skärmen") — en
+// ANDEL av elementets bredd, inte ett fast pixelantal, så samma känsla
+// gäller oavsett skärmstorlek. Gäller nu BÅDA input-typerna (touch hade
+// tidigare ett eget, litet fast pixelmått; mus hade redan en andel, fast
+// 60% — sänkt till samma 50% för konsekvens).
+const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
-const DESKTOP_CROSS_RATIO = 0.6;
 const SNAP_BACK_MS = 200;
 const SLIDE_MS = 200;
 
@@ -206,24 +211,20 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         el!.releasePointerCapture(e.pointerId);
       }
 
-      const dx = e.clientX - g.x;
-      let crossed: boolean;
-
-      if (g.isMouse) {
-        // "dra den nedtryckta markören över till andra sidan innan man
-        // släpper" — kräver en stor andel av bredden, inte bara några
-        // pixlar, så en vanlig textmarkering aldrig räknas som en växling.
-        const rect = el!.getBoundingClientRect();
-        const width = rect.width || 1;
-        crossed = Math.abs(dx) >= width * DESKTOP_CROSS_RATIO;
-      } else if (!g.everHorizontal) {
+      if (!g.isMouse && !g.everHorizontal) {
         // Aldrig ens tagit kontroll över gesten (rent lodrätt svep, eller
         // för kort rörelse för att avgöras) — ingen egen visuell
         // förskjutning att fjädra tillbaka, gör ingenting.
         return;
-      } else {
-        crossed = Math.abs(dx) >= TOUCH_SWIPE_THRESHOLD_PX;
       }
+
+      const dx = e.clientX - g.x;
+      // Samma andels-tröskel för båda input-typerna (se konstantens
+      // kommentar) — kräver en stor andel av bredden, inte bara några
+      // pixlar, så t.ex. en vanlig textmarkering med musen aldrig räknas
+      // som en växling.
+      const width = el!.getBoundingClientRect().width || 1;
+      const crossed = Math.abs(dx) >= width * SWIPE_COMMIT_RATIO;
 
       // Svep/dra åt vänster = nästa medlem, åt höger = föregående — samma
       // riktningskonvention som ett bildspel/karusell.
