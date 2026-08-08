@@ -252,8 +252,12 @@
 }
 
 /* Nedräkningsläget (2026-07-07) — hela kortet är dubbelklicks-/håll-ytan,
-   ingen separat knapp. touch-action: manipulation sätts inline (JSX) för att
-   dubbeltryck ska trigga dblclick istället för webbläsarens dubbeltryck-zoom. */
+   ingen separat knapp. touch-action: none sätts inline (JSX) — täcker samma
+   sak som manipulation gjorde (ingen webbläsar-dubbeltryck-zoom) men utan
+   att öppna för native pan-x/pan-y, som visade sig kunna läcka igenom och
+   ge intryck av att kortet "rörde sig" under ett svep över det (2026-08-09,
+   Zaidas fynd). Matchar nu samma touch-action:none som vanliga kort redan
+   har via basklassen. */
 .child-task-card--timer[role="button"] {
   cursor: pointer;
 }

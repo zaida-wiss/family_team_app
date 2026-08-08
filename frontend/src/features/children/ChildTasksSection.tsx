@@ -277,7 +277,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
     return (
       <div
         className={cardClassName}
-        style={{ ...style, touchAction: "manipulation" }}
+        style={{ ...style, touchAction: "none" }}
         {...sharedHandlers}
         role="button"
         tabIndex={0}
@@ -311,7 +311,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   return (
     <div
       className={cardClassName}
-      style={{ ...style, touchAction: "manipulation" }}
+      style={{ ...style, touchAction: "none" }}
       {...sharedHandlers}
       role="button"
       tabIndex={0}
