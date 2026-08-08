@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useNowTick } from "../../hooks/useNowTick";
+import { useMemberSwipeNav } from "../../hooks/useMemberSwipeNav";
 import type { ComponentProps } from "react";
 import type { CalendarFilter } from "../calendars/CalendarView";
 import type { AddEventInput } from "../calendars/useCalendarsState";
@@ -597,6 +598,27 @@ export function MemberShellContent({
   // lastActivePanel till "home") — utan denna extra spärr hade en sådan
   // medlem sett en annans dashboard på Hem igen efter en enda
   // sidomladdning, med fel nav-ikon markerad.
+  // Bläddra mellan familjemedlemmar med ett svep/marginal-drag (2026-08-09,
+  // Zaidas önskemål: "man skall kunna bläddra mellan olika familjemedlemmar
+  // i childrens timeline/todo genom att svepa... och i desktop genom att
+  // klicka i höger eller vänster marginal och dra... över till andra sidan
+  // innan man släpper") — cyklar genom SAMMA activeMembers-array/ordning
+  // som Hem-vyns "Visa medlemmar"-popup redan använder (vuxna först, sedan
+  // barn, se useAppState.ts). onSelectMember räcker ensamt (ingen
+  // onNavigate-ändring behövs) — activePanel är redan "members" när denna
+  // vy visas, se handleSelectMemberFromHome ovan för samma resonemang.
+  function goToRelativeMember(delta: number) {
+    if (activeMembers.length === 0 || !selectedDashboardMember) return;
+    const index = activeMembers.findIndex((m) => m.id === selectedDashboardMember.id);
+    const nextIndex = ((index === -1 ? 0 : index) + delta + activeMembers.length) % activeMembers.length;
+    const next = activeMembers[nextIndex];
+    if (next) onSelectMember(next.id);
+  }
+  const memberSwipeNav = useMemberSwipeNav({
+    onNext: () => goToRelativeMember(1),
+    onPrev: () => goToRelativeMember(-1)
+  });
+
   if (selectedDashboardMember && activePanel === "members") {
     const now = nowTick;
     // Ogömda/tilldelade uppgifter bara (2026-07-22, Zaidas önskemål: "mallar
@@ -681,29 +703,32 @@ export function MemberShellContent({
 
     if (selectedMemberIsChild) {
       return (
-        <Suspense fallback={null}>
-          <ChildDashboard
-            child={selectedDashboardMember}
-            calendars={calendars}
-            roles={roles}
-            categories={personalCategories}
-            timelineTodos={todos}
-            activeChildTodos={activeChildTodos}
-            rejectedTodos={rejectedTodos}
-            onOpenRecords={() => setShowChildRecords(true)}
-            onCreateWish={onCreateWish}
-            onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
-            onDismissRejectedTodo={(todoId) =>
-              onDismissRejectedTodo(todoId, selectedDashboardMember.id)
-            }
-            onThemePickerOpen={onThemePickerOpen}
-          />
-        </Suspense>
+        <div {...memberSwipeNav}>
+          <Suspense fallback={null}>
+            <ChildDashboard
+              child={selectedDashboardMember}
+              calendars={calendars}
+              roles={roles}
+              categories={personalCategories}
+              timelineTodos={todos}
+              activeChildTodos={activeChildTodos}
+              rejectedTodos={rejectedTodos}
+              onOpenRecords={() => setShowChildRecords(true)}
+              onCreateWish={onCreateWish}
+              onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
+              onDismissRejectedTodo={(todoId) =>
+                onDismissRejectedTodo(todoId, selectedDashboardMember.id)
+              }
+              onThemePickerOpen={onThemePickerOpen}
+            />
+          </Suspense>
+        </div>
       );
     }
 
     return (
-      <Suspense fallback={null}>
+      <div {...memberSwipeNav}>
+        <Suspense fallback={null}>
         <PersonalDashboard
           member={selectedDashboardMember}
           calendars={calendars}
@@ -718,7 +743,8 @@ export function MemberShellContent({
           }
           onOpenRecords={() => setShowChildRecords(true)}
         />
-      </Suspense>
+        </Suspense>
+      </div>
     );
   }
 
