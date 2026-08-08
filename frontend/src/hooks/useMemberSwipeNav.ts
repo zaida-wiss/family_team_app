@@ -10,113 +10,75 @@ import { useCallback, useRef } from "react";
 // 2026-08-09, uppföljning #1–#4 (skärmen rör sig, mus fångades inte, osäker
 // gest gav ingen visuell feedback, axeln kunde låsas fel permanent) — se
 // tidigare git-historik för full bakgrund. Grunden som fortfarande gäller:
-// pointermove (native addEventListener, passive:false) + preventDefault
-// redan under den osäkra perioden, axeln räknas om varje rörelseevent
-// (aldrig permanent låst).
+// pointermove (native addEventListener, passive:false) + preventDefault,
+// axeln räknas om varje rörelseevent (aldrig permanent låst).
 //
 // 2026-08-09, uppföljning #6 (Zaidas fynd: "tidslinje-vyn... hoppar runt
-// när jag drar fingret. Jag vill att den är fast när jag rör fingret där.
-// Annars går det inte att 'vända blad' som i en bok") — uppföljning #5
-// (och innan dess, hela "lika lätt som Tinder"-omskrivningen) byggde på
-// att INNEHÅLLET FÖLJER FINGRET LEVANDE under hela draget (translateX satt
-// på VARJE rörelseevent). Det visade sig vara fel gest för vad Zaida
-// faktiskt vill ha: en boksida ligger stilla ända tills den vänds, den
-// "följer" inte fingret kontinuerligt dessförinnan. follow()/snapBack()
-// (den levande 1:1-följningen och dess återfjädring) borttagna helt —
-// innehållet rör sig INTE alls under draget. Axel-detekteringen (för att
-// skilja ett vågrätt svep från vanlig lodrät skroll, och hindra
-// webbläsarens egen panorering under tiden) är oförändrad och behövs
-// fortfarande. Vid släpp: har draget passerat halva bredden (samma
-// SWIPE_COMMIT_RATIO som innan), spelas EXAKT samma kontrollerade
-// sidvändnings-animation (commit(), oförändrad) som redan fanns för ett
-// fullbordat svep — annars görs ingenting alls (inget att fjädra tillbaka,
-// eftersom inget någonsin flyttades).
-// 2026-08-09, uppföljning #7 (Zaidas fynd: "hela containern med allt
-// innehåll rör sig även upp och ner med fingret... det försör känslan
-// väldigt mycket när man ser en vit kant") — g.axis==="vertical"-grenen
-// kallade MEDVETET aldrig preventDefault, för att inte förstöra vanlig
-// skroll i uppgiftslistan (.child-tasks-grid). Problemet: samma
-// eftergivenhet gällde ALLA lodräta rörelser, även de som börjar på
-// tidslinjen/hjälten/bakgrunden — ytor som INTE är skrollbara
-// (.child-dashboard har overflow:hidden). En sådan lodrät rörelse har
-// ingenting legitimt att skrolla LOKALT, men webbläsaren försöker ändå
-// hitta någon skrollbar förfader — och utan en dokument-nivå-spärr (en
-// tidigare sådan togs bort igen, se historiken, då den av andra skäl
-// klippte position:fixed-element som medlemslistans popup) läcker det
-// till <body>s elastiska studs, vilket syns som en vit kant. Löst genom
-// att avgöra REDAN vid nedtryck om pekaren startade INUTI en genuint
-// skrollbar yta (findScrollableAncestor) — startar den UTANFÖR hålls
-// webbläsarens egen hantering ALLTID borta (oavsett axel), eftersom det
-// då aldrig finns något legitimt att skrolla där ändå.
-// 2026-08-09, uppföljning #8 (Zaidas fynd: "svajpar jag från vänster till
-// höger och inte spikrakt så flyttar sig dashboarden bara upp och ner...
-// man skall kunna dra fingret fast i 45 graders vingel och den skall ändå
-// ta det som att man försöker svepa till en annan medlem") — den strikta
-// |dx|>|dy|-jämförelsen ÄR redan matematiskt exakt gränsen vid 45°, men vid
-// EXAKT eller strax över 45° (helt normalt för en verklig fingerrörelse,
-// särskilt över en lite längre sträcka) klassades gesten som lodrät och
-// gav upp helt. Kräver nu att den lodräta komponenten är TYDLIGT större än
-// den vågräta (en högre kvot, motsvarande ~56°) innan gesten ger upp och
-// lämnas åt webbläsaren — annars vinner alltid tolkningen "försöker svepa".
+// när jag drar fingret... vill att den är fast... Annars går det inte att
+// 'vända blad' som i en bok") — innehållet FÖLJER ALDRIG fingret levande
+// under draget (ingen translateX per rörelseevent). Vid släpp: har draget
+// passerat halva bredden (SWIPE_COMMIT_RATIO), spelas en kontrollerad
+// sidvändnings-animation (commit()) — annars görs ingenting alls.
 //
-// 2026-08-09, uppföljning #9 (Zaidas fynd, samma dag: "svajpar jag från
-// höger så flyttas uppgiftscorten (containern) åt vänster istället för att
-// bläddra... [45°-kravet gäller] Man skall kunna dra fingret fast i 45
-// graders vingel" — utan undantag) — den generösa kvoten gällde tidigare
-// BARA utanför en skrollbar yta (uppgiftslistan behöll den strikta 45°-
-// gränsen, för att inte göra vanlig lodrät listskroll opålitlig). Men ett
-// svep som råkar starta OVANPÅ uppgiftskorten (vanligt, de fyller stora
-// delar av skärmen) klassades då fortfarande lätt som lodrätt vid minsta
-// diagonal drift, gav upp, och släpptes till listans egen (native)
-// lodräta panorering — vilket kunde SE UT som att korten/behållaren rör
-// sig. Zaida bekräftade uttryckligen att svepet ska dominera ÖVERALLT,
-// inte bara utanför listan — kvoten gäller nu likadant oavsett var gesten
-// startar. Avvägning, medvetet accepterad: en genuint diagonal
-// skroll-avsikt i uppgiftslistan kan nu behöva vara tydligare lodrät än
-// innan för att räknas som skroll istället för ett svepförsök.
+// 2026-08-09, uppföljning #8/#9 (Zaidas fynd: "man skall kunna dra fingret
+// fast i 45 graders vingel och den skall ändå ta det som att man försöker
+// svepa") — kräver att den lodräta komponenten är TYDLIGT större än den
+// vågräta (VERTICAL_DOMINANCE_RATIO, ~56°) innan gesten alls kan tolkas
+// som lodrät, likadant OAVSETT var i vyn den startar (även ovanpå
+// uppgiftskorten). Avvägning, medvetet accepterad: en genuint diagonal
+// skroll-avsikt i uppgiftslistan kan behöva vara tydligare lodrät än en
+// "naiv" 45°-gräns för att räknas som skroll istället för ett svepförsök.
 //
-// 2026-08-09, uppföljning #10 (Zaidas fynd, samma dag: "Det går inte att
-// svajpa när det jag ska svajpa på rör på sig! Det behöver vara
-// fixerat!") — kvarvarande hål trots #9 och trots att .child-dashboard
-// (ChildDashboard.css) samma dag fick touch-action: pan-y pinch-zoom.
-// Enskilda uppgiftskort har sitt EGET touch-action:none (oförändrat,
-// krävs för håll-in/tre-tryck-gesterna) och är därmed redan immuna mot
-// nativ panorering — men grid-MELLANRUMMET runt korten (.child-tasks-grid
-// själv sätter aldrig egen touch-action, ärver bara pan-y pinch-zoom från
-// .child-dashboard) har INGET sådant skydd. touch-action:s använda värde
-// låses av webbläsaren VID TOUCHSTART utifrån elementet direkt under
-// fingret — träffar ett svep av misstag mellanrummet istället för själva
-// kortet (helt normalt, fingrar är inte pixelexakta) låstes den touchen
-// till pan-y pinch-zoom för HELA gestens duration, och om de allra första
-// rörelsemillimetrarna råkade ha en tillräckligt lodrät komponent (vanligt
-// för en mänsklig fingerrörelse, långt innan vår egen 8px-tröskel ens
-// hunnit avgöra något) kunde webbläsaren committa till nativ lodrät scroll
-// FÖRE vår axel-bedömning ens kört en gång — ett rent timing-race vi
-// tidigare inte skyddade oss mot under den OSÄKRA perioden (axis==
-// "unknown"). Fixat: preventDefault() anropas nu ÄVEN under den osäkra
-// perioden när insideScrollable är sant (inte bara efter att axeln
-// konkret slagits fast som vågrät) — håller webbläsaren borta tills
-// axeln antingen blir "horizontal" (svepet tar över helt) eller
-// definitivt "vertical" (bara då släpps native scroll fram). Kostar högst
-// AXIS_DECIDE_THRESHOLD_PX (8px) extra latens innan en genuin lodrät
-// skroll får starta — ett medvetet accepterat, i praktiken omärkbart pris.
+// 2026-08-09, uppföljning #11 (Zaidas fynd, samma dag, efter #7/#9/#10:
+// "detta händer även lodrät... webbläsarens egen scroll tar över när det
+// inte är fixerat... så förfaller svepet") — ROTORSAKEN till HELA den här
+// klassen av bugg (vit kant, korten "rör sig", svepet "förfaller"): så
+// fort touch-action NÅGONSIN tillåter webbläsaren att själv panorera
+// (t.ex. pan-y för lodrät listskroll) kan webbläsaren committa till sin
+// EGEN scroll-hantering för en hel touch-sekvens — ett beslut den fattar
+// EN GÅNG, tidigt, och sedan ALDRIG lämnar tillbaka till JS, oavsett om
+// vår egen axel-bedömning senare (mitt i samma gest) skulle konstatera att
+// rörelsen egentligen är vågrät. Att jaga detta med preventDefault() vid
+// rätt tidpunkt (#7, #10) minskade fönstret men kunde aldrig stänga det
+// helt, eftersom webbläsaren kan hinna före oavsett hur tidigt vi reagerar.
+//
+// Löst genom att sluta lita på nativ panorering HELT — .child-dashboard/
+// .child-tasks-grid har inte längre pan-y i sin touch-action (bara
+// pinch-zoom kvar, se ChildDashboard.css/ChildTasks.css — WCAG 1.4.4/
+// 1.4.10 kräver att zoom förblir möjlig, det rörs INTE). Utan pan-y kan
+// webbläsaren ALDRIG committa till nativ panorering i någon riktning från
+// första touch-eventet, deterministiskt, ingen timing inblandad. Vi äger
+// därmed HELA gesten själva: preventDefault() anropas nu ovillkorligt på
+// varje touch-rörelseevent, och lodrät skroll av uppgiftslistan (om
+// pekaren startade där, se findScrollableAncestor) simuleras manuellt
+// genom att sätta scrollTop direkt utifrån fingrets STEGVISA (inte
+// kumulativa) lodräta rörelse — samma "finger drar, innehåll följer"-
+// känsla som nativ scroll, bara implementerad i JS istället för att
+// riskera att webbläsaren tar över och aldrig släpper. Ingen momentum/
+// studs vid listans ändar (native har det, detta har det inte) — ett
+// medvetet, litet avkall mot att svepet äntligen blir 100% pålitligt.
 const VERTICAL_DOMINANCE_RATIO = 1.5;
 const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
 const SLIDE_MS = 200;
 
-function findScrollableAncestor(node: Element | null, boundary: Element): boolean {
+// Hittar den NÄRMASTE genuint skrollbara förfadern (overflow-y auto/scroll
+// OCH faktiskt mer innehåll än plats) mellan den vidrörda noden och
+// gränsen (svep-wrappern) — returnerar själva ELEMENTET (2026-08-09,
+// uppföljning #11, var tidigare bara en boolean) så vi kan driva dess
+// scrollTop manuellt istället för att förlita oss på nativ panorering.
+function findScrollableAncestor(node: Element | null, boundary: Element): Element | null {
   let cur: Element | null = node;
   while (cur && cur !== boundary.parentElement) {
     const style = getComputedStyle(cur);
     if ((style.overflowY === "auto" || style.overflowY === "scroll") && cur.scrollHeight > cur.clientHeight) {
-      return true;
+      return cur;
     }
     if (cur === boundary) break;
     cur = cur.parentElement;
   }
-  return false;
+  return null;
 }
 
 type Options = {
@@ -128,6 +90,11 @@ type GestureState = {
   pointerId: number;
   x: number;
   y: number;
+  // Y-koordinaten vid FÖRRA rörelseeventet (2026-08-09, uppföljning #11) —
+  // skild från y (gestens STARTposition, används för axel-/tröskel-
+  // bedömning) — används för att driva scrollTarget.scrollTop med
+  // fingrets stegvisa, inte kumulativa, förflyttning.
+  lastY: number;
   isMouse: boolean;
   axis: "unknown" | "horizontal" | "vertical";
   // Har gesten någonsin klassats vågrät (2026-08-09) — avgör vid släpp om
@@ -135,10 +102,10 @@ type GestureState = {
   // ovan), en gest som svänger vågrät tar över kontrollen så fort
   // riktningen blir tydlig.
   everHorizontal: boolean;
-  // Startade pekaren inuti en genuint skrollbar yta (2026-08-09,
-  // uppföljning #7) — avgörs en gång vid nedtryck, styr om lodräta
-  // rörelser får lämnas åt webbläsaren eller alltid ska hindras.
-  insideScrollable: boolean;
+  // Den skrollbara listan pekaren startade inuti, om någon (2026-08-09,
+  // uppföljning #11) — null om gesten startade utanför all skrollbar yta,
+  // då finns inget att driva manuellt oavsett axel.
+  scrollTarget: Element | null;
 };
 
 export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Options) {
@@ -211,10 +178,11 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         pointerId: e.pointerId,
         x: e.clientX,
         y: e.clientY,
+        lastY: e.clientY,
         isMouse,
         axis: "unknown",
         everHorizontal: false,
-        insideScrollable: isMouse ? false : findScrollableAncestor(e.target as Element | null, el!)
+        scrollTarget: isMouse ? null : findScrollableAncestor(e.target as Element | null, el!)
       };
     }
 
@@ -233,45 +201,39 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         return;
       }
 
-      // Startade UTANFÖR en skrollbar yta (2026-08-09, uppföljning #7) —
-      // det finns då aldrig något legitimt att skrolla lokalt, håll
-      // webbläsarens egen hantering borta oavsett axel, annars läcker
-      // rörelsen till dokumentets elastiska studs (en vit kant syns).
-      if (!g.insideScrollable) {
-        e.preventDefault();
-      }
+      // Vi äger touchen helt (2026-08-09, uppföljning #11) — .child-
+      // dashboard/.child-tasks-grid saknar numera pan-y i sin touch-action,
+      // så webbläsaren kan aldrig committa till nativ panorering ändå.
+      // preventDefault() här är därmed mest en extra säkerhetsåtgärd (och
+      // krav för att en del webbläsare ska räkna touchen som "hanterad"),
+      // den huvudsakliga spärren sitter i CSS:en.
+      e.preventDefault();
+
+      // Fingrets STEGVISA lodräta förflyttning sedan FÖRRA eventet (inte
+      // sedan gestens start) — uppdateras varje event oavsett axel, så att
+      // en manuell scroll som börjar SENARE (när axeln väl slår fast
+      // "vertical") aldrig får ett hopp för den redan förflutna, oanvända
+      // sträckan.
+      const stepDeltaY = e.clientY - g.lastY;
+      g.lastY = e.clientY;
 
       // Ingen permanent låsning — räknas om varje rörelseevent utifrån
-      // KUMULATIVA dx/dy sedan gestens start. Väntar bara med att FASTSTÄLLA
-      // axeln tills den initiala tröskeln nåtts, för att inte överreagera på
-      // enstaka delpixel-skakningar. Samma generösa kvot oavsett var gesten
-      // startade (se uppföljning #9) — svepet ska dominera överallt.
+      // KUMULATIVA dx/dy sedan gestens start. Väntar bara med att
+      // FASTSTÄLLA axeln tills den initiala tröskeln nåtts, för att inte
+      // överreagera på enstaka delpixel-skakningar. Samma generösa kvot
+      // oavsett var gesten startade (se uppföljning #9) — svepet ska
+      // dominera överallt.
       if (Math.max(Math.abs(dx), Math.abs(dy)) >= AXIS_DECIDE_THRESHOLD_PX) {
         g.axis = Math.abs(dy) > Math.abs(dx) * VERTICAL_DOMINANCE_RATIO ? "vertical" : "horizontal";
       }
 
       if (g.axis === "horizontal") {
-        // Håller webbläsarens egen panorering borta (om inte redan gjort
-        // ovan) — annars stjäl den gesten innan vi hinner avgöra att den
-        // är vågrät. Ingen egen rörelse appliceras (se filhuvudets
-        // uppföljning #6) — innehållet ligger stilla under HELA draget,
-        // sidvändningen sker bara vid släpp om tröskeln passerats.
-        e.preventDefault();
         g.everHorizontal = true;
-      } else if (g.axis === "unknown" && g.insideScrollable) {
-        // 2026-08-09, uppföljning #10 — håll webbläsaren borta redan under
-        // den OSÄKRA perioden också (inte bara efter att axeln konkret
-        // slagits fast som vågrät). Utan detta kunde en gest som startade i
-        // grid-mellanrummet mellan korten (touch-action:none finns bara PÅ
-        // själva korten, inte i mellanrummet) committa till nativ lodrät
-        // scroll innan vår 8px-tröskel ens hunnit avgöra något — se
-        // filhuvudets uppföljning #10 för fullständig förklaring.
-        e.preventDefault();
+      } else if (g.axis === "vertical" && g.scrollTarget) {
+        // Manuell "nativ känns"-scroll (2026-08-09, uppföljning #11) —
+        // ersätter den nativa panorering vi medvetet stängt av i CSS:en.
+        g.scrollTarget.scrollTop -= stepDeltaY;
       }
-      // g.axis === "vertical" OCH insideScrollable: släpper helt (ingen
-      // preventDefault) — vanlig skroll i uppgiftslistan fortsätter
-      // fungera. Om gesten SENARE svänger vågrät tar grenen ovan över då
-      // istället, utan att ha "gett upp" permanent.
     }
 
     function onPointerUp(e: PointerEvent) {
