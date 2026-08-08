@@ -147,6 +147,7 @@ type Props = {
   calendarSettings?: CalendarSettings;
   onThemePickerOpen: (memberId: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
+  onUncompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onCreateWish: (childId: string, starsNeeded?: number, title?: string) => void;
   onLoadEventsForMonth?: (year: number, month: number) => Promise<void>;
@@ -186,7 +187,7 @@ export function MemberShellContent({
   onAddShoppingItem, onToggleShoppingItem, onDeleteShoppingItem, onReorderShoppingItems, onClearCompletedShoppingItems,
   shoppingShowCompletedDefault,
   onCreateShoppingList, onDeleteShoppingList, onRenameShoppingList, onShareShoppingList, onRemoveShoppingListShare,
-  onThemePickerOpen, onCompleteTodo,
+  onThemePickerOpen, onCompleteTodo, onUncompleteTodo,
   onDismissRejectedTodo, onCreateWish, calendarSettings, onLoadEventsForMonth,
 }: Props) {
   // Hem-vyns "Visa medlemmar"-popup (MemberOverview.tsx) är sedan
@@ -716,6 +717,7 @@ export function MemberShellContent({
               onOpenRecords={() => setShowChildRecords(true)}
               onCreateWish={onCreateWish}
               onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
+              onUncompleteTodo={(todoId) => onUncompleteTodo(selectedDashboardMember, todoId, roles)}
               onDismissRejectedTodo={(todoId) =>
                 onDismissRejectedTodo(todoId, selectedDashboardMember.id)
               }

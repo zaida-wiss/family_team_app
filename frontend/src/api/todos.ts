@@ -74,6 +74,11 @@ export const todosApi = {
       method: "PATCH",
       body: JSON.stringify({ elapsedMs })
     }),
+  uncomplete: (id: string) =>
+    request<{ ok: boolean }>(api(`todos/${id}/uncomplete`), {
+      method: "PATCH",
+      body: JSON.stringify({})
+    }),
   approve: (id: string) =>
     request<{ ok: boolean }>(api(`todos/${id}/approve`), {
       method: "PATCH",

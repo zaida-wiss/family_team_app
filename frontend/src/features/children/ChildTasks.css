@@ -125,8 +125,57 @@
   will-change: transform;
 }
 
-.child-task-card--holding::after {
-  animation: child-task-hold-progress 2s linear forwards;
+/* Solljus-glöd + gnistrande glitter under håll-in (2026-08-10, Zaidas
+   önskemål: ersätter den tidigare fyllande stapeln) — box-shadow (INTE ::after,
+   den pseudo-elementet delas redan med --timer-running:s statiska bar nedan)
+   eftersom en egen box-shadow inte klipps av kortets egen overflow:hidden.
+   Två oberoende animationer på SAMMA element: en långsam 2s-glöd som byggs
+   upp (box-shadow, "solljuset") och en snabb, loopande glitter-pulsering
+   (filter, "sprakandet") — olika CSS-egenskaper stör aldrig varandra. */
+.child-task-card--holding {
+  animation:
+    child-task-hold-sunlight 2s ease-out forwards,
+    child-task-hold-sparkle 0.55s ease-in-out infinite;
+}
+
+@keyframes child-task-hold-sunlight {
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--task-accent) 55%, transparent),
+      14px -18px 0 0 transparent,
+      -16px 14px 0 0 transparent,
+      18px 16px 0 0 transparent,
+      -14px -12px 0 0 transparent;
+  }
+  45% {
+    box-shadow:
+      0 0 20px 4px color-mix(in srgb, var(--task-accent) 55%, transparent),
+      14px -18px 2px 0 color-mix(in srgb, var(--white, #fff) 75%, var(--task-accent) 25%),
+      -16px 14px 1px 0 transparent,
+      18px 16px 1px 0 color-mix(in srgb, var(--white, #fff) 75%, var(--task-accent) 25%),
+      -14px -12px 2px 0 transparent;
+  }
+  75% {
+    box-shadow:
+      0 0 30px 8px color-mix(in srgb, var(--task-accent) 65%, transparent),
+      14px -18px 1px 0 transparent,
+      -16px 14px 2px 0 color-mix(in srgb, var(--white, #fff) 80%, var(--task-accent) 20%),
+      18px 16px 1px 0 transparent,
+      -14px -12px 2px 0 color-mix(in srgb, var(--white, #fff) 80%, var(--task-accent) 20%);
+  }
+  100% {
+    box-shadow:
+      0 0 40px 14px color-mix(in srgb, var(--task-accent) 78%, transparent),
+      14px -18px 2px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--task-accent) 12%),
+      -16px 14px 2px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--task-accent) 12%),
+      18px 16px 2px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--task-accent) 12%),
+      -14px -12px 2px 0 color-mix(in srgb, var(--white, #fff) 88%, var(--task-accent) 12%);
+  }
+}
+
+@keyframes child-task-hold-sparkle {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--white, #fff) 75%, var(--task-accent) 25%)); }
 }
 
 .child-task-card--timed {
@@ -245,10 +294,6 @@
   fill: currentColor;
 }
 
-@keyframes child-task-hold-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
 
 /* Timerfunktion (2026-07-07, Zaidas önskemål) — inte ett håll-in-kort utan
    ett Play/Stopp-kontrollerat kort, samma grundstil (kant/bakgrund/rotation)

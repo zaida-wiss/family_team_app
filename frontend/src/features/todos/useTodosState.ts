@@ -449,6 +449,38 @@ export function useTodosState(fixedTodoTimes = false) {
     await todosApi.purge(todoId);
   }
 
+  // Ångra klarmarkering (2026-08-10, Zaidas önskemål: barnet ska kunna ångra
+  // ett håll-in som gjordes av misstag, via håll-in+dra-uppåt-gesten på
+  // ChildPendingBadges.tsx) — samma canCompleteTodo-behörighet och samma
+  // pendingMutationIds-skydd mot en oberoende bakgrundsrefresh som redan
+  // används av approveTodo/rejectTodo (se refreshTodos-kommentaren) — utan
+  // det kunde en SSE-driven refresh mitt i anropet skriva tillbaka "done"
+  // innan denna mutation hunnit committa på servern.
+  function uncompleteTodo(member: Member, todoId: Id, roles: Role[]) {
+    const previousTodo = todosRef.current.find((t) => t.id === todoId);
+    if (!previousTodo || previousTodo.status !== "done" || !canCompleteTodo(member, roles, previousTodo)) {
+      return;
+    }
+
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, status: "pending" as const, completedAt: null, elapsedMs: null }
+          : todo
+      )
+    );
+    pendingMutationIds.current.add(todoId);
+
+    todosApi
+      .uncomplete(todoId)
+      .then(() => refreshTodos())
+      .catch((error) => {
+        console.error(error);
+        pendingMutationIds.current.delete(todoId);
+        setTodos((current) => current.map((todo) => (todo.id === todoId ? previousTodo : todo)));
+      });
+  }
+
   async function approveTodo(todoId: Id, approverId: Id) {
     // Eligibiliteten avgörs mot todosRef.current (en vanlig ref, alltid synkront
     // läsbar) — INTE genom att läsa tillbaka en yttre variabel som muterats inuti
@@ -653,6 +685,7 @@ export function useTodosState(fixedTodoTimes = false) {
     toggleSubtask,
     toggleTodoInProgress,
     completeTodo,
+    uncompleteTodo,
     softDeleteTodo,
     restoreTodo,
     purgeTodosTrash,

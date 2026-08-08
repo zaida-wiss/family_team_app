@@ -1217,6 +1217,37 @@ export async function rejectTodo(id: string, accountId: string, memberId: string
   broadcastTodosChanged();
 }
 
+// Ångra klarmarkering (2026-08-10, Zaidas önskemål: barnet ska kunna ångra
+// ett håll-in-tryck som gjordes av misstag — samma håll-in-gest, men på den
+// lilla snurrande "väntar på godkännande"-badgen, dragen uppåt mot
+// uppdragskortens plats). Kräver status==="done" (INTE "approved") — en
+// redan godkänd uppgift har redan delat ut stjärnor server-side (completeTodo/
+// approveTodo), att ångra den hade krävt att även dra tillbaka stjärnorna,
+// utanför scope för denna funktion. Samma behörighet som completeTodo
+// (canCompleteTodoAsCaller) — den som fick markera klar får rimligen också
+// ångra det, inklusive en förälder som hanterar ett barns uppgift åt barnet.
+// completedAt/elapsedMs nollställs (samma "engångstillstånd rensas vid
+// statusövergång"-princip som redan gäller inProgressBy i completeTodo) —
+// en ev. redan auto-registrerad Medaljer/Rekord-attempt (recordAutoTimedAttempt)
+// rörs MEDVETET INTE, ett känt/accepterat undantag (samma avvägning som redan
+// gjorts för andra edge-cases i denna fil).
+export async function uncompleteTodo(id: string, accountId: string, memberId: string | null) {
+  const todo = await TodoModel.findOne({ id, accountId });
+  if (!todo || todo.status !== "done") {
+    throw new AppError(404, "Todo hittades inte eller är inte done");
+  }
+  const member = await requireMember(memberId, accountId);
+  const roles = await getAllRoles(accountId);
+  if (!(await canCompleteTodoAsCaller(member, roles, todo))) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  todo.status = "pending";
+  todo.completedAt = null;
+  todo.elapsedMs = null;
+  await todo.save();
+  broadcastTodosChanged();
+}
+
 function canRetryRejectedTodo(todo: { expiresAt: string | null }, now = Date.now()) {
   if (!todo.expiresAt) {
     return true;

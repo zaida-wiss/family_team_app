@@ -35,7 +35,7 @@ export function useShellState(
     activePanel, setActivePanel, panelNavResetKey, apiError
   } = useAppState(activeMembership);
 
-  const { todos, createTodo, completeTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, purgeTodo, approveTodo, rejectTodo,
+  const { todos, createTodo, completeTodo, uncompleteTodo, softDeleteTodo, restoreTodo, purgeTodosTrash, purgeTodo, approveTodo, rejectTodo,
     dismissRejectedTodo, softDeleteTodosForMember, updateTodo, toggleSubtask, toggleTodoInProgress, refreshRoutineOccurrence,
     lastImportResult, setLastImportResult, lastImportUndo, setLastImportUndo,
     recordCelebration, setRecordCelebration } = todosState;
@@ -142,6 +142,7 @@ export function useShellState(
   const sharedChildProps = {
     onCreateWish: createWish,
     onCompleteTodo: completeTodo,
+    onUncompleteTodo: uncompleteTodo,
     onDismissRejectedTodo: dismissRejectedTodo,
     onThemePickerOpen: setThemePickerMemberId,
     timedTasks,

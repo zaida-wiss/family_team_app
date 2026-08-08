@@ -18,6 +18,7 @@ type Props = {
   onDeleteTimedAttempt: (id: Id, attemptId: Id) => Promise<void>;
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
+  onUncompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
 };
@@ -34,6 +35,7 @@ export function ChildShellContent({
   onDeleteTimedAttempt,
   onCreateWish,
   onCompleteTodo,
+  onUncompleteTodo,
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
@@ -107,6 +109,7 @@ export function ChildShellContent({
       onOpenRecords={() => setView("records")}
       onCreateWish={onCreateWish}
       onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(currentMember, todoId, roles, elapsedMs)}
+      onUncompleteTodo={(todoId) => onUncompleteTodo(currentMember, todoId, roles)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}
       onThemePickerOpen={onThemePickerOpen}
     />

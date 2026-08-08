@@ -265,6 +265,12 @@ todosRouter.patch("/:id/complete", requireAuth, attachAccountId, async (req, res
   res.json({ ok: true, isNewRecord: record?.isNewRecord ?? false });
 });
 
+// Ångra klarmarkering (2026-08-10) — se todosService.ts:s uncompleteTodo-kommentar.
+todosRouter.patch("/:id/uncomplete", requireAuth, attachAccountId, async (req, res) => {
+  await todos.uncompleteTodo(req.params.id, req.accountId!, req.memberId ?? null);
+  res.json({ ok: true });
+});
+
 todosRouter.patch("/:id/approve", requireAuth, attachAccountId, async (req, res) => {
   await todos.approveTodo(req.params.id, req.accountId!, req.memberId ?? null);
   res.json({ ok: true });

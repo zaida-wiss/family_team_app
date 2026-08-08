@@ -30,6 +30,7 @@ type Props = {
   onOpenRecords: () => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
+  onUncompleteTodo: (todoId: Id) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
   onThemePickerOpen: (memberId: Id) => void;
 };
@@ -57,6 +58,7 @@ export function ChildDashboard({
   onOpenRecords,
   onCreateWish,
   onCompleteTodo,
+  onUncompleteTodo,
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
@@ -151,7 +153,7 @@ export function ChildDashboard({
           />
 
           <div className="child-stars-anchor">
-            <ChildPendingBadges todos={pendingApprovalTodos} />
+            <ChildPendingBadges todos={pendingApprovalTodos} onUncomplete={onUncompleteTodo} />
             <ChildStarsPanel
               childId={child.id}
               approvedStarsToday={approvedStarsToday}
