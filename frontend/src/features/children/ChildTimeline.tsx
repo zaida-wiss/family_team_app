@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Star } from "lucide-react";
 import type { Calendar, Member, PurchasedReward, Role, Todo } from "@shared/types";
 import "./ChildTimeline.css";
@@ -320,9 +321,24 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
             </div>
       </div>
 
-      {selectedEvent && (
-        <TimelineEventDetail event={selectedEvent} onClose={() => setSelectedEvent(null)} />
-      )}
+      {selectedEvent &&
+        // Portalerad till document.body (2026-08-09, Zaidas fynd: "svajpar
+        // jag från höger så flyttas modalerna åt vänster istället för att
+        // bläddra till en annan medlem") — .child-tl-detail-backdrop är
+        // position:fixed, men renderades som ett vanligt barn i trädet,
+        // INTE portalerat som appens övriga modaler (kategorimeny,
+        // medlemslistan, "vem håller på med den här") redan konsekvent gör.
+        // useMemberSwipeNav.ts:s sidvändnings-animation sätter transform på
+        // den omslutande diven runt HELA dashboarden — en transform på en
+        // förfader blir per CSS-spec positioneringskontext för ett
+        // position:fixed-barn ISTÄLLET FÖR viewporten, så modalen gled med
+        // svepet istället för att ligga still. En portal till body ligger
+        // helt utanför den transformerade diven, opåverkad oavsett vilken
+        // förfader som råkar animera.
+        createPortal(
+          <TimelineEventDetail event={selectedEvent} onClose={() => setSelectedEvent(null)} />,
+          document.body
+        )}
     </section>
   );
 }

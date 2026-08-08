@@ -55,14 +55,26 @@ import { useCallback, useRef } from "react";
 // |dx|>|dy|-jämförelsen ÄR redan matematiskt exakt gränsen vid 45°, men vid
 // EXAKT eller strax över 45° (helt normalt för en verklig fingerrörelse,
 // särskilt över en lite längre sträcka) klassades gesten som lodrät och
-// gav upp helt. Utanför en skrollbar yta (där det aldrig finns något
-// legitimt att skrolla ändå, se uppföljning #7) krävs nu att den lodräta
-// komponenten är TYDLIGT större än den vågräta (en högre kvot, motsvarande
-// ~56°) innan gesten ger upp och lämnas åt webbläsaren — annars vinner
-// alltid tolkningen "försöker svepa". Inuti en skrollbar yta (uppgifts-
-// listan) behålls den strikta 45°-gränsen oförändrad, för att inte göra
-// vanlig lodrät skroll där opålitlig.
-const VERTICAL_DOMINANCE_RATIO_OUTSIDE_SCROLLABLE = 1.5;
+// gav upp helt. Kräver nu att den lodräta komponenten är TYDLIGT större än
+// den vågräta (en högre kvot, motsvarande ~56°) innan gesten ger upp och
+// lämnas åt webbläsaren — annars vinner alltid tolkningen "försöker svepa".
+//
+// 2026-08-09, uppföljning #9 (Zaidas fynd, samma dag: "svajpar jag från
+// höger så flyttas uppgiftscorten (containern) åt vänster istället för att
+// bläddra... [45°-kravet gäller] Man skall kunna dra fingret fast i 45
+// graders vingel" — utan undantag) — den generösa kvoten gällde tidigare
+// BARA utanför en skrollbar yta (uppgiftslistan behöll den strikta 45°-
+// gränsen, för att inte göra vanlig lodrät listskroll opålitlig). Men ett
+// svep som råkar starta OVANPÅ uppgiftskorten (vanligt, de fyller stora
+// delar av skärmen) klassades då fortfarande lätt som lodrätt vid minsta
+// diagonal drift, gav upp, och släpptes till listans egen (native)
+// lodräta panorering — vilket kunde SE UT som att korten/behållaren rör
+// sig. Zaida bekräftade uttryckligen att svepet ska dominera ÖVERALLT,
+// inte bara utanför listan — kvoten gäller nu likadant oavsett var gesten
+// startar. Avvägning, medvetet accepterad: en genuint diagonal
+// skroll-avsikt i uppgiftslistan kan nu behöva vara tydligare lodrät än
+// innan för att räknas som skroll istället för ett svepförsök.
+const VERTICAL_DOMINANCE_RATIO = 1.5;
 const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
@@ -206,10 +218,10 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // Ingen permanent låsning — räknas om varje rörelseevent utifrån
       // KUMULATIVA dx/dy sedan gestens start. Väntar bara med att avgöra
       // NÅGOT tills den initiala tröskeln nåtts, för att inte överreagera
-      // på enstaka delpixel-skakningar.
+      // på enstaka delpixel-skakningar. Samma generösa kvot oavsett var
+      // gesten startade (se uppföljning #9) — svepet ska dominera överallt.
       if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_DECIDE_THRESHOLD_PX) return;
-      const dominanceRatio = g.insideScrollable ? 1 : VERTICAL_DOMINANCE_RATIO_OUTSIDE_SCROLLABLE;
-      g.axis = Math.abs(dy) > Math.abs(dx) * dominanceRatio ? "vertical" : "horizontal";
+      g.axis = Math.abs(dy) > Math.abs(dx) * VERTICAL_DOMINANCE_RATIO ? "vertical" : "horizontal";
 
       if (g.axis === "horizontal") {
         // Håller webbläsarens egen panorering borta (om inte redan gjort
