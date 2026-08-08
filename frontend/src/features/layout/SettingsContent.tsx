@@ -162,12 +162,19 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           label: "Utseende",
           content: (
             <>
+              {/* Textstorlek (2026-08-10) — samma delade handleTextSizeSelect
+                  som den flytande varianten (Shell.tsx via settingsProps.
+                  onSelectTextSize), så en enhetsspecifik override respekteras
+                  oavsett vilken av de två man använder. */}
               <ThemePicker
                 compact
                 member={currentMember}
                 onSelectTheme={(themeId) => settingsProps.onUpdateMemberTheme(currentMember.id, themeId)}
                 onToggleDarkMode={(darkMode) => settingsProps.onUpdateMemberDarkMode(currentMember.id, darkMode)}
-                onSelectTextSize={(textSize) => settingsProps.onUpdateMemberTextSize(currentMember.id, textSize)}
+                onSelectTextSize={settingsProps.onSelectTextSize}
+                textSize={settingsProps.textSize}
+                deviceTextSizeOverride={settingsProps.deviceTextSizeOverride}
+                onToggleDeviceTextSize={settingsProps.onToggleDeviceTextSize}
                 fontId={fontId}
                 onSelectFont={setFontId}
               />
@@ -204,8 +211,10 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 </select>
               </label>
               {todoViewMode === "thread" && (
+                // Enhetsspecifikt sedan 2026-08-10 (Zaidas önskemål) — sparas
+                // bara på den här enheten, inte längre synkat till kontot.
                 <label className="field-label settings-todo-view-mode">
-                  Avstånd mellan kategoritrådarna ({todoThreadGap ?? 8} px)
+                  Avstånd mellan kategoritrådarna ({todoThreadGap ?? 8} px, bara på den här enheten)
                   <input
                     className="settings-thread-gap-slider"
                     max={32}
@@ -218,7 +227,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               )}
               {todoViewMode === "thread" && (
                 <label className="field-label settings-todo-view-mode">
-                  Bubblornas storlek ({todoBubbleSize ?? 96} px)
+                  Bubblornas storlek ({todoBubbleSize ?? 96} px, bara på den här enheten)
                   <input
                     className="settings-thread-gap-slider"
                     max={160}

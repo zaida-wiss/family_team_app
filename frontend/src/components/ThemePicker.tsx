@@ -19,13 +19,19 @@ type ThemePickerProps = {
   // Textstorlek (2026-07-25, Zaidas önskemål om bättre tillgänglighet för
   // äldre) — gäller alla medlemmar, till skillnad från Mörkt läge.
   onSelectTextSize?: (textSize: TextSize) => void;
+  // Enhetsspecifik override (2026-08-10) — textSize är den EFFEKTIVA
+  // storleken just nu (override om satt, annars member.textSize), inte
+  // nödvändigtvis samma som member.textSize.
+  textSize?: TextSize;
+  deviceTextSizeOverride?: boolean;
+  onToggleDeviceTextSize?: (enabled: boolean) => void;
   fontId?: FontId;
   onSelectFont?: (fontId: FontId) => void;
   /** Hides the floating header/close button — use when embedding inline */
   compact?: boolean;
 };
 
-export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, onSelectTextSize, fontId, onSelectFont, compact = false }: ThemePickerProps) {
+export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, onSelectTextSize, textSize, deviceTextSizeOverride, onToggleDeviceTextSize, fontId, onSelectFont, compact = false }: ThemePickerProps) {
   return compact
     ? (
         <ThemePickerBody
@@ -33,6 +39,9 @@ export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, 
           onSelectTheme={onSelectTheme}
           onToggleDarkMode={onToggleDarkMode}
           onSelectTextSize={onSelectTextSize}
+          textSize={textSize}
+          deviceTextSizeOverride={deviceTextSizeOverride}
+          onToggleDeviceTextSize={onToggleDeviceTextSize}
           fontId={fontId}
           onSelectFont={onSelectFont}
           compact
@@ -45,6 +54,9 @@ export function ThemePicker({ member, onClose, onSelectTheme, onToggleDarkMode, 
           onSelectTheme={onSelectTheme}
           onToggleDarkMode={onToggleDarkMode}
           onSelectTextSize={onSelectTextSize}
+          textSize={textSize}
+          deviceTextSizeOverride={deviceTextSizeOverride}
+          onToggleDeviceTextSize={onToggleDeviceTextSize}
           fontId={fontId}
           onSelectFont={onSelectFont}
         />
@@ -57,6 +69,9 @@ function ThemePickerFloating({
   onSelectTheme,
   onToggleDarkMode,
   onSelectTextSize,
+  textSize,
+  deviceTextSizeOverride,
+  onToggleDeviceTextSize,
   fontId,
   onSelectFont,
 }: Omit<ThemePickerProps, "compact" | "onClose"> & { onClose: () => void }) {
@@ -72,7 +87,17 @@ function ThemePickerFloating({
           <X size={18} />
         </button>
       </div>
-      <ThemePickerBody member={member} onSelectTheme={onSelectTheme} onToggleDarkMode={onToggleDarkMode} onSelectTextSize={onSelectTextSize} fontId={fontId} onSelectFont={onSelectFont} />
+      <ThemePickerBody
+        member={member}
+        onSelectTheme={onSelectTheme}
+        onToggleDarkMode={onToggleDarkMode}
+        onSelectTextSize={onSelectTextSize}
+        textSize={textSize}
+        deviceTextSizeOverride={deviceTextSizeOverride}
+        onToggleDeviceTextSize={onToggleDeviceTextSize}
+        fontId={fontId}
+        onSelectFont={onSelectFont}
+      />
     </div>
   );
 }
@@ -82,6 +107,9 @@ function ThemePickerBody({
   onSelectTheme,
   onToggleDarkMode,
   onSelectTextSize,
+  textSize,
+  deviceTextSizeOverride,
+  onToggleDeviceTextSize,
   fontId,
   onSelectFont,
   compact = false,
@@ -120,7 +148,11 @@ function ThemePickerBody({
 
   // Textstorlek (2026-07-25) — tre knappar, samma togglemönster som redan
   // används på flera ställen i appen (t.ex. RecurrencePicker.css:s
-  // veckodagar) istället för en fri slider.
+  // veckodagar) istället för en fri slider. Enhetsspecifik override
+  // (2026-08-10, Zaidas önskemål) — "textSize" är den EFFEKTIVA storleken
+  // (override om den här enheten har en, annars kontots värde för member),
+  // och en egen växel avgör vart ett val skrivs.
+  const effectiveTextSize = textSize ?? member.textSize ?? "normal";
   const textSizeSection = onSelectTextSize && (
     <div className="theme-text-size-section">
       <p className="eyebrow">Textstorlek</p>
@@ -128,8 +160,8 @@ function ThemePickerBody({
         {TEXT_SIZE_OPTIONS.map((opt) => (
           <button
             key={opt.id}
-            aria-pressed={(member.textSize ?? "normal") === opt.id}
-            className={`theme-text-size-option${(member.textSize ?? "normal") === opt.id ? " active" : ""}`}
+            aria-pressed={effectiveTextSize === opt.id}
+            className={`theme-text-size-option${effectiveTextSize === opt.id ? " active" : ""}`}
             onClick={() => onSelectTextSize(opt.id)}
             type="button"
           >
@@ -137,6 +169,16 @@ function ThemePickerBody({
           </button>
         ))}
       </div>
+      {onToggleDeviceTextSize && (
+        <label className="theme-text-size-device-toggle">
+          <span>Bara på den här enheten</span>
+          <input
+            checked={deviceTextSizeOverride ?? false}
+            onChange={(e) => onToggleDeviceTextSize(e.target.checked)}
+            type="checkbox"
+          />
+        </label>
+      )}
     </div>
   );
 

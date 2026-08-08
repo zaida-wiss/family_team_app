@@ -1,5 +1,6 @@
 import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
+import { useDeviceSetting } from "./useDeviceSetting";
 import { useShellPermissions } from "./useShellPermissions";
 import { useRewardShopState } from "../features/rewards/useRewardShopState";
 import { useTimedTasksState } from "../features/timedTasks/useTimedTasksState";
@@ -103,6 +104,29 @@ export function useShellState(
 
   const permissions = useShellPermissions(currentMember, roles);
 
+  // Enhetsspecifika inställningar (2026-08-10, Zaidas önskemål) — sparas
+  // BARA i localStorage på den här enheten, aldrig synkade till kontot. Se
+  // useDeviceSetting.ts. Textstorlek behåller ett explicit på/av-läge (Zaidas
+  // val: "kontot har ett standardval, men varje enhet kan avvika lokalt om
+  // man vill") — så länge ingen override är satt beter sig knapparna precis
+  // som innan (skriver till kontot, synkas mellan enheter). Avstånd/
+  // bubbelstorlek är rena layoutpreferenser för just DEN HÄR skärmen och
+  // blir därför alltid enhetslokala så fort man drar i reglaget, utan någon
+  // egen på/av-växel — kontots tidigare värde (om något redan sparats) är
+  // bara startpunkten för en enhet som aldrig rört reglaget.
+  const textSizeDevice = useDeviceSetting<TextSize>("textSize", currentMember.textSize ?? "normal");
+  const todoThreadGapDevice = useDeviceSetting<number | undefined>("todoThreadGap", currentMember.todoThreadGap);
+  const todoBubbleSizeDevice = useDeviceSetting<number | undefined>("todoBubbleSize", currentMember.todoBubbleSize);
+  const textSizeDeviceOverride = textSizeDevice.hasOverride ? textSizeDevice.value : null;
+
+  function handleToggleDeviceTextSize(enabled: boolean) {
+    if (enabled) {
+      textSizeDevice.setOverride(textSizeDevice.value);
+    } else {
+      textSizeDevice.clearOverride();
+    }
+  }
+
   async function createFamily(name: string) {
     const { membership } = await accountsApi.setup(name);
     onMembershipsUpdated([...memberships, membership]);
@@ -124,10 +148,17 @@ export function useShellState(
     updateMemberDarkMode(memberId, darkMode);
   }
 
-  // Textstorlek (2026-07-25) — samma "stäng inte popovern"-resonemang som
-  // handleDarkModeToggle.
+  // Textstorlek (2026-07-25, utökad 2026-08-10 med enhetsspecifik override)
+  // — samma "stäng inte popovern"-resonemang som handleDarkModeToggle. Är
+  // den här enheten satt till en egen textstorlek skrivs valet ENBART dit
+  // (localStorage) — annars precis som innan, till kontot (synkas mellan
+  // enheter).
   function handleTextSizeSelect(memberId: Id, textSize: TextSize) {
-    updateMemberTextSize(memberId, textSize);
+    if (textSizeDevice.hasOverride) {
+      textSizeDevice.setOverride(textSize);
+    } else {
+      updateMemberTextSize(memberId, textSize);
+    }
   }
 
   function deleteOwnData() {
@@ -228,13 +259,14 @@ export function useShellState(
     // Hur mycket som visas i tråd-vyn (2026-07-06, Zaidas önskemål) — väljs i
     // Inställningar, se settingsProps nedan.
     todoThreadRange: currentMember.todoThreadRange ?? "today",
-    // Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål) —
-    // väljs i Inställningar, se settingsProps nedan. undefined = ingen
-    // anpassning, ParentTodoThreadView.css:s befintliga clamp() gäller.
-    todoThreadGap: currentMember.todoThreadGap,
+    // Vågrätt avstånd mellan kategoritrådarna (2026-07-26, Zaidas önskemål,
+    // enhetsspecifik sedan 2026-08-10) — väljs i Inställningar, se
+    // settingsProps nedan. undefined = ingen anpassning, ParentTodoThreadView
+    // .css:s befintliga clamp() gäller.
+    todoThreadGap: todoThreadGapDevice.value,
     // Bubblornas storlek (2026-07-27, Zaidas önskemål) — samma mönster som
     // todoThreadGap ovan.
-    todoBubbleSize: currentMember.todoBubbleSize,
+    todoBubbleSize: todoBubbleSizeDevice.value,
     onApproveTodo: (todoId: string) => approveTodo(todoId, currentMember.id),
     onRejectTodo: (todoId: string, reason: string | null) => rejectTodo(todoId, currentMember.id, reason),
     onApproveWish: (rewardId: string) => approveWish(rewardId, currentMember.id),
@@ -363,6 +395,14 @@ export function useShellState(
     onUpdateMemberTheme: updateMemberTheme,
     onUpdateMemberDarkMode: updateMemberDarkMode,
     onUpdateMemberTextSize: updateMemberTextSize,
+    // Textstorlek, enhetsspecifik override (2026-08-10) — den inbäddade
+    // ThemePickern i Inställningar → Utseende redigerar alltid currentMember
+    // själv, samma delade handleTextSizeSelect som den flytande varianten
+    // (Shell.tsx) så båda respekterar samma på/av-läge för denna enhet.
+    textSize: textSizeDeviceOverride ?? currentMember.textSize ?? "normal",
+    deviceTextSizeOverride: textSizeDeviceOverride !== null,
+    onSelectTextSize: (textSize: TextSize) => handleTextSizeSelect(currentMember.id, textSize),
+    onToggleDeviceTextSize: handleToggleDeviceTextSize,
     onUpdateMemberHiddenCrossAccountIds: updateMemberHiddenCrossAccountIds,
     onSetChildCredentials: setChildCredentials,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
@@ -375,12 +415,14 @@ export function useShellState(
     todoThreadRange: currentMember.todoThreadRange ?? "today",
     onUpdateTodoThreadRange: (range: TodoThreadRange) =>
       updateMemberNavigation(currentMember.id, { todoThreadRange: range }),
-    todoThreadGap: currentMember.todoThreadGap,
-    onUpdateTodoThreadGap: (gap: number) =>
-      updateMemberNavigation(currentMember.id, { todoThreadGap: gap }),
-    todoBubbleSize: currentMember.todoBubbleSize,
-    onUpdateTodoBubbleSize: (size: number) =>
-      updateMemberNavigation(currentMember.id, { todoBubbleSize: size }),
+    // Enhetsspecifika (2026-08-10, Zaidas önskemål) — skriver bara till
+    // localStorage på den här enheten, inte längre till kontot. Ett
+    // kontovärde sparat innan denna ändring (om något) fortsätter gälla som
+    // startpunkt tills man drar i reglaget här, se useDeviceSetting.ts.
+    todoThreadGap: todoThreadGapDevice.value,
+    onUpdateTodoThreadGap: (gap: number) => todoThreadGapDevice.setOverride(gap),
+    todoBubbleSize: todoBubbleSizeDevice.value,
+    onUpdateTodoBubbleSize: (size: number) => todoBubbleSizeDevice.setOverride(size),
     // Barn-tråden i Todos-panelen, av som standard (2026-07-31, Zaidas
     // önskemål) — en liten toggle här, samma updateMemberNavigation-mönster.
     showChildTodosInOwnView: currentMember.showChildTodosInOwnView ?? false,
@@ -488,6 +530,11 @@ export function useShellState(
     handleThemeSelect,
     handleDarkModeToggle,
     handleTextSizeSelect,
+    // Enhetsspecifik textstorlek (2026-08-10) — se kommentaren ovanför
+    // textSizeDevice. null = ingen override, följ visibleThemeMember.textSize
+    // som förut.
+    textSizeDeviceOverride,
+    handleToggleDeviceTextSize,
     closeThemePicker: () => setThemePickerMemberId(null),
     apiError,
     childContentProps,

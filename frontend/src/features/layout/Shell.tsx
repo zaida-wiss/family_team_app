@@ -126,6 +126,8 @@ export function Shell({
     handleThemeSelect,
     handleDarkModeToggle,
     handleTextSizeSelect,
+    textSizeDeviceOverride,
+    handleToggleDeviceTextSize,
     closeThemePicker,
     apiError,
     childContentProps,
@@ -200,11 +202,26 @@ export function Shell({
   // färger) fungerar därför INTE för font-size — måste sättas direkt på
   // document.documentElement. Följer samma visibleThemeMember som
   // tema/mörkt läge (en vuxen som tittar på ett barns dashboard ser barnets
-  // val, konsekvent med resten av personaliseringen).
-  const textSizeScale: Record<string, string> = { normal: "100%", large: "115%", "extra-large": "130%" };
+  // val, konsekvent med resten av personaliseringen) — OM inte den här
+  // enheten har en egen override (textSizeDeviceOverride), som då alltid
+  // vinner oavsett vems dashboard som visas (2026-08-10, Zaidas önskemål om
+  // en enhetsspecifik textstorlek, t.ex. en delad familjeplatta).
+  //
+  // Skalning mot skärmstorlek (2026-08-10, Zaidas önskemål: "innehållet
+  // [ska bli] större när skärmen blir både bredare och större... navbars,
+  // inställningar, textstorlek") — clamp()-uttrycket nedan är en ren CSS-
+  // längd som webbläsaren räknar om automatiskt vid fönsterändring, ingen
+  // JS-resize-lyssnare behövs. Multipliceras med användarens valda skala
+  // (normal/stor/extra stor) via calc() — en <length> går att multiplicera
+  // med ett tal i CSS. Eftersom nästan all layout i appen redan är rem-
+  // baserad (bl.a. .icon-button, todo-bubblornas --ball-size) väger denna
+  // ENDA ändring igenom text, knappar, avstånd och bubblor på samma gång.
+  const textSizeScale: Record<string, number> = { normal: 1, large: 1.15, "extra-large": 1.3 };
+  const effectiveTextSize = textSizeDeviceOverride ?? visibleThemeMember.textSize ?? "normal";
   useEffect(() => {
-    document.documentElement.style.fontSize = textSizeScale[visibleThemeMember.textSize ?? "normal"];
-  }, [visibleThemeMember.textSize]);
+    const scale = textSizeScale[effectiveTextSize] ?? 1;
+    document.documentElement.style.fontSize = `calc(clamp(15px, 13px + 0.6vw, 22px) * ${scale})`;
+  }, [effectiveTextSize]);
 
   return (
     <main className={`app-shell theme-${shellTheme}${shellDarkMode ? " dark-mode" : ""}`}>
@@ -255,6 +272,9 @@ export function Shell({
             onSelectTheme={(themeId) => handleThemeSelect(themePickerMember.id, themeId)}
             onToggleDarkMode={(darkMode) => handleDarkModeToggle(themePickerMember.id, darkMode)}
             onSelectTextSize={(textSize) => handleTextSizeSelect(themePickerMember.id, textSize)}
+            textSize={textSizeDeviceOverride ?? themePickerMember.textSize ?? "normal"}
+            deviceTextSizeOverride={textSizeDeviceOverride !== null}
+            onToggleDeviceTextSize={handleToggleDeviceTextSize}
             fontId={fontId}
             onSelectFont={setFontId}
           />

@@ -1253,6 +1253,26 @@
   background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
+/* Enhetsspecifik override (2026-08-10) — samma rad-mönster som
+   .theme-dark-mode-toggle, men nästlad under text-size-sektionen istället
+   för en egen border-top-avdelare. */
+.theme-text-size-device-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--muted-fg);
+}
+
+.theme-text-size-device-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
 /* Font section */
 .theme-font-section {
   border-top: 1px solid var(--border);
