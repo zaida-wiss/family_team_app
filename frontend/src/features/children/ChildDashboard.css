@@ -13,7 +13,21 @@
     radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--c1, var(--primary)) 42%, transparent), transparent 24%),
     radial-gradient(circle at 16% 82%, color-mix(in srgb, var(--c2, var(--primary)) 34%, transparent), transparent 30%),
     linear-gradient(135deg, var(--c4, var(--background)), var(--c0, var(--background)) 48%, var(--c5, var(--muted))) !important;
-  touch-action: manipulation;
+  /* pan-y pinch-zoom, inte manipulation (2026-08-09, Zaidas fynd: "svepet
+     fungerar ganska dåligt") — manipulation lät webbläsaren själv hantera
+     BÅDE vågrät och lodrät panorering nativt, vilket konkurrerade med
+     useMemberSwipeNav.ts:s egna vågräta svep-gest (särskilt tydligt så fort
+     sidan pinch-zoomats in, då en webbläsare gärna tolkar ett enfinger-drag
+     som att panorera den inzoomade vyn istället för att leverera det som en
+     vanlig pekar-händelse till JS). pan-y pinch-zoom behåller BÅDA — lodrät
+     skroll i uppgiftslistan och pinch-zoom (WCAG 1.4.4/1.4.10 kräver att
+     zoom förblir möjlig, rörs INTE) — men släpper vågrät panorering till
+     JS, så svepet blir tillförlitligt oavsett zoomnivå. Ärvs korrekt av
+     alla ättlingar (touch-action:s "snävast vinner"-regel över hela
+     förfaderkedjan) utan att röra deras egna, redan satta värden
+     (t.ex. .child-task-card: touch-action:none, oförändrat, för
+     håll-in-för-att-avklara-gesten). */
+  touch-action: pan-y pinch-zoom;
 }
 
 .child-dashboard,
