@@ -104,16 +104,26 @@ async function mockChildSession(page: Page) {
   await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
 }
 
-test("Barnets uppgifter: en tidtagen uppgift har Starta/Klar-knapp istället för håll-in", async ({ page }) => {
+// 2026-08-09: den gamla Starta/Klar-knappen för en uppgift UTAN planerad tid
+// (öppen tidtagning, räknar uppåt) togs bort — Zaidas fynd: "en gammal
+// knapp för att starta timer har kommit tillbaka... uppgiften får inte
+// markeras som klar av att man stoppar timern." Samma gest som
+// nedräkningsläget nu: tre snabba tryck startar, 2s-håll avslutar (INTE en
+// knapp vars klick både stoppade OCH markerade klar samtidigt).
+test("Barnets uppgifter: en tidtagen uppgift utan planerad tid startas med tre snabba tryck, ingen Starta/Klar-knapp", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TIMER_TODO] }));
 
   await page.goto("/");
-  await expect(page.getByText("Städa rummet")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Starta Städa rummet" })).toBeVisible();
+  const card = page.getByRole("button", { name: /Städa rummet/ });
+  await expect(card).toBeVisible();
+  await expect(page.getByRole("button", { name: "Starta Städa rummet" })).toHaveCount(0);
+
+  await card.click({ clickCount: 3 });
+  await expect(page.getByText(/^\d:\d\d$/)).toBeVisible();
 });
 
-test("Barnets uppgifter: start/stopp på en tidtagen uppgift skickar elapsedMs till /complete", async ({ page }) => {
+test("Barnets uppgifter: tre tryck + 2s-håll på en öppen tidtagning skickar elapsedMs till /complete", async ({ page }) => {
   let sentElapsedMs: number | null | undefined;
   await mockChildSession(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TIMER_TODO] }));
@@ -124,19 +134,21 @@ test("Barnets uppgifter: start/stopp på en tidtagen uppgift skickar elapsedMs t
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Starta Städa rummet" }).click();
-  await expect(page.getByRole("button", { name: "Klar med Städa rummet" })).toBeVisible();
+  const card = page.getByRole("button", { name: /Städa rummet/ });
+  await card.click({ clickCount: 3 });
+  await expect(page.getByText(/^\d:\d\d$/)).toBeVisible();
 
   await page.waitForTimeout(1200);
-  await page.getByRole("button", { name: "Klar med Städa rummet" }).click();
-
-  await expect.poll(() => sentElapsedMs).not.toBeUndefined();
+  // Samma dispatchEvent-mönster som nedräkningstestet nedan — simulerar ett
+  // 2+ sekunders håll utan page.mouse:s känslighet för layoutskift.
+  await card.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await expect.poll(() => sentElapsedMs, { timeout: 3000 }).not.toBeUndefined();
   expect(sentElapsedMs).not.toBeNull();
-  expect(sentElapsedMs as number).toBeGreaterThan(500);
-  expect(sentElapsedMs as number).toBeLessThan(5000);
+  expect(sentElapsedMs as number).toBeGreaterThan(1000);
+  expect(sentElapsedMs as number).toBeLessThan(6000);
 });
 
-test("Barnets uppgifter: begär skärm-wake-lock medan en todo-timer pågår, släpper vid Klar", async ({ page }) => {
+test("Barnets uppgifter: begär skärm-wake-lock medan en öppen tidtagning pågår, släpper vid 2s-håll", async ({ page }) => {
   await mockChildSession(page);
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TIMER_TODO] }));
   await page.route("**/api/todos/todo-timer-1/complete", (route) => route.fulfill({ json: { ok: true } }));
@@ -160,16 +172,18 @@ test("Barnets uppgifter: begär skärm-wake-lock medan en todo-timer pågår, sl
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Starta Städa rummet" }).click();
+  const card = page.getByRole("button", { name: /Städa rummet/ });
+  await card.click({ clickCount: 3 });
 
   await expect.poll(() =>
     page.evaluate(() => (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls)
   ).toEqual(["request:screen"]);
 
-  await page.getByRole("button", { name: "Klar med Städa rummet" }).click();
+  await card.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
 
   await expect.poll(() =>
-    page.evaluate(() => (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls)
+    page.evaluate(() => (window as unknown as { __wakeLockCalls: string[] }).__wakeLockCalls),
+    { timeout: 3000 }
   ).toContain("release");
 });
 

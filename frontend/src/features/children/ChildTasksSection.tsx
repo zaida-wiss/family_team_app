@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useRef } from "react";
-import { Play, Square, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
@@ -289,20 +289,48 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
     );
   }
 
-  // Öppen tidtagning (fallback, oförändrad sedan tidigare) — för uppgifter
-  // med timerEnabled men UTAN plannedDurationMinutes. Avslutas med samma
-  // Klar-knapp som tidigare (bekräftelsen ÄR knapptrycket), startas nu med
-  // antingen tre snabba tryck på kortet eller Starta-knappen.
+  // Öppen tidtagning (fallback) — för uppgifter med timerEnabled men UTAN
+  // plannedDurationMinutes. 2026-08-09, Zaidas fynd: "en gammal knapp för
+  // att starta timer har kommit tillbaka" — det HÄR läget hade av misstag
+  // aldrig fått samma ombyggnad som nedräkningsläget ovan (2026-08-08):
+  // en Starta/Klar-knapp fanns kvar, och att trycka Klar körde
+  // handleConfirmComplete DIREKT — dvs att stoppa timern MARKERADE
+  // uppgiften klar, exakt det Zaida nu uttryckligen inte vill. Knappen
+  // borttagen helt — samma mönster som nedräkningen: tre snabba tryck
+  // startar/nollställer (registerTap, unconditional onClick — inte
+  // spärrat med !isRunning, se samma rättelse-kommentar i
+  // nedräkningsgrenen), 2s-håll markerar klar (samma useHoldToConfirm-
+  // instans, delad med nedräkningsgrenen ovan). Bara klockan räknar UPPÅT
+  // istället för nedåt, oförändrad digital-klocka-stil.
+  const isHeld = timerHeldId === todo.id;
   return (
     <div
       className={[
         "child-task-card",
         "child-task-card--timer",
         isRunning ? "child-task-card--timer-running" : "",
+        isHeld ? "child-task-card--holding" : "",
         timeLeftPercent !== null ? "child-task-card--timed" : "",
       ].filter(Boolean).join(" ")}
-      style={style}
-      onClick={() => !isRunning && registerTap()}
+      style={{ ...style, touchAction: "manipulation" }}
+      onClick={registerTap}
+      onPointerDown={() => {
+        if (!isRunning) return;
+        startTimerHold(todo.id, () => {
+          suppressClickRef.current = true;
+          handleConfirmComplete();
+        });
+      }}
+      onPointerLeave={clearTimerHold}
+      onPointerCancel={clearTimerHold}
+      onPointerUp={clearTimerHold}
+      role="button"
+      tabIndex={0}
+      aria-label={
+        isRunning
+          ? `${todo.title}, ${formatElapsed(Math.max(0, timerNow - startedAt))} hittills. Håll intryckt i två sekunder för att markera klar.`
+          : `${todo.title}. Tre snabba tryck startar tidtagningen.`
+      }
     >
       <div className="child-task-icon-circle">
         <span className="child-task-icon">{todo.visual.value}</span>
@@ -316,22 +344,6 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
           {formatElapsed(Math.max(0, timerNow - startedAt))}
         </span>
       )}
-      <button
-        aria-label={isRunning ? `Klar med ${todo.title}` : `Starta ${todo.title}`}
-        className={"child-task-timer-btn" + (isRunning ? " child-task-timer-btn--stop" : "")}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isRunning) {
-            handleConfirmComplete();
-          } else {
-            start();
-          }
-        }}
-        type="button"
-      >
-        {isRunning ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-        {isRunning ? "Klar" : "Starta"}
-      </button>
     </div>
   );
 }
