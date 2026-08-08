@@ -1,9 +1,11 @@
 import { Combine, GripVertical, Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
+import type { ClipboardEvent } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import { readCache, writeCache } from "../../utils/localCache";
 import { linkifyText } from "../../hooks/useLinkifiedText";
+import { splitPastedShoppingItems } from "./parseShoppingPaste";
 import {
   canEditSharedResource,
   canViewResource,
@@ -142,6 +144,19 @@ export function ShoppingView({
     if (!title || !list || !canEditList(list)) return;
     onAddItem(listId, title);
     setDraftItems((prev) => ({ ...prev, [listId]: "" }));
+  }
+
+  // Klistra in flera varor på en gång, en per rad (2026-08-09, Zaidas
+  // önskemål: "bara de har ett radbryt, eller semikolon") — en enda vara
+  // (inget separatortecken hittat) lämnas till fältets vanliga klistra-in-
+  // hantering istället, så en vanlig enstaka inklistring beter sig som förut.
+  function handleItemPaste(e: ClipboardEvent<HTMLInputElement>, listId: Id) {
+    const list = shoppingLists.find((l) => l.id === listId);
+    if (!list || !canEditList(list)) return;
+    const items = splitPastedShoppingItems(e.clipboardData.getData("text"));
+    if (items.length <= 1) return;
+    e.preventDefault();
+    items.forEach((title) => onAddItem(listId, title));
   }
 
   function createList() {
@@ -555,6 +570,7 @@ export function ShoppingView({
                     setDraftItems((prev) => ({ ...prev, [list.id]: e.target.value }))
                   }
                   onKeyDown={(e) => { if (e.key === "Enter") addItem(list.id); }}
+                  onPaste={(e) => handleItemPaste(e, list.id)}
                   placeholder="Lägg till vara"
                   value={draftItems[list.id] ?? ""}
                 />

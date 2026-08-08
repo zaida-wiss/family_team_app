@@ -1,7 +1,9 @@
 import { Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import type { ClipboardEvent } from "react";
 import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
 import { linkifyText } from "../../hooks/useLinkifiedText";
+import { splitPastedShoppingItems } from "./parseShoppingPaste";
 import {
   canEditSharedResource,
   canViewResource,
@@ -111,6 +113,17 @@ export function ShoppingListsPanel({
       ...currentDrafts,
       [listId]: ""
     }));
+  }
+
+  // Klistra in flera varor på en gång (2026-08-09) — samma delade
+  // uppdelningsfunktion som ShoppingView.tsx/SharedShoppingLists.tsx.
+  function handleItemPaste(event: ClipboardEvent<HTMLInputElement>, listId: Id) {
+    const list = shoppingLists.find((candidate) => candidate.id === listId);
+    if (!list || !canEditList(list)) return;
+    const items = splitPastedShoppingItems(event.clipboardData.getData("text"));
+    if (items.length <= 1) return;
+    event.preventDefault();
+    items.forEach((title) => onAddItem(listId, title));
   }
 
   function shareList(list: ShoppingList) {
@@ -270,6 +283,7 @@ export function ShoppingListsPanel({
                         addItem(list.id);
                       }
                     }}
+                    onPaste={(event) => handleItemPaste(event, list.id)}
                     placeholder="Lägg till vara"
                     value={draftItems[list.id] ?? ""}
                   />

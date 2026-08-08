@@ -1,7 +1,9 @@
 import { Lock, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useState } from "react";
+import type { ClipboardEvent } from "react";
 import { useSharedShoppingLists } from "./useShoppingSharesState";
 import { linkifyText } from "../../hooks/useLinkifiedText";
+import { splitPastedShoppingItems } from "./parseShoppingPaste";
 import styles from "./ShoppingLists.module.css";
 import type { Id, Member } from "@shared/types";
 
@@ -33,6 +35,15 @@ export function SharedShoppingLists({ currentMember }: Props) {
     if (!title) return;
     addItem(listId, listAccountId, title, currentMember.id);
     setDraftItems((prev) => ({ ...prev, [listId]: "" }));
+  }
+
+  // Klistra in flera varor på en gång (2026-08-09) — samma delade
+  // uppdelningsfunktion som ShoppingView.tsx/ShoppingListsPanel.tsx.
+  function handleItemPaste(e: ClipboardEvent<HTMLInputElement>, listId: Id, listAccountId: Id) {
+    const items = splitPastedShoppingItems(e.clipboardData.getData("text"));
+    if (items.length <= 1) return;
+    e.preventDefault();
+    items.forEach((title) => addItem(listId, listAccountId, title, currentMember.id));
   }
 
   return (
@@ -86,6 +97,7 @@ export function SharedShoppingLists({ currentMember }: Props) {
                   className="text-input"
                   onChange={(e) => setDraftItems((prev) => ({ ...prev, [list.id]: e.target.value }))}
                   onKeyDown={(e) => { if (e.key === "Enter") submitAdd(list.id, list.accountId!); }}
+                  onPaste={(e) => handleItemPaste(e, list.id, list.accountId!)}
                   placeholder="Lägg till vara"
                   value={draftItems[list.id] ?? ""}
                 />
