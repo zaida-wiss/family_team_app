@@ -22,7 +22,18 @@
    själv använder (bakgrund↔text) — "motsatt färgkombination", inte en ny
    hårdkodad kulör, håller sig därför korrekt genom alla ljusa/mörka/
    barn-teman. .home:s egen bottenpadding (nedan) kompenserar så
-   scrollat innehåll aldrig hamnar bakom den. */
+   scrollat innehåll aldrig hamnar bakom den.
+   Bugg fixad (2026-08-10, Zaidas fynd: "familjenavbarens bakgrund är
+   hårdkodad") — textfärgen (color: var(--theme-nav-bg)) läste tidigare
+   RAKT AV --theme-nav-bg, som är en linear-gradient() för 10 av 11
+   vuxenteman (bara Klar har en solid --theme-nav-bg). En gradient är
+   ogiltig som color-värde — den ogiltiga deklarationen ignorerades helt
+   (faller INTE tillbaka på var()-fallbacken, bara en helt osatt variabel
+   gör det) och texten/ikonerna behöll därför alltid samma statiska
+   --foreground oavsett tema, medan bakgrunden (redan solid,
+   --theme-nav-fg) faktiskt bytte färg korrekt — upplevdes som "bakgrunden
+   är hårdkodad" trots att bara textfärgen var det. Ny --theme-nav-bg-solid
+   (themes.css, en garanterat solid motsvarighet per tema) löser det. */
 .controlRow {
   display: flex;
   align-items: center;
@@ -61,7 +72,7 @@
        och ner bara hälften") — var 6px, nu 3px. */
     padding: 3px 10px;
     background: var(--theme-nav-fg, var(--foreground));
-    color: var(--theme-nav-bg, var(--sidebar));
+    color: var(--theme-nav-bg-solid, var(--sidebar));
     box-shadow: 0 -1px 0 var(--border);
   }
 

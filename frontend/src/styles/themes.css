@@ -4,6 +4,18 @@
 
 .app-shell.theme-clear {
   --theme-nav-bg: var(--sidebar);
+  /* --theme-nav-bg-solid (2026-08-10, Zaidas fynd: "familjenavbarens
+     bakgrund är hårdkodad") — --theme-nav-bg är en gradient för alla
+     vuxenteman utom Klar, ogiltig som color-värde (används av
+     MemberOverview.module.css:s .controlRow för att SWAPPA HeroBar:s
+     bakgrund↔text, "omvända färger" enligt Zaidas önskemål). En ogiltig
+     var()-användning faller INTE tillbaka på fallback-argumentet (det
+     gäller bara en helt osatt variabel) utan bara på det ärvda värdet —
+     texten/ikonerna i familjenavbaren blev därför alltid samma statiska
+     mörka --foreground oavsett tema, medan bakgrunden (redan solid,
+     --theme-nav-fg) faktiskt bytte färg korrekt. Ny, garanterat solid
+     motsvarighet per tema (Klar behöver ingen egen, redan solid). */
+  --theme-nav-bg-solid: var(--sidebar);
   --theme-nav-border: var(--sidebar-border);
   --theme-nav-fg: var(--foreground);
   --theme-nav-muted: var(--muted-fg);
@@ -69,6 +81,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #fff6d9 0%, #fbdfe6 50%, #fbdff0 100%);
+  --theme-nav-bg-solid: #fff6d9;
   --theme-nav-border: #f3c9e8;
   --theme-nav-fg: #6b2a5c;
   --theme-nav-muted: #a1608f;
@@ -106,6 +119,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #e3fffb 0%, #c3f5ee 100%);
+  --theme-nav-bg-solid: #e3fffb;
   --theme-nav-border: #a9e8df;
   --theme-nav-fg: #0b4a44;
   --theme-nav-muted: #4d8f86;
@@ -143,6 +157,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #eafff0 0%, #e7f6ff 100%);
+  --theme-nav-bg-solid: #eafff0;
   --theme-nav-border: #c9e9f5;
   --theme-nav-fg: #0d3b52;
   --theme-nav-muted: #4c7d74;
@@ -182,6 +197,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #eafbe0 0%, #fbe4f7 100%);
+  --theme-nav-bg-solid: #eafbe0;
   --theme-nav-border: #f0c9ea;
   --theme-nav-fg: #5c1257;
   --theme-nav-muted: #8f5a89;
@@ -221,6 +237,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #fdf6d0 0%, #f3e0fb 100%);
+  --theme-nav-bg-solid: #fdf6d0;
   --theme-nav-border: #e6cdf5;
   --theme-nav-fg: #4a1580;
   --theme-nav-muted: #8a6a9e;
@@ -264,6 +281,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #f2f3f2 0%, #ced0ce 100%);
+  --theme-nav-bg-solid: #f2f3f2;
   --theme-nav-border: #c3d1ca;
   --theme-nav-fg: #3a3f38;
   --theme-nav-muted: #6f7d70;
@@ -312,6 +330,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #fdf6c8 0%, #dcdcfa 100%);
+  --theme-nav-bg-solid: #fdf6c8;
   --theme-nav-border: #d8d0f0;
   --theme-nav-fg: #242066;
   --theme-nav-muted: #6f6a9e;
@@ -354,6 +373,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #f4effb 0%, #e3f9f7 100%);
+  --theme-nav-bg-solid: #f4effb;
   --theme-nav-border: #d8c7f1;
   --theme-nav-fg: #2d0e59;
   --theme-nav-muted: #7450a8;
@@ -393,6 +413,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #f9f0f1 0%, #f0f4e5 100%);
+  --theme-nav-bg-solid: #f9f0f1;
   --theme-nav-border: #e9c8ce;
   --theme-nav-fg: #4b111b;
   --theme-nav-muted: #985360;
@@ -439,6 +460,7 @@
   --on-c7: var(--black);
 
   --theme-nav-bg: linear-gradient(180deg, #f6f1f7 0%, #f1f1e8 100%);
+  --theme-nav-bg-solid: #f6f1f7;
   --theme-nav-border: #decfe3;
   --theme-nav-fg: #361c40;
   --theme-nav-muted: #80608a;
@@ -579,6 +601,9 @@
      enfärgad mörk variant istället för att återskapa varje temas
      tvåfärgade gradient i mörkt läge. */
   --theme-nav-bg: color-mix(in oklch, var(--primary) 24%, black 76%);
+  /* Redan solid i mörkt läge (till skillnad från ljust lägets per-tema
+     gradient ovan) — samma värde räcker som --theme-nav-bg-solid. */
+  --theme-nav-bg-solid: var(--theme-nav-bg);
   --theme-nav-border: var(--border);
   --theme-nav-fg: var(--foreground);
   --theme-nav-muted: var(--muted-fg);

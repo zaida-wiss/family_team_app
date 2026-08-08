@@ -27,7 +27,7 @@
   gap: 7px;
   border: 1px solid var(--border, rgba(0,0,0,0.13));
   border-radius: 7px;
-  background: white;
+  background: var(--card);
   padding: 0 8px;
   cursor: pointer;
   font-size: 0.78rem;
@@ -89,7 +89,9 @@
   padding: 3px 6px;
   vertical-align: middle;
   font-size: 0.72rem;
-  background: rgba(0,0,0,0.03);
+  /* Följer temat (2026-08-10) — var en hårdkodad svart tonad yta
+     (rgba(0,0,0,0.03)), oförändrad oavsett tema/Mörkt läge. */
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -187,7 +189,7 @@
   height: 16px;
   border-radius: 50%;
   border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
-  background: white;
+  background: var(--card);
   color: var(--muted-fg);
   display: inline-flex;
   align-items: center;
@@ -207,8 +209,10 @@
   gap: 5px;
   padding: 8px;
   border-radius: 9px;
-  background: rgba(0,0,0,0.03);
-  border: 1px dashed rgba(0,0,0,0.11);
+  /* Följer temat (2026-08-10) — bakgrunden var hårdkodat svart-tonad
+     oavsett tema/Mörkt läge, se samma fix i .rcr-list-table td ovan. */
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+  border: 1px dashed var(--border, rgba(0,0,0,0.11));
 }
 
 .rcr-row {
@@ -232,7 +236,7 @@
   justify-content: center;
   border: 1.5px solid var(--border, rgba(0,0,0,0.13));
   border-radius: 6px;
-  background: white;
+  background: var(--card);
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
@@ -245,7 +249,7 @@
   border-radius: 6px;
   padding: 0 8px;
   font-size: 0.82rem;
-  background: white;
+  background: var(--card);
 }
 .rcr-input:focus { outline: none; border-color: var(--primary, #3d6b4f); }
 .rcr-input--title { flex: 1; min-width: 80px; }
@@ -263,7 +267,7 @@
   border-radius: 6px;
   padding: 0 4px;
   font-size: 0.8rem;
-  background: white;
+  background: var(--card);
   cursor: pointer;
 }
 .rcr-select-native:focus { outline: none; border-color: var(--primary, #3d6b4f); }
@@ -292,7 +296,7 @@
   padding: 0 8px;
   border: 1.5px solid var(--border, rgba(0,0,0,0.13));
   border-radius: 6px;
-  background: white;
+  background: var(--card);
   font-size: 0.8rem;
   cursor: pointer;
   white-space: nowrap;
@@ -304,7 +308,7 @@
   top: calc(100% + 3px);
   left: 0;
   min-width: 130px;
-  background: white;
+  background: var(--card);
   border: 1.5px solid var(--border, rgba(0,0,0,0.13));
   border-radius: 8px;
   box-shadow: 0 4px 14px rgba(0,0,0,0.1);
@@ -331,7 +335,7 @@
   padding: 0 5px;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  background: white;
+  background: var(--card);
   flex-shrink: 0;
 }
 .rcr-time-input:focus { outline: none; border-color: var(--primary, #3d6b4f); }
@@ -352,8 +356,8 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 1.5px solid rgba(0,0,0,0.13);
-  background: white;
+  border: 1.5px solid var(--border, rgba(0,0,0,0.13));
+  background: var(--card);
   font-size: 0.65rem;
   font-weight: 800;
   cursor: pointer;

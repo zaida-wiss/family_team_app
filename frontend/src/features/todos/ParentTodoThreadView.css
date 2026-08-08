@@ -308,7 +308,7 @@
 }
 
 .todo-thread__category-menu-danger {
-  color: #e74c3c;
+  color: var(--destructive);
 }
 
 .todo-thread__category {

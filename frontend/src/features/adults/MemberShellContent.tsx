@@ -1028,24 +1028,37 @@ export function MemberShellContent({
           const editFamilyTodo = todos.find((t) => t.id === editFamilyTodoId);
           if (!editFamilyTodo) return null;
           return (
-            <Suspense fallback={null}>
-              <TodoEditModal
-                categories={personalCategories}
-                currentMember={currentMember}
-                familyScope
-                fixedTodoTimes={fixedTodoTimes}
-                members={members}
-                onClose={() => setEditFamilyTodoId(null)}
-                onCreateCategory={onCreateCategory}
-                onCreateTaskTemplate={onCreateTaskTemplate}
-                onDeleteTodo={onSoftDeleteTodo}
-                onRefreshRoutine={onRefreshRoutine}
-                onUpdateTodo={onUpdateTodo}
-                roles={roles}
-                todo={editFamilyTodo}
-                todos={todos}
-              />
-            </Suspense>
+            // --modal-bottom-reserve (2026-08-10, Zaidas fynd: modalen öppnas
+            // ENDAST via homeFamilyThreadSources' onEdit — d.v.s. alltid från
+            // Hem-vyns familjetrådar — men renderas här som ett SYSKON till
+            // <HomePage> (utanför MemberOverview.tsx:s DOM-träd), inte ett
+            // barn. Den ärver därför ALDRIG den 124px-variabel
+            // MemberOverview.tsx sätter på sin egen rot, och föll tyst
+            // tillbaka på CSS:ns 64px-standard (bara HeroBar) — modalen
+            // hamnade under/bakom Hem-vyns egen familjenavbar istället för
+            // ovanför den. Samma inline-mönster som MemberOverview.tsx själv
+            // använder, satt ovillkorligt eftersom denna gren aldrig nås från
+            // den personliga Todos-panelen.
+            <div style={{ "--modal-bottom-reserve": "124px" } as React.CSSProperties}>
+              <Suspense fallback={null}>
+                <TodoEditModal
+                  categories={personalCategories}
+                  currentMember={currentMember}
+                  familyScope
+                  fixedTodoTimes={fixedTodoTimes}
+                  members={members}
+                  onClose={() => setEditFamilyTodoId(null)}
+                  onCreateCategory={onCreateCategory}
+                  onCreateTaskTemplate={onCreateTaskTemplate}
+                  onDeleteTodo={onSoftDeleteTodo}
+                  onRefreshRoutine={onRefreshRoutine}
+                  onUpdateTodo={onUpdateTodo}
+                  roles={roles}
+                  todo={editFamilyTodo}
+                  todos={todos}
+                />
+              </Suspense>
+            </div>
           );
         })()}
     </>

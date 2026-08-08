@@ -369,18 +369,21 @@
   pointer-events: none;
 }
 
-/* × behöver vara klickbar */
+/* × behöver vara klickbar — bakgrund/text följer temat (2026-08-10, Zaidas
+   fynd: "endast text och boarders får vara i vitt eller svart") istället för
+   den tidigare hårdkodade vita cirkeln, som stod fast oavsett tema/Mörkt
+   läge trots att den ligger ovanpå en färgglad belöningsbild. */
 .shop-card-money-clear {
   position: absolute;
   top: 4px;
   left: 4px;
-  background: rgba(255,255,255,0.85);
+  background: color-mix(in oklch, var(--card) 85%, transparent);
   border: none;
   border-radius: 50%;
   width: 20px;
   height: 20px;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--muted-fg);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -389,8 +392,8 @@
 }
 
 .shop-card-money-clear:hover {
-  background: rgba(255,255,255,1);
-  color: #111;
+  background: var(--card);
+  color: var(--foreground);
 }
 
 /* Varje pengar-item i kortet är dragbart tillbaka */

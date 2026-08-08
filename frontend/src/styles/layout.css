@@ -11,6 +11,16 @@
      mörk bakgrund. Element som redan explicit skriver color: var(--foreground)
      själva (de flesta interaktiva ytorna) påverkades aldrig av detta. */
   color: var(--foreground);
+  /* (2026-08-10, Zaidas önskemål: "fästa alla sidor så att de inte
+     fladdrar runt, precis så som vi gjorde med barnens todo/tidslinje") —
+     samma överliggande skydd som redan fanns för barnvyn (ChildDashboard.css:
+     .app-shell-content:has(.child-dashboard)) men på rot-nivå, så INGEN
+     sida (oavsett panel) kan trigga webbläsarens elastiska
+     rubber-band-studs och avslöja tom vit yta bakom appen. Bara ett
+     skydd mot SCROLL-CHAINING till dokumentet — rör inte huruvida en
+     enskild panel själv får scrolla, det styrs fortsatt av
+     .app-shell-content nedan. */
+  overscroll-behavior: none;
 }
 
 /* Child view (app-shell-full) — desktop: fixed height; mobile: flex child handles height.
@@ -58,6 +68,10 @@
     min-height: 0;
     padding: 16px 16px calc(64px + 16px);
     overflow-y: auto;
+    /* Samma "ingen flutter"-skydd som barnvyn (2026-08-10) — panelen
+       scrollar fortfarande normalt (overflow-y:auto oförändrat), bara
+       den elastiska studsen vid över-/underkanten stängs av. */
+    overscroll-behavior: none;
     background: var(--background);
   }
 
@@ -85,6 +99,7 @@
   .app-shell-content {
     padding: 20px;
     min-height: 100vh;
+    overscroll-behavior: none;
     background: var(--background);
   }
 

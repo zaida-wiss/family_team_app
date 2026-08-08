@@ -344,7 +344,7 @@
 }
 
 .recipe-detail__step-timer-running--done {
-  color: #e74c3c;
+  color: var(--destructive);
 }
 
 .recipe-form__actions {
