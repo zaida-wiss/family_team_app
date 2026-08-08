@@ -7,54 +7,52 @@ import { useCallback, useRef } from "react";
 // cyklar runt i oändlighet (sista→första, första→sista) via
 // goToRelativeMember i MemberShellContent.tsx, inte den här hooken.
 //
-// 2026-08-09, uppföljning #1 (Zaidas fynd: "det är fortfarande svårt att
-// svajpa... kan det bero på att skärmen rör sig upp och ner?", sedan "om
-// fingret inte dras exakt vågrät utan några grader i en annan vinkel så
-// fungerar inte swipet") — en ren touch-action-begränsning
-// (se ChildDashboard.css) räcker INTE ensam: så fort fingret rör sig det
-// minsta lodrätt (helt normalt, ingen håller fingret perfekt vågrätt genom
-// hela gesten) kan webbläsaren hinna tolka rörelsen som sin EGEN, native
-// lodräta panorering/skroll INNAN gesten hunnit avslutas — det är just det
-// som UPPLEVS som "skärmen rör sig upp och ner". Löst genom att själv
-// lyssna på pointermove (native addEventListener, INTE Reacts
-// onPointerMove-props — måste kunna registreras med passive:false för att
-// preventDefault() garanterat ska stoppa webbläsarens egen panorering) och
-// tidigt (redan efter några pixlars rörelse) LÅSA gestens axel.
+// 2026-08-09, uppföljning #1–#3 (skärmen rör sig, mus fångades inte,
+// osäker gest gav ingen visuell feedback) — se tidigare git-historik för
+// full bakgrund. Grunden: pointermove (native addEventListener,
+// passive:false) + preventDefault redan under den osäkra perioden +
+// translateX-följning satt direkt via DOM (inte React-state).
 //
-// 2026-08-09, uppföljning #2 (CI: musdrag-testet gick inte att slutföra) —
-// setPointerCapture saknades för mus, tillagd (se onPointerDown).
+// 2026-08-09, uppföljning #4 (Zaidas fynd: "det går inte att svajpa höger
+// eftersom... containern för uppdragskorten flyttar sig istället för att
+// det blir ett svep... i allafall i mobilläget") — g.axis LÅSTES
+// PERMANENT vid det första utslaget (unknown → horizontal/vertical, en
+// gång, aldrig omvärderad). En tumsvep-gest som börjar med ett par pixlars
+// lodrät drift (helt normalt beroende på greppets vinkel — vanligare åt
+// ETT håll än det andra för de flesta händer) kunde alltså låsas
+// "vertical" på de allra första pixlarna, trots att RESTEN av samma gest
+// var tydligt vågrät — och satt sedan FAST i det felaktiga låset resten av
+// draget, vilket släppte igenom webbläsarens egen (lodräta) panorering på
+// vad som upplevdes som en ren sidled-svep. Löst genom att ALDRIG låsa
+// permanent — axeln räknas om på VARJE rörelseevent (kumulativt dx/dy från
+// gestens start), efter en initial 8px-tröskel som bara skjuter upp
+// FÖRSTA beslutet (skyddar mot att övertolka enstaka delpixel-skakningar).
+// En gest som startar lodrätt men snabbt blir vågrät tar därmed över
+// kontrollen så fort den faktiska riktningen blir tydlig, istället för att
+// vara låst av sitt första, missvisande utslag.
 //
-// 2026-08-09, uppföljning #3 (Zaidas fynd: "just nu flyttar sig skärmen.
-// Jag vill att den skall vara fast som navbaren", samtidigt med "jag vill
-// att det ska vara lika lätt som när man svajpar på tinder") — två separata
-// problem löstes tillsammans:
-//
-//   1. Skärmen flyttade sig: under den OSÄKRA perioden (innan axeln hunnit
-//      låsas) kallades preventDefault() ALDRIG — om de första pixlarnas
-//      rörelse råkade ha ett litet lodrätt inslag (i praktiken nästan alltid
-//      fallet för en mänsklig fingerrörelse) hann webbläsaren redan BÖRJA
-//      sin egen lodräta panorering innan vår kod bestämt sig för "vågrät" —
-//      den panoreringen ångras aldrig retroaktivt av ett senare
-//      preventDefault(), utan syns som ett litet hopp/studs. Löst genom att
-//      kalla preventDefault() på VARJE rörelseevent redan UNDER den osäkra
-//      perioden (inte bara efter låsning) — kostar en försumbar (några
-//      pixlars) fördröjning innan en RIKTIG lodrät skroll får starta ifall
-//      gesten visar sig vara lodrät, i utbyte mot att en vågrät svep-gest
-//      ALDRIG kan orsaka ens en enda oavsiktlig pixels sidscroll.
-//   2. "Lika lätt som Tinder": svepet gav tidigare INGEN visuell feedback
-//      förrän fingret släpptes — användaren kunde inte se att gesten
-//      registrerats, vilket gjorde den overksam/opålitlig KÄNSLAN oavsett
-//      hur korrekt detektionen egentligen var. Innehållet följer nu fingret
-//      1:1 (translateX, satt direkt via DOM — INTE via React-state, som
-//      hade gett en omrendering per pixel) medan man drar, och antingen
-//      glider hela vägen ut åt sidan (svep över tröskeln, som ett bortsvept
-//      Tinder-kort) eller fjädrar tillbaka till sin plats (under tröskeln).
+// 2026-08-09, uppföljning #5 (Zaidas fynd: "jag vill inte se en massa
+// vitt, det skall vara som att bläddra i en bok") — den gamla
+// bortsveps-animationen slutade med att sätta transform till "" (mitten)
+// UTAN någon egen ingångsrörelse för nästa persons redan bytta innehåll —
+// det dök bara upp direkt, kantigt, och den korta stund innehållet var
+// helt bortskjutet (innan bytet hunnit ske) visade vad som än ligger
+// bakom (sidans egen bakgrund). Löst genom att låta nästa persons
+// innehåll komma in från MOTSATT håll (samma riktning som en boksida
+// skulle vändas åt) istället för att bara dyka upp: när det gamla
+// innehållet hunnit ut, sätts det NYA läget till startpositionen
+// UTAN övergång (osynlig för ögat, sker inom samma bildruta som bytet)
+// och animeras sedan in till sin plats över nästa par bildrutor
+// (dubbel requestAnimationFrame — garanterar att webbläsaren hunnit
+// registrera startläget innan övergången som för den till 0 börjar, annars
+// riskerar de två stilsättningarna att slås ihop till en enda, osynlig
+// "övergång" utan rörelse).
 const TOUCH_SWIPE_THRESHOLD_PX = 60;
-const AXIS_LOCK_THRESHOLD_PX = 8;
+const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
 const DESKTOP_CROSS_RATIO = 0.6;
 const SNAP_BACK_MS = 200;
-const EXIT_MS = 180;
+const SLIDE_MS = 200;
 
 type Options = {
   onNext: () => void;
@@ -67,6 +65,13 @@ type GestureState = {
   y: number;
   isMouse: boolean;
   axis: "unknown" | "horizontal" | "vertical";
+  // Har follow() någonsin kallats den här gesten (2026-08-09, uppföljning
+  // #4) — släppet avgörs på DETTA, inte på axelns läge just vid
+  // pointerup, eftersom axeln nu kan svänga fram och tillbaka (se ovan);
+  // en gest som VARIT vågrät minst en gång ska alltid fjädra tillbaka
+  // eller slutföras, aldrig lämnas i ett halvvägs-läge bara för att den
+  // sista millisekunden råkade klassas lodrät.
+  everHorizontal: boolean;
 };
 
 export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Options) {
@@ -83,9 +88,9 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     if (!el) return;
 
     const gestureRef: { current: GestureState | null } = { current: null };
-    // Blockerar en NY gest medan förra gestens bortsvep-animation fortfarande
-    // spelar (2026-08-09) — annars kan ett snabbt andra svep starta mitt i
-    // en pågående translateX-övergång och se ryckigt/dubbelt ut.
+    // Blockerar en NY gest medan förra gestens övergång fortfarande spelar
+    // (2026-08-09) — annars kan ett snabbt andra svep starta mitt i en
+    // pågående animation och se ryckigt/dubbelt ut.
     let animating = false;
     el.style.willChange = "transform";
 
@@ -106,23 +111,35 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       animating = true;
       const width = el!.getBoundingClientRect().width || 1;
       const exitX = dx < 0 ? -width : width;
-      el!.style.transition = `transform ${EXIT_MS}ms ease-in`;
+      const enterX = dx < 0 ? width : -width;
+      el!.style.transition = `transform ${SLIDE_MS}ms ease-in`;
       el!.style.transform = `translateX(${exitX}px)`;
       window.setTimeout(() => {
-        // Nollställs INNAN nästa medlems innehåll hinner målas, så det
-        // renderas på sin vanliga plats istället för att vara kvar
-        // bortskjutet (samma div/ref återanvänds av React vid bytet).
-        el!.style.transition = "";
-        el!.style.transform = "";
-        animating = false;
+        // Byt medlem + placera NÄSTA persons redan-bytta innehåll på
+        // ingångspositionen INNAN webbläsaren målar nästa bildruta — allt
+        // detta sker synkront inom samma JS-task som setTimeout-callbacken,
+        // så webbläsaren hinner aldrig visa en tom bildruta däremellan.
+        el!.style.transition = "none";
+        el!.style.transform = `translateX(${enterX}px)`;
         if (dx < 0) onNextRef.current();
         else onPrevRef.current();
-      }, EXIT_MS);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            el!.style.transition = `transform ${SLIDE_MS}ms ease-out`;
+            el!.style.transform = "translateX(0px)";
+            window.setTimeout(() => {
+              el!.style.transition = "";
+              el!.style.transform = "";
+              animating = false;
+            }, SLIDE_MS);
+          });
+        });
+      }, SLIDE_MS);
     }
 
     function onPointerDown(e: PointerEvent) {
-      // Ett spårat svep pågår redan, eller en bortsvepsanimation spelar —
-      // ignorera ytterligare fingrar/knappar tills den är klar.
+      // Ett spårat svep pågår redan, eller en övergång spelar — ignorera
+      // ytterligare fingrar/knappar tills den är klar.
       if (gestureRef.current || animating) return;
       const isMouse = e.pointerType === "mouse";
       if (isMouse) {
@@ -136,7 +153,14 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         // ChildTasksSection.tsx:s håll-in-för-att-avklara).
         el!.setPointerCapture(e.pointerId);
       }
-      gestureRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, isMouse, axis: "unknown" };
+      gestureRef.current = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        isMouse,
+        axis: "unknown",
+        everHorizontal: false
+      };
     }
 
     function onPointerMove(e: PointerEvent) {
@@ -147,25 +171,31 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
 
       if (g.isMouse) {
         // Redan godkänd att svepa (start i marginalen, pointer capture
-        // aktiv) — ingen axel-låsning behövs, följ bara muspekaren direkt.
+        // aktiv) — ingen axel-bedömning behövs, följ bara muspekaren
+        // direkt.
         follow(dx);
+        g.everHorizontal = true;
         return;
       }
 
-      if (g.axis === "unknown") {
-        // Håller webbläsarens egen panorering borta redan under den osäkra
-        // perioden — se filhuvudets uppföljning #3, punkt 1.
-        e.preventDefault();
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_LOCK_THRESHOLD_PX) return;
-        g.axis = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
-      }
+      // Ingen permanent låsning (se filhuvudets uppföljning #4) — räknas om
+      // varje rörelseevent utifrån KUMULATIVA dx/dy sedan gestens start.
+      // Väntar bara med att göra NÅGOT tills den initiala tröskeln nåtts,
+      // för att inte överreagera på enstaka delpixel-skakningar.
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_DECIDE_THRESHOLD_PX) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+
       if (g.axis === "horizontal") {
+        // Håller webbläsarens egen panorering borta — se filhuvudets
+        // uppföljning #3.
         e.preventDefault();
         follow(dx);
+        g.everHorizontal = true;
       }
       // g.axis === "vertical": släpper helt (ingen preventDefault, ingen
       // follow()) — vanlig skroll i t.ex. uppgiftslistan fortsätter
-      // fungera precis som innan.
+      // fungera. Om gesten SENARE svänger vågrät tar grenen ovan över då
+      // istället, utan att ha "gett upp" permanent.
     }
 
     function onPointerUp(e: PointerEvent) {
@@ -186,9 +216,9 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         const rect = el!.getBoundingClientRect();
         const width = rect.width || 1;
         crossed = Math.abs(dx) >= width * DESKTOP_CROSS_RATIO;
-      } else if (g.axis !== "horizontal") {
-        // Aldrig ens låst till vågrät (rent lodrätt svep, eller för kort
-        // rörelse för att axeln hann bestämmas) — ingen egen visuell
+      } else if (!g.everHorizontal) {
+        // Aldrig ens tagit kontroll över gesten (rent lodrätt svep, eller
+        // för kort rörelse för att avgöras) — ingen egen visuell
         // förskjutning att fjädra tillbaka, gör ingenting.
         return;
       } else {
@@ -208,7 +238,7 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         if (g.isMouse && el!.hasPointerCapture(e.pointerId)) {
           el!.releasePointerCapture(e.pointerId);
         }
-        snapBack();
+        if (g.everHorizontal || g.isMouse) snapBack();
       }
     }
 
