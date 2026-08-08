@@ -31,10 +31,40 @@ import { useCallback, useRef } from "react";
 // sidvändnings-animation (commit(), oförändrad) som redan fanns för ett
 // fullbordat svep — annars görs ingenting alls (inget att fjädra tillbaka,
 // eftersom inget någonsin flyttades).
+// 2026-08-09, uppföljning #7 (Zaidas fynd: "hela containern med allt
+// innehåll rör sig även upp och ner med fingret... det försör känslan
+// väldigt mycket när man ser en vit kant") — g.axis==="vertical"-grenen
+// kallade MEDVETET aldrig preventDefault, för att inte förstöra vanlig
+// skroll i uppgiftslistan (.child-tasks-grid). Problemet: samma
+// eftergivenhet gällde ALLA lodräta rörelser, även de som börjar på
+// tidslinjen/hjälten/bakgrunden — ytor som INTE är skrollbara
+// (.child-dashboard har overflow:hidden). En sådan lodrät rörelse har
+// ingenting legitimt att skrolla LOKALT, men webbläsaren försöker ändå
+// hitta någon skrollbar förfader — och utan en dokument-nivå-spärr (en
+// tidigare sådan togs bort igen, se historiken, då den av andra skäl
+// klippte position:fixed-element som medlemslistans popup) läcker det
+// till <body>s elastiska studs, vilket syns som en vit kant. Löst genom
+// att avgöra REDAN vid nedtryck om pekaren startade INUTI en genuint
+// skrollbar yta (findScrollableAncestor) — startar den UTANFÖR hålls
+// webbläsarens egen hantering ALLTID borta (oavsett axel), eftersom det
+// då aldrig finns något legitimt att skrolla där ändå.
 const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
 const SLIDE_MS = 200;
+
+function findScrollableAncestor(node: Element | null, boundary: Element): boolean {
+  let cur: Element | null = node;
+  while (cur && cur !== boundary.parentElement) {
+    const style = getComputedStyle(cur);
+    if ((style.overflowY === "auto" || style.overflowY === "scroll") && cur.scrollHeight > cur.clientHeight) {
+      return true;
+    }
+    if (cur === boundary) break;
+    cur = cur.parentElement;
+  }
+  return false;
+}
 
 type Options = {
   onNext: () => void;
@@ -52,6 +82,10 @@ type GestureState = {
   // ovan), en gest som svänger vågrät tar över kontrollen så fort
   // riktningen blir tydlig.
   everHorizontal: boolean;
+  // Startade pekaren inuti en genuint skrollbar yta (2026-08-09,
+  // uppföljning #7) — avgörs en gång vid nedtryck, styr om lodräta
+  // rörelser får lämnas åt webbläsaren eller alltid ska hindras.
+  insideScrollable: boolean;
 };
 
 export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Options) {
@@ -126,7 +160,8 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         y: e.clientY,
         isMouse,
         axis: "unknown",
-        everHorizontal: false
+        everHorizontal: false,
+        insideScrollable: isMouse ? false : findScrollableAncestor(e.target as Element | null, el!)
       };
     }
 
@@ -145,6 +180,14 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         return;
       }
 
+      // Startade UTANFÖR en skrollbar yta (2026-08-09, uppföljning #7) —
+      // det finns då aldrig något legitimt att skrolla lokalt, håll
+      // webbläsarens egen hantering borta oavsett axel, annars läcker
+      // rörelsen till dokumentets elastiska studs (en vit kant syns).
+      if (!g.insideScrollable) {
+        e.preventDefault();
+      }
+
       // Ingen permanent låsning — räknas om varje rörelseevent utifrån
       // KUMULATIVA dx/dy sedan gestens start. Väntar bara med att avgöra
       // NÅGOT tills den initiala tröskeln nåtts, för att inte överreagera
@@ -153,18 +196,18 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       g.axis = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
 
       if (g.axis === "horizontal") {
-        // Håller webbläsarens egen panorering borta, annars stjäl den
-        // gesten innan vi hinner avgöra att den är vågrät. Ingen egen
-        // rörelse appliceras (se filhuvudets uppföljning #6) — innehållet
-        // ligger stilla under HELA draget, sidvändningen sker bara vid
-        // släpp om tröskeln passerats.
+        // Håller webbläsarens egen panorering borta (om inte redan gjort
+        // ovan) — annars stjäl den gesten innan vi hinner avgöra att den
+        // är vågrät. Ingen egen rörelse appliceras (se filhuvudets
+        // uppföljning #6) — innehållet ligger stilla under HELA draget,
+        // sidvändningen sker bara vid släpp om tröskeln passerats.
         e.preventDefault();
         g.everHorizontal = true;
       }
-      // g.axis === "vertical": släpper helt (ingen preventDefault) —
-      // vanlig skroll i t.ex. uppgiftslistan fortsätter fungera. Om
-      // gesten SENARE svänger vågrät tar grenen ovan över då istället,
-      // utan att ha "gett upp" permanent.
+      // g.axis === "vertical" OCH insideScrollable: släpper helt (ingen
+      // preventDefault) — vanlig skroll i uppgiftslistan fortsätter
+      // fungera. Om gesten SENARE svänger vågrät tar grenen ovan över då
+      // istället, utan att ha "gett upp" permanent.
     }
 
     function onPointerUp(e: PointerEvent) {
