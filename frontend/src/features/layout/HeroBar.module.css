@@ -11,6 +11,13 @@
   background: var(--theme-nav-bg, var(--sidebar));
   color: var(--theme-nav-fg, var(--foreground));
   box-shadow: none;
+  /* 2026-08-09, Zaidas önskemål: navbaren är ren UI-chrome (inget innehåll),
+     inte del av WCAG 1.4.4/1.4.10:s zoombarhetskrav (det kravet gäller den
+     faktiska INNEHÅLLSYTAN, som förblir helt opåverkad av detta — se
+     ChildDashboard.css). Klick/tryck på knapparna fortsätter fungera
+     oförändrat (touch-action stoppar bara native webbläsargester, aldrig
+     JS-hanterade klick). */
+  touch-action: none;
 }
 
 .brand {

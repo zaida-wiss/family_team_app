@@ -33,6 +33,11 @@
   z-index: 5;
   background: var(--background);
   padding: 6px 0;
+  /* 2026-08-09, samma resonemang som HeroBar.module.css:s .heroBar — ren
+     UI-chrome (familjeväljare/flikar/medlemsknapp), inte innehåll som
+     omfattas av WCAG:s zoombarhetskrav. Klick fortsätter fungera
+     oförändrat. */
+  touch-action: none;
 }
 
 @media (max-width: 1023px) {
