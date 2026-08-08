@@ -48,6 +48,21 @@ import { useCallback, useRef } from "react";
 // skrollbar yta (findScrollableAncestor) — startar den UTANFÖR hålls
 // webbläsarens egen hantering ALLTID borta (oavsett axel), eftersom det
 // då aldrig finns något legitimt att skrolla där ändå.
+// 2026-08-09, uppföljning #8 (Zaidas fynd: "svajpar jag från vänster till
+// höger och inte spikrakt så flyttar sig dashboarden bara upp och ner...
+// man skall kunna dra fingret fast i 45 graders vingel och den skall ändå
+// ta det som att man försöker svepa till en annan medlem") — den strikta
+// |dx|>|dy|-jämförelsen ÄR redan matematiskt exakt gränsen vid 45°, men vid
+// EXAKT eller strax över 45° (helt normalt för en verklig fingerrörelse,
+// särskilt över en lite längre sträcka) klassades gesten som lodrät och
+// gav upp helt. Utanför en skrollbar yta (där det aldrig finns något
+// legitimt att skrolla ändå, se uppföljning #7) krävs nu att den lodräta
+// komponenten är TYDLIGT större än den vågräta (en högre kvot, motsvarande
+// ~56°) innan gesten ger upp och lämnas åt webbläsaren — annars vinner
+// alltid tolkningen "försöker svepa". Inuti en skrollbar yta (uppgifts-
+// listan) behålls den strikta 45°-gränsen oförändrad, för att inte göra
+// vanlig lodrät skroll där opålitlig.
+const VERTICAL_DOMINANCE_RATIO_OUTSIDE_SCROLLABLE = 1.5;
 const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
@@ -193,7 +208,8 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // NÅGOT tills den initiala tröskeln nåtts, för att inte överreagera
       // på enstaka delpixel-skakningar.
       if (Math.max(Math.abs(dx), Math.abs(dy)) < AXIS_DECIDE_THRESHOLD_PX) return;
-      g.axis = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+      const dominanceRatio = g.insideScrollable ? 1 : VERTICAL_DOMINANCE_RATIO_OUTSIDE_SCROLLABLE;
+      g.axis = Math.abs(dy) > Math.abs(dx) * dominanceRatio ? "vertical" : "horizontal";
 
       if (g.axis === "horizontal") {
         // Håller webbläsarens egen panorering borta (om inte redan gjort
