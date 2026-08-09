@@ -13,6 +13,7 @@ import { CalendarWeekView } from "./CalendarWeekView";
 import { CalendarTimelineView } from "./CalendarTimelineView";
 import { useCalendarView } from "./useCalendarView";
 import type { CalendarFilter } from "./calendarTypes";
+import { LocationLink } from "../../components/LocationLink";
 
 export type { FormState, ModalMode, CalendarFilter } from "./calendarTypes";
 
@@ -313,7 +314,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
                 <span className="cal-event-row-title">{ev.title}</span>
                 <span className="cal-event-row-meta">
                   {ev.isAllDay ? fmtFullDate(ev.startsAt.slice(0, 10)) : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt, fixedCalendarTimes)}`}
-                  {ev.location && ` · ${ev.location}`}
+                  {ev.location && (<> · <LocationLink location={ev.location} /></>)}
                 </span>
               </div>
               <div className="cal-rsvp-btns">

@@ -74,8 +74,36 @@ describe("linkifyText", () => {
     );
   });
 
-  it("domändelen av en e-postadress blir INTE en (missvisande) webblänk", () => {
-    expect(render("Skriv till mig@exempel.se om det")).toBe("Skriv till mig@exempel.se om det");
+  // 2026-08-10, Zaidas önskemål: "även mail och adresser skall vara call to
+  // action" — domändelen av en e-postadress ska INTE bli en missvisande
+  // WEBBLÄNK (oförändrat, se URL_PATTERN:s (?<!@)), men HELA adressen ska
+  // bli en riktig mailto:-länk istället.
+  it("en e-postadress blir en mailto:-länk, inte en missvisande webblänk", () => {
+    const html = render("Skriv till mig@exempel.se om det");
+    expect(html).toContain('href="mailto:mig@exempel.se"');
+    expect(html).toContain(">mig@exempel.se</a>");
+    expect(html).not.toContain('href="https://exempel.se"');
+    expect(html).toContain("Skriv till ");
+    expect(html).toContain(" om det");
+  });
+
+  it("skiljetecken direkt efter en e-postadress hör inte till själva adressen", () => {
+    const html = render("Mejla mig@exempel.se, tack.");
+    expect(html).toContain('href="mailto:mig@exempel.se"');
+    expect(html).toContain(">mig@exempel.se</a>,");
+  });
+
+  it("flera e-postadresser i samma text blir varsin egen mailto:-länk", () => {
+    const html = render("mamma@exempel.se eller pappa@exempel.se");
+    expect((html.match(/<a /g) ?? []).length).toBe(2);
+  });
+
+  it("webblänk, e-post OCH telefonnummer i samma text blir tre olika klickbara länkar", () => {
+    const html = render("Se biltema.se, mejla mig@exempel.se eller ring 070-123 45 67");
+    expect(html).toContain('href="https://biltema.se"');
+    expect(html).toContain('href="mailto:mig@exempel.se"');
+    expect(html).toContain('href="tel:0701234567"');
+    expect((html.match(/<a /g) ?? []).length).toBe(3);
   });
 
   // 2026-08-10, Zaidas önskemål: "alla telefonnummer skall gå att ringa

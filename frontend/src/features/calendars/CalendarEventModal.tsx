@@ -2,6 +2,7 @@ import "./CalendarEventModal.css";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { MapPin, MoveDiagonal2, RefreshCw, Trash2, X } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
+import { LocationLink } from "../../components/LocationLink";
 import type { Calendar, Member } from "@shared/types";
 import type { FormState, ModalMode } from "./calendarTypes";
 import { RECURRENCE_LABELS, RECURRENCE_UNIT, fmtFullDate, fmtTime } from "./calendarHelpers";
@@ -62,7 +63,7 @@ export function CalendarEventModal({
                 ? `${fmtFullDate(modal.event.startsAt.slice(0, 10))} · Heldag`
                 : `${fmtFullDate(modal.event.startsAt)} · ${fmtTime(modal.event.startsAt, fixedCalendarTimes)}–${fmtTime(modal.event.endsAt, fixedCalendarTimes)}`}
             </p>
-            {modal.event.location && <p className="cal-event-row-meta"><MapPin size={13} /> {modal.event.location}</p>}
+            {modal.event.location && <p className="cal-event-row-meta"><MapPin size={13} /> <LocationLink location={modal.event.location} /></p>}
             {modal.event.notes && (
               <p style={{ fontSize: "0.875rem", whiteSpace: "pre-wrap" }}>
                 {modal.event.notes.replace(/\\n/g, "\n")}

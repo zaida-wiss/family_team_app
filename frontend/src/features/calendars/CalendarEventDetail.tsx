@@ -5,6 +5,7 @@ import type { EnrichedEvent } from "./CalendarEventList";
 import { fmtFullDate, fmtTime } from "./calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useLinkifiedText } from "../../hooks/useLinkifiedText";
+import { LocationLink } from "../../components/LocationLink";
 
 type CalendarCssVars = React.CSSProperties & {
   "--event-color"?: string;
@@ -60,7 +61,7 @@ export function CalendarEventDetail({
           </p>
           {event.location && (
             <p className="cal-event-row-meta cal-event-detail-location">
-              <MapPin className="cal-meta-icon" size={13} /> {event.location}
+              <MapPin className="cal-meta-icon" size={13} /> <LocationLink location={event.location} />
             </p>
           )}
           {notesContent && (

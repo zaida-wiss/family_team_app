@@ -3,6 +3,7 @@ import type { EnrichedEvent } from "../calendars/CalendarEventList";
 import { fmtDayLabel, fmtDaysFromToday, fmtEventTime } from "./timelineMath";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useLinkifiedText } from "../../hooks/useLinkifiedText";
+import { LocationLink } from "../../components/LocationLink";
 
 type Props = {
   event: EnrichedEvent;
@@ -46,7 +47,7 @@ export function TimelineEventDetail({ event, onClose }: Props) {
         {event.location && (
           <p className="child-tl-detail-location">
             <MapPin size={13} />
-            <span>{event.location}</span>
+            <LocationLink location={event.location} />
           </p>
         )}
         {notesContent && (

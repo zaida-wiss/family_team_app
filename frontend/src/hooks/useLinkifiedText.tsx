@@ -99,12 +99,45 @@ function linkifyPhoneNumbers(text: string, keyPrefix: string): ReactNode[] {
   });
 }
 
+// Klickbara e-postadresser (2026-08-10, Zaidas önskemål: "även mail och
+// adresser skall vara call to action") — samma "en mailto:-länk ger enhetens
+// egen 'vad vill du göra'-hantering gratis"-princip som telefonnummer ovan.
+// Ett förenklat men brett mönster (samma "täcker verkliga adresser utan att
+// bli ett helt eget e-postvalideringsbibliotek"-avvägning som URL_PATTERN
+// redan representerar för webbadresser) — kräver minst en punkt i
+// domändelen (utesluter t.ex. "namn@dator" i en teknisk anteckning).
+const EMAIL_PATTERN =
+  /([a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+)/g;
+
+function linkifyEmails(text: string, keyPrefix: string): ReactNode[] {
+  // text.split() med en enda fångstgrupp lägger matchningarna på UDDA
+  // index — vanlig text (skickas vidare till telefonnummer-igenkänningen)
+  // hamnar på jämna index. Körs FÖRE PHONE_PATTERN så att en adress som
+  // "kontakt2026@foretag.se" aldrig hinner tolkas fel av den senare passen.
+  const parts = text.split(EMAIL_PATTERN);
+  return parts.flatMap((part, j): ReactNode[] => {
+    const key = `${keyPrefix}-${j}`;
+    if (j % 2 !== 1 || !part) return linkifyPhoneNumbers(part ?? "", key);
+    const [email, trailing] = splitTrailingPunctuation(part);
+    return [
+      <Fragment key={key}>
+        {/* stopPropagation (samma skäl som webblänkarna nedan) — en
+            e-postadress kan sitta inuti en klickbar rad. */}
+        <a className="linkified-link" href={`mailto:${email}`} onClick={(e) => e.stopPropagation()}>
+          {email}
+        </a>
+        {trailing}
+      </Fragment>,
+    ];
+  });
+}
+
 export function linkifyText(text: string): ReactNode[] {
   // text.split() med en enda fångstgrupp lägger matchningarna på UDDA
   // index i den returnerade arrayen — vanlig text hamnar på jämna index.
   const parts = text.split(URL_PATTERN);
-  return parts.flatMap((part, i) => {
-    if (i % 2 !== 1 || !part) return linkifyPhoneNumbers(part ?? "", `t${i}`);
+  return parts.flatMap((part, i): ReactNode[] => {
+    if (i % 2 !== 1 || !part) return linkifyEmails(part ?? "", `t${i}`);
     const [url, trailing] = splitTrailingPunctuation(part);
     const href = url.startsWith("http") ? url : `https://${url}`;
     return [

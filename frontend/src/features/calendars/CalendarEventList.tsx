@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Calendar, CalendarEvent } from "@shared/types";
 import { fmtFullDate, fmtTime, isHolidayEvent } from "./calendarHelpers";
+import { LocationLink } from "../../components/LocationLink";
 
 type CalendarCssVars = React.CSSProperties & {
   "--dot-color"?: string;
@@ -281,7 +282,7 @@ const EventRow = forwardRef<HTMLDivElement, RowProps>(function EventRow(
         <span className="cal-event-row-meta">
           {dateStr}
           {ev.location && (
-            <> · <MapPin className="cal-meta-icon" size={11} /> {ev.location}</>
+            <> · <MapPin className="cal-meta-icon" size={11} /> <LocationLink location={ev.location} /></>
           )}
           {" · "}{ev.calendarName}
         </span>
