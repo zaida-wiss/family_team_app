@@ -82,6 +82,18 @@ export async function mockDataAPIs(page: Page) {
   // fångas den av den generiska {ok:true}-stubben (fel form, en array
   // förväntas), vilket kraschar renderingen tyst i en ErrorBoundary.
   await page.route("**/api/members/pending-child-shares", (route) => route.fulfill({ json: [] }));
+  // Dela barn-listan (ADR-0024/2026-07-28) — hämtas globalt av
+  // ChildShareSettings.tsx (renderas i Inställningar → Barn → Data för varje
+  // vuxen med canManageMembers, en av standardrollens behörigheter) för
+  // VARJE barn i kontot, oavsett om testet faktiskt handlar om delning.
+  // Samma "MÅSTE registreras EFTER den bredare mockningen ovan"-skäl som
+  // pending-child-shares — utan denna föll GET /api/members/:id/share igenom
+  // till den generiska {}-stubben (fel form, en array förväntas), vilket
+  // kraschade renderingen i en ErrorBoundary så fort barnens shares hunnit
+  // "hämtas" (bekräftat: bröt copy-routines.spec.ts:s klick på "Kopiera
+  // rutiner från ett annat barn" — knappen fanns, men hela panelen kraschade
+  // och togs bort ur DOM:en strax efter, precis innan klicket hann slutföras).
+  await page.route("**/api/members/*/share", (route) => route.fulfill({ json: [] }));
   // Hem-vyns familjefilter (2026-07-31) — hämtas globalt av
   // MemberShellContent.tsx (var med i Home-sammanslagningen), samma
   // "MÅSTE registreras EFTER den bredare mockningen ovan"-skäl som

@@ -319,4 +319,72 @@ describe.skipIf(!RUN)("todos.ts: server-side behörighetskontroll på complete/a
       .send({});
     expect(res.status).toBe(200);
   });
+
+  // Bugg fixad (2026-08-10, Zaidas fynd — ett håll-in-tryck på en bubbla
+  // visad via "Visa utgångna" gav ett tyst 404 i webbläsarkonsollen: "Todo
+  // hittades inte eller är inte pending"). "Visa utgångna" (2026-07-08,
+  // utökad 2026-08-08) visar en status:"expired"-uppgift som en HELT VANLIG,
+  // fullt interaktiv bubbla — uttryckligen så en förälder kan fylla i det man
+  // missat i efterhand. Men complete/toggleInProgress krävde tidigare strikt
+  // status==="pending", så en sådan bubbla var i praktiken ALDRIG faktiskt
+  // completable trots att UI:t (optimistiskt, väntar inte in serversvaret)
+  // spelade upp en "avklarad"-upplösningsanimation ändå. Bekräftat direkt mot
+  // en riktig produktionspost innan fixen (todosService.ts:s completeTodo/
+  // toggleInProgress/completeSharedChildTodo/completeSharedCategoryTodo).
+  it("tillåter complete på en status:\"expired\" todo (Visa utgångna-flödet, 2026-08-10)", async () => {
+    const todoId = `todo-perm-expired-complete-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({
+        id: todoId, title: "Missad morgonrutin", createdBy: parentMemberId, assignedTo: parentMemberId,
+        ...todoPayload({ status: "expired" })
+      });
+
+    const res = await request(app)
+      .patch(`/api/todos/${todoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("nekar complete på en redan status:\"approved\" todo — bara pending/expired är completable", async () => {
+    const todoId = `todo-perm-approved-complete-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({
+        id: todoId, title: "Redan godkänd", createdBy: parentMemberId, assignedTo: parentMemberId,
+        ...todoPayload({ status: "approved" })
+      });
+
+    const res = await request(app)
+      .patch(`/api/todos/${todoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({});
+    expect(res.status).toBe(404);
+  });
+
+  it("tillåter toggleInProgress (\"vem håller på med den här\") på en status:\"expired\" todo", async () => {
+    const todoId = `todo-perm-expired-inprogress-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({
+        id: todoId, title: "Missad kvällsrutin", createdBy: parentMemberId, assignedTo: childMemberId,
+        ...todoPayload({ status: "expired" })
+      });
+
+    const res = await request(app)
+      .patch(`/api/todos/${todoId}/in-progress`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", parentMemberId)
+      .send({ targetMemberId: childMemberId });
+    expect(res.status).toBe(200);
+  });
 });
