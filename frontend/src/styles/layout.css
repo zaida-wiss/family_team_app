@@ -104,6 +104,22 @@
   }
 
   .app-shell-full {
+    /* grid-row:1 (2026-08-10) -- .app-shell saknar grid-template-rows, så
+       raden är implicit. HeroBar (DOM-först) auto-placeras i rad 1/kolumn 1
+       och får height:100vh på just denna brytpunkt (HeroBar.module.css) --
+       ett grid-column:1/-1-element UTAN egen grid-row kan då inte få plats
+       i rad 1 (kolumn 1 redan upptagen) och auto-placeras istället i en
+       helt ny rad 2, en hel skärmhöjd under synligt område: ett barns
+       dashboard (eller en vuxens vy av valfri familjemedlem, currentMember.
+       isChild||isViewingMemberDashboard, se Shell.tsx) blev därmed osynlig
+       utan manuell scroll på ≥1024px, upptäckt via en e2e-diagnostik som
+       visade boundingBox().y===720 (exakt viewporthöjden) och 0 pointer-
+       events träffande elementet. grid-row:1 tvingar den tillbaka till
+       SAMMA rad som HeroBar, spänner ändå hela bredden (grid-column
+       oförändrad) och target målar därmed ÖVER HeroBar (DOM-senare vinner
+       i samma stapelnivå) -- vilket matchar "helt kant-till-kant"-avsikten
+       nedan (dölja sidonaven helt, inte bara undvika att krocka med den). */
+    grid-row: 1;
     grid-column: 1 / -1;
   }
 }
