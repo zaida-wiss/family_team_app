@@ -126,6 +126,33 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
     return { left: r.left, right: r.right, width: r.width };
   });
 
+  // TEMP DIAGNOSTIK — box.y kom tillbaka som exakt 720 (== viewportens
+  // höjd) i en tidigare körning: .child-dashboard renderas alltså en hel
+  // skärmhöjd UNDER synligt område, vilket förklarar 0 [swipe-debug]-loggar
+  // (musen träffar tom yta). Misstanke: en scrollbar förfaders scrollTop
+  // nollställs inte vid panelbytet Hem→members. Går uppåt från
+  // .child-dashboard och loggar varje förfaders scrollTop/overflow.
+  const scrollDiag = await page.evaluate(() => {
+    const out: Array<{ tag: string; cls: string; scrollTop: number; overflowY: string }> = [];
+    let cur: Element | null = document.querySelector(".child-dashboard");
+    while (cur) {
+      const style = getComputedStyle(cur);
+      out.push({
+        tag: cur.tagName,
+        cls: typeof cur.className === "string" ? cur.className.slice(0, 60) : "",
+        scrollTop: (cur as HTMLElement).scrollTop,
+        overflowY: style.overflowY
+      });
+      cur = cur.parentElement;
+    }
+    return {
+      windowScrollY: window.scrollY,
+      docScrollTop: document.documentElement.scrollTop,
+      bodyScrollTop: document.body.scrollTop,
+      ancestors: out
+    };
+  });
+
   // Nedtryck i VÄNSTER marginal (nära box.x), drag hela vägen till HÖGER
   // sida — nettoriktning åt höger = föregående medlem (samma
   // karusell-konvention som touch-svepet, se useMemberSwipeNav.ts).
@@ -161,6 +188,8 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
       "\"Hej Testförälder!\" blev aldrig synlig. URL: " + url +
       "\nwrapperRect (parent av .child-dashboard): " + JSON.stringify(wrapperRect) +
       "\nboundingBox (.child-dashboard, det testet mätte mot): " + JSON.stringify(box) +
+      "\nscrollDiag (window/dokument/förfäders scrollTop uppåt från .child-dashboard): " +
+      JSON.stringify(scrollDiag, null, 1) +
       "\n[swipe-debug]-loggar (" + swipeDebugLog.length + " st):\n" + swipeDebugLog.join("\n") +
       "\npageerror (" + pageErrors.length + " st):\n" + pageErrors.join("\n") +
       "\nSidans text vid timeout (första 1500 tecken):\n" + bodyText.slice(0, 1500) +
