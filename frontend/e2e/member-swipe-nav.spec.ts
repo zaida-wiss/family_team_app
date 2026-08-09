@@ -85,20 +85,6 @@ async function mockCommon(page: import("@playwright/test").Page) {
 }
 
 test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter till FÖREGÅENDE medlem", async ({ page }) => {
-  // TEMP DIAGNOSTIK (tas bort igen efter felsökning) — samlar (inte bara
-  // skriver ut) de temporära [swipe-debug]-loggarna OCH eventuella
-  // uncaught page errors, så de kan bakas in i felmeddelandet nedan.
-  // page.on("console")-utskrift till stdout syns bara i CI-jobbets RÅA
-  // loggar, som kräver adminrättigheter att ladda ner (bekräftat 403/401)
-  // — men en text inbakad i själva assertion-felet syns fritt i GitHub
-  // Actions annotations, utan auth.
-  const swipeDebugLog: string[] = [];
-  const pageErrors: string[] = [];
-  page.on("console", (msg) => {
-    if (msg.text().includes("[swipe-debug]")) swipeDebugLog.push(msg.text());
-  });
-  page.on("pageerror", (err) => pageErrors.push(String(err)));
-
   await mockCommon(page);
   await page.goto("/");
 
@@ -111,47 +97,6 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
   const dashboard = page.locator(".child-dashboard");
   const box = await dashboard.boundingBox();
   if (!box) throw new Error("Dashboard hittades inte");
-
-  // TEMP DIAGNOSTIK — jämför wrapper-diven (memberSwipeNavRef, den som
-  // faktiskt lyssnar på pointerdown/margin-kollen) mot .child-dashboard
-  // (det som testet mäter box mot) — en teori värd att utesluta: om de INTE
-  // har samma rect.left/width matchar inte marginal-beräkningen i
-  // useMemberSwipeNav.ts:s onPointerDown mot samma koordinater testet
-  // klickar på.
-  const wrapperRect = await page.evaluate(() => {
-    const article = document.querySelector(".child-dashboard");
-    const wrapper = article?.parentElement;
-    if (!wrapper) return null;
-    const r = wrapper.getBoundingClientRect();
-    return { left: r.left, right: r.right, width: r.width };
-  });
-
-  // TEMP DIAGNOSTIK — box.y kom tillbaka som exakt 720 (== viewportens
-  // höjd) i en tidigare körning: .child-dashboard renderas alltså en hel
-  // skärmhöjd UNDER synligt område, vilket förklarar 0 [swipe-debug]-loggar
-  // (musen träffar tom yta). Misstanke: en scrollbar förfaders scrollTop
-  // nollställs inte vid panelbytet Hem→members. Går uppåt från
-  // .child-dashboard och loggar varje förfaders scrollTop/overflow.
-  const scrollDiag = await page.evaluate(() => {
-    const out: Array<{ tag: string; cls: string; scrollTop: number; overflowY: string }> = [];
-    let cur: Element | null = document.querySelector(".child-dashboard");
-    while (cur) {
-      const style = getComputedStyle(cur);
-      out.push({
-        tag: cur.tagName,
-        cls: typeof cur.className === "string" ? cur.className.slice(0, 60) : "",
-        scrollTop: (cur as HTMLElement).scrollTop,
-        overflowY: style.overflowY
-      });
-      cur = cur.parentElement;
-    }
-    return {
-      windowScrollY: window.scrollY,
-      docScrollTop: document.documentElement.scrollTop,
-      bodyScrollTop: document.body.scrollTop,
-      ancestors: out
-    };
-  });
 
   // Nedtryck i VÄNSTER marginal (nära box.x), drag hela vägen till HÖGER
   // sida — nettoriktning åt höger = föregående medlem (samma
@@ -167,35 +112,7 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
   // JS-chunk-hämtning första gången, som under CI:s fulla parallellitet kan
   // ta längre än standardens 5000ms. Generös timeout, samma resonemang som
   // getBadge i child-uncomplete-badge.spec.ts.
-  //
-  // TEMP DIAGNOSTIK (tas bort igen efter felsökning) — testet har failat
-  // deterministiskt i CI sedan funktionen skrevs, men CI:s riktiga
-  // trace/skärmdump kräver admin-rättigheter att ladda ner (401/403 mot
-  // GitHub API utan token) och går inte att hämta programmatiskt. GitHub
-  // Actions "github"-reporterns ANNOTATIONS är däremot fritt läsbara utan
-  // auth (bekräftat) — ett try/catch som bakar in sidans faktiska text
-  // OCH nuvarande URL i själva felmeddelandet ger alltså diagnostik gratis,
-  // utan att någon behöver ladda ner/packa upp en artefakt manuellt.
-  try {
-    await expect(page.getByText("Hej Testförälder!")).toBeVisible({ timeout: 15000 });
-  } catch (err) {
-    const url = page.url();
-    const bodyText = await page
-      .locator("body")
-      .innerText()
-      .catch((e) => "(kunde inte läsa body: " + e + ")");
-    throw new Error(
-      "\"Hej Testförälder!\" blev aldrig synlig. URL: " + url +
-      "\nwrapperRect (parent av .child-dashboard): " + JSON.stringify(wrapperRect) +
-      "\nboundingBox (.child-dashboard, det testet mätte mot): " + JSON.stringify(box) +
-      "\nscrollDiag (window/dokument/förfäders scrollTop uppåt från .child-dashboard): " +
-      JSON.stringify(scrollDiag, null, 1) +
-      "\n[swipe-debug]-loggar (" + swipeDebugLog.length + " st):\n" + swipeDebugLog.join("\n") +
-      "\npageerror (" + pageErrors.length + " st):\n" + pageErrors.join("\n") +
-      "\nSidans text vid timeout (första 1500 tecken):\n" + bodyText.slice(0, 1500) +
-      "\n\nUrsprungligt fel: " + err
-    );
-  }
+  await expect(page.getByText("Hej Testförälder!")).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
 });
 

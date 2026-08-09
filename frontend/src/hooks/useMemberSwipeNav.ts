@@ -129,7 +129,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     el.style.willChange = "transform";
 
     function commit(dx: number) {
-      console.log("[swipe-debug] commit() anropad, dx=" + dx);
       animating = true;
       const width = el!.getBoundingClientRect().width || 1;
       const exitX = dx < 0 ? -width : width;
@@ -141,12 +140,10 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         // ingångspositionen INNAN webbläsaren målar nästa bildruta — allt
         // detta sker synkront inom samma JS-task som setTimeout-callbacken,
         // så webbläsaren hinner aldrig visa en tom bildruta däremellan.
-        console.log("[swipe-debug] commit() setTimeout fired, anropar " + (dx < 0 ? "onNext" : "onPrev"));
         el!.style.transition = "none";
         el!.style.transform = `translateX(${enterX}px)`;
         if (dx < 0) onNextRef.current();
         else onPrevRef.current();
-        console.log("[swipe-debug] onNext/onPrev-anropet returnerade");
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             el!.style.transition = `transform ${SLIDE_MS}ms ease-out`;
@@ -164,20 +161,12 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     function onPointerDown(e: PointerEvent) {
       // Ett spårat svep pågår redan, eller en övergång spelar — ignorera
       // ytterligare fingrar/knappar tills den är klar.
-      // TEMP DIAGNOSTIK (tas bort igen): if (gestureRef.current || animating) return;
-      if (gestureRef.current || animating) {
-        console.log("[swipe-debug] pointerdown ignorerad, gestureRef=" + Boolean(gestureRef.current) + " animating=" + animating);
-        return;
-      }
+      if (gestureRef.current || animating) return;
       const isMouse = e.pointerType === "mouse";
       if (isMouse) {
         const rect = el!.getBoundingClientRect();
         const inLeftMargin = e.clientX - rect.left <= DESKTOP_MARGIN_PX;
         const inRightMargin = rect.right - e.clientX <= DESKTOP_MARGIN_PX;
-        console.log(
-          "[swipe-debug] pointerdown mouse clientX=" + e.clientX + " rect.left=" + rect.left +
-          " rect.right=" + rect.right + " inLeftMargin=" + inLeftMargin + " inRightMargin=" + inRightMargin
-        );
         if (!inLeftMargin && !inRightMargin) return;
         // Garanterar att pointerup landar HÄR oavsett var muspekaren
         // fysiskt slutar — bara för mus, aldrig touch (skulle annars kapa
@@ -257,7 +246,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
 
     function onPointerUp(e: PointerEvent) {
       const g = gestureRef.current;
-      console.log("[swipe-debug] pointerup, gestureRef finns=" + Boolean(g) + " matchar pointerId=" + (g?.pointerId === e.pointerId));
       if (!g || g.pointerId !== e.pointerId) return;
       gestureRef.current = null;
       if (g.isMouse && el!.hasPointerCapture(e.pointerId)) {
@@ -268,7 +256,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         // Aldrig klassad vågrät (rent lodrätt svep, eller för kort rörelse
         // för att avgöras, eller ett musklick som aldrig lämnade
         // marginalen) — ingenting att göra, inget flyttades någonsin.
-        console.log("[swipe-debug] pointerup: everHorizontal var false, avbryter");
         return;
       }
 
@@ -277,7 +264,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // av bredden, inte bara några pixlar, så t.ex. en vanlig
       // textmarkering med musen aldrig räknas som en växling.
       const width = el!.getBoundingClientRect().width || 1;
-      console.log("[swipe-debug] pointerup dx=" + dx + " width=" + width + " threshold=" + (width * SWIPE_COMMIT_RATIO) + " passerar=" + (Math.abs(dx) >= width * SWIPE_COMMIT_RATIO));
       if (Math.abs(dx) < width * SWIPE_COMMIT_RATIO) return;
 
       // Svep/dra åt vänster = nästa medlem, åt höger = föregående — samma
