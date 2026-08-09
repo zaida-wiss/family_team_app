@@ -49,7 +49,7 @@ const familyConnectionSchema = new Schema({
 const accountSchema = new Schema<Account>({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
-  type: { type: String, enum: ["family"], required: true },
+  type: { type: String, enum: ["family", "personal"], required: true },
   createdBy: { type: String, required: true },
   deletedAt: { type: String, default: null },
   calendarSettings: { type: calendarSettingsSchema, default: undefined },

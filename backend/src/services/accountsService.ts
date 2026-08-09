@@ -49,6 +49,18 @@ function makePermissions(enabled: PermissionKey[]) {
   return Object.fromEntries(ALL_PERMISSION_KEYS.map((k) => [k, enabled.includes(k)])) as Record<PermissionKey, boolean>;
 }
 
+// Delad hjälpare för setupAccount/setupPersonalAccount nedan — undviker att
+// duplicera RoleModel.create-boilerplate en tredje gång.
+function createRole(id: string, accountId: string, name: string, isChildRole: boolean, permissions: PermissionKey[]) {
+  return new RoleModel({
+    id,
+    accountId,
+    name,
+    isChildRole,
+    permissions: makePermissions(permissions)
+  }).save();
+}
+
 export async function setupAccount(userId: string, data: unknown) {
   const { name } = validate(setupSchema, data);
 
@@ -63,28 +75,16 @@ export async function setupAccount(userId: string, data: unknown) {
   const barnRoleId = `role-${crypto.randomUUID()}`;
 
   await Promise.all([
-    new RoleModel({
-      id: förälderRoleId,
-      accountId,
-      name: "Förälder",
-      isChildRole: false,
-      // Kontoskaparen ska ha full adminbehörighet — ALLA behörigheter, inte
-      // en kuraterad delmängd (2026-07-27, Zaidas önskemål: "den personen
-      // skall få adminbehörigheter och ha tillgång till allt i roller och
-      // behörigheter"). Tidigare saknade förälderrollen tre behörigheter
-      // (canSeeOwnTodos/canCompleteAssignedTodos/canSeeOwnCalendar, av
-      // misstag bara i CHILD_PERMISSIONS) — synligt i Inställningar → Roller
-      // & behörigheter som tre ikryssade rutor som saknades för kontots
-      // egen, allra första roll.
-      permissions: makePermissions(ALL_PERMISSION_KEYS)
-    }).save(),
-    new RoleModel({
-      id: barnRoleId,
-      accountId,
-      name: "Barn",
-      isChildRole: true,
-      permissions: makePermissions(CHILD_PERMISSIONS)
-    }).save(),
+    // Kontoskaparen ska ha full adminbehörighet — ALLA behörigheter, inte
+    // en kuraterad delmängd (2026-07-27, Zaidas önskemål: "den personen
+    // skall få adminbehörigheter och ha tillgång till allt i roller och
+    // behörigheter"). Tidigare saknade förälderrollen tre behörigheter
+    // (canSeeOwnTodos/canCompleteAssignedTodos/canSeeOwnCalendar, av
+    // misstag bara i CHILD_PERMISSIONS) — synligt i Inställningar → Roller
+    // & behörigheter som tre ikryssade rutor som saknades för kontots
+    // egen, allra första roll.
+    createRole(förälderRoleId, accountId, "Förälder", false, ALL_PERMISSION_KEYS),
+    createRole(barnRoleId, accountId, "Barn", true, CHILD_PERMISSIONS),
     new AccountModel({ id: accountId, name, type: "family", createdBy: memberId }).save(),
     new MemberModel({
       id: memberId,
@@ -92,6 +92,47 @@ export async function setupAccount(userId: string, data: unknown) {
       userId: user.id,
       name: user.name,
       roleId: förälderRoleId,
+      isChild: false,
+      avatarUrl: null,
+      dashboardTheme: "clear",
+      deletedAt: null,
+      deletedBy: null
+    }).save()
+  ]);
+
+  const savedMember = await MemberModel.findOne({ id: memberId }, { _id: 0, __v: 0 });
+  const savedAccount = await AccountModel.findOne({ id: accountId }, { _id: 0, __v: 0 });
+
+  return { membership: { member: savedMember, account: savedAccount } };
+}
+
+// Personligt konto vid registrering (2026-08-10, se ADR för bakgrund) — en
+// medvetet EGEN, enklare funktion, inte en variant av setupAccount ovan:
+// inget namn-steg (kontot får ett fast namn), och bara EN roll ("Ägare",
+// fulla behörigheter — du är ensam medlem i ditt eget utrymme) istället för
+// Förälder+Barn-paret, eftersom ett personligt konto inte är en familj. Att
+// skapa en GRUPP (=familjekonto, samma datamodell/flöde som idag) förblir
+// ett separat, uttryckligt steg via setupAccount ovan (AccountPicker/
+// "Skapa nytt familjekonto") — den funktionen rörs inte av detta.
+export async function setupPersonalAccount(userId: string) {
+  const user = await UserModel.findOne({ id: userId });
+  if (!user) {
+    throw new AppError(401, "Användare hittades inte");
+  }
+
+  const accountId = `account-${crypto.randomUUID()}`;
+  const memberId = `member-${crypto.randomUUID()}`;
+  const ägareRoleId = `role-${crypto.randomUUID()}`;
+
+  await Promise.all([
+    createRole(ägareRoleId, accountId, "Ägare", false, ALL_PERMISSION_KEYS),
+    new AccountModel({ id: accountId, name: "Personligt konto", type: "personal", createdBy: memberId }).save(),
+    new MemberModel({
+      id: memberId,
+      accountId,
+      userId: user.id,
+      name: user.name,
+      roleId: ägareRoleId,
       isChild: false,
       avatarUrl: null,
       dashboardTheme: "clear",

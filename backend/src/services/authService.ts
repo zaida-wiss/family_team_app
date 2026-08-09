@@ -6,6 +6,8 @@ import { validate } from "../utils/validate.js";
 import { signAccess, signRefresh, verifyRefresh, fetchMemberships } from "../utils/tokens.js";
 import { AppError } from "../utils/errors.js";
 import { sendPasswordResetEmail } from "../utils/email.js";
+import { setupPersonalAccount } from "./accountsService.js";
+import { logger } from "../utils/logger.js";
 
 function toPublicUser(user: {
   id: string;
@@ -44,12 +46,26 @@ export async function register(email: string, password: string, name: string) {
   });
   await user.save();
 
+  // Ett personligt konto skapas automatiskt vid registrering (2026-08-10) —
+  // se ADR-0032 för bakgrund. Fångar ett ev. misslyckande istället för att
+  // låta HELA registreringen falla: användaren är redan skapad och kan
+  // logga in, bara utan konto än — exakt samma säkra, redan beprövade
+  // fallback som redan finns (AccountPicker visar "Kom igång" vid noll
+  // medlemskap).
+  let membership: Awaited<ReturnType<typeof setupPersonalAccount>>["membership"] | null = null;
+  try {
+    ({ membership } = await setupPersonalAccount(user.id));
+  } catch (err) {
+    logger.error({ err, userId: user.id }, "Kunde inte skapa personligt konto vid registrering");
+  }
+
   const refreshToken = signRefresh(user.id, 0);
   const accessToken = signAccess(user.id);
   return {
     refreshToken,
     accessToken,
-    user: toPublicUser(user)
+    user: toPublicUser(user),
+    membership
   };
 }
 

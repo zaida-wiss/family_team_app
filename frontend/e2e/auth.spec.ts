@@ -1,6 +1,24 @@
 import { test, expect } from "@playwright/test";
 import { mockUnauthenticated, mockAuthAndData, mockDataAPIs, loginViaUI } from "./helpers";
 
+// Personligt konto vid registrering (2026-08-10, se ADR-0032) — registrering
+// skapar nu automatiskt ett minimalt "Personligt konto" (type: "personal",
+// en enda "Ägare"-roll) istället för att lämna användaren på "Kom igång"-
+// skärmen. Fixturen speglar det nya /api/auth/register-svarskontraktet
+// (samma form som login: {accessToken, user, memberships}).
+const REGISTER_ACCOUNT = { id: "acc-personal-1", name: "Personligt konto", type: "personal", createdBy: "mem-personal-1", deletedAt: null };
+const REGISTER_MEMBER = {
+  id: "mem-personal-1", accountId: "acc-personal-1", userId: "user-personal-1",
+  name: "Ny Användare", roleId: "role-personal-1", isChild: false,
+  avatarUrl: null, color: null, dashboardTheme: null,
+  spentStars: 0, deletedAt: null, deletedBy: null,
+};
+const REGISTER_RESPONSE = {
+  accessToken: "fake-register-token",
+  user: { id: "user-personal-1", email: "ny@exempel.se", name: "Ny Användare", createdAt: "2026-08-10T00:00:00.000Z" },
+  memberships: [{ member: REGISTER_MEMBER, account: REGISTER_ACCOUNT }],
+};
+
 test.describe("Inloggningsformulär", () => {
   test("visas när ingen aktiv session finns", async ({ page }) => {
     await mockUnauthenticated(page);
@@ -42,6 +60,31 @@ test.describe("Inloggningsformulär", () => {
     await page.getByRole("button", { name: /Inget konto/ }).click();
     await expect(page.getByLabel("Namn")).toBeVisible();
     await expect(page.getByRole("button", { name: "Skapa konto" })).toBeVisible();
+  });
+
+  test("registrering skapar automatiskt ett personligt konto och hoppar förbi Kom igång-skärmen", async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockDataAPIs(page);
+    await page.route("**/api/auth/register", (route) =>
+      route.fulfill({ status: 201, json: REGISTER_RESPONSE })
+    );
+    await page.goto("/");
+    await page.getByRole("button", { name: /Inget konto/ }).click();
+    await page.getByLabel("Namn").fill("Ny Användare");
+    await page.getByLabel("E-postadress").fill("ny@exempel.se");
+    await page.getByLabel("Lösenord").fill("lösenord123");
+    await page.getByRole("button", { name: "Skapa konto" }).click();
+
+    // Landar direkt i appen med det automatiskt skapade personliga kontot —
+    // "Kom igång"/AccountPicker-skärmen visas aldrig.
+    await expect(page.getByRole("button", { name: "Hem" })).toBeVisible();
+    await expect(page.getByText("Kom igång")).not.toBeVisible();
+
+    // Regression: att skapa en GRUPP (=familjekonto, dagens redan befintliga
+    // "Skapa nytt familjekonto"-flöde) ska fortfarande fungera oförändrat,
+    // som ett separat, uttryckligt steg via "Byt vy".
+    await page.getByRole("button", { name: "Byt vy" }).click();
+    await expect(page.getByRole("button", { name: "Skapa nytt familjekonto" })).toBeVisible();
   });
 
   test("återställningsflödet visar rätt rubrik", async ({ page }) => {

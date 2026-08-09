@@ -1,6 +1,6 @@
 export type Id = string;
 
-export type AccountType = "family";
+export type AccountType = "family" | "personal";
 
 export type CalendarSettings = {
   showWeekNumbers: boolean;

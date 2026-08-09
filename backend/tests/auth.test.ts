@@ -16,7 +16,7 @@ vi.mock("../src/services/authService.js", () => ({
 import * as authService from "../src/services/authService.js";
 
 const mockUser = { id: "user-1", email: "test@example.com" };
-const mockTokens = { refreshToken: "rt", accessToken: "at", user: mockUser, memberships: [] };
+const mockTokens = { refreshToken: "rt", accessToken: "at", user: mockUser, memberships: [], membership: null };
 
 beforeEach(() => vi.clearAllMocks());
 

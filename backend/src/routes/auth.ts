@@ -7,9 +7,9 @@ export const authRouter = Router();
 
 authRouter.post("/register", async (req, res) => {
   const { email, password, name } = req.body;
-  const { refreshToken, accessToken, user } = await authService.register(email, password, name);
+  const { refreshToken, accessToken, user, membership } = await authService.register(email, password, name);
   setRefreshCookie(res, refreshToken);
-  res.status(201).json({ accessToken, user });
+  res.status(201).json({ accessToken, user, memberships: membership ? [membership] : [] });
 });
 
 authRouter.post("/login", async (req, res) => {

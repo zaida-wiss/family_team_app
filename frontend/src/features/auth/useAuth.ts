@@ -98,8 +98,8 @@ export function useAuth() {
   }
 
   async function register(email: string, password: string, name: string) {
-    const { accessToken, user } = await authApi.register(email, password, name);
-    applySession(user, [], accessToken);
+    const { accessToken, user, memberships } = await authApi.register(email, password, name);
+    applySession(user, memberships ?? [], accessToken);
   }
 
   async function logout() {

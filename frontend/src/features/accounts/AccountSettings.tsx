@@ -119,7 +119,13 @@ export function AccountSettings({
             <input
               className="text-input"
               onChange={(e) => setName(e.target.value)}
-              placeholder={account.type === "family" ? "Barn eller vuxen" : "Kollega"}
+              placeholder={
+                account.type === "family"
+                  ? "Barn eller vuxen"
+                  : account.type === "personal"
+                    ? "Medlem"
+                    : "Kollega"
+              }
               value={name}
             />
           </label>

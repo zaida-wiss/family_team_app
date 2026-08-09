@@ -1,12 +1,13 @@
 import type { Membership, User } from "@shared/types";
 import { api, request } from "./client";
 
+// Registrering skapar sedan 2026-08-10 automatiskt ett personligt konto
+// (se ADR-0032) — svaret bär därför samma form som login/refresh.
 type LoginResponse = { accessToken: string; user: User; memberships: Membership[] };
-type RegisterResponse = { accessToken: string; user: User };
 
 export const authApi = {
   register: (email: string, password: string, name: string) =>
-    request<RegisterResponse>(api("auth/register"), {
+    request<LoginResponse>(api("auth/register"), {
       method: "POST",
       body: JSON.stringify({ email, password, name })
     }),
