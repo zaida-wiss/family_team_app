@@ -563,3 +563,22 @@ h3 {
 .todo-edit-modal__subtask-row .text-input {
   flex: 1;
 }
+
+/* Klickbara webbadresser/telefonnummer i fri text (useLinkifiedText.tsx,
+   2026-08-10) — en enda global regel istället för en kopia per feature.
+   Färgen är en kontrastsäker blandning av temats knappfärg (--primary) och
+   den redan kontrastverifierade brödtextfärgen (--foreground, garanterat
+   läsbar mot --card i både ljust och mörkt läge, se .todo-thread__category i
+   ParentTodoThreadView.css för samma princip) — 65/35 är den högsta
+   primary-andelen som fortfarande klarar WCAG AA (4,5:1) i samtliga elva
+   vuxenteman, verifierat programmatiskt (sämst: Karneval mörkt läge,
+   4,91:1). Ren var(--primary) klarar INTE mörkt läge (så lågt som 2,35:1
+   för Karneval) eftersom --card där redan är en mörkare nyans av samma
+   primärfärg. Understruken, inte bara färgad — en länk ska inte förlita sig
+   på färg ensamt för att särskiljas från vanlig text (WCAG 1.4.1). */
+.linkified-link {
+  color: color-mix(in srgb, var(--primary) 65%, var(--foreground) 35%);
+  text-decoration: underline;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
