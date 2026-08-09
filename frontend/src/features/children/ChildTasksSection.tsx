@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
@@ -72,7 +72,60 @@ const HOLD_DURATION_MS = 2000;
 const TRIPLE_TAP_MS = 300;
 
 export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo }: Props) {
-  if (todos.length === 0) {
+  // Bekräftelsekort för en avklarad ÖPPEN tidtagning (2026-08-10, Zaidas
+  // önskemål: "vill jag se tiden den stannat på... innan den försvinner
+  // efter 3 sekunder", sedan rättat samma dag: "det ska inte blinka grönt...
+  // kortet kan skaka/vibrera lite istället. Grönt ska det bara blinka om det
+  // är rekord" — grönt är reserverat för RecordCelebration.tsx:s
+  // skärmtäckande pokal-firande, se useTodosState.ts:s isNewRecord-hantering,
+  // helt separat från det här) — kortet måste leva kvar HÄR, lokalt, i tre
+  // sekunder EFTER att uppgiften redan lämnat `todos`-propen (statusen har
+  // redan bytts av onCompleteTodo, förälderns filter tar bort den ur listan
+  // nästa render) — annars hade kortet bara försvunnit direkt utan att
+  // skaket hunnit synas. Nedräkningar (todo.plannedDurationMinutes) hanteras
+  // INTE här, se handleConfirmComplete — de försvinner direkt (Zaidas
+  // beslut: "då ska uppdragskortet försvinna").
+  const [confirmFlashes, setConfirmFlashes] = useState<Record<Id, { todo: Todo; elapsedMs: number | null }>>({});
+  const flashTimeoutsRef = useRef<Map<Id, ReturnType<typeof window.setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timeouts = flashTimeoutsRef.current;
+    return () => {
+      timeouts.forEach((t) => window.clearTimeout(t));
+      timeouts.clear();
+    };
+  }, []);
+
+  function handleConfirmComplete(todo: Todo, elapsedMs: number | null) {
+    onCompleteTodo(todo.id, elapsedMs);
+    if (todo.plannedDurationMinutes) return;
+    setConfirmFlashes((prev) => ({ ...prev, [todo.id]: { todo, elapsedMs } }));
+    const existing = flashTimeoutsRef.current.get(todo.id);
+    if (existing) window.clearTimeout(existing);
+    flashTimeoutsRef.current.set(
+      todo.id,
+      window.setTimeout(() => {
+        flashTimeoutsRef.current.delete(todo.id);
+        setConfirmFlashes((prev) => {
+          if (!(todo.id in prev)) return prev;
+          const next = { ...prev };
+          delete next[todo.id];
+          return next;
+        });
+      }, 3000)
+    );
+  }
+
+  // Flashande kort vars uppgift redan hunnit lämna `todos`-propen (det
+  // normala fallet — förälderns filter tar bort den så fort statusen
+  // ändras) läggs på i slutet, så en fortfarande-synlig uppgift aldrig
+  // dubbelräknas.
+  const flashExtras = Object.values(confirmFlashes)
+    .map((f) => f.todo)
+    .filter((t) => !todos.some((x) => x.id === t.id));
+  const renderTodos = flashExtras.length === 0 ? todos : [...todos, ...flashExtras];
+
+  if (renderTodos.length === 0) {
     return <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>;
   }
 
@@ -83,7 +136,7 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
         <span>{getTodayHeading(today)}</span>
       </div>
       <div className="child-tasks-grid">
-        {todos.map((todo, i) => {
+        {renderTodos.map((todo, i) => {
           const category = categories.find((c) => c.id === todo.personalCategoryId)?.name ?? "";
           const timeLeftPercent = getTimeLeftPercent(todo, timerNow);
           const style: TaskCardStyle = {
@@ -100,12 +153,26 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
             </span>
           );
 
+          const flash = confirmFlashes[todo.id];
+          if (flash) {
+            return (
+              <ChildTaskConfirmFlash
+                key={todo.id}
+                elapsedMs={flash.elapsedMs}
+                nameClass={nameClass}
+                starBadge={starBadge}
+                style={style}
+                todo={todo}
+              />
+            );
+          }
+
           if (todo.timerEnabled) {
             return (
               <ChildTimerTaskCard
                 key={todo.id}
                 nameClass={nameClass}
-                onCompleteTodo={onCompleteTodo}
+                onConfirmComplete={handleConfirmComplete}
                 starBadge={starBadge}
                 style={style}
                 timeLeftPercent={timeLeftPercent}
@@ -154,7 +221,10 @@ type ChildTimerTaskCardProps = {
   starBadge: ReactNode;
   timeLeftPercent: number | null;
   timerNow: number;
-  onCompleteTodo: (id: Id, elapsedMs: number | null) => void;
+  // Skickar med hela todon (inte bara id, se onCompleteTodo ovan) — förälder
+  // (ChildTasksSection) behöver titel/plannedDurationMinutes för att avgöra
+  // om en bekräftelseflash ska visas (2026-08-10).
+  onConfirmComplete: (todo: Todo, elapsedMs: number | null) => void;
 };
 
 // Egen komponent PER uppgift (2026-08-08) — krävs för att useTodoTimer (en
@@ -167,7 +237,7 @@ type ChildTimerTaskCardProps = {
 // uppgifters timers kan nu gå SAMTIDIGT (ingen "bara en åt gången"-spärr
 // längre, samma princip som vuxenvyn: "startar andra timers" ska inte
 // avbryta en redan pågående).
-function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent, timerNow, onCompleteTodo }: ChildTimerTaskCardProps) {
+function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent, timerNow, onConfirmComplete }: ChildTimerTaskCardProps) {
   const { startedAt, accumulatedMs, isPaused, isActive, start, clear, togglePause } = useTodoTimer(todo.id, timerCapMinutes(todo));
   const isRunning = startedAt !== null;
   useWakeLock(isRunning);
@@ -229,14 +299,13 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   // Läser av den TOTALA förflutna tiden (ackumulerad + ev. nu körande
   // period) DIREKT från localStorage vid bekräftelsetillfället, inte från
   // hookens React-state som kan vara ett render bakom — samma "läs alltid
-  // färskt vid confirm"-princip som vuxenvyns handleConfirmComplete. isActive
-  // (inte bara isRunning) avgör om håll-in-gesten ska ge effekt — en
-  // PAUSAD timer med redan ackumulerad tid ska fortfarande gå att markera
-  // klar utan att först behöva återupptas.
+  // färskt vid confirm"-princip som vuxenvyns handleConfirmComplete.
+  // readTodoTimerElapsedMs returnerar null om timern aldrig startats, vilket
+  // onConfirmComplete redan hanterar (samma som en icke-timer-uppgift).
   function handleConfirmComplete() {
     const elapsed = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
     clear();
-    onCompleteTodo(todo.id, elapsed);
+    onConfirmComplete(todo, elapsed);
   }
 
   const isCountdown = Boolean(todo.plannedDurationMinutes);
@@ -259,8 +328,15 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
 
   const sharedHandlers = {
     onClick: registerTap,
+    // 2026-08-10, Zaidas fynd: håll-in-för-att-avklara gick tidigare bara
+    // att använda EFTER att timern startats (`if (!isActive) return`) —
+    // en timer-uppgift som aldrig startats gick alltså inte att markera
+    // klar alls, till skillnad från vuxenvyns motsvarande gest (Parent
+    // ThreadView.tsx/FamilyTodoThreads.tsx), som aldrig haft den spärren.
+    // Borttagen — håll-in fungerar nu alltid, precis som på en vanlig
+    // uppgift utan timer. handleConfirmComplete läser elapsedMs som null om
+    // timern aldrig startats, redan hanterat av onCompleteTodo.
     onPointerDown: () => {
-      if (!isActive) return;
       startTimerHold(todo.id, () => {
         suppressClickRef.current = true;
         handleConfirmComplete();
@@ -286,7 +362,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
             ? `${todo.title}, pausad vid ${formatElapsed(remainingMs)} kvar. Ett tryck återupptar, håll intryckt i två sekunder för att markera klar.`
             : isRunning
             ? `${todo.title}, ${formatElapsed(remainingMs)} kvar. Ett tryck pausar, håll intryckt i två sekunder för att markera klar.`
-            : `${todo.title}. Tre snabba tryck startar nedräkningen på ${todo.plannedDurationMinutes} minuter.`
+            : `${todo.title}. Tre snabba tryck startar nedräkningen på ${todo.plannedDurationMinutes} minuter, eller håll intryckt i två sekunder för att markera klar direkt.`
         }
       >
         <div className="child-task-icon-circle">
@@ -320,7 +396,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
           ? `${todo.title}, pausad vid ${formatElapsed(elapsedMs)}. Ett tryck återupptar, håll intryckt i två sekunder för att markera klar.`
           : isRunning
           ? `${todo.title}, ${formatElapsed(elapsedMs)} hittills. Ett tryck pausar, håll intryckt i två sekunder för att markera klar.`
-          : `${todo.title}. Tre snabba tryck startar tidtagningen.`
+          : `${todo.title}. Tre snabba tryck startar tidtagningen, eller håll intryckt i två sekunder för att markera klar direkt.`
       }
     >
       <div className="child-task-icon-circle">
@@ -335,6 +411,42 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
           {formatElapsed(elapsedMs)}
         </span>
       )}
+    </div>
+  );
+}
+
+type ChildTaskConfirmFlashProps = {
+  todo: Todo;
+  style: TaskCardStyle;
+  nameClass: string;
+  starBadge: ReactNode;
+  elapsedMs: number | null;
+};
+
+// Bekräftelseflash när en ÖPPEN tidtagning (stoppur) avklaras via håll-in
+// (2026-08-10, Zaidas önskemål: "vill jag se tiden den stannat på... innan
+// den försvinner efter 3 sekunder") — icke-interaktivt, uppgiften är redan
+// avklarad. Kortet lever kvar i ChildTasksSection.tsx:s confirmFlashes-state
+// i tre sekunder EFTER att uppgiften redan lämnat `todos`-propen, sluttiden
+// är fryst vid bekräftelsetillfället (inte en fortsatt tickande klocka).
+// Gäller aldrig en nedräkning (plannedDurationMinutes) — den försvinner
+// direkt istället, se ChildTasksSection.tsx:s handleConfirmComplete.
+function ChildTaskConfirmFlash({ todo, style, nameClass, starBadge, elapsedMs }: ChildTaskConfirmFlashProps) {
+  return (
+    <div
+      className="child-task-card child-task-card--timer child-task-card--confirm-flash"
+      style={style}
+      aria-live="polite"
+      aria-label={`${todo.title}, klar${elapsedMs !== null ? ` på ${formatElapsed(elapsedMs)}` : ""}.`}
+    >
+      <div className="child-task-icon-circle">
+        <span className="child-task-icon">{todo.visual.value}</span>
+      </div>
+      <span className="child-task-copy">
+        <span className={nameClass}>{todo.title}</span>
+      </span>
+      {starBadge}
+      {elapsedMs !== null && <span className="child-task-timer-digital">{formatElapsed(elapsedMs)}</span>}
     </div>
   );
 }

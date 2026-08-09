@@ -308,3 +308,29 @@
   background: var(--task-accent);
   opacity: 0.5;
 }
+
+/* Bekräftelseflash vid avklarad öppen tidtagning (2026-08-10, Zaidas
+   önskemål: "vill jag se tiden den stannat på... innan den försvinner efter
+   3 sekunder", sedan rättat samma dag: "det ska inte blinka grönt, gör en
+   annan bekräftelse. Kortet kan skaka/vibrera lite istället. Grönt ska det
+   bara blinka om det är rekord" — grönt blink är alltså reserverat för
+   RecordCelebration.tsx:s skärmtäckande pokal-firande vid ett nytt
+   personbästa, inte den här vanliga per-kort-bekräftelsen). Ett kort skaknp
+   (0,5s) vid bekräftelsetillfället, sedan står kortet still och visar
+   sluttiden i resten av sina tre sekunder innan ChildTasksSection.tsx:s
+   timeout tar bort det. Ingen "forwards" — kortet ska återgå till sin
+   vanliga (nth-child-roterade) vila mellan skaket och att det försvinner. */
+.child-task-card--confirm-flash {
+  cursor: default;
+  animation: child-task-confirm-shake 0.5s ease-in-out;
+}
+
+@keyframes child-task-confirm-shake {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-6px); }
+  30%  { transform: translateX(5px); }
+  45%  { transform: translateX(-4px); }
+  60%  { transform: translateX(3px); }
+  75%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}

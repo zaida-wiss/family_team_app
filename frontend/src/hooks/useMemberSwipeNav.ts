@@ -212,14 +212,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         return;
       }
 
-      // Vi äger touchen helt (2026-08-09, uppföljning #11) — .child-
-      // dashboard/.child-tasks-grid saknar numera pan-y i sin touch-action,
-      // så webbläsaren kan aldrig committa till nativ panorering ändå.
-      // preventDefault() här är därmed mest en extra säkerhetsåtgärd (och
-      // krav för att en del webbläsare ska räkna touchen som "hanterad"),
-      // den huvudsakliga spärren sitter i CSS:en.
-      e.preventDefault();
-
       // Fingrets STEGVISA lodräta förflyttning sedan FÖRRA eventet (inte
       // sedan gestens start) — uppdateras varje event oavsett axel, så att
       // en manuell scroll som börjar SENARE (när axeln väl slår fast
@@ -238,9 +230,25 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         g.axis = Math.abs(dy) > Math.abs(dx) * VERTICAL_DOMINANCE_RATIO ? "vertical" : "horizontal";
       }
 
+      // 2026-08-10, uppföljning #12 (Zaidas fynd: barnens tre-tryck-gest för
+      // att starta todo-timern missade tryck så fort listan inte låg
+      // perfekt stilla) — så länge axeln fortfarande är "unknown" (rörelsen
+      // ännu under AXIS_DECIDE_THRESHOLD_PX, precis det ett vanligt finger
+      // alltid gör under ett tryck) anropas INTE preventDefault(). Att göra
+      // det ovillkorligt (som tidigare) stryper webbläsarens syntetiska
+      // click-händelse för HELA touchen enligt Pointer Events-specen, även
+      // om rörelsen bara var brus från ett tryck — vilket gjorde att
+      // ChildTasksSection.tsx/ParentTodoThreadView.tsx:s onClick-baserade
+      // tap-räknare (tre-tryck startar timern) tappade tryck. Vi äger ändå
+      // touchen helt (.child-dashboard/.child-tasks-grid saknar pan-y i sin
+      // touch-action, se filhuvudet) — webbläsaren kan aldrig committa till
+      // nativ panorering under de här första pixlarna oavsett.
+      if (g.axis === "unknown") return;
+      e.preventDefault();
+
       if (g.axis === "horizontal") {
         g.everHorizontal = true;
-      } else if (g.axis === "vertical" && g.scrollTarget) {
+      } else if (g.scrollTarget) {
         // Manuell "nativ känns"-scroll (2026-08-09, uppföljning #11) —
         // ersätter den nativa panorering vi medvetet stängt av i CSS:en.
         g.scrollTarget.scrollTop -= stepDeltaY;
