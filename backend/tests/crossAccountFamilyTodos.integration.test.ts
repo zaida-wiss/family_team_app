@@ -87,14 +87,14 @@ describe.skipIf(!RUN)("Mina familjekonton — todo utan tilldelad mottagare öve
     outsiderMemberId = outsiderSetup.body.membership.member.id as string;
   });
 
-  it("GET /api/members/my-memberships listar båda mina konton med rätt namn", async () => {
+  it("GET /api/members/my-memberships listar båda mina familjekonton med rätt namn, plus det automatiskt skapade personliga kontot (ADR-0033)", async () => {
     const res = await request(app)
       .get("/api/members/my-memberships")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
     expect(res.status).toBe(200);
     const names = (res.body as Array<{ accountId: string; accountName: string }>).map((m) => m.accountName).sort();
-    expect(names).toEqual(["Familj A", "Familj B"]);
+    expect(names).toEqual(["Familj A", "Familj B", "Personligt konto"]);
   });
 
   it("en Familjen-uppgift (assignedTo: null) i konto B syns i konto A:s cross-account-vy, med kontots namn", async () => {
@@ -142,12 +142,13 @@ describe.skipIf(!RUN)("Mina familjekonton — todo utan tilldelad mottagare öve
       .set("x-member-id", accountA.memberId);
     expect(hidden.body).toEqual([]);
 
-    // Jag är fortfarande medlem — my-memberships-listan opåverkad.
+    // Jag är fortfarande medlem — my-memberships-listan opåverkad (Familj A,
+    // Familj B, plus det automatiskt skapade personliga kontot, ADR-0033).
     const memberships = await request(app)
       .get("/api/members/my-memberships")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
-    expect(memberships.body).toHaveLength(2);
+    expect(memberships.body).toHaveLength(3);
 
     // Markera synlig igen för resten av testerna.
     await request(app)

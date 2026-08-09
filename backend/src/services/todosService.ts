@@ -50,6 +50,22 @@ async function requireMember(memberId: string | null, accountId: string) {
   return member;
 }
 
+// "Visa utgångna" (ParentTodoThreadView.tsx/FamilyTodoThreads.tsx, sedan
+// 2026-07-08, utökad 2026-08-08) visar en redan status:"expired"-uppgift som
+// en helt vanlig, fullt interaktiv bubbla — uttryckligen så en förälder kan
+// "fylla i det under dagen i efterhand" (Zaidas egna ord). Men complete/
+// toggleInProgress krävde tidigare strikt status==="pending", så själva
+// syftet med funktionen gick aldrig att uppfylla: ett håll-in-tryck på en
+// sådan bubbla visade en falsk "avklarad"-upplösningsanimation klientsidan
+// (optimistisk, väntar inte in serversvaret) medan PATCH-anropet i
+// verkligheten alltid 404:ade — ändringen sparades aldrig, tyst. Bekräftat
+// mot en riktig produktionspost (2026-08-10): en dagens-occurrence med
+// status:"expired" som Zaida höll intryckt via "Visa utgångna". Denna
+// hjälpare gör completion-vägarna eniga med visningslogiken.
+function isCompletableStatus(status: Todo["status"]): boolean {
+  return status === "pending" || status === "expired";
+}
+
 // completeTodo anropas alltid med den INLOGGADE medlemmens id (x-member-id sätts
 // en gång per session, aldrig per todo) — men frontend låter en förälder
 // slutföra ett BARNS uppgift via ett långt tryck i tråd-vyn (MemberShellContent.tsx),
@@ -247,7 +263,12 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
   for (const m of memberDocs) {
     if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
     const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
-    if (!account) continue;
+    // type:"personal" exkluderat (2026-08-10, ADR-0033) — denna funktion
+    // pushar OVILLKORLIGT en post per konto (även med tomma todos), så
+    // vartenda registrerat konto (inkl. det egna, automatiskt skapade
+    // personliga) dök annars upp i Hem-vyns familjefilter. Samma resonemang
+    // som membersService.ts:s getCrossAccountMembers.
+    if (!account || account.type === "personal") continue;
     const accountTodos = await getAllTodos(m.accountId);
     // Inkluderar även todos jag redan är tilldelad ELLER signat upp på DÄR
     // (assignedTo===m.id eller inProgressBy innehåller m.id) — inte bara det
@@ -436,7 +457,7 @@ export async function completeSharedChildTodo(
   }
 
   const todo = await TodoModel.findOne({ id: todoId, accountId: childAccountId, assignedTo: childMemberId });
-  if (!todo || todo.status !== "pending") {
+  if (!todo || !isCompletableStatus(todo.status)) {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
 
@@ -812,7 +833,7 @@ export async function completeSharedCategoryTodo(
   elapsedMs: number | null
 ) {
   const todo = await TodoModel.findOne({ id: todoId, accountId: categoryAccountId, deletedAt: null });
-  if (!todo || !todo.personalCategoryId || todo.status !== "pending") {
+  if (!todo || !todo.personalCategoryId || !isCompletableStatus(todo.status)) {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
   await requireEditableSharedCategory(todo.personalCategoryId, categoryAccountId, callerMemberId, callerAccountId);
@@ -1019,7 +1040,7 @@ export async function completeTodo(
   elapsedMs: number | null = null
 ) {
   const todo = await TodoModel.findOne({ id, accountId });
-  if (!todo || todo.status !== "pending") {
+  if (!todo || !isCompletableStatus(todo.status)) {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
   const member = await requireMember(memberId, accountId);
@@ -1089,7 +1110,7 @@ export async function toggleInProgress(
   targetMemberId: string
 ) {
   const todo = await TodoModel.findOne({ id, accountId });
-  if (!todo || todo.status !== "pending") {
+  if (!todo || !isCompletableStatus(todo.status)) {
     throw new AppError(404, "Todo hittades inte eller är inte pending");
   }
   await requireMember(callerMemberId, accountId);

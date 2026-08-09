@@ -92,7 +92,10 @@ export async function getCrossAccountMembers(callerUserId: string, currentAccoun
     // så min egen medlemspost i det raderade kontot ligger kvar avsiktligt
     // — det är kontot som måste filtreras bort.
     const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
-    if (!account) continue;
+    // type:"personal" exkluderat (2026-08-10, ADR-0033) — Hem-vyns
+    // familjefilter handlar om FAMILJER man är med i, inte ens eget
+    // personliga konto (som redan ÄR "jag", inget att filtrera till).
+    if (!account || account.type === "personal") continue;
     const members = await MemberModel.find({ accountId: m.accountId, deletedAt: null });
     results.push({ accountId: m.accountId, accountName: account.name, members: members.map(toMemberSummary) });
   }
