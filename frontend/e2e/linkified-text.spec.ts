@@ -49,11 +49,18 @@ test("Todo-anteckningar: telefonnummer OCH e-postadress blir riktiga klickbara l
 });
 
 const now = new Date();
-// Samma "räkna ut relativt idag" som redan etablerat i calendar-event-
-// symbol.spec.ts — undviker den tidsberoende testfällan (Math.min(...,27)
-// m.fl.) som dokumenterats flera gånger tidigare i den här sviten.
-const eventStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0).toISOString();
-const eventEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0).toISOString();
+// EN NY tidsberoende testfälla hittad och fixad (2026-08-10, CI-fel #466) —
+// ett hårdkodat "09:00–10:00" (kopierat från calendar-event-symbol.spec.ts,
+// som bara klickar i månadsrutnätet, inte listan) föll i CI eftersom
+// useCalendarView.ts:s "listan under griden"-filter (isNotPast) exkluderar
+// en händelse vars endsAt redan passerat — ett 09–10-möte räknas som förbi
+// så fort testet körs EFTER kl. 10 på dagen, oavsett datum. Månadsrutnätet
+// filtrerar INTE på detta (därför syntes "Frisören" där men inte i listan
+// `.cal-event-row-title` som testet faktiskt klickar på). Räknat relativt
+// `Date.now()` istället för ett fast klockslag — alltid i framtiden,
+// oavsett vilken tid på dygnet CI råkar köra.
+const eventStart = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+const eventEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
 
 const CALENDAR = {
   id: "cal-1", name: "Testförälderns kalender", ownerId: "mem-1", color: "#2f7d6d",
