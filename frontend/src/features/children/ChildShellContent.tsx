@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNowTick } from "../../hooks/useNowTick";
 import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
@@ -39,6 +39,21 @@ export function ChildShellContent({
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
+  // Håll-in-gesterna (klarmarkera/ångra) fryser sin onConfirm-callback vid
+  // PRESS-tid (useHoldToConfirm.ts:s setTimeout), inte vid de 2s senare när
+  // hållet faktiskt löser ut. roles hämtas numera via deferToIdle (S1a,
+  // 2026-07-26) och är därför ofta [] precis vid mount, innan requestIdleCallback
+  // hunnit köra — trycker barnet direkt (eller dispatchar ett testevent direkt)
+  // fångas den STALE tomma roles-arrayen i stängningen, canCompleteTodo nekas
+  // tyst och API-anropet görs aldrig, oavsett hur länge man väntar efteråt.
+  // rolesRef löser det utan att röra useHoldToConfirm/dess övriga konsumenter —
+  // closures som läser rolesRef.current (istället för roles direkt) ser alltid
+  // den SENASTE listan vid EXEKVERINGSTID, oavsett när själva closuren skapades.
+  const rolesRef = useRef(roles);
+  useEffect(() => {
+    rolesRef.current = roles;
+  }, [roles]);
+
   const childTimedTasks = timedTasks.filter((t) => t.assignedTo === currentMember.id);
   // Tickande klocka (2026-08-06, se useNowTick.ts) — var tidigare
   // Date.now() beräknat en gång per rendering, så en uppgift med ett
@@ -108,8 +123,8 @@ export function ChildShellContent({
       rejectedTodos={rejectedTodos}
       onOpenRecords={() => setView("records")}
       onCreateWish={onCreateWish}
-      onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(currentMember, todoId, roles, elapsedMs)}
-      onUncompleteTodo={(todoId) => onUncompleteTodo(currentMember, todoId, roles)}
+      onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(currentMember, todoId, rolesRef.current, elapsedMs)}
+      onUncompleteTodo={(todoId) => onUncompleteTodo(currentMember, todoId, rolesRef.current)}
       onDismissRejectedTodo={(todoId) => onDismissRejectedTodo(todoId, currentMember.id)}
       onThemePickerOpen={onThemePickerOpen}
     />
