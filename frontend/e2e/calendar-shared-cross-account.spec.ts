@@ -38,8 +38,22 @@ const PARENT_CALENDAR = {
   events: [], importedSources: [], subscriptions: [], calDavConnections: [],
 };
 
-const todayIso = new Date().toISOString();
-const inOneHourIso = new Date(Date.now() + 3_600_000).toISOString();
+// 2026-08-10, CI-fel spårat hit: en händelse "nu till nu+1h" kan straddla
+// midnatt om testet råkar köra i sista timmen av dygnet (t.ex. 23:20 UTC på
+// GitHub Actions-löparen, som kör i UTC) — eventsForDay() (useCalendarView.ts)
+// inkluderar då händelsen i BÅDA dagarnas cell, vilket ger TVÅ .cal-event-pill
+// med samma text och en strict-mode-krasch på eventPill.toBeVisible(). Samma
+// redan flera gånger dokumenterade tidsgräns-fälla som resten av sviten,
+// bara med en NY variant (för nära dygnets SLUT, inte ett fast klockslag).
+// Fixat genom att klämma sluttiden till senast 23:59:59.999 samma dag —
+// garanterar start/slut alltid ligger på SAMMA kalenderdag (aldrig 2 pills)
+// samtidigt som sluttiden alltid är >= nu (håller isNotPast-filtret nöjt,
+// eftersom dygnets slut per definition aldrig kan ligga före "nu").
+const now = new Date();
+const endOfDay = new Date(now);
+endOfDay.setHours(23, 59, 59, 999);
+const todayIso = now.toISOString();
+const inOneHourIso = new Date(Math.min(now.getTime() + 3_600_000, endOfDay.getTime())).toISOString();
 
 // Formen backend nu returnerar (calendarsService.ts:s toReadOnlyCalendar) —
 // en RIKTIG Calendar, namnet suffigerat med källfamiljen, readOnly:true.
