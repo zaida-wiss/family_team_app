@@ -64,12 +64,20 @@ async function mockCommon(page: import("@playwright/test").Page) {
 }
 
 test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter till FÖREGÅENDE medlem", async ({ page }) => {
-  // TEMP DIAGNOSTIK (tas bort igen efter felsökning) — fångar de temporära
-  // [swipe-debug]-loggarna i useMemberSwipeNav.ts/MemberShellContent.tsx så
-  // de syns i CI-jobbets stdout.
+  // TEMP DIAGNOSTIK (tas bort igen efter felsökning) — samlar (inte bara
+  // skriver ut) de temporära [swipe-debug]-loggarna OCH eventuella
+  // uncaught page errors, så de kan bakas in i felmeddelandet nedan.
+  // page.on("console")-utskrift till stdout syns bara i CI-jobbets RÅA
+  // loggar, som kräver adminrättigheter att ladda ner (bekräftat 403/401)
+  // — men en text inbakad i själva assertion-felet syns fritt i GitHub
+  // Actions annotations, utan auth.
+  const swipeDebugLog: string[] = [];
+  const pageErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.text().includes("[swipe-debug]")) console.log("BROWSER: " + msg.text());
+    if (msg.text().includes("[swipe-debug]")) swipeDebugLog.push(msg.text());
   });
+  page.on("pageerror", (err) => pageErrors.push(String(err)));
+
   await mockCommon(page);
   await page.goto("/");
 
@@ -82,6 +90,20 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
   const dashboard = page.locator(".child-dashboard");
   const box = await dashboard.boundingBox();
   if (!box) throw new Error("Dashboard hittades inte");
+
+  // TEMP DIAGNOSTIK — jämför wrapper-diven (memberSwipeNavRef, den som
+  // faktiskt lyssnar på pointerdown/margin-kollen) mot .child-dashboard
+  // (det som testet mäter box mot) — en teori värd att utesluta: om de INTE
+  // har samma rect.left/width matchar inte marginal-beräkningen i
+  // useMemberSwipeNav.ts:s onPointerDown mot samma koordinater testet
+  // klickar på.
+  const wrapperRect = await page.evaluate(() => {
+    const article = document.querySelector(".child-dashboard");
+    const wrapper = article?.parentElement;
+    if (!wrapper) return null;
+    const r = wrapper.getBoundingClientRect();
+    return { left: r.left, right: r.right, width: r.width };
+  });
 
   // Nedtryck i VÄNSTER marginal (nära box.x), drag hela vägen till HÖGER
   // sida — nettoriktning åt höger = föregående medlem (samma
@@ -116,6 +138,10 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
       .catch((e) => "(kunde inte läsa body: " + e + ")");
     throw new Error(
       "\"Hej Testförälder!\" blev aldrig synlig. URL: " + url +
+      "\nwrapperRect (parent av .child-dashboard): " + JSON.stringify(wrapperRect) +
+      "\nboundingBox (.child-dashboard, det testet mätte mot): " + JSON.stringify(box) +
+      "\n[swipe-debug]-loggar (" + swipeDebugLog.length + " st):\n" + swipeDebugLog.join("\n") +
+      "\npageerror (" + pageErrors.length + " st):\n" + pageErrors.join("\n") +
       "\nSidans text vid timeout (första 1500 tecken):\n" + bodyText.slice(0, 1500) +
       "\n\nUrsprungligt fel: " + err
     );
