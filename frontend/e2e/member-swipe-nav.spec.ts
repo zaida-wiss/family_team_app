@@ -97,7 +97,29 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
   // JS-chunk-hämtning första gången, som under CI:s fulla parallellitet kan
   // ta längre än standardens 5000ms. Generös timeout, samma resonemang som
   // getBadge i child-uncomplete-badge.spec.ts.
-  await expect(page.getByText("Hej Testförälder!")).toBeVisible({ timeout: 15000 });
+  //
+  // TEMP DIAGNOSTIK (tas bort igen efter felsökning) — testet har failat
+  // deterministiskt i CI sedan funktionen skrevs, men CI:s riktiga
+  // trace/skärmdump kräver admin-rättigheter att ladda ner (401/403 mot
+  // GitHub API utan token) och går inte att hämta programmatiskt. GitHub
+  // Actions "github"-reporterns ANNOTATIONS är däremot fritt läsbara utan
+  // auth (bekräftat) — ett try/catch som bakar in sidans faktiska text
+  // OCH nuvarande URL i själva felmeddelandet ger alltså diagnostik gratis,
+  // utan att någon behöver ladda ner/packa upp en artefakt manuellt.
+  try {
+    await expect(page.getByText("Hej Testförälder!")).toBeVisible({ timeout: 15000 });
+  } catch (err) {
+    const url = page.url();
+    const bodyText = await page
+      .locator("body")
+      .innerText()
+      .catch((e) => "(kunde inte läsa body: " + e + ")");
+    throw new Error(
+      "\"Hej Testförälder!\" blev aldrig synlig. URL: " + url +
+      "\nSidans text vid timeout (första 1500 tecken):\n" + bodyText.slice(0, 1500) +
+      "\n\nUrsprungligt fel: " + err
+    );
+  }
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
 });
 
