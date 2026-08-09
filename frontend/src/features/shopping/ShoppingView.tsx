@@ -1,10 +1,9 @@
-import { Combine, GripVertical, Pencil, Plus, Share2, ShoppingCart, Trash2, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ClipboardEvent } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
-import { ShoppingListExternalShare } from "./ShoppingListExternalShare";
+import { ShoppingListCard } from "./ShoppingListCard";
 import { readCache, writeCache } from "../../utils/localCache";
-import { linkifyText } from "../../hooks/useLinkifiedText";
 import { splitPastedShoppingItems } from "./parseShoppingPaste";
 import {
   canEditSharedResource,
@@ -49,15 +48,6 @@ type Props = {
 
 type ShareDraft = { memberId: Id; access: AccessLevel };
 
-// Gamla listor har "ShoppingCart" (en Lucide-ikon-NAMN-sträng, aldrig
-// faktiskt visad förrän nu) som icon — inte en emoji. Visa Lucide-ikonen för
-// dem/listor utan vald symbol, en riktig emoji (vald via EmojiPickerPortal,
-// 2026-07-22) för nya.
-function ListIcon({ icon }: { icon: string | null }) {
-  if (!icon || icon === "ShoppingCart") return <ShoppingCart size={18} />;
-  return <span aria-hidden="true">{icon}</span>;
-}
-
 export function ShoppingView({
   currentMember,
   members,
@@ -88,6 +78,10 @@ export function ShoppingView({
       writeCache(SHOW_COMPLETED_CACHE_KEY, next);
       return next;
     });
+  }
+
+  function shouldShowCompletedFor(listId: Id): boolean {
+    return showCompleted[listId] ?? showCompletedDefault ?? true;
   }
   const [editingLists, setEditingLists] = useState<Record<Id, boolean>>({});
   const [sharingListId, setSharingListId] = useState<Id | null>(null);
@@ -293,298 +287,73 @@ export function ShoppingView({
 
       {visible.map((list) => {
         const editable = canEditList(list);
-        const activeItems = list.items.filter((i) => i.deletedAt === null);
-        const doneCount = activeItems.filter((i) => i.done).length;
-        const shouldShowCompleted = showCompleted[list.id] ?? showCompletedDefault ?? true;
         const isEditing = editable && (editingLists[list.id] ?? false);
         const isSharing = sharingListId === list.id;
+        const isMerging = mergingListId === list.id;
         const shareDraft = getShareDraft(list.id);
-        const visibleItems = shouldShowCompleted
-          ? [...activeItems].sort((a, b) => Number(a.done) - Number(b.done))
-          : activeItems.filter((i) => !i.done);
+        const otherEditableLists = shoppingLists.filter(
+          (l) => l.id !== list.id && l.deletedAt === null && canEditList(l)
+        );
 
         return (
-          <article className={styles.card} key={list.id}>
-            <div className={styles.header}>
-              <div>
-                <ListIcon icon={list.icon} />
-                {isEditing ? (
-                  <input
-                    aria-label={`Namn på ${list.name}`}
-                    className="text-input"
-                    onBlur={() => saveListName(list)}
-                    onChange={(e) => setNameDrafts((current) => ({ ...current, [list.id]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                    }}
-                    type="text"
-                    value={nameDrafts[list.id] ?? list.name}
-                  />
-                ) : (
-                  <strong>{list.name}</strong>
-                )}
-              </div>
-              {activeItems.length > 0 && (
-                <small style={{ color: "var(--muted-fg)" }}>
-                  {doneCount}/{activeItems.length} klart
-                </small>
-              )}
-            </div>
-
-            <div className={styles.toolbar}>
-              <label className={styles.toggleSwitch}>
-                <input
-                  checked={shouldShowCompleted}
-                  onChange={() => setListShowCompleted(list.id, !shouldShowCompleted)}
-                  role="switch"
-                  type="checkbox"
-                />
-                <span>Visa avklarade</span>
-              </label>
-              {editable && (
-                <div className={styles.toolbarActions}>
-                  <button
-                    aria-label={`Dela ${list.name}`}
-                    aria-pressed={isSharing}
-                    className={`icon-button${isSharing ? " icon-button--active" : ""}`}
-                    onClick={() => setSharingListId(isSharing ? null : list.id)}
-                    type="button"
-                  >
-                    <Share2 size={16} />
-                  </button>
-                  <button
-                    aria-label={isEditing ? `Klar med redigering av ${list.name}` : `Redigera ${list.name}`}
-                    aria-pressed={isEditing}
-                    className={`icon-button${isEditing ? " icon-button--active" : ""}`}
-                    onClick={() => {
-                      if (!isEditing) {
-                        setEditingLists((prev) => ({ ...prev, [list.id]: true }));
-                        return;
-                      }
-                      // Lämnar redigeringsläget — spara ett ev. öppet
-                      // namnbyte och nollställ en öppen sammanslagning.
-                      saveListName(list);
-                      setEditingLists((prev) => ({ ...prev, [list.id]: false }));
-                      setMergingListId((current) => (current === list.id ? null : current));
-                    }}
-                    type="button"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  {isEditing && shoppingLists.filter((l) => l.id !== list.id && l.deletedAt === null && canEditList(l)).length > 0 && (
-                    <button
-                      aria-label={`Slå ihop ${list.name} med en annan lista`}
-                      aria-pressed={mergingListId === list.id}
-                      className={`icon-button${mergingListId === list.id ? " icon-button--active" : ""}`}
-                      onClick={() => {
-                        setMergingListId((current) => (current === list.id ? null : list.id));
-                        setMergeTargetId(null);
-                      }}
-                      type="button"
-                    >
-                      <Combine size={16} />
-                    </button>
-                  )}
-                  {/* 2026-07-28, Zaidas önskemål: "man ska inte behöva
-                      trycka flera ggr på tex delete knappen" — Radera-knappen
-                      tar bort direkt i redigeringsläge (ett klick, inte ett
-                      extra Bekräfta-steg ovanpå), samma mönster som
-                      ShoppingListsPanel.tsx (Inställningar → Inköpslistor)
-                      redan använde. Redigeringsläget är själva säkerhets-
-                      spärren (2026-07-22: "ingenting skall gå att radera om
-                      man inte trycker redigera först"), oförändrat. */}
-                  {isEditing && (
-                    <button
-                      aria-label={`Radera ${list.name}`}
-                      className="icon-button danger"
-                      onClick={() => onDeleteList(list.id)}
-                      type="button"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {mergingListId === list.id && (
-              <div className={styles.sharePanel}>
-                <div className={styles.addRow}>
-                  <select
-                    aria-label={`Slå ihop ${list.name} med`}
-                    className="text-input"
-                    onChange={(e) => setMergeTargetId(e.target.value || null)}
-                    value={mergeTargetId ?? ""}
-                  >
-                    <option value="">Välj lista att slå ihop med</option>
-                    {shoppingLists
-                      .filter((l) => l.id !== list.id && l.deletedAt === null && canEditList(l))
-                      .map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                  </select>
-                  <button
-                    aria-label={`Slå ihop ${list.name} in i vald lista`}
-                    className="icon-button"
-                    disabled={!mergeTargetId}
-                    onClick={() => mergeTargetId && mergeListInto(list.id, mergeTargetId)}
-                    type="button"
-                  >
-                    <Combine size={16} />
-                  </button>
-                </div>
-                <p className="empty-note">
-                  Alla varor från {list.name} läggs till i den valda listan, sedan raderas {list.name}.
-                </p>
-              </div>
-            )}
-
-            {isSharing && (
-              <div className={styles.sharePanel}>
-                <div className={styles.addRow}>
-                  <select
-                    aria-label="Välj medlem att dela med"
-                    className="text-input"
-                    onChange={(e) =>
-                      setShareDrafts((prev) => ({ ...prev, [list.id]: { ...shareDraft, memberId: e.target.value } }))
-                    }
-                    value={shareDraft.memberId}
-                  >
-                    <option value="">Välj medlem</option>
-                    {activeMembers
-                      .filter((m) => m.id !== currentMember.id)
-                      .map((m) => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                  </select>
-                  <select
-                    aria-label="Behörighetsnivå"
-                    className="text-input"
-                    onChange={(e) =>
-                      setShareDrafts((prev) => ({
-                        ...prev,
-                        [list.id]: { ...shareDraft, access: e.target.value as AccessLevel }
-                      }))
-                    }
-                    value={shareDraft.access}
-                  >
-                    <option value="view">Bara se</option>
-                    <option value="edit">Redigera</option>
-                  </select>
-                  <button
-                    aria-label="Dela lista"
-                    className="icon-button"
-                    disabled={!shareDraft.memberId}
-                    onClick={() => onShareList(list.id, shareDraft.memberId, shareDraft.access)}
-                    type="button"
-                  >
-                    <Share2 size={16} />
-                  </button>
-                </div>
-                {list.sharedWith.length > 0 && (
-                  <ul className={styles.items}>
-                    {list.sharedWith.map((share) => (
-                      <li className={styles.itemRow} key={share.memberId}>
-                        <span>
-                          {members.find((m) => m.id === share.memberId)?.name ?? "Okänd medlem"}
-                          {" — "}
-                          {share.access === "edit" ? "Kan redigera" : "Kan se"}
-                        </span>
-                        <button
-                          aria-label={`Ta bort delning med ${members.find((m) => m.id === share.memberId)?.name ?? "okänd medlem"}`}
-                          className="icon-button danger"
-                          onClick={() => onRemoveListShare(list.id, share.memberId)}
-                          type="button"
-                        >
-                          <X size={14} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <ShoppingListExternalShare listId={list.id} />
-              </div>
-            )}
-
-            <ul className={styles.items}>
-              {visibleItems.map((item) => (
-                <li
-                  className={`${styles.itemRow}${dragOverItemId === item.id && draggingItemId !== item.id ? ` ${styles.dragOver}` : ""}`}
-                  data-item-id={item.id}
-                  data-list-id={list.id}
-                  key={item.id}
-                >
-                  {isEditing && (
-                    <button
-                      aria-label={`Dra för att flytta ${item.title}`}
-                      className={`icon-button ${styles.dragHandle}`}
-                      onPointerDown={(e) => handleItemPointerDown(e, list.id, item.id)}
-                      onPointerMove={handleItemPointerMove}
-                      onPointerUp={() => handleItemPointerUp(visibleItems.map((i) => i.id))}
-                      type="button"
-                    >
-                      <GripVertical size={14} />
-                    </button>
-                  )}
-                  <span className={`${styles.itemLabel}${item.done ? ` ${styles.done}` : ""}`}>
-                    <input
-                      aria-label={item.title}
-                      checked={item.done}
-                      disabled={!editable}
-                      onChange={() => onToggleItem(list.id, item.id)}
-                      type="checkbox"
-                    />
-                    <span>{linkifyText(item.title)}</span>
-                  </span>
-                  {isEditing && (
-                    <button
-                      aria-label={`Ta bort ${item.title}`}
-                      className="icon-button danger"
-                      onClick={() => onDeleteItem(list.id, item.id)}
-                      type="button"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            {isEditing && doneCount > 0 && (
-              <button
-                aria-label={`Töm bockade varor i ${list.name}`}
-                className={`secondary-button ${styles.clearButton}`}
-                onClick={() => onClearCompleted(list.id)}
-                type="button"
-              >
-                <Trash2 size={14} />
-                Töm bockade varor
-              </button>
-            )}
-
-            {editable && (
-              <div className={styles.addRow}>
-                <input
-                  className="text-input"
-                  onChange={(e) =>
-                    setDraftItems((prev) => ({ ...prev, [list.id]: e.target.value }))
-                  }
-                  onKeyDown={(e) => { if (e.key === "Enter") addItem(list.id); }}
-                  onPaste={(e) => handleItemPaste(e, list.id)}
-                  placeholder="Lägg till vara"
-                  value={draftItems[list.id] ?? ""}
-                />
-                <button
-                  aria-label="Lägg till vara"
-                  className="icon-button"
-                  onClick={() => addItem(list.id)}
-                  type="button"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-            )}
-          </article>
+          <ShoppingListCard
+            activeMembers={activeMembers}
+            currentMember={currentMember}
+            dragOverItemId={dragOverItemId}
+            draggingItemId={draggingItemId}
+            draftItemValue={draftItems[list.id] ?? ""}
+            editable={editable}
+            isEditing={isEditing}
+            isMerging={isMerging}
+            isSharing={isSharing}
+            key={list.id}
+            list={list}
+            members={members}
+            mergeTargetId={mergeTargetId}
+            nameDraft={nameDrafts[list.id] ?? list.name}
+            onAddItemClick={() => addItem(list.id)}
+            onClearCompleted={() => onClearCompleted(list.id)}
+            onConfirmMerge={() => mergeTargetId && mergeListInto(list.id, mergeTargetId)}
+            onConfirmShare={() => onShareList(list.id, shareDraft.memberId, shareDraft.access)}
+            onDeleteItem={(itemId) => onDeleteItem(list.id, itemId)}
+            onDeleteListClick={() => onDeleteList(list.id)}
+            onDraftItemChange={(value) => setDraftItems((prev) => ({ ...prev, [list.id]: value }))}
+            onItemPaste={(e) => handleItemPaste(e, list.id)}
+            onItemPointerDown={(e, itemId) => handleItemPointerDown(e, list.id, itemId)}
+            onItemPointerMove={handleItemPointerMove}
+            onItemPointerUp={handleItemPointerUp}
+            onMergeTargetChange={setMergeTargetId}
+            onNameDraftChange={(value) => setNameDrafts((current) => ({ ...current, [list.id]: value }))}
+            onRemoveShare={(memberId) => onRemoveListShare(list.id, memberId)}
+            onSaveListName={() => saveListName(list)}
+            onShareDraftAccessChange={(access) =>
+              setShareDrafts((prev) => ({ ...prev, [list.id]: { ...shareDraft, access } }))
+            }
+            onShareDraftMemberChange={(memberId) =>
+              setShareDrafts((prev) => ({ ...prev, [list.id]: { ...shareDraft, memberId } }))
+            }
+            onToggleEditingMode={() => {
+              if (!isEditing) {
+                setEditingLists((prev) => ({ ...prev, [list.id]: true }));
+                return;
+              }
+              // Lämnar redigeringsläget — spara ett ev. öppet namnbyte och
+              // nollställ en öppen sammanslagning.
+              saveListName(list);
+              setEditingLists((prev) => ({ ...prev, [list.id]: false }));
+              setMergingListId((current) => (current === list.id ? null : current));
+            }}
+            onToggleItem={(itemId) => onToggleItem(list.id, itemId)}
+            onToggleMerging={() => {
+              setMergingListId((current) => (current === list.id ? null : list.id));
+              setMergeTargetId(null);
+            }}
+            onToggleShowCompleted={() => setListShowCompleted(list.id, !shouldShowCompletedFor(list.id))}
+            onToggleSharing={() => setSharingListId(isSharing ? null : list.id)}
+            otherEditableLists={otherEditableLists}
+            shareDraft={shareDraft}
+            shouldShowCompleted={shouldShowCompletedFor(list.id)}
+          />
         );
       })}
 

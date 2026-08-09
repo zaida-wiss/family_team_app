@@ -135,6 +135,54 @@ test("bockade varor hamnar sist när de visas, kan döljas med en toggle", async
   await expect(page.getByText("Läsk")).toBeVisible();
 });
 
+// 2026-08-10, Zaidas önskemål: "5 sekunders fördröjning från sista
+// knapptryck till att de avklarade åker längst ner. Senast avklarade
+// punkter skall hamna överst [i listan av avklarade]." — samma delade
+// useDelayedCompletionSort-hook som TodosView.tsx:s listläge använder.
+test("en avbockad vara flyttas till botten först 5s efter senaste knapptryck, senast avklarad överst", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-08-10T10:00:00") });
+  await mockCommon(page);
+  const list = {
+    id: "shop-6", name: "Delay-test", ownerId: "mem-1", color: "#2f7d6d", icon: null,
+    sharedWith: [], deletedAt: null, deletedBy: null,
+    items: [
+      shoppingItem({ id: "item-mjolk", title: "Mjölk" }),
+      shoppingItem({ id: "item-brod", title: "Bröd" }),
+    ],
+  };
+  await page.route("**/api/shopping", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: [list] }) : route.fulfill({ json: { id: list.id } })
+  );
+  await page.route("**/api/shopping/shop-6/items/*/toggle", (route) => route.fulfill({ json: { ok: true } }));
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inköp", exact: true }).click();
+
+  const items = page.locator("li", { hasText: /Mjölk|Bröd/ });
+  await expect(items.first()).toHaveText(/Mjölk/);
+
+  // Bocka av Mjölk — ska INTE hoppa till botten direkt.
+  await page.getByRole("checkbox", { name: "Mjölk" }).click();
+  await expect(items.first()).toHaveText(/Mjölk/);
+  await expect(items.last()).toHaveText(/Bröd/);
+
+  // 1s senare bockas Bröd också av — nollställer 5s-fördröjningen (från
+  // SENASTE knapptryck), så ingenting ska flyttas ännu vid t+5s (bara 4s
+  // sedan Bröds tryck). setSystemTime hoppar bara klockans VÄRDE utan att
+  // lösa ut väntande timers — runFor kör fram den faktiska virtuella tiden
+  // (och löser ut setTimeout), måste användas för hela fördröjningen.
+  await page.clock.runFor(1000);
+  await page.getByRole("checkbox", { name: "Bröd" }).click();
+  await page.clock.runFor(4000);
+  await expect(items.first()).toHaveText(/Mjölk/);
+
+  // 5s efter Bröds tryck (t+6s totalt) — nu flyttas båda ner, senast
+  // avklarad (Bröd) överst bland de avklarade.
+  await page.clock.runFor(1500);
+  await expect(items.first()).toHaveText(/Bröd/);
+  await expect(items.last()).toHaveText(/Mjölk/);
+});
+
 // 2026-07-27, Zaidas fynd: "sparas inställningen om jag växlar vy... det ska
 // sparas på enheten" — växeln var tidigare bara lokal komponent-state,
 // nollställdes vid ny sidomladdning/panelbyte. Sparas nu i localStorage.

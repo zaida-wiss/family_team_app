@@ -10,6 +10,7 @@ import type { FamilyThreadSource } from "./FamilyTodoThreads";
 import { getAssigneeName, getMyTodosViewTodos, isDueWithinRange } from "./selectors";
 import { isRecurringTemplate } from "./recurringTodos";
 import { hasPermission } from "../../utils/permissions";
+import { useDelayedCompletionSort } from "../../hooks/useDelayedCompletionSort";
 
 type Props = {
   currentMember: Member;
@@ -157,6 +158,17 @@ export function TodosView({
     todoViewMode === "list"
       ? visibleTodos.filter((t) => t.status === "done" || isDueWithinRange(t, today, todoThreadRange))
       : visibleTodos;
+  // Avklarade ("done") sorteras sist, senast avklarad överst — men gruppbytet
+  // fördröjs 5s från senaste knapptryck så listan inte hoppar direkt
+  // (2026-08-10, Zaidas önskemål). Ordningen bland ännu ej avklarade rörs
+  // aldrig. `todo.completedAt` sätts redan optimistiskt vid klarmarkering
+  // (useTodosState.ts), så rangordningen är korrekt direkt.
+  const listSortedTodos = useDelayedCompletionSort(
+    rangeFilteredTodos,
+    (t) => t.id,
+    (t) => t.status === "done",
+    (t) => t.completedAt
+  );
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
   const suggestedRewards = canApproveTodos
     ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null)
@@ -390,7 +402,7 @@ export function TodosView({
           </div>
         )}
 
-        {todoViewMode === "list" && rangeFilteredTodos.map((todo) => (
+        {todoViewMode === "list" && listSortedTodos.map((todo) => (
           <div className="dashboard-row todo-dashboard-row" key={todo.id}>
             <input
               aria-label={`Välj ${todo.title} för massradering`}
