@@ -86,7 +86,13 @@ export async function lookupConnectionCandidate(accountId: string, callerMemberI
   }
   const members = await MemberModel.find({ userId: user.id, deletedAt: null, isChild: false });
   const accountIds = [...new Set(members.map((m) => m.accountId).filter((id) => id !== accountId))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 });
+  // type:"personal" exkluderat (2026-08-10, ADR-0033) — en familjeanslutning
+  // är en anslutning MELLAN GRUPPER, ett personligt konto är per definition
+  // aldrig en giltig motpart. Se samma kommentar i shoppingSharesService.ts.
+  const accounts = await AccountModel.find(
+    { id: { $in: accountIds }, deletedAt: null, type: { $ne: "personal" } },
+    { _id: 0, __v: 0 }
+  );
   return { accounts: accounts.map((a) => ({ accountId: a.id, accountName: a.name })) };
 }
 

@@ -42,15 +42,23 @@ export async function lookupShareCandidate(categoryId: string, accountId: string
 
   const members = await MemberModel.find({ userId: user.id, deletedAt: null, isChild: false });
   const accountIds = [...new Set(members.map((m) => m.accountId))];
-  const accounts = await AccountModel.find({ id: { $in: accountIds }, deletedAt: null }, { _id: 0, __v: 0 });
+  // type:"personal" exkluderat (2026-08-10, ADR-0033) — se samma kommentar
+  // i shoppingSharesService.ts.
+  const accounts = await AccountModel.find(
+    { id: { $in: accountIds }, deletedAt: null, type: { $ne: "personal" } },
+    { _id: 0, __v: 0 }
+  );
+  const familyAccountIds = new Set(accounts.map((a) => a.id));
 
   return {
-    memberships: members.map((m) => ({
-      memberId: m.id,
-      accountId: m.accountId,
-      memberName: m.name,
-      accountName: accounts.find((a) => a.id === m.accountId)?.name ?? "Okänt konto"
-    }))
+    memberships: members
+      .filter((m) => familyAccountIds.has(m.accountId))
+      .map((m) => ({
+        memberId: m.id,
+        accountId: m.accountId,
+        memberName: m.name,
+        accountName: accounts.find((a) => a.id === m.accountId)?.name ?? "Okänt konto"
+      }))
   };
 }
 
