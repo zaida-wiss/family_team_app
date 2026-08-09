@@ -34,6 +34,41 @@ export const LOGIN_RESPONSE = {
 // mockDataAPIs — mock:ar bara datanropen (inte auth/refresh).
 // Används när testet hanterar auth separat.
 export async function mockDataAPIs(page: Page) {
+  // Säkerhetsnät mot HELA klassen av bugg som redan dokumenterats upprepade
+  // gånger i den här filen (t.ex. kommentarerna på members/*, todos/events,
+  // recipes ovan): ett API-anrop utan egen mock faller igenom till ett RIKTIGT
+  // nätverksanrop. Lokalt (till skillnad från CI, där webServer alltid
+  // startas fräscht och inget lyssnar på :3000) proxar `vite preview` detta
+  // vidare (server.proxy i vite.config.ts) till en verklig backend på
+  // localhost:3000 — och råkar en sådan redan vara igång av EN ANNAN process
+  // på samma maskin (vanligt när flera Claude Code-sessioner kör parallellt),
+  // svarar den med ett ÄKTA 401 (den mockade fake-access-token:en känns
+  // förstås inte igen). client.ts:s performRequest/handleUnauthorized
+  // behandlar VILKET 401-svar som helst som "hela sessionen är ogiltig" —
+  // försöker en riktig refresh (misslyckas av samma skäl), och loggar sedan
+  // ut HELA appen (onUnauthorized) — även om det ursprungliga anropet bara
+  // gällde en liten, ovidkommande delfunktion (t.ex. GET /api/household-pin,
+  // som konkret bekräftades vara den utlösande orsaken 2026-08-10 — testet
+  // "flakade" bara beroende på om en riktig backend råkade lyssna på :3000
+  // just då, inte på DOM-timing). Registrerad FÖRST (lägst prioritet, samma
+  // "bred FÖRE specifik"-konvention som resten av filen) — alla senare,
+  // mer specifika mockningar nedan fortsätter gälla för sina egna mönster,
+  // det är bara det som INTE matchar något annat som hamnar här istället för
+  // ute på nätverket. Undantar uttryckligen /api/auth/* — mockAuthAndData/
+  // mockUnauthenticated/loginViaUI registrerar SINA egna auth-mockningar
+  // både före och efter detta anrop beroende på ordning, route.fallback()
+  // låter alltid DEN specifika (oavsett var i koden den råkar stå) vinna.
+  await page.route("**/api/**", (route) => {
+    if (route.request().url().includes("/api/auth/")) {
+      return route.fallback();
+    }
+    return route.fulfill({ json: {} });
+  });
+  // GET /api/household-pin (2026-07-26) — hämtas globalt av
+  // SettingsContent.tsx:s useHouseholdPin() så fort Inställningar-panelen
+  // monteras, oavsett vilken kategori man faktiskt öppnar. Konkret
+  // bekräftad utlösare till buggen som beskrivs ovan.
+  await page.route("**/api/household-pin", (route) => route.fulfill({ json: { isSet: false } }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
   // Matchar även /api/members/:id (t.ex. update/restore/remove) — utan denna
   // föll anrop som membersApi.update() (bl.a. lastActivePanel-persistering vid

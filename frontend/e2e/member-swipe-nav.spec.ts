@@ -43,6 +43,27 @@ const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", c
 const LOGIN_RESPONSE = { accessToken: "tok", user: USER, memberships: [{ member: PARENT, account: ACCOUNT }] };
 
 async function mockCommon(page: import("@playwright/test").Page) {
+  // Säkerhetsnät (2026-08-10) — samma fynd/fix som e2e/helpers.ts:s
+  // mockDataAPIs: den här filen har sin EGEN, fristående mockCommon() (inte
+  // den delade helpern) som saknade flera nyare, globalt hämtade endpoints
+  // (t.ex. GET /api/recipes, hämtas av useShellState oavsett aktiv panel
+  // sedan 2026-07-26). Ett sådant omockat anrop faller igenom till ett
+  // RIKTIGT nätverksanrop — lokalt proxar vite preview det vidare till en
+  // äkta backend på :3000, och råkar en sådan redan vara igång (t.ex. en
+  // annan parallell Claude Code-session) svarar den med ett ÄKTA 401.
+  // client.ts:s performRequest/handleUnauthorized behandlar VILKET 401 som
+  // helst som "hela sessionen ogiltig" och loggar ut HELA appen — vilket
+  // sedan såg ut som slumpmässig "element detached from DOM"-flakighet i
+  // just DEN HÄR filens tester, fast grundorsaken var en saknad mock, inte
+  // DOM-timing. Registrerad FÖRST (lägst prioritet, Playwright kör senast
+  // registrerade matchning först) så alla mer specifika mockningar nedan
+  // fortsätter gälla oförändrat.
+  await page.route("**/api/**", (route) => {
+    if (route.request().url().includes("/api/auth/")) {
+      return route.fallback();
+    }
+    return route.fulfill({ json: {} });
+  });
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, CHILD] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
