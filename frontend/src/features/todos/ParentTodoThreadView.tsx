@@ -810,7 +810,11 @@ export function ParentTodoThreadView({
     }, DOUBLE_TAP_MS);
   }
 
-  function handleConfirmComplete(todo: Todo) {
+  // elapsedAtHoldStart fångas vid pointerDown (håll-in-STARTEN, se
+  // onPointerDown nedan), inte här — annars räknas hela 2-sekunders-hållet
+  // in i den sparade tiden (Zaidas fynd 2026-08-10: "tidtagningen måste
+  // stoppas när man börjar hålla 2 sekunder, inte efter 2-3 sekunder").
+  function handleConfirmComplete(todo: Todo, elapsedAtHoldStart: number | null) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
     // En eventuell pågående ELLER PAUSAD timer (2026-08-07/09, startas med
@@ -818,7 +822,7 @@ export function ParentTodoThreadView({
     // avslutas här via den redan befintliga håll-in-gesten — fungerar
     // oavsett om den råkar vara pausad just då) räknas ut och skickas med,
     // oavsett om uppgiften faktiskt hann öppnas via visa-vyn eller ej.
-    const elapsedMs = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+    const elapsedMs = elapsedAtHoldStart;
     if (elapsedMs !== null) {
       clearTodoTimer(todo.id);
       onCompleteTodo(todo.id, elapsedMs);
@@ -1261,7 +1265,8 @@ export function ParentTodoThreadView({
                       }}
                       onPointerDown={(e) => {
                         if ((editingThreadId === thread.id)) { handleBubblePointerDown(e, thread.id, bubbleKey); return; }
-                        startHold(todo.id, () => handleConfirmComplete(todo));
+                        const elapsedAtHoldStart = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+                        startHold(todo.id, () => handleConfirmComplete(todo, elapsedAtHoldStart));
                       }}
                       onPointerMove={(editingThreadId === thread.id) ? handleBubblePointerMove : undefined}
                       onPointerUp={() => {

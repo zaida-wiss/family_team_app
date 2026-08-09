@@ -325,7 +325,12 @@ export function FamilyTodoThreads({
     }, DOUBLE_TAP_MS);
   }
 
-  function handleConfirmComplete(source: FamilyThreadSource, todo: Todo) {
+  // elapsedAtHoldStart fångas vid pointerDown (håll-in-STARTEN, se
+  // onPointerDown nedan), inte här — annars räknas hela 2-sekunders-hållet
+  // in i den sparade tiden (samma fix som ParentTodoThreadView.tsx, Zaidas
+  // fynd 2026-08-10: "tidtagningen måste stoppas när man börjar hålla 2
+  // sekunder, inte efter 2-3 sekunder").
+  function handleConfirmComplete(source: FamilyThreadSource, todo: Todo, elapsedAtHoldStart: number | null) {
     suppressClickRef.current = true;
     setDissolving((current) => new Map(current).set(todo.id, todo));
     // En eventuell pågående ELLER PAUSAD timer (2026-08-07/09, se
@@ -333,7 +338,7 @@ export function FamilyTodoThreads({
     // ParentTodoThreadView.tsx. Bara meningsfullt för LOKALA källor
     // (cross-account/anslutna källors onComplete ignorerar redan tyst ett
     // extra argument de inte förväntar).
-    const elapsedMs = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+    const elapsedMs = elapsedAtHoldStart;
     if (elapsedMs !== null) {
       clearTodoTimer(todo.id);
       source.onComplete(todo.id, elapsedMs);
@@ -859,7 +864,8 @@ export function FamilyTodoThreads({
                         onPointerDown={(e) => {
                           if (isSelecting) return;
                           if (isEditing) { handleBubblePointerDown(e, source.id, bubbleKey); return; }
-                          startHold(todo.id, () => handleConfirmComplete(source, todo));
+                          const elapsedAtHoldStart = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+                          startHold(todo.id, () => handleConfirmComplete(source, todo, elapsedAtHoldStart));
                         }}
                         onPointerLeave={isSelecting || isEditing ? undefined : clearHold}
                         onPointerMove={!isSelecting && isEditing ? handleBubblePointerMove : undefined}

@@ -5,6 +5,7 @@ import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { useLinkifiedText } from "../../hooks/useLinkifiedText";
+import { useCountdownSound } from "../../hooks/useCountdownSound";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
@@ -107,16 +108,14 @@ function TodoTimerSection({ todo }: { todo: Todo }) {
   // på minus": now, denna komponents egen 1s-tickande klocka, kan ligga
   // strax FÖRE startedAt tills nästa tick hinner ikapp).
   const elapsedMs = accumulatedMs + (isRunning ? Math.max(0, now - (startedAt as number)) : 0);
+  const remainingMs = isCountdown
+    ? Math.max(0, (todo.plannedDurationMinutes as number) * 60_000 - elapsedMs)
+    : 0;
+  useCountdownSound(isCountdown, isRunning, remainingMs);
 
   let liveLabel: string | null = null;
   if (isRunning || isPaused) {
-    if (isCountdown) {
-      const totalMs = (todo.plannedDurationMinutes as number) * 60_000;
-      const remainingMs = Math.max(0, totalMs - elapsedMs);
-      liveLabel = `${formatElapsed(remainingMs)} kvar`;
-    } else {
-      liveLabel = formatElapsed(elapsedMs);
-    }
+    liveLabel = isCountdown ? `${formatElapsed(remainingMs)} kvar` : formatElapsed(elapsedMs);
   }
 
   return (

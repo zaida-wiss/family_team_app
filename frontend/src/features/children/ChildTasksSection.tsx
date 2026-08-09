@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
+import { useCountdownSound } from "../../hooks/useCountdownSound";
 import { readTodoTimerElapsedMs, timerCapMinutes, useTodoTimer } from "../todos/useTodoTimer";
 import "./ChildTasks.css";
 
@@ -296,16 +297,14 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
     }, TRIPLE_TAP_MS);
   }
 
-  // Läser av den TOTALA förflutna tiden (ackumulerad + ev. nu körande
-  // period) DIREKT från localStorage vid bekräftelsetillfället, inte från
-  // hookens React-state som kan vara ett render bakom — samma "läs alltid
-  // färskt vid confirm"-princip som vuxenvyns handleConfirmComplete.
-  // readTodoTimerElapsedMs returnerar null om timern aldrig startats, vilket
-  // onConfirmComplete redan hanterar (samma som en icke-timer-uppgift).
-  function handleConfirmComplete() {
-    const elapsed = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
+  // Tiden fryses vid HÅLL-IN-STARTEN (pointerDown, se sharedHandlers nedan),
+  // inte här när bekräftelsen faktiskt löser ut — annars räknas hela 2-
+  // sekundershållet in i den sparade tiden (Zaidas fynd 2026-08-10:
+  // "tidtagningen måste stoppas när man börjar hålla 2 sekunder, inte efter
+  // 2-3 sekunder"). Det fångade värdet skickas in som elapsedAtHoldStart.
+  function handleConfirmComplete(elapsedAtHoldStart: number | null) {
     clear();
-    onConfirmComplete(todo, elapsed);
+    onConfirmComplete(todo, elapsedAtHoldStart);
   }
 
   const isCountdown = Boolean(todo.plannedDurationMinutes);
@@ -317,6 +316,8 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   // startedAt (satt till Date.now() exakt vid start) tills nästa tick hinner
   // ikapp.
   const elapsedMs = accumulatedMs + (isRunning ? Math.max(0, timerNow - (startedAt as number)) : 0);
+  const remainingMs = isCountdown ? Math.max(0, (todo.plannedDurationMinutes as number) * 60000 - elapsedMs) : 0;
+  useCountdownSound(isCountdown, isRunning, remainingMs);
 
   const cardClassName = [
     "child-task-card",
@@ -337,9 +338,10 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
     // uppgift utan timer. handleConfirmComplete läser elapsedMs som null om
     // timern aldrig startats, redan hanterat av onCompleteTodo.
     onPointerDown: () => {
+      const elapsedAtHoldStart = readTodoTimerElapsedMs(todo.id, timerCapMinutes(todo));
       startTimerHold(todo.id, () => {
         suppressClickRef.current = true;
-        handleConfirmComplete();
+        handleConfirmComplete(elapsedAtHoldStart);
       });
     },
     onPointerLeave: clearTimerHold,
@@ -348,8 +350,6 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   };
 
   if (isCountdown) {
-    const totalMs = (todo.plannedDurationMinutes as number) * 60000;
-    const remainingMs = isActive ? Math.max(0, totalMs - elapsedMs) : totalMs;
     return (
       <div
         className={cardClassName}

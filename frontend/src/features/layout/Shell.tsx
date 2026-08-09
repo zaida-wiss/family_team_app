@@ -4,6 +4,7 @@ import { ThemePicker } from "../../components/ThemePicker";
 import { RecordCelebration } from "../../components/RecordCelebration";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
+import { primeTimerAudio } from "../../utils/timerSound";
 import { RewardShopContext } from "../rewards/RewardShopContext";
 import type { Membership } from "@shared/types";
 
@@ -139,6 +140,31 @@ export function Shell({
     recordCelebration,
     dismissRecordCelebration,
   } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated);
+
+  // Låser upp ljuduppspelning (nedräkningens "klar"-signal, timerSound.ts,
+  // 2026-08-10) redan vid FÖRSTA riktiga tryck/klick i appen — mobila
+  // webbläsares autoplay-policy kräver att AudioContext skapas/återupptas
+  // inom en genuin användargest innan den kan spela ljud senare, utan en ny
+  // gest, när en nedräkning tickar ner till 0 av sig själv. En engångs-
+  // lyssnare på hela dokumentet (inte bara timer-widgetarna) täcker även
+  // fallet att timern startats via en gest någon annanstans (t.ex. tre-
+  // tryck-gesten på en bubbla i tråd-vyn).
+  useEffect(() => {
+    let unlocked = false;
+    function unlock() {
+      if (unlocked) return;
+      unlocked = true;
+      primeTimerAudio();
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    }
+    document.addEventListener("pointerdown", unlock);
+    document.addEventListener("keydown", unlock);
+    return () => {
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   // Medlemsvyn (2026-07-30) — om en roll får canSeeMembers avstängd EFTER
   // att activePanel/lastActivePanel redan pekade på "members" (t.ex. en
