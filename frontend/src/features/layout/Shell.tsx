@@ -270,7 +270,29 @@ export function Shell({
         onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
       />
 
-      <div className={`app-shell-content${currentMember.isChild || isViewingMemberDashboard ? " app-shell-full" : ""}`}>
+      <div
+        className={`app-shell-content${
+          currentMember.isChild
+            ? " app-shell-full"
+            // 2026-08-10 (Zaida: "jag tappar navbarerna och blir fast på
+            // childrensview vid vissa skärmbredder") — currentMember.isChild
+            // (ett riktigt inloggat barns EGEN vy) behåller det avsiktliga
+            // helt-kant-till-kant-läget (sidonav dolt, barnet har ingen
+            // annan panel att navigera till ändå). isViewingMemberDashboard
+            // (en VUXEN som tittar på en vald medlems dashboard via "Visa
+            // medlemmar") fick tidigare EXAKT samma behandling — men en
+            // vuxen behöver kunna ta sig därifrån, och varken ChildDashboard.
+            // tsx eller PersonalDashboard.tsx har någon egen tillbaka-knapp.
+            // app-shell-full--inline behåller samma kant-till-kant-styling
+            // för INNEHÅLLET (ingen padding, fast höjd, ingen studs) men
+            // låter sidonaven vara kvar synlig/klickbar på ≥1024px (se
+            // layout.css) — under 1024px är HeroBar redan alltid
+            // position:fixed och opåverkad oavsett.
+            : isViewingMemberDashboard
+            ? " app-shell-full app-shell-full--inline"
+            : ""
+        }`}
+      >
         {/* key={activePanel}-panelNavResetKey — en krasch i en panel ska inte permanent
             låsa hela appen; navigerar man till en annan panel får felgränsen en ny chans
             (ommonteras). panelNavResetKey (2026-07-26, generaliserad 2026-08-09 till alla

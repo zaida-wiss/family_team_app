@@ -113,3 +113,30 @@ test("Ett klick på Hem tar tillbaka till den egna hemvyn (avväljer) och Visa m
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Visa medlemmar" })).toBeVisible();
 });
+
+// 2026-08-10, Zaidas fynd: "jag tappar navbarerna och blir fast på
+// childrensview" vid ≥1024px bred skärm — .app-shell-full (layout.css)
+// döljer sidonaven avsiktligt för currentMember.isChild, men fick tidigare
+// EXAKT samma behandling för isViewingMemberDashboard (en VUXEN som tittar
+// på en vald medlems dashboard) trots att varken ChildDashboard.tsx eller
+// PersonalDashboard.tsx har någon egen tillbaka-knapp — och en grid-
+// placeringsbugg (se layout.css/HeroBar.module.css) puttade dessutom
+// sidonaven ner en hel skärmhöjd, osynlig utan manuell scroll. Playwrights
+// vanliga .click() maskerade båda buggarna (auto-scrollar in elementet
+// innan klick, precis som testet ovan visar) — bara en explicit position-
+// koll (utan att klicka) avslöjar det en riktig användare faktiskt ser.
+test("Sidonaven förblir synlig UTAN scroll (inget klick, bara position) på desktopbredd medan man tittar på en vald medlems dashboard", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await mockCommon(page);
+  await selectChild(page);
+
+  const homeButton = page.getByRole("button", { name: "Hem", exact: true });
+  await expect(homeButton).toBeVisible();
+  const box = await homeButton.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(900);
+
+  const appShellHeight = await page.locator(".app-shell").evaluate((el) => el.getBoundingClientRect().height);
+  expect(appShellHeight).toBeLessThanOrEqual(900);
+});

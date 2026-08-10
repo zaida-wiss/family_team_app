@@ -105,21 +105,33 @@
 
   .app-shell-full {
     /* grid-row:1 (2026-08-10) -- .app-shell saknar grid-template-rows, så
-       raden är implicit. HeroBar (DOM-först) auto-placeras i rad 1/kolumn 1
-       och får height:100vh på just denna brytpunkt (HeroBar.module.css) --
-       ett grid-column:1/-1-element UTAN egen grid-row kan då inte få plats
-       i rad 1 (kolumn 1 redan upptagen) och auto-placeras istället i en
-       helt ny rad 2, en hel skärmhöjd under synligt område: ett barns
-       dashboard (eller en vuxens vy av valfri familjemedlem, currentMember.
-       isChild||isViewingMemberDashboard, se Shell.tsx) blev därmed osynlig
-       utan manuell scroll på ≥1024px, upptäckt via en e2e-diagnostik som
-       visade boundingBox().y===720 (exakt viewporthöjden) och 0 pointer-
-       events träffande elementet. grid-row:1 tvingar den tillbaka till
-       SAMMA rad som HeroBar, spänner ändå hela bredden (grid-column
-       oförändrad) och target målar därmed ÖVER HeroBar (DOM-senare vinner
-       i samma stapelnivå) -- vilket matchar "helt kant-till-kant"-avsikten
-       nedan (dölja sidonaven helt, inte bara undvika att krocka med den). */
+       raden är implicit. Utan en egen explicit grid-row auto-placerades det
+       här elementet (grid-column:1/-1, spänner hela bredden) i en helt ny
+       rad 2 så fort HeroBar redan låg i rad 1/kolumn 1 -- en hel skärmhöjd
+       under synligt område, upptäckt via en e2e-diagnostik som visade
+       boundingBox().y===720 (exakt viewporthöjden). grid-row:1 tvingar
+       tillbaka den till SAMMA rad som HeroBar, spänner ändå hela bredden
+       och målar därmed ÖVER HeroBar (DOM-senare vinner i samma stapelnivå)
+       -- vilket matchar "helt kant-till-kant"-avsikten (dölja sidonaven
+       helt, inte bara undvika att krocka med den) för currentMember.isChild
+       (ett riktigt inloggat barns EGEN vy, se Shell.tsx).
+       HeroBar.module.css fick SENARE (samma dag, uppföljning: "jag tappar
+       navbarerna och blir fast på childrensview") samma explicita grid-
+       row:1/grid-column:1 -- annars auto-placerades HeroBar SJÄLV istället
+       ner i rad 2 (den ursprungliga buggen bytte bara offer). */
     grid-row: 1;
     grid-column: 1 / -1;
+  }
+
+  /* isViewingMemberDashboard (en VUXEN som tittar på en vald medlems
+     dashboard via "Visa medlemmar", Shell.tsx) -- till skillnad från
+     currentMember.isChild ovan finns här ingen egen tillbaka-knapp i
+     ChildDashboard.tsx/PersonalDashboard.tsx, så att dölja sidonaven helt
+     lämnade en vuxen helt utan väg tillbaka på ≥1024px (samma uppföljning
+     som HeroBar-fixen ovan). Behåller .app-shell-full:s kant-till-kant-
+     styling för INNEHÅLLET (padding:0/fast höjd/ingen studs, ärvs redan)
+     men lämnar sidonav-kolumnen fri istället för att spänna över den. */
+  .app-shell-full.app-shell-full--inline {
+    grid-column: 2;
   }
 }

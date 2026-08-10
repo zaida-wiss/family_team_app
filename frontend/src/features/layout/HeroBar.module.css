@@ -101,6 +101,18 @@
     width: 64px;
     height: 100vh;
     flex-direction: column;
+    /* 2026-08-10 (Zaida: "jag tappar navbarerna och blir fast på
+       childrensview" vid vissa skärmbredder) — .app-shell-full (layout.css)
+       tvingar sig explicit till grid-row:1/grid-column:1/-1 för att lösa en
+       ANNAN buggen (se dess egen kommentar), men eftersom heroBar SJÄLV
+       aldrig fick en egen explicit grid-row auto-placerades den då istället
+       ner i en helt ny rad 2 — en hel skärmhöjd under synligt område, precis
+       samma buggklass fixen ovan skulle lösa, bara flyttad till ett nytt
+       offer. Explicit grid-row/grid-column här garanterar att heroBar ALLTID
+       ligger i rad 1 tillsammans med huvudinnehållet, oavsett vad det andra
+       elementet gör. */
+    grid-row: 1;
+    grid-column: 1;
   }
 
   .top,
