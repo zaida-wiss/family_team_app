@@ -4,6 +4,7 @@ import { X, Trash2 } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 import { useModalA11y } from "../../hooks/useModalA11y";
+import { formatDurationWithHundredths as fmtDuration } from "../../utils/durationFormat";
 
 type Props = {
   task: TimedTaskWithBest;
@@ -11,13 +12,6 @@ type Props = {
   onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
   onClose: () => void;
 };
-
-function fmtDuration(ms: number): string {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
 
 function fmtDayLabel(iso: string): string {
   const d = new Date(iso);

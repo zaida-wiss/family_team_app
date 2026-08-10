@@ -1,5 +1,4 @@
 import "./ChildRecordsPage.css";
-import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
@@ -16,17 +15,11 @@ type Props = {
 
 // Egen sida för Medaljer/Rekord (2026-07-06, Zaidas beslut) — låg tidigare
 // alltid synlig inline längst ner i ChildDashboard, nås nu via en pokal-knapp
-// till vänster om profilbilden i ChildHero istället. Egen 1s-tickande klocka
-// här (självständig från ChildDashboard:s, eftersom sidorna är ömsesidigt
-// uteslutande — bara en av dem är monterad åt gången).
+// till vänster om profilbilden i ChildHero istället. Den tidigare egna
+// 1s-tickande klockan här (bara vidarebefordrad till ChildTimedTasksSection)
+// togs bort 2026-08-10 — den komponenten driver numera sin egen, snabbare
+// klocka internt (useFastTick, för hundradels-visningen).
 export function ChildRecordsPage({ themeName, timedTasks, onRecordAttempt, onListAttempts, onDeleteAttempt, onBack }: Props) {
-  const [timerNow, setTimerNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTimerNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
   return (
     <article className={`child-dashboard child-records-page theme-${themeName}`}>
       <header className="child-records-page__header">
@@ -44,7 +37,6 @@ export function ChildRecordsPage({ themeName, timedTasks, onRecordAttempt, onLis
       <div className="child-records-page__body">
         <ChildTimedTasksSection
           timedTasks={timedTasks}
-          timerNow={timerNow}
           onRecordAttempt={onRecordAttempt}
           onListAttempts={onListAttempts}
           onDeleteAttempt={onDeleteAttempt}

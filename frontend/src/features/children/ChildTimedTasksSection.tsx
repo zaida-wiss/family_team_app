@@ -4,12 +4,13 @@ import { Play, Square, Trophy } from "lucide-react";
 import type { Id, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
 import { useWakeLock } from "../../hooks/useWakeLock";
+import { useFastTick } from "../../hooks/useFastTick";
 import { trackEvent } from "../../utils/analytics";
+import { formatDurationWithHundredths as fmtDurationWithHundredths } from "../../utils/durationFormat";
 import { TimedTaskRecordsModal } from "./TimedTaskRecordsModal";
 
 type Props = {
   timedTasks: TimedTaskWithBest[];
-  timerNow: number;
   onRecordAttempt: (id: Id, durationMs: number, achievedAt: string) => Promise<{ isNewRecord: boolean }>;
   onListAttempts: (id: Id) => Promise<TimedAttemptListItem[]>;
   onDeleteAttempt: (id: Id, attemptId: Id) => Promise<void>;
@@ -26,13 +27,6 @@ const THEME_ACCENT_COUNT = 8;
 // för en hårdkodad kulör, TimedTask saknar ett eget kategori-/färgfält.
 function accentColorForIndex(index: number): string {
   return `var(--c${index % THEME_ACCENT_COUNT})`;
-}
-
-function fmtDuration(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 // running lagras som en Map (id → startedAt) i localStorage, inte en enda
@@ -63,7 +57,9 @@ function saveRunning(running: Map<Id, number>) {
 // Start/stopp-tryck, inte håll-in (Zaidas beslut, S9-spiken) — många tidtagna
 // uppgifter (t.ex. "spring ett varv") går inte att göra samtidigt som man håller
 // i skärmen. Flyttad till en egen sida (ChildRecordsPage, 2026-07-06, Zaidas
-// beslut) — timerNow kommer därför från den sidans egna tickande 1s-intervall.
+// beslut). Den löpande tiden drivs numera av en egen intern useFastTick
+// (2026-08-10, se fmtDurationWithHundredths-importen) — inte längre en
+// timerNow-prop utifrån.
 // Korten fick samma rektangulära grid-form som uppdragskorten (ChildTasks.css)
 // och en fullbredds start/stopp-knapp istället för en liten 44px-cirkel
 // (2026-07-13, Zaidas fynd: "lika form... rektangulära och lättare att trycka
@@ -72,7 +68,6 @@ function saveRunning(running: Map<Id, number>) {
 // grid-höjd som cqb/cqh-enheterna förutsätter.
 export function ChildTimedTasksSection({
   timedTasks,
-  timerNow,
   onRecordAttempt,
   onListAttempts,
   onDeleteAttempt
@@ -87,6 +82,13 @@ export function ChildTimedTasksSection({
   const [editingTask, setEditingTask] = useState<TimedTaskWithBest | null>(null);
 
   useWakeLock(running.size > 0);
+
+  // Hundradelar (2026-08-10, Zaidas önskemål, utökat till Medaljer/Rekords
+  // löpande tid) — EN delad, snabb klocka (50ms) för samtliga samtidigt
+  // körande kort (running.size kan vara >1, se loadRunning-kommentaren
+  // ovan), inte en per-kort-hook (skulle bryta mot Hooks-reglerna inuti
+  // .map() nedan). Tickar bara medan minst ett kort faktiskt går.
+  const fastNow = useFastTick(running.size > 0);
 
   if (timedTasks.length === 0) {
     return <p className="empty-note">Inga rekorduppgifter ännu.</p>;
@@ -125,11 +127,11 @@ export function ChildTimedTasksSection({
         {timedTasks.map((task, index) => {
           const startedAt = running.get(task.id);
           const isRunning = startedAt !== undefined;
-          // Math.max(0, ...) — timerNow tickar bara en gång per sekund
-          // (ChildRecordsPage.tsx), så den kan ligga en aning FÖRE det exakta
-          // Date.now() man startade på precis efter en tryckning, vilket annars
-          // visar en kort, förvirrande negativ tid ("-1:-1") tills nästa tick.
-          const elapsed = isRunning ? Math.max(0, timerNow - startedAt) : null;
+          // Math.max(0, ...) — fastNow (50ms-klockan ovan) kan ligga en aning
+          // FÖRE det exakta Date.now() man startade på precis efter en
+          // tryckning, vilket annars visar en kort, förvirrande negativ tid
+          // tills nästa tick.
+          const elapsed = isRunning ? Math.max(0, fastNow - startedAt) : null;
 
           return (
             <div key={task.id} className="child-timed-tasks__cell">
@@ -155,7 +157,7 @@ export function ChildTimedTasksSection({
                 <span className="child-timed-tasks__copy">
                   <strong className="child-timed-tasks__name">{task.title}</strong>
                   {isRunning && (
-                    <small className="child-timed-tasks__status">{fmtDuration(elapsed ?? 0)}</small>
+                    <small className="child-timed-tasks__status">{fmtDurationWithHundredths(elapsed ?? 0)}</small>
                   )}
                 </span>
                 <button

@@ -1,12 +1,13 @@
 import "./TodoDetailModal.css";
 import { Pencil, Play, X } from "lucide-react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment } from "react";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { useLinkifiedText } from "../../hooks/useLinkifiedText";
 import { useCountdownSound } from "../../hooks/useCountdownSound";
-import { useFastTick } from "../../hooks/useFastTick";
+import { useLiveElapsed } from "../../hooks/useLiveElapsed";
+import { formatDuration as formatElapsed, formatDurationWithHundredths as formatElapsedWithHundredths } from "../../utils/durationFormat";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
@@ -70,25 +71,6 @@ function formatRecurrence(todo: Todo): string | null {
   return everyLabel;
 }
 
-// Samma formatering som ChildTasksSection.tsx (duplicerad hellre än ett
-// cross-feature-beroende, se Todo.elapsedMs-kommentaren i shared/types.ts).
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
-}
-
-// Samma hundradels-variant som ChildTasksSection.tsx (2026-08-10) — bara för
-// den VISUELLA texten i ett aktivt, öppet (icke-nedräknande) stoppur, aldrig
-// för aria-live (skulle spamma skärmläsare med 20 uppdateringar/s).
-function formatElapsedWithHundredths(ms: number): string {
-  const hundredths = Math.floor((ms % 1000) / 10);
-  return `${formatElapsed(ms)}.${String(hundredths).padStart(2, "0")}`;
-}
-
 // Timerkontroll för en ännu ej avklarad uppgift (2026-08-07/08, Zaidas
 // önskemål: timern ska gå att välja för ALLA uppgifter, inte bara
 // barn-tilldelade, och startas med TRE SNABBA TRYCK direkt på bubblan i
@@ -101,22 +83,15 @@ function formatElapsedWithHundredths(ms: number): string {
 // den läser av samma localStorage-timer för att räkna ut elapsedMs.
 function TodoTimerSection({ todo }: { todo: Todo }) {
   const { startedAt, accumulatedMs, isPaused, start, clear, togglePause } = useTodoTimer(todo.id, timerCapMinutes(todo));
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (startedAt === null) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [startedAt]);
-
   const isRunning = startedAt !== null;
   const isCountdown = Boolean(todo.plannedDurationMinutes);
+
   // Ackumulerad tid från ev. tidigare pausade perioder (2026-08-09, "ett
   // snabbt tryck stoppar tiden") + tiden sedan senaste start/återupptag, om
-  // den körs just nu — golvat på 0 (2026-08-08, "Timern skall inte starta
-  // på minus": now, denna komponents egen 1s-tickande klocka, kan ligga
-  // strax FÖRE startedAt tills nästa tick hinner ikapp).
-  const elapsedMs = accumulatedMs + (isRunning ? Math.max(0, now - (startedAt as number)) : 0);
+  // den körs just nu (useLiveElapsed golvar redan mot 0, se dess egen
+  // kommentar: "Timern skall inte starta på minus"). 1000ms-takten driver
+  // aria-live-texten, oförändrad sedan tidigare.
+  const elapsedMs = useLiveElapsed(startedAt, accumulatedMs, isRunning, 1000);
   const remainingMs = isCountdown
     ? Math.max(0, (todo.plannedDurationMinutes as number) * 60_000 - elapsedMs)
     : 0;
@@ -124,13 +99,10 @@ function TodoTimerSection({ todo }: { todo: Todo }) {
 
   // Hundradelar (2026-08-10, Zaidas önskemål: "jag vill kunna se hundradelar
   // på timern då den räknar uppåt") — bara för ett aktivt körande ÖPPET
-  // stoppur, en egen snabbare klocka (50ms) än komponentens vanliga
-  // 1s-tickande `now` (som fortsatt driver aria-live-texten oförändrat).
+  // stoppur, en egen snabbare klocka (50ms, useLiveElapsed:s default) än
+  // aria-live-textens 1000ms ovan.
   const isOpenStopwatchRunning = isRunning && !isCountdown;
-  const fastNow = useFastTick(isOpenStopwatchRunning);
-  const fastElapsedMs = isOpenStopwatchRunning
-    ? accumulatedMs + Math.max(0, fastNow - (startedAt as number))
-    : elapsedMs;
+  const fastElapsedMs = useLiveElapsed(startedAt, accumulatedMs, isOpenStopwatchRunning);
 
   let liveLabel: string | null = null;
   if (isRunning || isPaused) {

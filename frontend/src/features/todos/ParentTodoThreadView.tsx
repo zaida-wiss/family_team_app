@@ -12,6 +12,7 @@ import { downloadCsv, todosToCsv } from "./todoCsv";
 import { isRecurringTemplate } from "./recurringTodos";
 import { isChildMember, isDueWithinRange, isTodoVisibleNow } from "./selectors";
 import { clearTodoTimer, readTodoTimerElapsedMs, readTodoTimerIsActive, startTodoTimer, timerCapMinutes, toggleTodoTimerPause } from "./useTodoTimer";
+import { formatDuration } from "../../utils/durationFormat";
 
 const HOLD_DURATION_MS = 2000;
 // Måste matcha CSS-animationens längd (todo-thread-dissolve i .css) — bollen
@@ -29,12 +30,11 @@ const CHILDREN_THREAD_ID = "__children__";
 // Exporterad (2026-08-01) för återanvändning i FamilyTodoThreads.tsx — Hem-
 // vyns familjebubblor ska ha "samma gester och kategorimenyer som todovyn"
 // (Zaidas önskemål), samma tidsformattering för den delade in-progress-klockan.
-export function formatElapsed(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
+// Re-exporterad från den delade utils/durationFormat.ts (2026-08-10, tidigare
+// en egen, näst intill identisk lokal kopia — konsoliderad på Zaidas förslag
+// "en hook vore kanske bra för timern?") — alla befintliga importer av
+// formatElapsed härifrån (bl.a. FamilyTodoThreads.tsx) fungerar oförändrat.
+export const formatElapsed = formatDuration;
 
 // Timern längst ner i en bubbla (2026-08-09, Zaidas önskemål: "när en timer
 // är igång på en uppgiftsbubbla så vill jag även kunna se timern längst ner
