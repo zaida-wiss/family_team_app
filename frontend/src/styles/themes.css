@@ -1317,6 +1317,13 @@
   color: var(--foreground);
 }
 
+/* Parisienne finns bara i vikt 400 — utan detta syntetiserar webbläsaren en
+   fet variant i förhandsvisningen, samma resonemang som .font-parisienne i
+   tokens.css. */
+.theme-font-option[data-font-id="parisienne"] .theme-font-preview {
+  font-weight: 400;
+}
+
 .theme-font-label {
   font-size: 0.7rem;
   color: var(--foreground);

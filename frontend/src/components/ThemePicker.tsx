@@ -191,6 +191,7 @@ function ThemePickerBody({
             key={font.id}
             className={`theme-font-option${fontId === font.id ? " active" : ""}`}
             style={{ "--font-preview": font.display } as React.CSSProperties}
+            data-font-id={font.id}
             onClick={() => onSelectFont(font.id)}
             type="button"
             title={font.display}

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 
-export type FontId = "baloo" | "nunito" | "fredoka" | "comfortaa" | "poppins";
+export type FontId = "baloo" | "nunito" | "fredoka" | "comfortaa" | "poppins" | "caveat" | "parisienne";
 
 export const FONTS: { id: FontId; name: string; display: string; body: string }[] = [
-  { id: "baloo",     name: "Baloo",     display: "Baloo 2",          body: "Plus Jakarta Sans" },
-  { id: "nunito",    name: "Nunito",    display: "Nunito",           body: "Nunito" },
-  { id: "fredoka",   name: "Fredoka",   display: "Fredoka",          body: "DM Sans" },
-  { id: "comfortaa", name: "Comfortaa", display: "Comfortaa",        body: "Outfit" },
-  { id: "poppins",   name: "Poppins",   display: "Poppins",          body: "Poppins" },
+  { id: "baloo",      name: "Baloo",      display: "Baloo 2",    body: "Plus Jakarta Sans" },
+  { id: "nunito",     name: "Nunito",     display: "Nunito",     body: "Nunito" },
+  { id: "fredoka",    name: "Fredoka",    display: "Fredoka",    body: "DM Sans" },
+  { id: "comfortaa",  name: "Comfortaa",  display: "Comfortaa",  body: "Outfit" },
+  { id: "poppins",    name: "Poppins",    display: "Poppins",    body: "Poppins" },
+  { id: "caveat",     name: "Caveat",     display: "Caveat",     body: "Quicksand" },
+  { id: "parisienne", name: "Parisienne", display: "Parisienne", body: "Jost" },
 ];
 
 // Google Fonts-frågesträngar — måste matcha FONTS-objektet i public/font-init.js exakt.
@@ -17,6 +19,8 @@ const GOOGLE_FONTS_QUERY: Record<FontId, string> = {
   fredoka: "DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Fredoka:wght@400;500;600;700",
   comfortaa: "Comfortaa:wght@400;500;600;700&family=Outfit:wght@400;500;600;700",
   poppins: "Poppins:wght@400;500;600;700;800",
+  caveat: "Caveat:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700",
+  parisienne: "Parisienne&family=Jost:wght@400;500;600;700",
 };
 
 const STORAGE_KEY = "app-font";

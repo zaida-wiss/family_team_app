@@ -76,3 +76,17 @@
   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
+
+.font-caveat {
+  --font-sans: "Quicksand", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Caveat", cursive;
+}
+
+.font-parisienne {
+  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Parisienne", cursive;
+  /* Parisienne finns bara i vikt 400 hos Google Fonts — utan detta syntetiserar
+     webbläsaren en fet variant där rubriker begär bold, vilket förstör den
+     tunna, eleganta karaktären typsnittet valdes för. */
+  font-synthesis: none;
+}
