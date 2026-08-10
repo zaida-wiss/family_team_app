@@ -51,10 +51,8 @@ export function TemplatesSettings({
     if (bi !== undefined) return 1;
     return 0;
   });
-  const taskDrag = useDragReorder(
-    sortedTaskTemplates.map((t) => t.id),
-    onReorder
-  );
+  const taskDrag = useDragReorder<Id>();
+  const taskOrder = sortedTaskTemplates.map((t) => t.id);
 
   // 2026-07-28, Zaidas fynd: "jag måste kunna öppna, se och redigera en
   // kategorimall, nu ser jag inte vad den ens innehåller" — Kategori-mallar
@@ -211,7 +209,7 @@ export function TemplatesSettings({
                     className="icon-button templates-settings__drag-handle"
                     onPointerDown={(e) => taskDrag.handlePointerDown(e, template.id)}
                     onPointerMove={taskDrag.handlePointerMove}
-                    onPointerUp={taskDrag.handlePointerUp}
+                    onPointerUp={() => taskDrag.handlePointerUp(taskOrder, onReorder)}
                     type="button"
                   >
                     <GripVertical size={16} />

@@ -1,10 +1,11 @@
 import { Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { ClipboardEvent } from "react";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { ShoppingListCard } from "./ShoppingListCard";
 import { readCache, writeCache } from "../../utils/localCache";
 import { splitPastedShoppingItems } from "./parseShoppingPaste";
+import { useDragReorder } from "../../hooks/useDragReorder";
 import {
   canEditSharedResource,
   canViewResource,
@@ -13,7 +14,6 @@ import {
 import styles from "./ShoppingLists.module.css";
 import type { AccessLevel, Id, Member, Role, ShoppingList } from "@shared/types";
 
-const DRAG_THRESHOLD_PX = 8;
 const SHOW_COMPLETED_CACHE_KEY = "shopping_show_completed_v1";
 
 // Visning av bockade varor + redigeringsläge (2026-07-22, Zaidas önskemål:
@@ -107,11 +107,12 @@ export function ShoppingView({
     });
   }
   const [mergeTargetId, setMergeTargetId] = useState<Id | null>(null);
-  // Drag-and-drop-ordning på varorna (2026-07-26) — pointer-baserat, samma
-  // mönster som ParentTodoThreadView.tsx:s bubbel-drag inom en tråd.
-  const itemDragStateRef = useRef<{ listId: Id; itemId: Id; x: number; y: number } | null>(null);
-  const [draggingItemId, setDraggingItemId] = useState<Id | null>(null);
-  const [dragOverItemId, setDragOverItemId] = useState<Id | null>(null);
+  // Drag-and-drop-ordning på varorna (2026-07-26, konsoliderad till den
+  // delade hooken 2026-08-10, Sprint 9 S4) — "data-list-id" som groupAttr
+  // förhindrar bara en missvisande drag-över-markering på en rad i en ANNAN
+  // lista, den faktiska omordningen är redan säker (en främmande vara hittas
+  // aldrig i den lista som tar emot droppet).
+  const drag = useDragReorder<Id>("data-item-id", "data-list-id");
 
   const canEdit = hasPermission(currentMember, roles, "canEditShoppingLists");
   const canCreate = hasPermission(currentMember, roles, "canCreateShoppingLists");
@@ -171,47 +172,6 @@ export function ShoppingView({
 
   function getShareDraft(listId: Id): ShareDraft {
     return shareDrafts[listId] ?? getDefaultShareDraft();
-  }
-
-  function handleItemPointerDown(e: React.PointerEvent<HTMLButtonElement>, listId: Id, itemId: Id) {
-    itemDragStateRef.current = { listId, itemId, x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-
-  function handleItemPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
-    const start = itemDragStateRef.current;
-    if (!start) return;
-    if (draggingItemId === null) {
-      const dx = e.clientX - start.x;
-      const dy = e.clientY - start.y;
-      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-      setDraggingItemId(start.itemId);
-    }
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const li = el instanceof Element ? el.closest<HTMLElement>("[data-item-id]") : null;
-    if (li && li.dataset.listId === start.listId) {
-      setDragOverItemId(li.dataset.itemId as Id);
-    } else {
-      setDragOverItemId(null);
-    }
-  }
-
-  function handleItemPointerUp(visibleItemIds: Id[]) {
-    const start = itemDragStateRef.current;
-    const target = dragOverItemId;
-    itemDragStateRef.current = null;
-    if (start && target && start.itemId !== target) {
-      const from = visibleItemIds.indexOf(start.itemId);
-      const to = visibleItemIds.indexOf(target);
-      if (from !== -1 && to !== -1) {
-        const next = [...visibleItemIds];
-        next.splice(from, 1);
-        next.splice(to, 0, start.itemId);
-        onReorderItems(start.listId, next);
-      }
-    }
-    setDraggingItemId(null);
-    setDragOverItemId(null);
   }
 
   // Slå ihop två listor (2026-07-26, Zaidas önskemål) — återanvänder
@@ -299,8 +259,8 @@ export function ShoppingView({
           <ShoppingListCard
             activeMembers={activeMembers}
             currentMember={currentMember}
-            dragOverItemId={dragOverItemId}
-            draggingItemId={draggingItemId}
+            dragOverItemId={drag.dragOverKey}
+            draggingItemId={drag.draggingKey}
             draftItemValue={draftItems[list.id] ?? ""}
             editable={editable}
             isEditing={isEditing}
@@ -319,9 +279,11 @@ export function ShoppingView({
             onDeleteListClick={() => onDeleteList(list.id)}
             onDraftItemChange={(value) => setDraftItems((prev) => ({ ...prev, [list.id]: value }))}
             onItemPaste={(e) => handleItemPaste(e, list.id)}
-            onItemPointerDown={(e, itemId) => handleItemPointerDown(e, list.id, itemId)}
-            onItemPointerMove={handleItemPointerMove}
-            onItemPointerUp={handleItemPointerUp}
+            onItemPointerDown={(e, itemId) => drag.handlePointerDown(e, itemId, list.id)}
+            onItemPointerMove={drag.handlePointerMove}
+            onItemPointerUp={(visibleItemIds) =>
+              drag.handlePointerUp(visibleItemIds, (next) => onReorderItems(list.id, next))
+            }
             onMergeTargetChange={setMergeTargetId}
             onNameDraftChange={(value) => setNameDrafts((current) => ({ ...current, [list.id]: value }))}
             onRemoveShare={(memberId) => onRemoveListShare(list.id, memberId)}

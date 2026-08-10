@@ -144,14 +144,7 @@ export function RecurringTodosSettings({
     onReorder(next);
   }
 
-  const childDrag = useDragReorder(
-    childItems.map((t) => t.id),
-    (newOrder) => reorderGroup(childItems, newOrder)
-  );
-  const otherDrag = useDragReorder(
-    otherItems.map((t) => t.id),
-    (newOrder) => reorderGroup(otherItems, newOrder)
-  );
+  const drag = useDragReorder<Id>("data-drag-key", "data-drag-group");
 
   // En mall "används just nu" om den har minst en ännu ej raderad,
   // väntande occurrence — samma relation som useTodosState.ts:s
@@ -175,11 +168,13 @@ export function RecurringTodosSettings({
     onDeleteTodo(id);
   }
 
-  function renderRow(todo: Todo, drag: ReturnType<typeof useDragReorder<Id>>) {
+  function renderRow(todo: Todo, group: Todo[], groupKey: string) {
     const endLabel = describeRecurrenceEnd(todo.recurrence);
+    const groupIds = group.map((t) => t.id);
     return (
       <li
         className={`recurring-todos-settings__row${drag.dragOverKey === todo.id ? " recurring-todos-settings__row--drag-over" : ""}`}
+        data-drag-group={groupKey}
         data-drag-key={todo.id}
         key={todo.id}
       >
@@ -187,9 +182,9 @@ export function RecurringTodosSettings({
           <button
             aria-label={`Flytta ${todo.title}`}
             className="icon-button recurring-todos-settings__drag-handle"
-            onPointerDown={(e) => drag.handlePointerDown(e, todo.id)}
+            onPointerDown={(e) => drag.handlePointerDown(e, todo.id, groupKey)}
             onPointerMove={drag.handlePointerMove}
-            onPointerUp={drag.handlePointerUp}
+            onPointerUp={() => drag.handlePointerUp(groupIds, (newOrder) => reorderGroup(group, newOrder))}
             type="button"
           >
             <GripVertical size={16} />
@@ -302,13 +297,13 @@ export function RecurringTodosSettings({
           {childItems.length > 0 && (
             <div>
               <h4 className="recurring-todos-settings__group-heading">👶 Barn</h4>
-              <ul className="recurring-todos-settings__list">{childItems.map((todo) => renderRow(todo, childDrag))}</ul>
+              <ul className="recurring-todos-settings__list">{childItems.map((todo) => renderRow(todo, childItems, "child"))}</ul>
             </div>
           )}
           {otherItems.length > 0 && (
             <div>
               <h4 className="recurring-todos-settings__group-heading">Övriga</h4>
-              <ul className="recurring-todos-settings__list">{otherItems.map((todo) => renderRow(todo, otherDrag))}</ul>
+              <ul className="recurring-todos-settings__list">{otherItems.map((todo) => renderRow(todo, otherItems, "other"))}</ul>
             </div>
           )}
         </div>
