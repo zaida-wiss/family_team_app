@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Zaida (2026-07-23): "det måste gå att scrolla i barnvyn / medlemsvyn med
 // uppdragskorten" — .child-tasks-grid (ChildTasksSection.tsx, delad av
@@ -46,24 +47,14 @@ function todo(overrides: Record<string, unknown>) {
 const MANY_TODOS = Array.from({ length: 24 }, (_, i) => todo({ id: `todo-${i}`, title: `Uppgift ${i + 1}` }));
 
 test("uppdragskorten går att scrolla när fler uppgifter finns än vad som får plats", async ({ page }) => {
+  // 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+  // todo-timer.spec.ts:s identiska kommentar (samma bugklass).
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: MANY_TODOS }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased/, (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
 
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/");

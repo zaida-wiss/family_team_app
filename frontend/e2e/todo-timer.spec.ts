@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Todo-timerfunktion (2026-07-07, Zaidas önskemål: "precis som barnens
 // belöningar skall man även kunna lägga in en timer på hur lång aktiviteten
@@ -85,23 +86,19 @@ const COUNTDOWN_TODO = {
   plannedDurationMinutes: 1
 };
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — filens egen
+// mock saknade flera nyare endpoints (todo-templates, recipes,
+// family-across-accounts, connections m.fl., tillkomna sedan denna fil
+// skrevs) som annars faller igenom till ett RIKTIGT, ej mockat nätverksanrop
+// och ett äkta 401 → appen loggar ut mitt i testet (inloggningssidan visas
+// istället för barnets dashboard). Samma bugklass som redan dokumenterats i
+// helpers.ts:s egen mockDataAPIs-kommentar, hittad här vid felsökning av en
+// till synes "flakig" körning (screenshoten visade inloggningssidan).
 async function mockChildSession(page: Page) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD] }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [CHILD_ROLE] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
-    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
-  );
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
 }
 
 // 2026-08-09: den gamla Starta/Klar-knappen för en uppgift UTAN planerad tid
