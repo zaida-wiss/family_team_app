@@ -6,6 +6,7 @@ import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
 import { useLinkifiedText } from "../../hooks/useLinkifiedText";
 import { useCountdownSound } from "../../hooks/useCountdownSound";
+import { useFastTick } from "../../hooks/useFastTick";
 import type { Id, Member, RecurrenceUnit, Todo } from "@shared/types";
 import { WEEKDAY_SHORT } from "./recurringTodos";
 import { SubtaskCountdown } from "./SubtaskCountdown";
@@ -80,6 +81,14 @@ function formatElapsed(ms: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
 }
 
+// Samma hundradels-variant som ChildTasksSection.tsx (2026-08-10) — bara för
+// den VISUELLA texten i ett aktivt, öppet (icke-nedräknande) stoppur, aldrig
+// för aria-live (skulle spamma skärmläsare med 20 uppdateringar/s).
+function formatElapsedWithHundredths(ms: number): string {
+  const hundredths = Math.floor((ms % 1000) / 10);
+  return `${formatElapsed(ms)}.${String(hundredths).padStart(2, "0")}`;
+}
+
 // Timerkontroll för en ännu ej avklarad uppgift (2026-08-07/08, Zaidas
 // önskemål: timern ska gå att välja för ALLA uppgifter, inte bara
 // barn-tilldelade, och startas med TRE SNABBA TRYCK direkt på bubblan i
@@ -113,16 +122,30 @@ function TodoTimerSection({ todo }: { todo: Todo }) {
     : 0;
   useCountdownSound(isCountdown, isRunning, remainingMs);
 
+  // Hundradelar (2026-08-10, Zaidas önskemål: "jag vill kunna se hundradelar
+  // på timern då den räknar uppåt") — bara för ett aktivt körande ÖPPET
+  // stoppur, en egen snabbare klocka (50ms) än komponentens vanliga
+  // 1s-tickande `now` (som fortsatt driver aria-live-texten oförändrat).
+  const isOpenStopwatchRunning = isRunning && !isCountdown;
+  const fastNow = useFastTick(isOpenStopwatchRunning);
+  const fastElapsedMs = isOpenStopwatchRunning
+    ? accumulatedMs + Math.max(0, fastNow - (startedAt as number))
+    : elapsedMs;
+
   let liveLabel: string | null = null;
   if (isRunning || isPaused) {
     liveLabel = isCountdown ? `${formatElapsed(remainingMs)} kvar` : formatElapsed(elapsedMs);
   }
+  const visualLabel = isOpenStopwatchRunning ? formatElapsedWithHundredths(fastElapsedMs) : liveLabel;
 
   return (
     <p className="todo-detail-modal__meta todo-detail-modal__timer">
       {isRunning ? (
         <>
-          <span aria-live="polite">⏱ {liveLabel}</span>
+          {/* Skärmläsartext oförändrad (sekundtakt) i en dold aria-live-yta;
+              den snabba, hundradelsvisande texten är aria-hidden. */}
+          <span aria-live="polite" className="sr-only">⏱ {liveLabel}</span>
+          <span aria-hidden="true">⏱ {visualLabel}</span>
           <button className="todo-detail-modal__timer-reset" onClick={togglePause} type="button">
             Pausa
           </button>

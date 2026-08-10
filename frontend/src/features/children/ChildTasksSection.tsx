@@ -5,6 +5,7 @@ import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useCountdownSound } from "../../hooks/useCountdownSound";
+import { useFastTick } from "../../hooks/useFastTick";
 import { readTodoTimerElapsedMs, timerCapMinutes, useTodoTimer } from "../todos/useTodoTimer";
 import "./ChildTasks.css";
 
@@ -19,6 +20,17 @@ function formatElapsed(ms: number): string {
   const seconds = totalSeconds % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+}
+
+// Samma som ovan, men med hundradelar (2026-08-10, Zaidas önskemål: "jag
+// vill kunna se hundradelar på timern då den räknar uppåt") — bara för det
+// VISUELLA, snabbt tickande stoppurs-läget, aldrig för aria-label/aria-live
+// (skulle spamma skärmläsare med 20 uppdateringar/sekund, se
+// ChildTimerTaskCard nedan som medvetet håller kvar en separat,
+// sekundtaktad text för det).
+function formatElapsedWithHundredths(ms: number): string {
+  const hundredths = Math.floor((ms % 1000) / 10);
+  return `${formatElapsed(ms)}.${String(hundredths).padStart(2, "0")}`;
 }
 
 type TaskCardStyle = CSSProperties & {
@@ -319,6 +331,16 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
   const remainingMs = isCountdown ? Math.max(0, (todo.plannedDurationMinutes as number) * 60000 - elapsedMs) : 0;
   useCountdownSound(isCountdown, isRunning, remainingMs);
 
+  // Hundradelar visas bara för ett aktivt körande ÖPPET stoppur (inte en
+  // nedräkning, inte pausad) — en egen, snabbare klocka (50ms) än förälderns
+  // 1s-tickande timerNow, som annars driver resten av kortet (timeLeftPercent
+  // m.m.) och inte ska tvingas till en tätare takt bara för detta.
+  const isOpenStopwatchRunning = isRunning && !isCountdown;
+  const fastNow = useFastTick(isOpenStopwatchRunning);
+  const fastElapsedMs = isOpenStopwatchRunning
+    ? accumulatedMs + Math.max(0, fastNow - (startedAt as number))
+    : elapsedMs;
+
   const cardClassName = [
     "child-task-card",
     "child-task-card--timer",
@@ -407,9 +429,17 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
       </span>
       {starBadge}
       {isActive && (
-        <span aria-live="polite" className="child-task-timer-digital">
-          {formatElapsed(elapsedMs)}
-        </span>
+        <>
+          {/* Skärmläsartext oförändrad (sekundtakt, samma som innan
+              hundradelarna lades till) — den snabba visuella texten är
+              aria-hidden för att inte spamma AT med 20 uppdateringar/s. */}
+          <span aria-live="polite" className="sr-only">
+            {formatElapsed(elapsedMs)}
+          </span>
+          <span aria-hidden="true" className="child-task-timer-digital">
+            {isOpenStopwatchRunning ? formatElapsedWithHundredths(fastElapsedMs) : formatElapsed(elapsedMs)}
+          </span>
+        </>
       )}
     </div>
   );

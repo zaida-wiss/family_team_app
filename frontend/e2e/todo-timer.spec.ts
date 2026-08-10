@@ -120,7 +120,14 @@ test("Barnets uppgifter: en tidtagen uppgift utan planerad tid startas med tre s
   await expect(page.getByRole("button", { name: "Starta Städa rummet" })).toHaveCount(0);
 
   await card.click({ clickCount: 3 });
-  await expect(page.getByText(/^\d:\d\d$/)).toBeVisible();
+  // .child-task-timer-digital (inte en bar getByText-textsökning) — sedan
+  // 2026-08-10 visar den ÖPPNA tidtagningens digitala siffra hundradelar
+  // (Zaidas önskemål: "jag vill kunna se hundradelar på timern då den
+  // räknar uppåt"), medan en separat, dold aria-live-yta (samma text som
+  // förut, utan hundradelar) fortsatt finns kvar för skärmläsare — en
+  // klassbaserad locator är entydig oavsett vilken av de två Playwright
+  // råkar räkna som "synlig".
+  await expect(page.locator(".child-task-timer-digital")).toHaveText(/^\d:\d\d\.\d\d$/);
 });
 
 test("Barnets uppgifter: tre tryck + 2s-håll på en öppen tidtagning skickar elapsedMs till /complete", async ({ page }) => {
@@ -136,7 +143,7 @@ test("Barnets uppgifter: tre tryck + 2s-håll på en öppen tidtagning skickar e
   await page.goto("/");
   const card = page.getByRole("button", { name: /Städa rummet/ });
   await card.click({ clickCount: 3 });
-  await expect(page.getByText(/^\d:\d\d$/)).toBeVisible();
+  await expect(page.locator(".child-task-timer-digital")).toHaveText(/^\d:\d\d\.\d\d$/);
 
   await page.waitForTimeout(1200);
   // Samma dispatchEvent-mönster som nedräkningstestet nedan — simulerar ett
