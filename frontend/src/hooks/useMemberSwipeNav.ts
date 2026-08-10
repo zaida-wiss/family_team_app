@@ -61,7 +61,7 @@ const VERTICAL_DOMINANCE_RATIO = 1.5;
 const SWIPE_COMMIT_RATIO = 0.5;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
-const SLIDE_MS = 200;
+const FLIP_MS = 260;
 
 // Hittar den NÄRMASTE genuint skrollbara förfadern (overflow-y auto/scroll
 // OCH faktiskt mer innehåll än plats) mellan den vidrörda noden och
@@ -126,36 +126,79 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     // (2026-08-09) — annars kan ett snabbt andra svep starta mitt i en
     // pågående animation och se ryckigt/dubbelt ut.
     let animating = false;
-    el.style.willChange = "transform";
+    // Positioneringskontext för ögonblicksbilden nedan (position:absolute;
+    // inset:0 måste positioneras relativt just el, inte en ännu högre
+    // förfader) — sätts en gång, permanent, ofarligt för ett i övrigt
+    // ostylat wrapper-div.
+    el.style.position = "relative";
 
+    // "Sida som vänds"-effekt (2026-08-10, Zaidas fynd: "det blir vitt...
+    // jag vill att det ska vara som att vända blad i en bok istället,
+    // ingenting vitt"). Den tidigare lösningen lät HELA innehållet (el,
+    // en enda nod) glida iväg åt sidan och sedan glida in en ny kopia från
+    // andra hållet — eftersom el är den ENDA ytan som täcker utrymmet
+    // exponerades skalets egen bakgrund (vit i ljust läge) bakom el under
+    // hela den tid den var i rörelse, inte bara ett kort ögonblick.
+    //
+    // Löst genom att aldrig flytta den RIKTIGA ytan alls: en FRUSEN
+    // ÖGONBLICKSBILD (cloneNode) av den nuvarande sidan läggs OVANPÅ
+    // (position:absolute, högre z-index) innehållet, medan den riktiga,
+    // NYA sidan byts in UNDER ögonblicksbilden i samma task (onNext/
+    // onPrev) — den nya sidan täcker alltså hela ytan från första bildrutan,
+    // långt innan ögonblicksbilden ens börjar röra sig. Bara
+    // ögonblicksbilden roteras bort (rotateY, som att vika ett blad kring
+    // dess bindningskant) och tas bort när den är klar — aldrig ett tomt
+    // mellanrum, aldrig skalets bakgrund synlig.
     function commit(dx: number) {
       animating = true;
       const width = el!.getBoundingClientRect().width || 1;
-      const exitX = dx < 0 ? -width : width;
-      const enterX = dx < 0 ? width : -width;
-      el!.style.transition = `transform ${SLIDE_MS}ms ease-in`;
-      el!.style.transform = `translateX(${exitX}px)`;
-      window.setTimeout(() => {
-        // Byt medlem + placera NÄSTA persons redan-bytta innehåll på
-        // ingångspositionen INNAN webbläsaren målar nästa bildruta — allt
-        // detta sker synkront inom samma JS-task som setTimeout-callbacken,
-        // så webbläsaren hinner aldrig visa en tom bildruta däremellan.
-        el!.style.transition = "none";
-        el!.style.transform = `translateX(${enterX}px)`;
-        if (dx < 0) onNextRef.current();
-        else onPrevRef.current();
+      // Svep åt vänster (nästa medlem) viker sidan bort kring dess VÄNSTRA
+      // kant, som att vända framåt i en bok. Svep åt höger (föregående)
+      // viker den bort kring den HÖGRA kanten, som att bläddra bakåt.
+      const direction: 1 | -1 = dx < 0 ? 1 : -1;
+
+      const snapshot = el!.cloneNode(true) as HTMLElement;
+      // Skärmläsare ska aldrig se den frusna, overksamma dubblettkopian —
+      // bara den riktiga, nya sidan under den.
+      snapshot.setAttribute("aria-hidden", "true");
+      snapshot.style.position = "absolute";
+      snapshot.style.inset = "0";
+      snapshot.style.zIndex = "1";
+      snapshot.style.transformOrigin = direction === 1 ? "left center" : "right center";
+      snapshot.style.willChange = "transform, box-shadow";
+      snapshot.style.pointerEvents = "none";
+      // Rotationen går förbi 90° (till 110°, se rAF-blocket nedan) för att
+      // sidan ska hinna kännas helt bortvikt innan den tas bort — utan
+      // detta hade den sista biten (90°→110°) visat sidans SPEGELVÄNDA
+      // baksida istället för att förbli dold.
+      snapshot.style.backfaceVisibility = "hidden";
+      // Ett svagt skuggdrag i vikningsriktningen antyder djup medan sidan
+      // lyfter, tonar bort mot slutet av rotationen (se rAF-blocket nedan).
+      snapshot.style.boxShadow = direction === 1
+        ? "18px 0 32px -12px rgba(0,0,0,0.4)"
+        : "-18px 0 32px -12px rgba(0,0,0,0.4)";
+      el!.appendChild(snapshot);
+
+      // Byt medlem — den nya personens innehåll ritas nu UNDER
+      // ögonblicksbilden, i samma synkrona task.
+      if (dx < 0) onNextRef.current();
+      else onPrevRef.current();
+
+      // Dubbel rAF (samma beprövade mönster som redan användes här innan)
+      // garanterar att webbläsaren hunnit måla den nya, riktiga sidan under
+      // ögonblicksbilden innan viknings-animationen ens börjar.
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            el!.style.transition = `transform ${SLIDE_MS}ms ease-out`;
-            el!.style.transform = "translateX(0px)";
-            window.setTimeout(() => {
-              el!.style.transition = "";
-              el!.style.transform = "";
-              animating = false;
-            }, SLIDE_MS);
-          });
+          snapshot.style.transition = `transform ${FLIP_MS}ms ease-in, box-shadow ${FLIP_MS}ms ease-in`;
+          snapshot.style.transform = `perspective(${width * 2.5}px) rotateY(${direction * -110}deg)`;
+          snapshot.style.boxShadow = "0 0 0 rgba(0,0,0,0)";
         });
-      }, SLIDE_MS);
+      });
+
+      window.setTimeout(() => {
+        snapshot.remove();
+        animating = false;
+      }, FLIP_MS + 30);
     }
 
     function onPointerDown(e: PointerEvent) {
@@ -296,9 +339,7 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       el.removeEventListener("pointermove", onPointerMove);
       el.removeEventListener("pointerup", onPointerUp);
       el.removeEventListener("pointercancel", onPointerCancel);
-      el.style.transition = "";
-      el.style.transform = "";
-      el.style.willChange = "";
+      el.style.position = "";
     };
   }, []);
 
