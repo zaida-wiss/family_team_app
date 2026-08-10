@@ -67,7 +67,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
   } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent, onMonthChange, focusMemberId, fixedCalendarTimes);
 
-  const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds };
+  const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds, currentMemberId: currentMember.id };
   const filteredVisible = visible.filter((calendar) => !hiddenCalendarIds.has(calendar.id));
 
   function startSwipe(e: React.TouchEvent<HTMLElement>) {

@@ -471,6 +471,27 @@
   gap: 1px;
 }
 
+.cal-filter-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 7px 7px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cal-filter-quick-action {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cal-filter-quick-action:hover { text-decoration: underline; }
+
 .cal-filter-item {
   display: flex;
   align-items: center;

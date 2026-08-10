@@ -2,7 +2,7 @@ import { Filter, MapPin, Plus, Repeat, Search } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { Calendar, CalendarEvent } from "@shared/types";
+import type { Calendar, CalendarEvent, Id } from "@shared/types";
 import { fmtFullDate, fmtTime, isHolidayEvent } from "./calendarHelpers";
 import { LocationLink } from "../../components/LocationLink";
 
@@ -39,6 +39,7 @@ export type EventListProps = {
   setSearchQuery: (q: string) => void;
   hiddenCalendarIds: Set<string>;
   setHiddenCalendarIds: (ids: Set<string>) => void;
+  currentMemberId: Id;
   onEventClick: (ev: EnrichedEvent) => void;
   navExtra?: ReactNode;
   onClearDay?: () => void;
@@ -49,7 +50,7 @@ export type EventListProps = {
 export function CalendarEventList({
   allEvents, selectedDay, scope = "month", viewYear, viewMonth, visible,
   calendarDisplayColor, holidayBgColor, holidayTextColor,
-  searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds,
+  searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds, currentMemberId,
   onEventClick, navExtra, onClearDay, onNewEvent, fixedCalendarTimes = false,
 }: EventListProps) {
   const hasFilter = !!searchQuery.trim() || hiddenCalendarIds.size > 0;
@@ -88,6 +89,7 @@ export function CalendarEventList({
       <div className="cal-event-list-header">
         {navExtra}
         <CalendarFilter
+          currentMemberId={currentMemberId}
           visible={visible}
           hiddenCalendarIds={hiddenCalendarIds}
           setHiddenCalendarIds={setHiddenCalendarIds}
@@ -152,9 +154,10 @@ type FilterProps = {
   visible: Calendar[];
   hiddenCalendarIds: Set<string>;
   setHiddenCalendarIds: (ids: Set<string>) => void;
+  currentMemberId: Id;
 };
 
-function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: FilterProps) {
+function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds, currentMemberId }: FilterProps) {
   const [showFilter, setShowFilter] = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
@@ -196,6 +199,12 @@ function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: Fi
     setHiddenCalendarIds(next);
   }
 
+  // 2026-08-10, backloggens "bara mina egna"-önskemål: en genväg ovanpå den
+  // redan existerande kryssruta-listan istället för en helt ny vy — slipper
+  // manuell avbockning av varje delad/cross-account-kalender för sig, och
+  // slipper göra om det varje gång en ny tillkommer.
+  const sharedCalendarIds = visible.filter((cal) => cal.ownerId !== currentMemberId).map((cal) => cal.id);
+
   return (
     <div className="cal-filter-wrap">
       <button
@@ -219,6 +228,28 @@ function CalendarFilter({ visible, hiddenCalendarIds, setHiddenCalendarIds }: Fi
             "--filter-max-height": `${menuPos.maxHeight}px`,
           } as CalendarCssVars}
         >
+          {(sharedCalendarIds.length > 0 || hiddenCalendarIds.size > 0) && (
+            <div className="cal-filter-quick-actions">
+              {sharedCalendarIds.length > 0 && (
+                <button
+                  className="cal-filter-quick-action"
+                  onClick={() => setHiddenCalendarIds(new Set(sharedCalendarIds))}
+                  type="button"
+                >
+                  Bara mina kalendrar
+                </button>
+              )}
+              {hiddenCalendarIds.size > 0 && (
+                <button
+                  className="cal-filter-quick-action"
+                  onClick={() => setHiddenCalendarIds(new Set())}
+                  type="button"
+                >
+                  Visa alla
+                </button>
+              )}
+            </div>
+          )}
           {visible.map((cal) => (
             <label className="cal-filter-item" key={cal.id}>
               <input
