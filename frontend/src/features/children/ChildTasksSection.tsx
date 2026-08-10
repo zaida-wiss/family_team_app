@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Star } from "lucide-react";
+import { Pencil, Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
@@ -38,6 +38,29 @@ function getTodayHeading(date: Date) {
   return new Intl.DateTimeFormat("sv-SE", { weekday: "long" }).format(date);
 }
 
+// Delad nested redigera-knapp (2026-08-10) — stoppar propagation på BÅDE
+// click OCH pointerdown/pointerup: kortets håll-in-gest startar redan vid
+// onPointerDown (bubblar upp från VILKET barn-element som helst), inte bara
+// vid click, så bara stopPropagation på click hade räckt för att öppna
+// modalen men INTE för att hindra en samtidigt armerad 2s-håll-timer.
+function EditTodoButton({ todo, onEditTodo }: { todo: Todo; onEditTodo: (todo: Todo) => void }) {
+  return (
+    <button
+      aria-label={`Redigera ${todo.title}`}
+      className="child-task-edit-btn"
+      onClick={(e) => {
+        e.stopPropagation();
+        onEditTodo(todo);
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      type="button"
+    >
+      <Pencil size={14} />
+    </button>
+  );
+}
+
 type Props = {
   todos: Todo[];
   // Kontobreda kategorier (2026-07-08, ADR-0020 — ersätter routineCategory)
@@ -52,6 +75,15 @@ type Props = {
   // håll-in-bekräftelsen: att trycka Klar på en pågående tidtagning ÄR
   // bekräftelsen, ingen ytterligare 2s-håll behövs ovanpå det.
   onCompleteTodo: (id: Id, elapsedMs: number | null) => void;
+  // Redigera-knapp på kortet (2026-08-10, PersonalDashboard-uppföljning) —
+  // MEDVETET valfri och opt-in. Komponenten delas rakt av med RIKTIGA barns
+  // dashboard (ChildDashboard.tsx), som aldrig skickar med denna — ett barn
+  // ska inte kunna öppna redigeringsläget för sin egen uppgift. Bara
+  // PersonalDashboard.tsx (en vuxens egen vy) sätter den, och bara när
+  // vyn visar den INLOGGADES EGEN dashboard (självval, ingen befintlig
+  // behörighetsprincip finns för att redigera en ANNAN vuxens uppgifter
+  // härifrån — se teamgenomgang-2026-08-10.md).
+  onEditTodo?: (todo: Todo) => void;
 };
 
 const HOLD_DURATION_MS = 2000;
@@ -61,7 +93,7 @@ const HOLD_DURATION_MS = 2000;
 // (ParentTodoThreadView.tsx/FamilyTodoThreads.tsx).
 const TRIPLE_TAP_MS = 300;
 
-export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo }: Props) {
+export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo, onEditTodo }: Props) {
   // Bekräftelsekort för en avklarad ÖPPEN tidtagning (2026-08-10, Zaidas
   // önskemål: "vill jag se tiden den stannat på... innan den försvinner
   // efter 3 sekunder", sedan rättat samma dag: "det ska inte blinka grönt...
@@ -163,6 +195,7 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
                 key={todo.id}
                 nameClass={nameClass}
                 onConfirmComplete={handleConfirmComplete}
+                onEditTodo={onEditTodo}
                 starBadge={starBadge}
                 style={style}
                 timeLeftPercent={timeLeftPercent}
@@ -173,7 +206,7 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
           }
 
           return (
-            <button
+            <div
               key={todo.id}
               className={[
                 "child-task-card",
@@ -185,7 +218,8 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
               onPointerLeave={onClearHold}
               onPointerCancel={onClearHold}
               onPointerUp={onClearHold}
-              type="button"
+              role="button"
+              tabIndex={0}
             >
               <div className="child-task-icon-circle">
                 <span className="child-task-icon">{todo.visual.value}</span>
@@ -196,7 +230,8 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
                 </span>
               </span>
               {starBadge}
-            </button>
+              {onEditTodo && <EditTodoButton onEditTodo={onEditTodo} todo={todo} />}
+            </div>
           );
         })}
       </div>
@@ -215,6 +250,7 @@ type ChildTimerTaskCardProps = {
   // (ChildTasksSection) behöver titel/plannedDurationMinutes för att avgöra
   // om en bekräftelseflash ska visas (2026-08-10).
   onConfirmComplete: (todo: Todo, elapsedMs: number | null) => void;
+  onEditTodo?: (todo: Todo) => void;
 };
 
 // Egen komponent PER uppgift (2026-08-08) — krävs för att useTodoTimer (en
@@ -227,7 +263,7 @@ type ChildTimerTaskCardProps = {
 // uppgifters timers kan nu gå SAMTIDIGT (ingen "bara en åt gången"-spärr
 // längre, samma princip som vuxenvyn: "startar andra timers" ska inte
 // avbryta en redan pågående).
-function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent, timerNow, onConfirmComplete }: ChildTimerTaskCardProps) {
+function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent, timerNow, onConfirmComplete, onEditTodo }: ChildTimerTaskCardProps) {
   const { startedAt, accumulatedMs, isPaused, isActive, start, clear, togglePause } = useTodoTimer(todo.id, timerCapMinutes(todo));
   const isRunning = startedAt !== null;
   useWakeLock(isRunning);
@@ -369,6 +405,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
           <span className={nameClass}>{todo.title}</span>
         </span>
         {starBadge}
+        {onEditTodo && <EditTodoButton onEditTodo={onEditTodo} todo={todo} />}
         {isActive && (
           <span aria-live="polite" className="child-task-timer-digital">
             {formatElapsed(remainingMs)}
@@ -403,6 +440,7 @@ function ChildTimerTaskCard({ todo, style, nameClass, starBadge, timeLeftPercent
         <span className={nameClass}>{todo.title}</span>
       </span>
       {starBadge}
+      {onEditTodo && <EditTodoButton onEditTodo={onEditTodo} todo={todo} />}
       {isActive && (
         <>
           {/* Skärmläsartext oförändrad (sekundtakt, samma som innan

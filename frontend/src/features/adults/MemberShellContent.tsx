@@ -214,6 +214,10 @@ export function MemberShellContent({
   // "ingen redigera-modal för andra kontons todos"-gräns som redan gäller
   // FamilyTodoThreads.tsx:s övriga mutationer).
   const [editFamilyTodoId, setEditFamilyTodoId] = useState<Id | null>(null);
+  // Redigera-knapp på PersonalDashboard-uppdragskortet (2026-08-10,
+  // Zaidas beslut: bara på DIN EGEN dashboard, ingen befintlig
+  // behörighetsprincip för att redigera en ANNAN vuxens uppgifter härifrån).
+  const [editingSelfTodoId, setEditingSelfTodoId] = useState<Id | null>(null);
   // Egen sida för Medaljer/Rekord (2026-07-06) — samma pokal-knapp/sida som
   // barnets egen vy, men här när en vuxen tittar på ett barns dashboard.
   const [showChildRecords, setShowChildRecords] = useState(false);
@@ -745,6 +749,12 @@ export function MemberShellContent({
       );
     }
 
+    // Redigera-knapp bara på DIN EGEN dashboard (2026-08-10, Zaidas beslut)
+    // — ingen befintlig behörighetsprincip för att redigera en ANNAN vuxens
+    // uppgifter härifrån, se onEditTodo-kommentaren i ChildTasksSection.tsx.
+    const isOwnDashboard = selectedDashboardMember.id === currentMember.id;
+    const editingSelfTodo = editingSelfTodoId ? todos.find((t) => t.id === editingSelfTodoId) ?? null : null;
+
     return (
       <div ref={memberSwipeNavRef}>
         <Suspense fallback={null}>
@@ -761,8 +771,28 @@ export function MemberShellContent({
             onDismissRejectedTodo(todoId, selectedDashboardMember.id)
           }
           onOpenRecords={() => setShowChildRecords(true)}
+          onEditTodo={isOwnDashboard ? (todo) => setEditingSelfTodoId(todo.id) : undefined}
         />
         </Suspense>
+        {editingSelfTodo && (
+          <Suspense fallback={null}>
+            <TodoEditModal
+              categories={personalCategories}
+              currentMember={currentMember}
+              fixedTodoTimes={fixedTodoTimes}
+              members={members}
+              onClose={() => setEditingSelfTodoId(null)}
+              onCreateCategory={onCreateCategory}
+              onCreateTaskTemplate={onCreateTaskTemplate}
+              onDeleteTodo={onSoftDeleteTodo}
+              onRefreshRoutine={onRefreshRoutine}
+              onUpdateTodo={onUpdateTodo}
+              roles={roles}
+              todo={editingSelfTodo}
+              todos={todos}
+            />
+          </Suspense>
+        )}
       </div>
     );
   }

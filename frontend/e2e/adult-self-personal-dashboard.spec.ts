@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockAuthAndData, MEMBER } from "./helpers";
 
 // Zaida (2026-07-22): "Som vuxen ser jag ingen barnvy när jag klickar på min
 // profil på medlemsvyn. Jag vill kunna se mina uppgifter och kalendrar på
@@ -12,28 +13,19 @@ import { test, expect } from "@playwright/test";
 // "väljer man en ANNAN vuxen visas ändå den vanliga hemvyn" reverserat.
 // Andra testet nedan uppdaterat till det NYA beteendet (visade tidigare det
 // omvända).
-
-const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
-const ROLE = {
-  id: "role-1", name: "Förälder", isChildRole: false,
-  permissions: {
-    canManageMembers: true, canManageRoles: true,
-    canSeeAllTodos: true, canSeeOwnTodos: true, canCreateTodos: true,
-    canScheduleRecurringTodos: true, canCompleteAssignedTodos: true,
-    canEditAnyTodos: true, canDeleteAnyTodos: true, canApproveTodos: true,
-    canSeeAllCalendar: true, canSeeOwnCalendar: true, canCreateCalendar: true,
-    canEditCalendar: true, canImportCalendar: true, canExportCalendar: true,
-    canSeeShoppingLists: true, canCreateShoppingLists: true, canEditShoppingLists: true,
-    canViewTrash: true, canRestoreFromTrash: true,
-    canCreateChildAccounts: true, canManageChildTodos: true,
-  },
-};
-const PARENT = {
-  id: "mem-1", accountId: "acc-1", userId: "user-1",
-  name: "Testförälder", roleId: "role-1", isChild: false,
-  avatarUrl: null, color: null, dashboardTheme: "sunset",
-  spentStars: 0, deletedAt: null, deletedBy: null,
-};
+//
+// 2026-08-10: migrerad från en egen, lokal mockCommon() till den delade
+// mockAuthAndData()/mockDataAPIs() (helpers.ts) — filens ursprungliga mock
+// saknade flera endpoints som lagts till sedan 2026-07-22 (todo-templates,
+// recipes, family-across-accounts, connections m.fl.), vilket lät dem falla
+// igenom till ett RIKTIGT, ej mockat nätverksanrop och ett äkta 401 →
+// appen loggade ut mitt i testet (upptäckt vid felsökning av en till synes
+// "flakig" körning — screenshoten visade inloggningssidan, inte instabil
+// DOM-timing). Samma redan dokumenterade bugklass som helpers.ts:s egen
+// mockDataAPIs-kommentar beskriver. Den delade hjälparen håller sig
+// uppdaterad automatiskt när nya endpoints tillkommer, till skillnad från
+// en lokal kopia.
+const PARENT = { ...MEMBER, dashboardTheme: "sunset" };
 const OTHER_ADULT = {
   id: "mem-2", accountId: "acc-1", userId: "user-2",
   name: "Lars", roleId: "role-1", isChild: false,
@@ -50,28 +42,14 @@ const TODO = {
   personalCategoryId: null, notes: null
 };
 const LARS_TODO = { ...TODO, id: "todo-2", title: "Klippa gräset", createdBy: "mem-2", assignedTo: "mem-2" };
-const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" };
-const LOGIN_RESPONSE = { accessToken: "fake-access-token", user: USER, memberships: [{ member: PARENT, account: ACCOUNT }] };
 
 async function mockCommon(page: import("@playwright/test").Page) {
-  await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
+  await mockAuthAndData(page);
+  // Registrerade EFTER mockAuthAndData (Playwright: senast registrerad
+  // matchning vinner) — testets egna, mer specifika data ersätter de
+  // generiska default-stubbarna för just members/todos.
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
-  await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO, LARS_TODO] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased/, (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 }
 
 test("vuxen som klickar sin egen profil ser sina uppgifter+kalender, inte Familjens kalender", async ({ page }) => {
@@ -101,4 +79,38 @@ test("vuxen som klickar en ANNAN vuxens profil ser NU den personens uppgifter+ka
   await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expect(page.getByText("Handla mat")).toHaveCount(0);
   await expect(page.getByText("Familjens kalender")).toHaveCount(0);
+});
+
+// 2026-08-10, PersonalDashboard-uppföljning (öppen backlogg-post): redigera-
+// knapp på uppdragskortet, MEDVETET bara på DIN EGEN dashboard — ingen
+// befintlig behörighetsprincip för att redigera en ANNAN vuxens uppgifter
+// härifrån (Zaidas beslut). ChildTasksSection.tsx delas rakt av med RIKTIGA
+// barns dashboard, så knappen är opt-in via en valfri prop som bara
+// PersonalDashboard.tsx sätter.
+test("vuxen ser en redigera-knapp på sin EGEN dashboard, öppnar redigeringsmodalen", async ({ page }) => {
+  await mockCommon(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
+
+  await expect(page.getByText("Handla mat")).toBeVisible();
+  // exact:true (2026-08-10) — kortets EGEN tillgängliga namn ("Star Handla
+  // mat Redigera") innehåller redan den nästlade knappens namn som en
+  // delsträng (role="button"-namnet beräknas från allt textinnehåll,
+  // inklusive ättlingar), samma redan dokumenterade tvetydighetsklass som
+  // finns på flera andra ställen i sviten.
+  await page.getByRole("button", { name: "Redigera Handla mat", exact: true }).click();
+  await expect(page.getByText("Redigera uppgift")).toBeVisible();
+});
+
+test("vuxen ser INGEN redigera-knapp på en ANNAN vuxens dashboard", async ({ page }) => {
+  await mockCommon(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
+
+  await expect(page.getByText("Klippa gräset")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Redigera Klippa gräset", exact: true })).toHaveCount(0);
 });

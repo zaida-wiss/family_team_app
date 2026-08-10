@@ -286,6 +286,35 @@
    ljusa siffror ger ett garanterat högt kontrastförhållande OAVSETT vilken
    av de fyra kategoripastellerna kortet råkar ha, till skillnad från att
    bara välja en enda "säker" textfärg mot en varierande bakgrund. */
+/* Redigera-knapp (2026-08-10, PersonalDashboard-uppföljning) — bara
+   renderad när ChildTasksSection.tsx fått onEditTodo (opt-in, aldrig satt
+   för riktiga barns dashboard). Övre högra hörnet, motsatt den digitala
+   timer-badgen (nedre höger) för att aldrig kollidera. stopPropagation på
+   pointerdown/pointerup/click (se EditTodoButton) hindrar kortets egen
+   håll-in-gest från att armeras samtidigt. Klickytan hålls vid CLAUDE.md:s
+   44×44px-golv trots att kortet i sig kan krympa mindre på små skärmar
+   (container queries) — ikonen är visuellt liten, touch-målet är det inte. */
+.child-task-edit-btn {
+  position: absolute;
+  top: clamp(4px, 1.2cqi, 8px);
+  right: clamp(4px, 1.2cqi, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--task-bg, var(--card)) 55%, transparent);
+  color: var(--black, #000);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.child-task-edit-btn:hover {
+  background: color-mix(in srgb, var(--task-bg, var(--card)) 80%, transparent);
+}
+
 .child-task-timer-digital {
   position: absolute;
   right: clamp(6px, 1.6cqi, 12px);

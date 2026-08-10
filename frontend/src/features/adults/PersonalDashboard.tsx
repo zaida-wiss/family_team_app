@@ -44,6 +44,10 @@ type Props = {
   // belöningar gäller inte en vuxens egna uppgifter), så pokal-knappen ligger
   // istället som en egen, liten knapp här.
   onOpenRecords: () => void;
+  // Redigera-knapp på uppdragskortet (2026-08-10) — vidarebefordras rakt av
+  // till ChildTasksSection.tsx (samma opt-in-princip: satt bara av den
+  // som äger anropsstället i MemberShellContent.tsx, bara vid SJÄLVVAL).
+  onEditTodo?: (todo: Todo) => void;
 };
 
 function getWeekStripDays(anchor: Date) {
@@ -68,7 +72,8 @@ export function PersonalDashboard({
   rejectedTodos,
   onCompleteTodo,
   onDismissRejectedTodo,
-  onOpenRecords
+  onOpenRecords,
+  onEditTodo
 }: Props) {
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -145,6 +150,7 @@ export function PersonalDashboard({
             onStartHold={startHold}
             onClearHold={clearHold}
             onCompleteTodo={onCompleteTodo}
+            onEditTodo={onEditTodo}
           />
 
           <ChildRejectedTodos
