@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useNowTick } from "../../hooks/useNowTick";
 import { useMemberSwipeNav } from "../../hooks/useMemberSwipeNav";
 import type { ComponentProps } from "react";
@@ -225,6 +225,23 @@ export function MemberShellContent({
   // inuti if-blocket längre ner.
   const nowTick = useNowTick();
 
+  // Stale-roles-closure-mönstret (2026-08-10, samma fix som redan gjordes i
+  // ChildShellContent.tsx) — håll-in-gester (useHoldToConfirm, i
+  // ParentTodoThreadView.tsx/FamilyTodoThreads.tsx) fryser sin onConfirm-
+  // parameter VID PRESS-tid. roles hämtas uppskjutet via deferToIdle och kan
+  // vara den tomma startarrayen precis vid mount (en fräsch session utan
+  // cache) — trycker man in exakt då blir onCompleteTodo/onUncompleteTodo-
+  // wrapparna nedan FROZEN med tomma roles i hela håll-in-tiden, oavsett hur
+  // många renderingar som hinner ske under tiden. rolesRef löses istället
+  // vid EXEKVERINGSTID (vilket kan ligga flera lager djupare, bakom
+  // ParentTodoThreadView.tsx/FamilyTodoThreads.tsx:s egna handleConfirmComplete
+  // — de bara vidarebefordrar den redan mottagna propen, ingen egen fix
+  // behövdes där).
+  const rolesRef = useRef(roles);
+  useEffect(() => {
+    rolesRef.current = roles;
+  }, [roles]);
+
   const canSeeAllCalendars = hasPermission(currentMember, roles, "canSeeAllCalendar");
   const canSeeOwnCalendars = hasPermission(currentMember, roles, "canSeeOwnCalendar");
 
@@ -318,7 +335,7 @@ export function MemberShellContent({
   function completeOwnFamilyTodo(todoId: Id, elapsedMs?: number | null) {
     const todo = todos.find((t) => t.id === todoId);
     const assignee = todo?.assignedTo === null ? currentMember : members.find((m) => m.id === todo?.assignedTo);
-    if (assignee) onCompleteTodo(assignee, todoId, roles, elapsedMs);
+    if (assignee) onCompleteTodo(assignee, todoId, rolesRef.current, elapsedMs);
   }
 
   const homeFamilyThreadSources = useMemo(() => {
@@ -716,8 +733,8 @@ export function MemberShellContent({
               rejectedTodos={rejectedTodos}
               onOpenRecords={() => setShowChildRecords(true)}
               onCreateWish={onCreateWish}
-              onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
-              onUncompleteTodo={(todoId) => onUncompleteTodo(selectedDashboardMember, todoId, roles)}
+              onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, rolesRef.current, elapsedMs)}
+              onUncompleteTodo={(todoId) => onUncompleteTodo(selectedDashboardMember, todoId, rolesRef.current)}
               onDismissRejectedTodo={(todoId) =>
                 onDismissRejectedTodo(todoId, selectedDashboardMember.id)
               }
@@ -739,7 +756,7 @@ export function MemberShellContent({
           timelineTodos={todos}
           activeTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}
-          onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, roles, elapsedMs)}
+          onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, rolesRef.current, elapsedMs)}
           onDismissRejectedTodo={(todoId) =>
             onDismissRejectedTodo(todoId, selectedDashboardMember.id)
           }
@@ -846,7 +863,7 @@ export function MemberShellContent({
             // duger här).
             const todo = todos.find((t) => t.id === todoId);
             const assignee = todo?.assignedTo === null ? currentMember : members.find((m) => m.id === todo?.assignedTo);
-            if (assignee) onCompleteTodo(assignee, todoId, roles, elapsedMs);
+            if (assignee) onCompleteTodo(assignee, todoId, rolesRef.current, elapsedMs);
           }}
           personalCategories={personalCategories}
           onCreateCategory={onCreateCategory}
