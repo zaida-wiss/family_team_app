@@ -220,6 +220,13 @@ test("Barnets uppgifter: en tidtagen uppgift med planerad tid visar nedräkning,
   await expect(card).toHaveAccessibleName(/0:5\d kvar|1:00 kvar/);
   await expect(page.getByText(/^0:5\d$|^1:00$/)).toBeVisible();
 
+  // Väntar in nedräkningen INNAN håll-in-starten (2026-08-10, samma ändring
+  // som stoppurstestet ovan): elapsedMs fångas numera vid HÅLL-IN-STARTEN,
+  // inte vid håll-in-slutet, så själva 2-sekundershållet räknas inte längre
+  // in i den sparade tiden — utan denna väntan hinner nästan ingen tid gå
+  // innan pointerdown.
+  await page.waitForTimeout(2200);
+
   // Simulerar ett 2+ sekunders håll, samma dispatchEvent-mönster som det
   // befintliga långtryck-testet i parent-todo-thread-view.spec.ts (undviker
   // page.mouse:s känslighet för layoutskift under väntan).
