@@ -29,6 +29,15 @@ export const calendarsApi = {
     request<{ ok: boolean }>(api(`calendars/${calendarId}/share/${memberId}`), {
       method: "DELETE"
     }),
+  setDashboardVisibility: (calendarId: string, memberId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/dashboard-visibility`), {
+      method: "POST",
+      body: JSON.stringify({ memberId })
+    }),
+  removeDashboardVisibility: (calendarId: string, memberId: string) =>
+    request<{ ok: boolean }>(api(`calendars/${calendarId}/dashboard-visibility/${memberId}`), {
+      method: "DELETE"
+    }),
   importEvents: (calendarId: string, source: object, events: object[]) =>
     request<{ ok: boolean }>(api(`calendars/${calendarId}/import`), {
       method: "POST",

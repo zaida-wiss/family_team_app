@@ -308,6 +308,30 @@ export async function unshareCalendar(calendarId: string, accountId: string, mem
   await calendar.save();
 }
 
+// Dashboard-synlighet (2026-08-11, Zaidas rättelse: familjekalender-delning
+// (shareCalendar ovan) och "syns på dashboarden" är två oberoende
+// inställningar — se shared/types.ts:s kommentar på dashboardVisibleTo).
+export async function setDashboardVisibility(calendarId: string, accountId: string, memberId: string) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
+  if (!calendar) throw new AppError(404, "Kalender hittades inte");
+
+  const dashboardVisibleTo = calendar.dashboardVisibleTo ?? [];
+  if (!dashboardVisibleTo.includes(memberId)) {
+    calendar.dashboardVisibleTo = [...dashboardVisibleTo, memberId];
+    calendar.markModified("dashboardVisibleTo");
+    await calendar.save();
+  }
+}
+
+export async function removeDashboardVisibility(calendarId: string, accountId: string, memberId: string) {
+  const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
+  if (!calendar) throw new AppError(404, "Kalender hittades inte");
+
+  calendar.dashboardVisibleTo = (calendar.dashboardVisibleTo ?? []).filter((id) => id !== memberId);
+  calendar.markModified("dashboardVisibleTo");
+  await calendar.save();
+}
+
 export async function addEvent(calendarId: string, accountId: string, memberId: string, event: unknown) {
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");

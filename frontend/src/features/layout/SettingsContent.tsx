@@ -283,6 +283,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 onUpdateFixedCalendarTimes={settingsProps.onUpdateFixedCalendarTimes}
                 onShareCalendar={memberContentProps.onShareCalendar}
                 onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+                onSetDashboardVisibility={memberContentProps.onSetDashboardVisibility}
+                onRemoveDashboardVisibility={memberContentProps.onRemoveDashboardVisibility}
               />
               {canManageMembers && (
                 <div className="settings-sub">

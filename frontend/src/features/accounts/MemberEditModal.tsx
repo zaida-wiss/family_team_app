@@ -19,6 +19,8 @@ type MemberEditModalProps = {
   onSetChildCredentials: (memberId: Id, username: string, password: string) => Promise<{ id: string; username: string }>;
   onShareCalendar: (calendarId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
+  onSetDashboardVisibility: (calendarId: Id, memberId: Id) => void;
+  onRemoveDashboardVisibility: (calendarId: Id, memberId: Id) => void;
   onDelete: (memberId: Id) => void;
   onClose: () => void;
 };
@@ -42,6 +44,8 @@ export function MemberEditModal({
   onSetChildCredentials,
   onShareCalendar,
   onRemoveCalendarShare,
+  onSetDashboardVisibility,
+  onRemoveDashboardVisibility,
   onDelete,
   onClose
 }: MemberEditModalProps) {
@@ -230,20 +234,38 @@ export function MemberEditModal({
           {isChildMember && otherCalendars.length > 0 && (
             <div className="member-edit-modal__section">
               <h4 className="settings-sub-title">Kalenderåtkomst</h4>
+              <p className="settings-sub-desc">
+                Familjekalender gör kalendern synlig i den vanliga kalenderfliken. Dashboard gör
+                den synlig på {member.name}s egen dashboard-vy — oberoende inställningar.
+              </p>
               <div className="member-edit-modal__cal-list">
                 {otherCalendars.map((cal) => (
-                  <label className="cal-filter-item" key={cal.id}>
-                    <input
-                      type="checkbox"
-                      checked={canViewResource(member, cal)}
-                      onChange={(e) => {
-                        if (e.target.checked) onShareCalendar(cal.id, member.id, "view");
-                        else onRemoveCalendarShare(cal.id, member.id);
-                      }}
-                    />
+                  <div className="member-edit-modal__cal-row" key={cal.id}>
                     <span className="cal-filter-dot" style={{ background: cal.color }} />
-                    <span>{cal.name}</span>
-                  </label>
+                    <span className="member-edit-modal__cal-name">{cal.name}</span>
+                    <label className="cal-filter-item member-edit-modal__cal-toggle">
+                      <input
+                        type="checkbox"
+                        checked={canViewResource(member, cal)}
+                        onChange={(e) => {
+                          if (e.target.checked) onShareCalendar(cal.id, member.id, "view");
+                          else onRemoveCalendarShare(cal.id, member.id);
+                        }}
+                      />
+                      Familjekalender
+                    </label>
+                    <label className="cal-filter-item member-edit-modal__cal-toggle">
+                      <input
+                        type="checkbox"
+                        checked={(cal.dashboardVisibleTo ?? []).includes(member.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) onSetDashboardVisibility(cal.id, member.id);
+                          else onRemoveDashboardVisibility(cal.id, member.id);
+                        }}
+                      />
+                      Dashboard
+                    </label>
+                  </div>
                 ))}
               </div>
             </div>

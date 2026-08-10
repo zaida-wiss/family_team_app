@@ -623,6 +623,12 @@ export type Calendar = OwnedSharedResource & {
   // en sträng är opålitlig att PARSA tillbaka till ett rent namn — det här
   // fältet ger MemberOverview.tsx familjenamnet direkt, utan regex.
   sourceAccountName?: string;
+  // Dashboard-synlighet (2026-08-11, Zaidas rättelse: en kalender delad till
+  // familjekalendern via sharedWith ska INTE per automatik synas på ett barns/
+  // en vuxens dashboard-vy — det är en egen, oberoende inställning under
+  // Medlemmar. Barnets/vuxnas EGNA kalendrar (ownerId === member.id) visas
+  // alltid på deras egen dashboard oavsett detta fält, se ChildTimeline.tsx.
+  dashboardVisibleTo?: Id[];
   events: CalendarEvent[];
   importedSources: ImportedCalendarSource[];
   subscriptions: IcsSubscription[];

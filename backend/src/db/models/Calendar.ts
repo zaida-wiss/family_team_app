@@ -43,6 +43,9 @@ const calendarSchema = new Schema<Calendar>(
     color: { type: String, required: true },
     ownerId: { type: String, required: true },
     sharedWith: [{ memberId: String, access: String }],
+    // Dashboard-synlighet (2026-08-11) — oberoende av sharedWith ovan, se
+    // shared/types.ts:s kommentar.
+    dashboardVisibleTo: { type: [String], default: [] },
     deletedAt: { type: String, default: null },
     deletedBy: { type: String, default: null },
     keepAllHistory: { type: Boolean, default: false },

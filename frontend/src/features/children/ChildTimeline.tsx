@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import type { Calendar, Member, PurchasedReward, Role, Todo } from "@shared/types";
 import "./ChildTimeline.css";
 import { expandForRange, fmtTime, resolveDisplaySymbol, toLocalDateStr } from "../calendars/calendarHelpers";
-import { canViewResource, hasPermission } from "../../utils/permissions";
+import { hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 import { TimelineEventDetail } from "./TimelineEventDetail";
 import {
@@ -39,12 +39,20 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
   const selectedDayStr = toLocalDateStr(selectedDay);
   const timelineRange = getTimelineRange(child);
 
+  // Dashboard-synlighet (2026-08-11, Zaidas rättelse) — MEDVETET frikopplad
+  // från familjekalender-delningen (sharedWith/canViewResource, se
+  // CalendarEventList.tsx för den vyn): en kalender delad till familjen ska
+  // INTE per automatik dyka upp här. Bara egna kalendrar (alltid) och
+  // kalendrar explicit ikryssade under Medlemmar → Kalenderåtkomst →
+  // Dashboard (dashboardVisibleTo) syns.
   const visibleCalIds = new Set(
     calendars
       .filter((cal) => {
         if (cal.deletedAt !== null) return false;
         if (hasPermission(child, roles, "canSeeAllCalendar")) return true;
-        return hasPermission(child, roles, "canSeeOwnCalendar") && canViewResource(child, cal);
+        if (!hasPermission(child, roles, "canSeeOwnCalendar")) return false;
+        if (cal.ownerId === child.id) return true;
+        return (cal.dashboardVisibleTo ?? []).includes(child.id);
       })
       .map((cal) => cal.id)
   );

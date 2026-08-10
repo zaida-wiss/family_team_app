@@ -45,7 +45,7 @@ export function useShellState(
 
   const { calendars, loadEventsForMonth, createCalendar, updateCalendarColor, renameCalendar, transferCalendar, updateCalendarKeepAllHistory, updateCalendarShareAcrossMyAccounts, addCalendarEvent, updateCalendarEvent,
     deleteCalendarEvent, deleteCalendar, rsvpCalendarEvent, importCalendarEvents,
-    shareCalendar, removeCalendarShare, restoreCalendar, purgeCalendarsTrash,
+    shareCalendar, removeCalendarShare, setDashboardVisibility, removeDashboardVisibility, restoreCalendar, purgeCalendarsTrash,
     softDeleteCalendarsForMember,
     addSubscription, updateSubscription, removeSubscription, syncSubscription,
     appleAccounts, refreshAppleAccounts, addAppleAccount, removeAppleAccount, listCalendarsForAppleAccount,
@@ -315,6 +315,8 @@ export function useShellState(
     ) => importCalendarEvents(calendarId, sourceName, events, currentMember.id),
     onShareCalendar: shareCalendar,
     onRemoveCalendarShare: removeCalendarShare,
+    onSetDashboardVisibility: setDashboardVisibility,
+    onRemoveDashboardVisibility: removeDashboardVisibility,
     onAddShoppingItem: (listId: string, title: string) =>
       addShoppingItem(listId, title, currentMember.id),
     onCreateShoppingList: (name: string, icon?: string | null) =>

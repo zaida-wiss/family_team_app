@@ -51,6 +51,18 @@ calendarsRouter.delete("/:id/share/:memberId", requireAuth, attachAccountId, asy
   res.json({ ok: true });
 });
 
+// Dashboard-synlighet (2026-08-11) — oberoende av /share ovan.
+calendarsRouter.post("/:id/dashboard-visibility", requireAuth, attachAccountId, async (req, res) => {
+  const { memberId } = req.body;
+  await calendars.setDashboardVisibility(req.params.id, req.accountId!, memberId);
+  res.json({ ok: true });
+});
+
+calendarsRouter.delete("/:id/dashboard-visibility/:memberId", requireAuth, attachAccountId, async (req, res) => {
+  await calendars.removeDashboardVisibility(req.params.id, req.accountId!, req.params.memberId);
+  res.json({ ok: true });
+});
+
 // ── subscriptions ─────────────────────────────────────────────────────────────
 
 calendarsRouter.post("/:id/subscriptions", requireAuth, attachAccountId, async (req, res) => {

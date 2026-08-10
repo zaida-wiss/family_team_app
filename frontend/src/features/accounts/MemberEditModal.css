@@ -79,6 +79,25 @@
   gap: 6px;
 }
 
+.member-edit-modal__cal-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 5px 7px;
+}
+
+.member-edit-modal__cal-name {
+  flex: 1 1 auto;
+  min-width: 80px;
+}
+
+.member-edit-modal__cal-toggle {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  color: var(--muted-fg);
+}
+
 /* Direkt synlig native <input type=color> (2026-07-23, Zaidas fynd: klick på
    den tidigare dolda input-i-label-varianten öppnade ingen färgväljare) —
    samma bevisat fungerande mönster som redan används för kalenderfärg

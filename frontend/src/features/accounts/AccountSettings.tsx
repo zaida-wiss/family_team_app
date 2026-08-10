@@ -34,6 +34,8 @@ type AccountSettingsProps = {
   onUpdateFixedCalendarTimes: (fixedCalendarTimes: boolean) => void;
   onShareCalendar: (calendarId: string, memberId: string, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
+  onSetDashboardVisibility: (calendarId: string, memberId: string) => void;
+  onRemoveDashboardVisibility: (calendarId: string, memberId: string) => void;
 };
 
 export function AccountSettings({
@@ -54,6 +56,8 @@ export function AccountSettings({
   onUpdateFixedCalendarTimes,
   onShareCalendar,
   onRemoveCalendarShare,
+  onSetDashboardVisibility,
+  onRemoveDashboardVisibility,
 }: AccountSettingsProps) {
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
@@ -330,6 +334,8 @@ export function AccountSettings({
             onRemoveCalendarShare={onRemoveCalendarShare}
             onSetChildCredentials={onSetChildCredentials}
             onShareCalendar={onShareCalendar}
+            onSetDashboardVisibility={onSetDashboardVisibility}
+            onRemoveDashboardVisibility={onRemoveDashboardVisibility}
             onUpdateAvatar={onUpdateMemberAvatar}
             onUpdateColor={onUpdateMemberColor}
             onUpdateName={onUpdateMemberName}

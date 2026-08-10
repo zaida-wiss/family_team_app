@@ -127,8 +127,16 @@ test("Barnets tidslinje: samma importerade händelses egen symbol visas när bar
   const CHILD_LOGIN_RESPONSE = {
     accessToken: "fake-access-token", user: CHILD_USER, memberships: [{ member: CHILD, account: ACCOUNT }],
   };
-  // Kalendern delad med barnet (view räcker för att synas i tidslinjen).
-  const SHARED_CALENDAR = { ...CALENDAR, sharedWith: [{ memberId: CHILD.id, access: "view" }] };
+  // 2026-08-11: familjekalender-delning (sharedWith) och dashboard-synlighet
+  // (dashboardVisibleTo) är sedan Zaidas rättelse oberoende inställningar —
+  // se ChildTimeline.tsx. Testet handlar om symbolupplösning, inte om vilken
+  // av de två inställningarna som styr synlighet, så båda sätts här för att
+  // händelsen ska synas i barnets egen tidslinje.
+  const SHARED_CALENDAR = {
+    ...CALENDAR,
+    sharedWith: [{ memberId: CHILD.id, access: "view" }],
+    dashboardVisibleTo: [CHILD.id],
+  };
 
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: CHILD_LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD] }));

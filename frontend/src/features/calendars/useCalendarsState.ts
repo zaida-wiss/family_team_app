@@ -400,6 +400,39 @@ export function useCalendarsState() {
     );
   }
 
+  function setDashboardVisibility(calendarId: Id, memberId: Id) {
+    calendarsApi.setDashboardVisibility(calendarId, memberId).catch(console.error);
+    setCalendars((current) =>
+      current.map((calendar) => {
+        if (calendar.id !== calendarId) {
+          return calendar;
+        }
+
+        const existing = calendar.dashboardVisibleTo ?? [];
+        if (existing.includes(memberId)) {
+          return calendar;
+        }
+        return { ...calendar, dashboardVisibleTo: [...existing, memberId] };
+      })
+    );
+  }
+
+  function removeDashboardVisibility(calendarId: Id, memberId: Id) {
+    calendarsApi.removeDashboardVisibility(calendarId, memberId).catch(console.error);
+    setCalendars((current) =>
+      current.map((calendar) => {
+        if (calendar.id !== calendarId) {
+          return calendar;
+        }
+
+        return {
+          ...calendar,
+          dashboardVisibleTo: (calendar.dashboardVisibleTo ?? []).filter((id) => id !== memberId)
+        };
+      })
+    );
+  }
+
   function restoreCalendar(calendarId: Id) {
     calendarsApi.restore(calendarId).catch(console.error);
     setCalendars((current) =>
@@ -494,6 +527,8 @@ export function useCalendarsState() {
     importCalendarEvents,
     shareCalendar,
     removeCalendarShare,
+    setDashboardVisibility,
+    removeDashboardVisibility,
     restoreCalendar,
     purgeCalendarsTrash,
     softDeleteCalendarsForMember,
