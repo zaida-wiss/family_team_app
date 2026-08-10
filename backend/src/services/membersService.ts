@@ -13,8 +13,33 @@ function toMemberSummary(m: { id: string; name: string; avatarUrl?: string | nul
   return { id: m.id, name: m.name, avatarUrl: m.avatarUrl ?? null, color: m.color ?? null, isChild: !!m.isChild };
 }
 
+// 2026-08-10: kontonivå-avatar cascadar hit — en medlem utan egen
+// avatarUrl (null, ingen per-familj-override satt) visar istället sin
+// User.avatarUrl om en sådan finns. En redan explicit satt Member.avatarUrl
+// har alltid företräde, opåverkad. .lean() krävs inte för korrekthet här
+// (bara plain-object-fälten läses/skrivs) men är billigare än fulla
+// Mongoose-dokument för en ren läs-operation.
+async function resolveAvatars<T extends { avatarUrl: string | null; userId?: string | null }>(
+  members: T[]
+): Promise<T[]> {
+  const userIds = [...new Set(members.filter((m) => m.avatarUrl === null && m.userId).map((m) => m.userId as string))];
+  if (userIds.length === 0) {
+    return members;
+  }
+
+  const users = await UserModel.find({ id: { $in: userIds } }, { id: 1, avatarUrl: 1, _id: 0 }).lean();
+  const avatarByUserId = new Map(users.map((u) => [u.id, u.avatarUrl ?? null]));
+
+  return members.map((m) =>
+    m.avatarUrl === null && m.userId && avatarByUserId.get(m.userId)
+      ? { ...m, avatarUrl: avatarByUserId.get(m.userId) ?? null }
+      : m
+  );
+}
+
 export async function getAllMembers(accountId: string) {
-  return MemberModel.find({ accountId }, { _id: 0, __v: 0 });
+  const memberDocs = await MemberModel.find({ accountId }, { _id: 0, __v: 0 }).lean();
+  return resolveAvatars(memberDocs);
 }
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka

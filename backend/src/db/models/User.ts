@@ -25,6 +25,10 @@ const userSchema = new Schema<UserDoc>({
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
   lastActiveMemberId: { type: String, default: null },
+  // 2026-08-10: kontonivå-avatar, cascadar till Member.avatarUrl===null (se
+  // membersService.ts). Uppladdas via samma delade uploadImage-flöde som
+  // medlemsprofilbilder (frontend/src/utils/uploadImage.ts, folder:"avatars").
+  avatarUrl: { type: String, default: null },
   tokenVersion: { type: Number, default: 0 },
   passwordResetTokenHash: { type: String, default: null },
   passwordResetExpiry: { type: String, default: null }

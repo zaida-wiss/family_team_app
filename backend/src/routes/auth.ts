@@ -47,6 +47,12 @@ authRouter.patch("/preferences", requireAuth, async (req, res) => {
   });
 });
 
+authRouter.patch("/avatar", requireAuth, async (req, res) => {
+  res.json({
+    user: await authService.updateMyAvatar(req.userId!, req.body.avatarUrl ?? null)
+  });
+});
+
 authRouter.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
   await authService.forgotPassword(email ?? "");

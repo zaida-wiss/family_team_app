@@ -69,10 +69,12 @@ export function AppRouter() {
       key={nav.activeMembership.member.id}
       activeMembership={nav.activeMembership}
       memberships={nav.memberships}
+      user={nav.user}
       onLogout={nav.onLogout}
       onSwitchAccount={nav.onSwitchAccount}
       onSelectMembership={nav.onSelectMembership}
       onMembershipsUpdated={nav.onMembershipsUpdated}
+      onUpdateMyAvatar={nav.onUpdateMyAvatar}
     />
   );
 }

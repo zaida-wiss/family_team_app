@@ -16,6 +16,7 @@ function toPublicUser(user: {
   name: string;
   createdAt: string;
   lastActiveMemberId?: string | null;
+  avatarUrl?: string | null;
 }) {
   return {
     id: user.id,
@@ -23,7 +24,8 @@ function toPublicUser(user: {
     username: user.username ?? null,
     name: user.name,
     createdAt: user.createdAt,
-    lastActiveMemberId: user.lastActiveMemberId ?? null
+    lastActiveMemberId: user.lastActiveMemberId ?? null,
+    avatarUrl: user.avatarUrl ?? null
   };
 }
 
@@ -168,6 +170,21 @@ export async function updatePreferences(userId: string, patch: { lastActiveMembe
     user.lastActiveMemberId = patch.lastActiveMemberId ?? null;
   }
 
+  await user.save();
+  return toPublicUser(user);
+}
+
+// 2026-08-10: kontonivå-avatar (ADR se CLAUDE.md-historik "avatar på
+// kontonivå") — cascadar till Member.avatarUrl===null via
+// membersService.ts:s resolveAvatars, en per-familj-satt medlemsbild har
+// alltid företräde och är opåverkad av detta.
+export async function updateMyAvatar(userId: string, avatarUrl: string | null) {
+  const user = await UserModel.findOne({ id: userId });
+  if (!user) {
+    throw new AppError(404, "Användare hittades inte");
+  }
+
+  user.avatarUrl = avatarUrl;
   await user.save();
   return toPublicUser(user);
 }

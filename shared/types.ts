@@ -207,6 +207,10 @@ export type User = {
   name: string;
   createdAt: string;
   lastActiveMemberId?: Id | null;
+  // 2026-08-10: kontonivå-profilbild — cascadar till en Member vars
+  // avatarUrl är null (se membersService.ts:s resolveAvatars). En medlems
+  // egen, explicit satta avatarUrl har alltid företräde (per-familj-override).
+  avatarUrl?: string | null;
 };
 
 export type Invitation = {

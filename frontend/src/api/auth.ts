@@ -28,6 +28,13 @@ export const authApi = {
       method: "PATCH",
       body: JSON.stringify(patch)
     }),
+  // 2026-08-10: kontonivå-avatar, cascadar till familjer där medlemmen
+  // saknar en egen avatarUrl (se membersService.ts:s resolveAvatars).
+  updateMyAvatar: (avatarUrl: string | null) =>
+    request<{ user: User }>(api("auth/avatar"), {
+      method: "PATCH",
+      body: JSON.stringify({ avatarUrl })
+    }),
   forgotPassword: (email: string) =>
     request<{ ok: boolean }>(api("auth/forgot-password"), { method: "POST", body: JSON.stringify({ email }) }),
   resetPassword: (token: string, password: string) =>

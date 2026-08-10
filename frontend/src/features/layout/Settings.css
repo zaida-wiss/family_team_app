@@ -26,6 +26,12 @@
   line-height: 1.4;
 }
 
+.account-setup__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .settings-member-list {
   display: grid;
   gap: 8px;

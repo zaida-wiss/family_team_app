@@ -20,10 +20,12 @@ type Screen =
       screen: "shell";
       activeMembership: Membership;
       memberships: Membership[];
+      user: User;
       onLogout: () => Promise<void>;
       onSwitchAccount: () => void;
       onSelectMembership: (m: Membership) => void;
       onMembershipsUpdated: (ms: Membership[]) => void;
+      onUpdateMyAvatar: (avatarUrl: string | null) => Promise<void>;
     };
 
 export function useAppNavigation(): Screen {
@@ -68,6 +70,11 @@ export function useAppNavigation(): Screen {
   async function handleLogout() {
     await logout();
     setActiveMembership(null);
+  }
+
+  async function handleUpdateMyAvatar(avatarUrl: string | null) {
+    const { user } = await authApi.updateMyAvatar(avatarUrl);
+    updateUser(user);
   }
 
   function handleInviteAccepted(session: AcceptedSession) {
@@ -115,12 +122,14 @@ export function useAppNavigation(): Screen {
     screen: "shell",
     activeMembership,
     memberships,
+    user,
     onLogout: handleLogout,
     onSwitchAccount: () => {
       setSwitchingAccount(true);
       setActiveMembership(null);
     },
     onSelectMembership: selectMembership,
-    onMembershipsUpdated: updateMemberships
+    onMembershipsUpdated: updateMemberships,
+    onUpdateMyAvatar: handleUpdateMyAvatar
   };
 }

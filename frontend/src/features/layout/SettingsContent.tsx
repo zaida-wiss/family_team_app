@@ -342,8 +342,11 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
           content: (
             <AccountSetup
               account={activeAccount}
+              currentMember={currentMember}
+              myAvatarUrl={settingsProps.myAvatarUrl}
               onCreateFamily={settingsProps.onCreateFamily}
               onUpdateAccount={settingsProps.onUpdateAccount}
+              onUpdateMyAvatar={settingsProps.onUpdateMyAvatar}
             />
           )
         },

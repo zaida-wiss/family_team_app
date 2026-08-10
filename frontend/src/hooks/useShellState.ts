@@ -8,14 +8,16 @@ import { useTodoCategoriesState } from "../features/todos/useTodoCategoriesState
 import { useTodoTemplatesState } from "../features/todos/useTodoTemplatesState";
 import { useRecipesState } from "../features/recipes/useRecipesState";
 import { useAppFont } from "../components/FontPicker";
-import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TextSize, TodoThreadRange, TodoViewMode } from "@shared/types";
+import type { CalendarFilterKey, CalendarSettings, CalendarViewMode, DashboardThemeId, Id, Membership, TextSize, TodoThreadRange, TodoViewMode, User } from "@shared/types";
 
 export function useShellState(
   activeMembership: Membership,
   onLogout: () => Promise<void>,
   memberships: Membership[],
   onSelectMembership: (m: Membership) => void,
-  onMembershipsUpdated: (ms: Membership[]) => void
+  onMembershipsUpdated: (ms: Membership[]) => void,
+  user: User,
+  onUpdateMyAvatar: (avatarUrl: string | null) => Promise<void>
 ) {
   // En enda instans delad mellan flytande temaväljaren (Shell) och Inställningar-panelen
   // (SettingsContent) — annars visar de "aktiv"-markering utifrån varsin egen state och
@@ -365,6 +367,10 @@ export function useShellState(
     canViewTrash: permissions.canViewTrash,
     onUpdateAccount: setActiveAccount,
     onCreateFamily: createFamily,
+    // 2026-08-10: kontonivå-avatar (cascadar till familjer där medlemmen
+    // saknar en egen avatarUrl, se membersService.ts:s resolveAvatars).
+    myAvatarUrl: user.avatarUrl ?? null,
+    onUpdateMyAvatar,
     onUpdateCalendarSettings: (settings: CalendarSettings) =>
       setActiveAccount({ ...activeAccount, calendarSettings: settings }),
     // Till skillnad från onUpdateCalendarSettings ovan (som bara sätter

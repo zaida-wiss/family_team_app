@@ -6,15 +6,17 @@ import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
 import { primeTimerAudio } from "../../utils/timerSound";
 import { RewardShopContext } from "../rewards/RewardShopContext";
-import type { Membership } from "@shared/types";
+import type { Membership, User } from "@shared/types";
 
 export type ShellProps = {
   activeMembership: Membership;
   memberships: Membership[];
+  user: User;
   onLogout: () => Promise<void>;
   onSwitchAccount: () => void;
   onSelectMembership: (m: Membership) => void;
   onMembershipsUpdated: (ms: Membership[]) => void;
+  onUpdateMyAvatar: (avatarUrl: string | null) => Promise<void>;
 };
 
 const ChildShellContent = lazy(() =>
@@ -112,10 +114,12 @@ function PanelRouter({
 export function Shell({
   activeMembership,
   memberships,
+  user,
   onLogout,
   onSwitchAccount,
   onSelectMembership,
   onMembershipsUpdated,
+  onUpdateMyAvatar,
 }: ShellProps) {
   const {
     activeAccount,
@@ -139,7 +143,7 @@ export function Shell({
     setFontId,
     recordCelebration,
     dismissRecordCelebration,
-  } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated);
+  } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated, user, onUpdateMyAvatar);
 
   // Låser upp ljuduppspelning (nedräkningens "klar"-signal, timerSound.ts,
   // 2026-08-10) redan vid FÖRSTA riktiga tryck/klick i appen — mobila
