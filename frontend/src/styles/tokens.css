@@ -78,15 +78,16 @@
 }
 
 .font-caveat {
-  --font-sans: "Quicksand", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Caveat", cursive;
   --font-display: "Caveat", cursive;
 }
 
 .font-parisienne {
-  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Parisienne", cursive;
   --font-display: "Parisienne", cursive;
-  /* Parisienne finns bara i vikt 400 hos Google Fonts — utan detta syntetiserar
-     webbläsaren en fet variant där rubriker begär bold, vilket förstör den
-     tunna, eleganta karaktären typsnittet valdes för. */
+  /* Parisienne finns bara i vikt 400 hos Google Fonts, och används nu som
+     BÅDE rubrik- och brödtextfont — utan detta syntetiserar webbläsaren en
+     fet variant varhelst i appen som begär bold, vilket förstör den tunna,
+     eleganta karaktären typsnittet valdes för. */
   font-synthesis: none;
 }
