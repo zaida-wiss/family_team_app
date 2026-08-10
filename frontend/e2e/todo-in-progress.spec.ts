@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Zaida (2026-07-22, "innan vi jobbar med cross family så ska vi lösa det i
 // vår familj"): en "någon håller på med den här"-indikator. Dubbeltryck på
@@ -48,24 +49,15 @@ function todo(overrides: Record<string, unknown>) {
   };
 }
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+// todo-timer.spec.ts:s identiska kommentar (samma bugklass).
 async function mockCommon(page: import("@playwright/test").Page) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased/, (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 }
 
 test("dubbeltryck öppnar en avatarväljare, val av en medlem visar en tjock kant i deras färg", async ({ page }) => {

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Zaida (2026-07-23): "När vi är på denna [barnvyn/medlemsvyn] så är det
 // endast medlemmar symbolen som skall vara markerad. Klickar vi på hemmet
@@ -59,29 +60,17 @@ const LOGIN_RESPONSE = {
   memberships: [{ member: PARENT, account: ACCOUNT }],
 };
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+// todo-timer.spec.ts:s identiska kommentar (samma bugklass: en lokal, stale
+// mock saknar nyare endpoints, faller igenom till nätverket, äkta 401 →
+// utloggning mitt i testet).
 async function mockCommon(page: import("@playwright/test").Page) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, CHILD] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE, CHILD_ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
-    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
-  );
-  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
 }
 
 async function selectChild(page: import("@playwright/test").Page) {

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // ADR-0025 (2026-07-23, Zaidas beslut): "Töm papperskorgen permanent" — ett
 // medvetet undantag från appens "aldrig hard delete"-regel. Testar att
@@ -54,6 +55,10 @@ const DELETED_TODO = {
 test("Töm papperskorgen permanent: dubbel bekräftelse, anropar alla fyra endpoints, tömmer listan", async ({ page }) => {
   const purgeCalls: string[] = [];
 
+  // 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST, minimal diff
+  // (behåller alla filens egna, redan stateful mockningar oförändrade
+  // nedan) — se todo-timer.spec.ts:s identiska kommentar (samma bugklass).
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, DELETED_MEMBER] }));
   await page.route("**/api/members/purge-trash", (route) => {
@@ -151,6 +156,9 @@ test("Radera permanent (per rad): dubbel bekräftelse, anropar bara den valda ra
   const purgedIds: string[] = [];
   let items = [DELETED_TODO, DELETED_TODO_2];
 
+  // 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST, se
+  // motsvarande kommentar i filens första test.
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));

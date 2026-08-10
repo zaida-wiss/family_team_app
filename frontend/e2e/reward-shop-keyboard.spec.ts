@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // S4 (Sprint 3): RewardShopModal-korten och plånbokens sedlar/mynt var enbart
 // pekarbaserade (onPointerDown-drag + håll-in för gratisvaror) utan tangentbords-
@@ -50,23 +51,17 @@ const FREE_ITEM = {
   availability: null, requiredCategories: [], createdBy: "mem-parent", deletedAt: null,
 };
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+// todo-timer.spec.ts:s identiska kommentar (samma bugklass).
 async function mockChildSession(page: Page, items: unknown[]) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD] }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [CHILD_ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
   await page.route(/\/api\/reward-shop$/, (route) =>
     route.fulfill({ json: { items, requireApprovalForCategories: false } })
   );
-  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
-    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
-  );
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
 }
 
 test.describe("Belöningsbutiken: tangentbordsläge", () => {

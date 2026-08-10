@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // 2026-07-27, Zaidas fynd: "om jag uppdaterar en importerad kalenderhändelse
 // med emoji så vill jag att den emojin skall synas i barnens vy om jag delar
@@ -71,28 +72,15 @@ const CALENDAR = {
   ],
 };
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+// todo-timer.spec.ts:s identiska kommentar (samma bugklass).
 async function mockCommon(page: import("@playwright/test").Page) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
-    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
-  );
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
 }
 
 test("Kalender-panelen (månadsvy): en importerad händelses egen symbol visas, inte prenumerationens standard", async ({ page }) => {

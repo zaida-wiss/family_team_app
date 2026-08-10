@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Zaida (2026-07-23): "Klickar vi på hemmet eller kalendern så ska det inte
 // längre vara barnvyn" — reverserar 2026-07-21/22-beteendet som den här
@@ -77,36 +78,17 @@ const LARS_CALENDAR = {
   importedSources: [], subscriptions: [],
 };
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — ersätter den
+// tidigare manuella, ofullständiga listan av "nyare endpoints" nedan (se
+// git-historiken) med den delade, kontinuerligt uppdaterade hjälparen. Se
+// todo-timer.spec.ts:s identiska kommentar för bugklassen.
 async function mockCommon(page: import("@playwright/test").Page) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
-    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
-  );
-  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
-  // Nyare, orelaterade endpoints som Hem-vyn/Todos-panelen nu hämtar
-  // ovillkorligt (recept, Familjeanslutningar, Mina familjekonton) — utan
-  // dessa mockar 500:ar de mot dev-serverns proxy (ingen riktig backend
-  // körs), vilket bara syns som en brusig global felbanner men inte
-  // påverkar testets assertions. Mockade ändå för renlighet.
-  await page.route("**/api/recipes", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/connections", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/family-across-accounts", (route) => route.fulfill({ json: [] }));
 }
 
 test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar min VANLIGA kalendervy, inte filtrerad till den valda personen", async ({ page }) => {

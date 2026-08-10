@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Zaida (2026-08-09): "man skall kunna bläddra mellan olika
 // familjemedlemmar i childrens timeline/todo genom att svepa med ett
@@ -42,46 +43,17 @@ const CHILD = {
 const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" };
 const LOGIN_RESPONSE = { accessToken: "tok", user: USER, memberships: [{ member: PARENT, account: ACCOUNT }] };
 
+// 2026-08-10: bytt från en egen, lokalt duplicerad bred catch-all (samma
+// fynd, en annan session löste det oberoende samtidigt) till den delade
+// mockDataAPIs() (helpers.ts) — samma effekt, ingen duplicerad kopia att
+// hålla i synk. Se todo-timer.spec.ts:s identiska kommentar för bugklassen.
 async function mockCommon(page: import("@playwright/test").Page) {
-  // Säkerhetsnät (2026-08-10) — samma fynd/fix som e2e/helpers.ts:s
-  // mockDataAPIs: den här filen har sin EGEN, fristående mockCommon() (inte
-  // den delade helpern) som saknade flera nyare, globalt hämtade endpoints
-  // (t.ex. GET /api/recipes, hämtas av useShellState oavsett aktiv panel
-  // sedan 2026-07-26). Ett sådant omockat anrop faller igenom till ett
-  // RIKTIGT nätverksanrop — lokalt proxar vite preview det vidare till en
-  // äkta backend på :3000, och råkar en sådan redan vara igång (t.ex. en
-  // annan parallell Claude Code-session) svarar den med ett ÄKTA 401.
-  // client.ts:s performRequest/handleUnauthorized behandlar VILKET 401 som
-  // helst som "hela sessionen ogiltig" och loggar ut HELA appen — vilket
-  // sedan såg ut som slumpmässig "element detached from DOM"-flakighet i
-  // just DEN HÄR filens tester, fast grundorsaken var en saknad mock, inte
-  // DOM-timing. Registrerad FÖRST (lägst prioritet, Playwright kör senast
-  // registrerade matchning först) så alla mer specifika mockningar nedan
-  // fortsätter gälla oförändrat.
-  await page.route("**/api/**", (route) => {
-    if (route.request().url().includes("/api/auth/")) {
-      return route.fallback();
-    }
-    return route.fulfill({ json: {} });
-  });
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, CHILD] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE, CHILD_ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased/, (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
 }
 
 test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter till FÖREGÅENDE medlem", async ({ page }) => {

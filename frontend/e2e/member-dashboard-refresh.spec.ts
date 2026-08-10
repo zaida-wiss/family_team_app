@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Ursprungligen (2026-07-06): "om jag står på barnets sida och refreshar
 // sidan så åker jag till kalendervyn. Jag ska egentligen stå kvar på samma
@@ -55,7 +56,10 @@ const CHILD = {
 };
 const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", createdAt: "2024-01-01T00:00:00.000Z" };
 
+// 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+// todo-timer.spec.ts:s identiska kommentar (samma bugklass).
 async function mockCommon(page: import("@playwright/test").Page, parent: Record<string, unknown>) {
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) =>
     route.fulfill({ json: { accessToken: "tok", user: USER, memberships: [{ member: parent, account: ACCOUNT }] } })
   );
@@ -63,23 +67,6 @@ async function mockCommon(page: import("@playwright/test").Page, parent: Record<
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE, CHILD_ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
-  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
-    route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })
-  );
-  await page.route("**/api/timed-tasks", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/todo-templates/**", (route) => route.fulfill({ json: [] }));
 }
 
 test("gammal persisterad lastActivePanel=home + ett kvarvarande medlemsval visar INTE längre barnets dashboard", async ({ page }) => {

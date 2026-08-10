@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockDataAPIs } from "./helpers";
 
 // Zaida (2026-07-22): "mallar till listor och undanlagda listor skall inte
 // stå med i barnvyn ens för vuxna. endast assignade 2do" — den egna
@@ -61,24 +62,15 @@ const USER = { id: "user-1", email: "test@exempel.se", name: "Testförälder", c
 const LOGIN_RESPONSE = { accessToken: "fake-access-token", user: USER, memberships: [{ member: PARENT, account: ACCOUNT }] };
 
 test("PersonalDashboard visar bara riktigt tilldelade, synliga uppgifter — inte otilldelade, mallar eller gömd kategori", async ({ page }) => {
+  // 2026-08-10: mockDataAPIs() (helpers.ts) registreras FÖRST — se
+  // todo-timer.spec.ts:s identiska kommentar (samma bugklass).
+  await mockDataAPIs(page);
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
   await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT] }));
   await page.route("**/api/members/*", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: TODOS }));
-  await page.route("**/api/todos/events", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [VISIBLE_CATEGORY, HIDDEN_CATEGORY] }));
-  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/shopping**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/rewards**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/reward-shop**", (route) => route.fulfill({ json: [] }));
-  await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
-  );
-  await page.route(/\/api\/reward-shop\/purchased/, (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [] }));
-  await page.route("**/api/audit-log**", (route) => route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } }));
-  await page.route("**/api/analytics/**", (route) => route.fulfill({ json: { ok: true } }));
 
   await page.goto("/");
   // Hem-vyns egen "Visa medlemmar"-popup (ersätter sedan 2026-08-09
