@@ -266,7 +266,6 @@ export function Shell({
 
       <HeroBar
         activePanel={activePanel}
-        accountName={activeAccount.name}
         onNavigate={setActivePanel}
       />
 

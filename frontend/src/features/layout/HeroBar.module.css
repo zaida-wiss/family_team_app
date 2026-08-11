@@ -20,14 +20,6 @@
   touch-action: none;
 }
 
-.brand {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: inherit;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-
 .nav {
   display: flex;
   align-items: stretch;
@@ -68,11 +60,6 @@
   color: var(--theme-nav-fg, var(--foreground));
 }
 
-:global(.app-shell[class*="theme-"]) .brand {
-  color: var(--theme-nav-fg, var(--foreground));
-}
-
-:global(.app-shell[class*="theme-"]) .account,
 :global(.app-shell[class*="theme-"]) .navBtn {
   color: var(--theme-nav-muted, var(--muted-fg));
 }
@@ -113,12 +100,6 @@
     grid-column: 1;
   }
 
-  .top,
-  .account,
-  .tip {
-    display: none;
-  }
-
   .nav {
     flex-direction: column;
   }
@@ -137,11 +118,6 @@
   .heroBar {
     flex-shrink: 0;
     height: 4rem;
-  }
-
-  .top,
-  .account {
-    display: none;
   }
 
   .nav {

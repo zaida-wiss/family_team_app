@@ -11,7 +11,6 @@ import styles from "./HeroBar.module.css";
 
 type Props = {
   activePanel: ShellPanel;
-  accountName: string;
   onNavigate: (panel: ShellPanel) => void;
 };
 
@@ -25,14 +24,9 @@ type Props = {
 // kontobyte flyttat till Inställningar → Konto → Byt vy (samma
 // onSwitchAccount-funktion, se SettingsContent.tsx), båda medvetet
 // helt borttagna härifrån istället för bara omdesignade.
-export function HeroBar({ activePanel, accountName, onNavigate }: Props) {
+export function HeroBar({ activePanel, onNavigate }: Props) {
   return (
     <nav className={styles.heroBar}>
-      <div className={styles.top}>
-        <span className={styles.brand}>Familjeappen</span>
-        <span className={styles.account}>{accountName}</span>
-      </div>
-
       <div className={styles.nav}>
         <NavBtn icon={<Home size="1.25rem" />} label="Hem" panel="home" active={activePanel === "home"} onNavigate={onNavigate} />
         <NavBtn icon={<CalendarDays size="1.25rem" />} label="Kalender" panel="calendar" active={activePanel === "calendar"} onNavigate={onNavigate} />
