@@ -23,7 +23,58 @@ export function decryptEvent<T extends { title: string; notes: string | null }>(
   };
 }
 
-export async function getAllCalendars(accountId: string, from?: string, until?: string) {
+// Behörighetsfiltrering av kalendrar (2026-08-11, Zaida: "Som standard skall
+// inte min kalender dyka upp i de andra familjemedlemmarnas kalender eller
+// dashboard såvida jag inte skrivit att den händelsen är tillsammans med
+// dom" — se docs/.../2026-08-11-installningar-familjekonto-omorganisation.md
+// för hela beslutet). Tidigare skickade getAllCalendars ALLA kalendrar i
+// kontot till VEM SOM HELST som var autentiserad — filtreringen skedde bara
+// i frontend (useCalendarView.ts), en riktig dataexponering (DevTools/rått
+// API-anrop visade redan allt). Nu är servern den auktoritativa gränsen.
+//
+// canSeeAllCalendar (rollbehörighet, påslagen som standard för förälder/
+// admin) fortsätter bypassa delning — men EFTER Zaidas beslut BARA för
+// kalendrar ägda av ett BARN (föräldratillsyn, en annan sak än integritet
+// mellan vuxna). En annan VUXENS kalender kräver nu alltid antingen explicit
+// delning (sharedWith) eller att jag taggats som deltagare på en specifik
+// händelse — samma mönster som redan fanns för barnets dashboard
+// (ChildTimeline.tsx), nu generaliserat till hela kalender-API:t.
+async function filterCalendarsForCaller<
+  T extends {
+    ownerId: string;
+    sharedWith: { memberId: string }[];
+    readOnly?: boolean;
+    events: { attendees?: { memberId: string }[] }[];
+  }
+>(calendars: T[], accountId: string, callerMemberId: string): Promise<T[]> {
+  const caller = await MemberModel.findOne({ id: callerMemberId, accountId, deletedAt: null });
+  if (!caller) return [];
+
+  const roles = await getAllRoles(accountId);
+  const canSeeAll = hasPermission(caller, roles, "canSeeAllCalendar");
+  const canSeeOwn = hasPermission(caller, roles, "canSeeOwnCalendar");
+  const members = await MemberModel.find({ accountId });
+  const childOwnerIds = new Set(members.filter((m) => m.isChild).map((m) => m.id));
+
+  const result: T[] = [];
+  for (const cal of calendars) {
+    if (cal.readOnly) { result.push(cal); continue; }
+    if (cal.ownerId === callerMemberId) { result.push(cal); continue; }
+    if (canSeeAll && childOwnerIds.has(cal.ownerId)) { result.push(cal); continue; }
+    if (canSeeOwn && cal.sharedWith.some((s) => s.memberId === callerMemberId)) { result.push(cal); continue; }
+
+    // Sista chansen: enskilda händelser där jag taggats som deltagare, även
+    // om kalendern i övrigt är privat för mig — oberoende av canSeeOwn/
+    // canSeeAll, samma precedent som ChildTimeline.tsx:s attendee-fallback.
+    const taggedEvents = cal.events.filter((ev) => (ev.attendees ?? []).some((a) => a.memberId === callerMemberId));
+    if (taggedEvents.length > 0) {
+      result.push({ ...cal, events: taggedEvents });
+    }
+  }
+  return result;
+}
+
+export async function getAllCalendars(accountId: string, callerMemberId: string, from?: string, until?: string) {
   const now = new Date();
   const defaultFrom = new Date(now); defaultFrom.setDate(1);
   const defaultUntil = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -74,7 +125,7 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
     appleAccounts.map((a) => [a.id, decryptField(accountId, a.accountEmailEnc)])
   );
 
-  return calendars.map((calendar) => ({
+  const decrypted = calendars.map((calendar) => ({
     ...calendar,
     events: calendar.events.map((event: { title: string; notes: string | null }) =>
       decryptEvent(accountId, event)
@@ -88,6 +139,8 @@ export async function getAllCalendars(accountId: string, from?: string, until?: 
       accountEmail: appleEmailById.get(conn.appleAccountId) ?? null
     }))
   }));
+
+  return filterCalendarsForCaller(decrypted, accountId, callerMemberId);
 }
 
 export async function createCalendar(data: unknown) {

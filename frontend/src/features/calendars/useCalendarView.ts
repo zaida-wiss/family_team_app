@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { canEditSharedResource, canViewResource, hasPermission } from "../../utils/permissions";
+import { canEditSharedResource, hasPermission } from "../../utils/permissions";
 import { isoToLocalDateTimeStr, localDateTimeToISO } from "../../utils/fixedTimeZone";
 import type { Calendar, CalendarEvent, CalendarSettings, EventRecurrence, Id, Member, Role } from "@shared/types";
 import type { EnrichedEvent } from "./CalendarEventList";
@@ -83,34 +83,22 @@ export function useCalendarView(
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Permission filtering ──
-  // focusMemberId (2026-07-21, utökad 2026-07-22 — Zaidas rättelse: "jag ska
-  // ENDAST se den valda familjemedlemmens kalender... filtreringen skall
-  // motsvara kalendrar som tillhör den personen som den valt att dela med
-  // mig") — smalnar av vilka kalendrar som överhuvudtaget räknas som synliga
-  // till BARA de som ägs av den valda medlemmen, FÖRE den vanliga delnings-
-  // behörighetskontrollen nedan körs. canSeeAllCalendar/canSeeOwnCalendar +
-  // canViewResource avgör fortfarande om JAG (den riktiga inloggade
-  // currentMember) faktiskt får se just den kalendern — en kalender ägd av
-  // den valda medlemmen som inte delats med mig visas alltså fortfarande
-  // inte. editableCalendars nedan är redan en delmängd av visible, så
-  // redigeringsrätten smalnas av på samma gång, automatiskt.
-  // readOnly (2026-07-30, "kalender man valt att dela med respektive
-  // familj skall komma upp i familjens tillgängliga kalendrar") — en
-  // cross-account/Familjeanslutning-kalender är redan explicit delad in i
-  // detta konto av sin ägare i ett HELT ANNAT konto (se calendarsService.ts:s
-  // getCrossAccountCalendars/getConnectionCalendars) — kontots egen
-  // sharedWith/ownerId-baserade behörighetsmodell gäller inte den, den är
-  // ALLTID synlig (utom när ett specifikt annat konto-medlems focusMemberId
-  // är valt, eftersom en delad kalender aldrig ägs av en LOKAL medlem).
+  // focusMemberId (2026-07-21, utökad 2026-07-22) — smalnar av till bara den
+  // valda medlemmens kalendrar, ovanpå det som redan skickats hit.
+  // Behörighetsfiltreringen (vem får se vilken kalender alls) sker sedan
+  // 2026-08-11 SERVER-SIDE (calendarsService.ts:s filterCalendarsForCaller,
+  // se docs/.../2026-08-11-installningar-familjekonto-omorganisation.md) —
+  // `calendars` innehåller redan bara det currentMember (samma person som
+  // request:en gjordes för) faktiskt får se, inklusive enskilda attendee-
+  // taggade händelser på annars privata kalendrar. Ett client-side
+  // sharedWith-/canSeeAllCalendar-återfilter här skulle GISSA fel (t.ex.
+  // felaktigt dölja en attendee-taggad kalender, eftersom canViewResource
+  // inte känner till attendees) — filtret nedan gör bara kvarvarande RENA
+  // UI-koncept (raderad, medlems-fokus).
   const visible = calendars.filter((cal) => {
     if (cal.deletedAt !== null) return false;
     if (focusMemberId && cal.ownerId !== focusMemberId) return false;
-    // (focusMemberId-grenen ovan har redan filtrerat bort readOnly-kalendrar
-    // när ett specifikt medlems-fokus är valt, eftersom ownerId="" aldrig
-    // matchar — når vi hit är focusMemberId alltså redan falsy.)
-    if (cal.readOnly) return true;
-    if (hasPermission(currentMember, roles, "canSeeAllCalendar")) return true;
-    return hasPermission(currentMember, roles, "canSeeOwnCalendar") && canViewResource(currentMember, cal);
+    return true;
   });
 
   // readOnly utesluts ALLTID från editableCalendars, oavsett övriga
