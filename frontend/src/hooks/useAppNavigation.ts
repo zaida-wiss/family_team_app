@@ -61,6 +61,16 @@ export function useAppNavigation(): Screen {
     setSwitchingAccount(false);
     setActiveMembership(m);
     setApiMemberId(m.member.id);
+    // Nollställ panel-URL:en vid ett EXPLICIT kontoval (2026-08-11,
+    // usePanelUrlSync.ts) — annars ärver den nya familjens helt nymonterade
+    // Shell (key={member.id}, se AppRouter.tsx) ändå den FÖREGÅENDE
+    // familjens djupa URL (t.ex. "/settings/account" om man bytte via Byt
+    // vy inifrån Inställningar), samma klass av stale-state-läckage som
+    // Shell-key-remounten redan finns till för att förhindra — bara via
+    // URL:en istället för React-state denna gång. Den auto-återställande
+    // effekten ovan (sidladdning/session-restore) går INTE via denna
+    // funktion, så en riktig djuplänk vid en vanlig omladdning påverkas inte.
+    window.history.pushState({}, "", "/");
     authApi
       .updatePreferences({ lastActiveMemberId: m.member.id })
       .then(({ user }) => updateUser(user))

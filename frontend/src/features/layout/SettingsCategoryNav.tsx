@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import "./SettingsCategoryNav.css";
 import type { ReactNode } from "react";
@@ -19,10 +18,16 @@ export type SettingsCategory = {
 
 type Props = {
   categories: SettingsCategory[];
-  // Låter en konsument reagera på att man LÄMNAR en kategori (2026-07-25,
-  // Hushåll-kategorins PIN-lås: "tills jag byter vy" ska låsa om) — anropas
-  // med den NYA activeCategoryId (null = tillbaka till kategori-rutnätet).
-  onCategoryChange?: (categoryId: string | null) => void;
+  // Kontrollerad komponent (2026-08-11) — kategori/underkategori-valet ägs
+  // av useSettingsNavSync.ts (SettingsContent.tsx) istället för intern
+  // state, så det kan hållas synkat med webbläsarens historik (bakåt/
+  // framåt-knapparna). null = kategori-rutnätet.
+  activeCategoryId: string | null;
+  activeSubId: string | null;
+  onOpenCategory: (categoryId: string, subId: string | null) => void;
+  onOpenSub: (subId: string) => void;
+  onBackToCategories: () => void;
+  onBackToSubcategories: () => void;
 };
 
 // Tvånivå-navigering för Inställningar (2026-07-22, Zaidas önskemål: "en
@@ -32,36 +37,33 @@ type Props = {
 // samtidigt öppningsbara accordion-sektioner (settings-section.tsx) — bara
 // EN kategori och EN underkategori kan vara öppen åt gången, en brödsmule
 // visar alltid var man är.
-export function SettingsCategoryNav({ categories, onCategoryChange }: Props) {
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
-  const [activeSubId, setActiveSubId] = useState<string | null>(null);
-
+export function SettingsCategoryNav({
+  categories,
+  activeCategoryId,
+  activeSubId,
+  onOpenCategory,
+  onOpenSub,
+  onBackToCategories,
+  onBackToSubcategories
+}: Props) {
   const activeCategory = categories.find((c) => c.id === activeCategoryId) ?? null;
   const activeSub = activeCategory?.subcategories.find((s) => s.id === activeSubId) ?? null;
   const hasSingleSub = (activeCategory?.subcategories.length ?? 0) <= 1;
 
   function openCategory(category: SettingsCategory) {
-    setActiveCategoryId(category.id);
-    setActiveSubId(category.subcategories.length === 1 ? category.subcategories[0].id : null);
-    onCategoryChange?.(category.id);
-  }
-
-  function backToCategories() {
-    setActiveCategoryId(null);
-    setActiveSubId(null);
-    onCategoryChange?.(null);
+    onOpenCategory(category.id, category.subcategories.length === 1 ? category.subcategories[0].id : null);
   }
 
   function backToSubcategories() {
     if (hasSingleSub) {
-      backToCategories();
+      onBackToCategories();
       return;
     }
-    setActiveSubId(null);
+    onBackToSubcategories();
   }
 
   const crumbs: { label: string; onClick?: () => void }[] = [
-    { label: "Inställningar", onClick: activeCategory ? backToCategories : undefined }
+    { label: "Inställningar", onClick: activeCategory ? onBackToCategories : undefined }
   ];
   if (activeCategory) {
     const categoryIsLastCrumb = !activeSub || hasSingleSub;
@@ -122,7 +124,7 @@ export function SettingsCategoryNav({ categories, onCategoryChange }: Props) {
             <button
               className={`settings-subcategory-btn${sub.variant === "danger" ? " settings-subcategory-btn--danger" : ""}`}
               key={sub.id}
-              onClick={() => (sub.onSelect ? sub.onSelect() : setActiveSubId(sub.id))}
+              onClick={() => (sub.onSelect ? sub.onSelect() : onOpenSub(sub.id))}
               type="button"
             >
               <span className="settings-subcategory-btn__label">

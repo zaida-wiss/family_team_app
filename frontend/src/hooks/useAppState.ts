@@ -7,6 +7,8 @@ import { useRewardsState } from "../features/rewards/useRewardsState";
 import { useRolesState } from "../features/roles/useRolesState";
 import { useShoppingState } from "../features/shopping/useShoppingState";
 import { useTodosState } from "../features/todos/useTodosState";
+import { usePanelUrlSync } from "./usePanelUrlSync";
+import { buildPanelPath, parsePanelPath } from "../utils/navPaths";
 import type { Account, AppPanel, Id, Member } from "@shared/types";
 
 export type ShellPanel = AppPanel;
@@ -41,16 +43,25 @@ export function useAppState(initialMembership: ActiveMembership) {
   const shoppingState = useShoppingState();
   const rewardsState = useRewardsState();
 
+  // En explicit panel-URL (t.ex. /kalender eller /medlemmar/abc123, se
+  // navPaths.ts) vinner över den persisterade lastActivePanel/
+  // lastSelectedDashboardMemberId — annars skulle en direktnavigering eller
+  // en bakåt/framåt-tryckning aldrig kunna landa på en annan panel än den
+  // som redan var sparad sedan sist (2026-08-11, historik-synk).
+  const urlTarget = parsePanelPath(window.location.pathname);
+
   // Återställs från persisterad state (2026-07-06-fix) — saknades tidigare,
   // så en sidomladdning medan man tittade på ett barns dashboard nollställde
   // valet och man hamnade på den inloggade medlemmens egen Hem-vy istället,
   // trots att activePanel korrekt återställdes till "home".
   const [selectedDashboardMemberId, setSelectedDashboardMemberIdRaw] = useState<Id | null>(
-    initialMembership.member.lastSelectedDashboardMemberId ?? null
+    urlTarget?.panel === "members"
+      ? urlTarget.memberId
+      : initialMembership.member.lastSelectedDashboardMemberId ?? null
   );
   const [themePickerMemberId, setThemePickerMemberId] = useState<Id | null>(null);
   const [activePanel, setActivePanelRaw] = useState<ShellPanel>(
-    initialMembership.member.lastActivePanel ?? "home"
+    urlTarget?.panel ?? initialMembership.member.lastActivePanel ?? "home"
   );
   const [apiError, setApiError] = useState<string | null>(null);
   // Ökas vid VARJE klick på en nav-ikon, oavsett om panelen faktiskt bytte
@@ -69,6 +80,24 @@ export function useAppState(initialMembership: ActiveMembership) {
   const [panelNavResetKey, setPanelNavResetKey] = useState(0);
 
   function setActivePanel(panel: ShellPanel) {
+    // Klick på en REDAN AKTIV panels egen ikon (t.ex. Inställningar-ikonen
+    // medan man redan står djupt inne i en underkategori) ändrar inte
+    // activePanel-värdet — usePanelUrlSync.ts:s effekt (som bara reagerar på
+    // faktiska värdeändringar i sitt dependency-array) hinner då ALDRIG
+    // rätta URL:en till panelens grundläge innan panelNavResetKey nedan
+    // tvingar fram en remount (SettingsContent.tsx m.fl.), som annars skulle
+    // läsa av en fortfarande DJUP URL (t.ex. "/installningar/utseende") och
+    // återställa fel state trots att panelen visuellt skulle nollställas
+    // (upptäckt av en befintlig regressionstest, settings.spec.ts). Rättar
+    // URL:en synkront HÄR istället, bara i just detta specialfall — en
+    // vanlig panelväxling (activePanel FAKTISKT ändras) lämnas oförändrad åt
+    // usePanelUrlSync.ts:s effekt, som redan hanterar den korrekt.
+    if (panel === activePanel) {
+      const basePath = buildPanelPath({ panel, memberId: null });
+      if (window.location.pathname !== basePath) {
+        window.history.pushState({}, "", basePath);
+      }
+    }
     setActivePanelRaw(panel);
     setPanelNavResetKey((k) => k + 1);
     setSelectedDashboardMemberIdRaw(null);
@@ -94,6 +123,8 @@ export function useAppState(initialMembership: ActiveMembership) {
       lastSelectedDashboardMemberId: memberId
     });
   }
+
+  usePanelUrlSync(activePanel, selectedDashboardMemberId, setActivePanel, setSelectedDashboardMemberId);
 
   const currentMember =
     members.find((member) => member.id === initialMembership.member.id) ??

@@ -7,6 +7,7 @@ import { RecipeShoppingListSettings } from "../recipes/RecipeShoppingListSetting
 import { AccountSetup } from "../accounts/AccountSetup";
 import { SettingsCategoryNav } from "./SettingsCategoryNav";
 import type { SettingsCategory } from "./SettingsCategoryNav";
+import { useSettingsNavSync } from "./useSettingsNavSync";
 import { LogoutConfirmModal } from "./LogoutConfirmModal";
 import { ThemePicker } from "../../components/ThemePicker";
 import { RewardShopSettings } from "../rewards/RewardShopSettings";
@@ -140,6 +141,20 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
   // Extra lås för Hushåll-kategorin (2026-07-25) — EN instans här (inte i
   // HouseholdPinGate.tsx) så upplåst-state delas mellan Lösenord/Abonnemang.
   const householdPin = useHouseholdPin();
+  const settingsNav = useSettingsNavSync();
+
+  // Låser om Hushåll-kategorins PIN så fort man LÄMNAR den (2026-07-25,
+  // "tills jag byter vy") — se useHouseholdPin.ts. Bara openCategory/
+  // backToCategories byter faktisk kategori (openSub/backToSubcategories
+  // rör sig inom SAMMA kategori), så bara de två behöver låsa om.
+  function openCategory(categoryId: string, subId: string | null) {
+    if (categoryId !== "household") householdPin.lock();
+    settingsNav.openCategory(categoryId, subId);
+  }
+  function backToCategories() {
+    householdPin.lock();
+    settingsNav.backToCategories();
+  }
 
   const hiddenCategories = personalCategories.filter((c) => c.hidden);
 
@@ -842,7 +857,12 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
     <>
       <SettingsCategoryNav
         categories={categories}
-        onCategoryChange={(categoryId) => { if (categoryId !== "household") householdPin.lock(); }}
+        activeCategoryId={settingsNav.activeCategoryId}
+        activeSubId={settingsNav.activeSubId}
+        onOpenCategory={openCategory}
+        onOpenSub={settingsNav.openSub}
+        onBackToCategories={backToCategories}
+        onBackToSubcategories={settingsNav.backToSubcategories}
       />
       {logoutConfirmOpen && (
         <LogoutConfirmModal

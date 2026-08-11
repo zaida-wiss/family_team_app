@@ -8,8 +8,8 @@ const UNLOCK_DURATION_MS = 15 * 60 * 1000;
 // vy"). Upplåst-state hålls ENDAST i minnet (ingen persistens) — en
 // sidomladdning låser alltid om, matchar "extra säkerhet"-syftet. En
 // 15-minuters timer låser om automatiskt om man stannar kvar i Hushåll
-// länge; att lämna kategorin (SettingsContent.tsx avmonterar/anropar
-// lock() via SettingsCategoryNav.tsx:s onCategoryChange) låser om direkt,
+// länge; att lämna kategorin (SettingsContent.tsx:s openCategory/
+// backToCategories-wrappers runt useSettingsNavSync.ts) låser om direkt,
 // vilket kommer FÖRST om det inträffar innan de 15 minuterna gått.
 export function useHouseholdPin() {
   const [isSet, setIsSet] = useState<boolean | null>(null);
