@@ -29,7 +29,7 @@ import type { CalendarEvent, Member, Role, Todo } from "../../../shared/types.js
 // (samma mönster som accountsService.ts:s exportAccount, som redan
 // importerar tvärs över flera services för en aggregerad vy), ingen
 // duplicerad hämtningslogik.
-import { getAllCalendars } from "./calendarsService.js";
+import { getCalendarsRaw } from "./calendarsService.js";
 import { getPurchasedRewardsForMember } from "./rewardShopService.js";
 import { getAllTimedTasks } from "./timedTasksService.js";
 import { findAcceptedConnectionFrom } from "./familyConnectionsService.js";
@@ -202,7 +202,7 @@ export async function getSharedChildrenData(callerMemberId: string, callerAccoun
 
     const [accountTodos, calendars, purchased, timedTasks, homeAccount] = await Promise.all([
       getAllTodos(child.accountId),
-      getAllCalendars(child.accountId, fromStr, untilStr),
+      getCalendarsRaw(child.accountId, fromStr, untilStr),
       getPurchasedRewardsForMember(child.accountId, child.id, 25),
       getAllTimedTasks(child.accountId),
       AccountModel.findOne({ id: child.accountId, deletedAt: null })

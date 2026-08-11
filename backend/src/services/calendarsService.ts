@@ -74,7 +74,15 @@ async function filterCalendarsForCaller<
   return result;
 }
 
-export async function getAllCalendars(accountId: string, callerMemberId: string, from?: string, until?: string) {
+// Rå hämtning utan per-anropare-filtrering (2026-08-11, utbruten ur
+// getAllCalendars) — filterCalendarsForCaller antar att anroparen är medlem
+// i accountId, vilket INTE stämmer för ADR-0024s delade-barn-flöde
+// (getSharedChildrenData i todosService.ts anropar detta med barnets konto
+// men en anropare som tillhör ett HELT ANNAT konto). Den auktorisationen
+// sker redan via childSharedWith-grant + ownerId===child.id-filtret på
+// anropsstället, så den extra kontomedlemskaps-kollen vore både fel och
+// skulle (som den gjorde innan denna utbrytning) tyst returnera tomt.
+export async function getCalendarsRaw(accountId: string, from?: string, until?: string) {
   const now = new Date();
   const defaultFrom = new Date(now); defaultFrom.setDate(1);
   const defaultUntil = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -140,6 +148,11 @@ export async function getAllCalendars(accountId: string, callerMemberId: string,
     }))
   }));
 
+  return decrypted;
+}
+
+export async function getAllCalendars(accountId: string, callerMemberId: string, from?: string, until?: string) {
+  const decrypted = await getCalendarsRaw(accountId, from, until);
   return filterCalendarsForCaller(decrypted, accountId, callerMemberId);
 }
 
