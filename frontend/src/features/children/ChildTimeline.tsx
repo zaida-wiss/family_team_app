@@ -39,17 +39,32 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
   const selectedDayStr = toLocalDateStr(selectedDay);
   const timelineRange = getTimelineRange(child);
 
-  // Dashboard-synlighet (2026-08-11, Zaidas rättelse) — MEDVETET frikopplad
-  // från familjekalender-delningen (sharedWith/canViewResource, se
-  // CalendarEventList.tsx för den vyn): en kalender delad till familjen ska
-  // INTE per automatik dyka upp här. Bara egna kalendrar (alltid) och
-  // kalendrar explicit ikryssade under Medlemmar → Kalenderåtkomst →
-  // Dashboard (dashboardVisibleTo) syns.
+  // Dashboard-synlighet (2026-08-11, Zaidas rättelse, uppföljd samma dag:
+  // "På dashboard skall inte andra medlemmars kalendrar synas, om inte just
+  // den händelsen delas med dig att du skall närvara i aktiviteten") —
+  // MEDVETET frikopplad från familjekalender-delningen (sharedWith/
+  // canViewResource, se CalendarEventList.tsx för den vyn): en kalender
+  // delad till familjen ska INTE per automatik dyka upp här.
+  //
+  // INGEN canSeeAllCalendar-bypass här, medvetet — testat och bekräftat
+  // konkret: ett första försök att bypassa BARA för barns dashboard (samma
+  // princip som familjekalendern, calendarsService.ts:s
+  // filterCalendarsForCaller) återinförde regressionen i
+  // calendar-dashboard-visibility.spec.ts — en förälder med
+  // canSeeAllCalendar som tittade på Novas dashboard såg då en kalender som
+  // BARA var delad till familjekalendern (sharedWith), inte till Novas
+  // dashboard (dashboardVisibleTo) — exakt det gårdagens fix skulle
+  // förhindra. Dashboarden är en egen, striktare yta: bara ägarens EGNA
+  // kalendrar (alltid), kalendrar explicit ikryssade under Medlemmar →
+  // Kalenderåtkomst → Dashboard (dashboardVisibleTo), och enskilda attendee-
+  // taggade händelser (se enriched-filtret nedan) — oavsett vems roll som
+  // har vilka behörigheter. Föräldratillsyn av ett barns kalendrar sker
+  // redan explicit via Dashboard-kryssrutan (admin väljer per kalender),
+  // inte via en implicit bypass.
   const visibleCalIds = new Set(
     calendars
       .filter((cal) => {
         if (cal.deletedAt !== null) return false;
-        if (hasPermission(child, roles, "canSeeAllCalendar")) return true;
         if (!hasPermission(child, roles, "canSeeOwnCalendar")) return false;
         if (cal.ownerId === child.id) return true;
         return (cal.dashboardVisibleTo ?? []).includes(child.id);
