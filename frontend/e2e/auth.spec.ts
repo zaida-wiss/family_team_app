@@ -82,7 +82,11 @@ test.describe("Inloggningsformulär", () => {
 
     // Regression: att skapa en GRUPP (=familjekonto, dagens redan befintliga
     // "Skapa nytt familjekonto"-flöde) ska fortfarande fungera oförändrat,
-    // som ett separat, uttryckligt steg via "Byt vy".
+    // som ett separat, uttryckligt steg via Inställningar → Konto → Byt vy
+    // (2026-08-11, flyttad hit från en oskyltad ikon i sidonavet — se
+    // HeroBar.tsx/family-switching.spec.ts för hela bakgrunden).
+    await page.getByRole("button", { name: "Inställningar" }).click();
+    await page.getByRole("button", { name: "Konto" }).click();
     await page.getByRole("button", { name: "Byt vy" }).click();
     await expect(page.getByRole("button", { name: "Skapa nytt familjekonto" })).toBeVisible();
   });

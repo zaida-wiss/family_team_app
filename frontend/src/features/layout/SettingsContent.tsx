@@ -1,6 +1,6 @@
 import "./Settings.css";
 import { lazy, useState } from "react";
-import { Baby, Cake, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
+import { ArrowLeftRight, Baby, Cake, CalendarDays, ChefHat, KeyRound, ListTodo, LogOut, Palette, ShoppingCart, UserCog, Users } from "lucide-react";
 import { RecipeImportExport } from "../recipes/RecipeImportExport";
 import { ShoppingImportExport } from "../shopping/ShoppingImportExport";
 import { RecipeShoppingListSettings } from "../recipes/RecipeShoppingListSettings";
@@ -66,9 +66,10 @@ type Props = {
   settingsProps: ShellState["settingsProps"];
   memberContentProps: ShellState["memberContentProps"];
   onLogout: () => Promise<void>;
+  onSwitchAccount: () => void;
 };
 
-export function SettingsContent({ settingsProps, memberContentProps, onLogout }: Props) {
+export function SettingsContent({ settingsProps, memberContentProps, onLogout, onSwitchAccount }: Props) {
   const {
     account: activeAccount,
     currentMember,
@@ -396,6 +397,16 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               />
             </div>
           )
+        },
+        {
+          // 2026-08-11, flyttad hit från en oskyltad ikonknapp i sidonavet
+          // (Zaidas fynd: "jag trycker på det som hemknappen skall göra" —
+          // se HeroBar.tsx för hela bakgrunden). Samma onSwitchAccount-
+          // funktion som tidigare, bara en tydligt skyltad plats istället.
+          id: "switch-account",
+          label: "Byt vy",
+          icon: <ArrowLeftRight aria-hidden="true" size={16} />,
+          onSelect: onSwitchAccount
         },
         {
           id: "logout",

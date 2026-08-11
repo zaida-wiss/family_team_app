@@ -68,23 +68,17 @@
   color: var(--theme-nav-fg, var(--foreground));
 }
 
-:global(.app-shell[class*="theme-"]) .brand,
-:global(.app-shell[class*="theme-"]) .memberName {
+:global(.app-shell[class*="theme-"]) .brand {
   color: var(--theme-nav-fg, var(--foreground));
 }
 
 :global(.app-shell[class*="theme-"]) .account,
-:global(.app-shell[class*="theme-"]) .navBtn,
-:global(.app-shell[class*="theme-"]) .switchText,
-:global(.app-shell[class*="theme-"]) .themeBtn,
-:global(.app-shell[class*="theme-"]) .tip {
+:global(.app-shell[class*="theme-"]) .navBtn {
   color: var(--theme-nav-muted, var(--muted-fg));
 }
 
 :global(.app-shell[class*="theme-"]) .navBtn:hover,
-:global(.app-shell[class*="theme-"]) .navBtn:hover:not(.active),
-:global(.app-shell[class*="theme-"]) .memberBtn:hover,
-:global(.app-shell[class*="theme-"]) .themeBtn:hover {
+:global(.app-shell[class*="theme-"]) .navBtn:hover:not(.active) {
   background: var(--theme-nav-hover-bg, transparent);
   color: var(--theme-nav-fg, var(--foreground));
 }
@@ -98,7 +92,11 @@
   .heroBar {
     position: sticky;
     top: 0;
-    width: 64px;
+    /* rem, inte px (2026-08-11) — skalar med clamp(15px,13px+0.6vw,22px)
+       på <html> (Shell.tsx), samma mekanism resten av appen redan använder
+       för att växa med fönstret ("navbars" nämndes uttryckligen i det
+       ursprungliga 2026-08-10-beslutet men HeroBar migrerades aldrig dit). */
+    width: 4rem;
     height: 100vh;
     flex-direction: column;
     /* 2026-08-10 (Zaida: "jag tappar navbarerna och blir fast på
@@ -126,66 +124,23 @@
   }
 
   .navBtn {
-    width: 64px;
-    height: 64px;
+    width: 4rem;
+    height: 4rem;
   }
 
   .navLabel {
     display: none;
-  }
-
-  /* .bottom var tidigare dold här av misstag (regression från en CSS-refaktorering
-     som gjorde sidopanelen ikon-bara) — det tog bort enda vägen att byta konto
-     (onSwitchAccount) och temaknappen ur gränssnittet helt. Återställd som en
-     kompakt ikonstapel som matchar den smala 64px-panelen; medlemsnamn/"Byt vy"-
-     text och tipstexten döljs (som .navLabel ovan), bara ikonerna är kvar. */
-  .bottom {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-  }
-
-  .bottomRow {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .memberBtn {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    cursor: pointer;
-  }
-
-  .memberInfo {
-    display: none;
-  }
-
-  .themeBtn {
-    width: 44px;
-    height: 44px;
   }
 }
 
 @media (max-width: 1023px) {
   .heroBar {
     flex-shrink: 0;
-    height: 64px;
+    height: 4rem;
   }
 
   .top,
-  .account,
-  .bottom,
-  .tip {
+  .account {
     display: none;
   }
 
@@ -201,8 +156,8 @@
 
   .navBtn {
     flex: 1 1 0;
-    min-width: 56px;
-    height: 64px;
+    min-width: 3.5rem;
+    height: 4rem;
   }
 
   .navLabel {
@@ -217,13 +172,13 @@
     right: 0;
     bottom: 0;
     z-index: 999;
-    height: 64px;
+    height: 4rem;
     background: var(--theme-nav-bg);
     color: var(--theme-nav-fg);
   }
 
   .navBtn {
-    height: 64px;
+    height: 4rem;
     border-radius: 0;
     color: var(--theme-nav-muted);
   }

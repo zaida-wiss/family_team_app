@@ -52,6 +52,7 @@ type PanelRouterProps = {
   childContentProps: ShellState["childContentProps"];
   setActivePanel: ShellState["setActivePanel"];
   onLogout: () => Promise<void>;
+  onSwitchAccount: () => void;
 };
 
 function PanelRouter({
@@ -63,6 +64,7 @@ function PanelRouter({
   childContentProps,
   setActivePanel,
   onLogout,
+  onSwitchAccount,
 }: PanelRouterProps) {
   if (currentMember.isChild) {
     return <ChildShellContent {...childContentProps} />;
@@ -97,6 +99,7 @@ function PanelRouter({
         settingsProps={settingsProps}
         memberContentProps={memberContentProps}
         onLogout={onLogout}
+        onSwitchAccount={onSwitchAccount}
       />
     );
   }
@@ -264,10 +267,7 @@ export function Shell({
       <HeroBar
         activePanel={activePanel}
         accountName={activeAccount.name}
-        currentMember={currentMember}
         onNavigate={setActivePanel}
-        onSwitchAccount={onSwitchAccount}
-        onOpenThemePicker={() => memberContentProps.onThemePickerOpen(currentMember.id)}
       />
 
       <div
@@ -312,6 +312,7 @@ export function Shell({
                 childContentProps={childContentProps}
                 setActivePanel={setActivePanel}
                 onLogout={onLogout}
+                onSwitchAccount={onSwitchAccount}
               />
             </RewardShopContext.Provider>
           </Suspense>

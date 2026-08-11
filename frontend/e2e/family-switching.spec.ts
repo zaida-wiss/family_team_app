@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import { mockDataAPIs } from "./helpers";
 
@@ -7,12 +8,25 @@ import { mockDataAPIs } from "./helpers";
 // — Hem-vyns tidigare, lättillgängliga "Familj"-dropdown (som BYTTE HELA
 // INLOGGNINGSSESSIONEN till ett annat av dina egna konton, inklusive
 // åtkomst till DESS Inställningar) togs bort helt. Att byta session till
-// ett annat av dina egna konton kräver nu ett MEDVETET steg — headerns
-// "Byt vy"-knapp (HeroBar.tsx, onSwitchAccount) som går till en egen
-// kontoväljar-sida (AccountPicker.tsx), inte en casual dropdown mitt i
-// Hem-vyn. Hem-vyns NYA "Visa familj"-filter (MemberOverview.tsx) är rent
-// visningsmässigt — byter ALDRIG session/Inställningar, bara vad
-// sammanfattningskorten visar.
+// ett annat av dina egna konton kräver nu ett MEDVETET steg — en "Byt vy"-
+// knapp som går till en egen kontoväljar-sida (AccountPicker.tsx), inte en
+// casual dropdown mitt i Hem-vyn. Hem-vyns NYA "Visa familj"-filter
+// (MemberOverview.tsx) är rent visningsmässigt — byter ALDRIG
+// session/Inställningar, bara vad sammanfattningskorten visar.
+//
+// "Byt vy"-knappen flyttades 2026-08-11 från en oskyltad ikon i sidonavets
+// header till Inställningar → Konto → Byt vy (Zaidas fynd: den satt förut
+// direkt under Hem/Kalender/Todos-ikonerna på desktop, oskyltad, och ett
+// feklick dumpade en rakt in i kontoväljaren utan någon väg tillbaka — se
+// HeroBar.tsx/SettingsContent.tsx för hela bakgrunden). onSwitchAccount-
+// funktionen och AccountPicker-flödet nedan är oförändrade, bara ingången.
+async function switchAccount(page: Page, familyName: RegExp) {
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Konto" }).click();
+  await page.getByRole("button", { name: "Byt vy" }).click();
+  await expect(page.getByRole("heading", { name: "Välj konto" })).toBeVisible();
+  await page.getByRole("button", { name: familyName }).click();
+}
 
 const ROLE = {
   id: "role-1", name: "Förälder", isChildRole: false,
@@ -38,7 +52,7 @@ const MEMBER_B = {
 };
 const USER = { id: "user-1", email: "test@exempel.se", name: "Förälder A", createdAt: "2024-01-01T00:00:00.000Z", lastActiveMemberId: "mem-a" };
 
-test("Familj B syns inte längre som ett val i Hem-vyn — byte av session kräver 'Byt vy' i headern (kontoväljaren), inte en dropdown i Hem", async ({ page }) => {
+test("Familj B syns inte längre som ett val i Hem-vyn — byte av session kräver 'Byt vy' i Inställningar (kontoväljaren), inte en dropdown i Hem", async ({ page }) => {
   let currentUser = { ...USER };
 
   await page.route("**/api/auth/refresh", (route) =>
@@ -69,20 +83,15 @@ test("Familj B syns inte längre som ett val i Hem-vyn — byte av session kräv
   // "Familj"-väljaren som direkt bytte session/Inställningar är borttagen.
   await expect(page.getByLabel("Familj", { exact: true })).toHaveCount(0);
 
-  // "Byt vy" i headern → kontoväljaren, ett MEDVETET steg.
-  await page.getByRole("button", { name: /Byt vy/ }).click();
-  await expect(page.getByRole("heading", { name: "Välj konto" })).toBeVisible();
-
-  await page.getByRole("button", { name: /Familjen B/ }).click();
-  await expect(page.getByRole("button", { name: /Byt vy/ })).toBeVisible();
+  // Inställningar → Konto → "Byt vy" → kontoväljaren, ett MEDVETET steg.
+  await switchAccount(page, /Familjen B/);
+  await expect(page.getByRole("button", { name: "Hem" })).toBeVisible();
 
   // Tillbaka igen — kärnan i den ursprungliga buggen (2026-07-29) var att
   // Familjen A slutade gå att välja efter ett byte. Fortsatt sant här,
   // fast via kontoväljaren istället för en Hem-dropdown.
-  await page.getByRole("button", { name: /Byt vy/ }).click();
-  await expect(page.getByRole("button", { name: /Familjen A/ })).toBeVisible();
-  await page.getByRole("button", { name: /Familjen A/ }).click();
-  await expect(page.getByRole("button", { name: /Byt vy/ })).toBeVisible();
+  await switchAccount(page, /Familjen A/);
+  await expect(page.getByRole("button", { name: "Hem" })).toBeVisible();
 });
 
 // 2026-07-30, Zaidas önskemål: "i hemmet skall du kunna växla mellan olika
@@ -152,12 +161,13 @@ test("Hem visar rätt familjs uppgifter/inköpslistor/medlemmar efter ett kontob
   await page.getByRole("tab", { name: "Visa inköpslista" }).click();
   await expect(page.getByText("Veckohandling A")).toBeVisible();
 
-  await page.getByRole("button", { name: /Byt vy/ }).click();
-  await page.getByRole("button", { name: /Familjen B/ }).click();
+  await switchAccount(page, /Familjen B/);
 
   // Hela Shell remountas vid ett kontobyte (key={member.id}) — Hem-vyns
   // fliksval är lokal state och återgår till standard (kalender), måste
-  // väljas igen.
+  // väljas igen. switchAccount gick via Inställningar, så vi måste
+  // dessutom navigera tillbaka till Hem-panelen explicit.
+  await page.getByRole("button", { name: "Hem" }).click();
   await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
   // Ingen kvarbliven cache från Familjen A — den gamla listan ska inte

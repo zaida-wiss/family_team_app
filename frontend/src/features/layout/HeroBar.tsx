@@ -3,32 +3,29 @@ import {
   ChefHat,
   Home,
   ListTodo,
-  Palette,
   Settings,
   ShoppingCart
 } from "lucide-react";
-import { MemberAvatar } from "../../components/MemberAvatar";
-import type { Member } from "@shared/types";
 import type { ShellPanel } from "../../hooks/useAppState";
 import styles from "./HeroBar.module.css";
 
 type Props = {
   activePanel: ShellPanel;
   accountName: string;
-  currentMember: Member;
   onNavigate: (panel: ShellPanel) => void;
-  onSwitchAccount: () => void;
-  onOpenThemePicker: () => void;
 };
 
-export function HeroBar({
-  activePanel,
-  accountName,
-  currentMember,
-  onNavigate,
-  onSwitchAccount,
-  onOpenThemePicker,
-}: Props) {
+// Kontobyte ("Byt vy") och temaväljare bodde tidigare här som två
+// oskyltade ikonknappar längst ner i sidonavet (2026-08-11, Zaidas fynd:
+// "jag trycker på det som hemknappen skall göra" — på ≥1024px döljs all
+// text (memberInfo), så kontobytesknappen blev en oskyltad avatar-ikon
+// direkt under Hem/Kalender/Todos m.fl., lätt att klicka av misstag. Ett
+// sådant klick skickade rakt in i AccountPicker, en helt egen skärm utan
+// någon tillbakaknapp). Temat nås redan via Inställningar → Utseende;
+// kontobyte flyttat till Inställningar → Konto → Byt vy (samma
+// onSwitchAccount-funktion, se SettingsContent.tsx), båda medvetet
+// helt borttagna härifrån istället för bara omdesignade.
+export function HeroBar({ activePanel, accountName, onNavigate }: Props) {
   return (
     <nav className={styles.heroBar}>
       <div className={styles.top}>
@@ -37,34 +34,12 @@ export function HeroBar({
       </div>
 
       <div className={styles.nav}>
-        <NavBtn icon={<Home size={20} />} label="Hem" panel="home" active={activePanel === "home"} onNavigate={onNavigate} />
-        <NavBtn icon={<CalendarDays size={20} />} label="Kalender" panel="calendar" active={activePanel === "calendar"} onNavigate={onNavigate} />
-        <NavBtn icon={<ShoppingCart size={20} />} label="Inköp" panel="shopping" active={activePanel === "shopping"} onNavigate={onNavigate} />
-        <NavBtn icon={<ListTodo size={20} />} label="Todos" panel="todos" active={activePanel === "todos"} onNavigate={onNavigate} />
-        <NavBtn icon={<ChefHat size={20} />} label="Recept" panel="recipes" active={activePanel === "recipes"} onNavigate={onNavigate} />
-        <NavBtn icon={<Settings size={20} />} label="Inställningar" panel="settings" active={activePanel === "settings"} onNavigate={onNavigate} />
-      </div>
-
-      <div className={styles.bottom}>
-        <div className={styles.bottomRow}>
-          <button
-            aria-label="Byt vy"
-            className={styles.memberBtn}
-            onClick={onSwitchAccount}
-            title="Byt vy"
-            type="button"
-          >
-            <MemberAvatar member={currentMember} size="xs" />
-            <div className={styles.memberInfo}>
-              <span className={styles.memberName}>{currentMember.name}</span>
-              <span className={styles.switchText}>Byt vy</span>
-            </div>
-          </button>
-          <button className={styles.themeBtn} onClick={onOpenThemePicker} title="Byt tema" type="button">
-            <Palette size={18} />
-          </button>
-        </div>
-        <p className={styles.tip}>Tips: håll fingret länge på bakgrunden för att byta tema.</p>
+        <NavBtn icon={<Home size="1.25rem" />} label="Hem" panel="home" active={activePanel === "home"} onNavigate={onNavigate} />
+        <NavBtn icon={<CalendarDays size="1.25rem" />} label="Kalender" panel="calendar" active={activePanel === "calendar"} onNavigate={onNavigate} />
+        <NavBtn icon={<ShoppingCart size="1.25rem" />} label="Inköp" panel="shopping" active={activePanel === "shopping"} onNavigate={onNavigate} />
+        <NavBtn icon={<ListTodo size="1.25rem" />} label="Todos" panel="todos" active={activePanel === "todos"} onNavigate={onNavigate} />
+        <NavBtn icon={<ChefHat size="1.25rem" />} label="Recept" panel="recipes" active={activePanel === "recipes"} onNavigate={onNavigate} />
+        <NavBtn icon={<Settings size="1.25rem" />} label="Inställningar" panel="settings" active={activePanel === "settings"} onNavigate={onNavigate} />
       </div>
     </nav>
   );
