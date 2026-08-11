@@ -278,6 +278,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
                 onUpdateMemberColor={settingsProps.onUpdateMemberColor}
                 onUpdateMemberName={settingsProps.onUpdateMemberName}
                 onSetChildCredentials={settingsProps.onSetChildCredentials}
+                onAssignRole={settingsProps.onAssignRole}
                 onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
                 onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
                 onUpdateFixedCalendarTimes={settingsProps.onUpdateFixedCalendarTimes}
@@ -429,6 +430,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout }:
               onImportCalendar={memberContentProps.onImportCalendar}
               onShareCalendar={memberContentProps.onShareCalendar}
               onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+              onSetDashboardVisibility={memberContentProps.onSetDashboardVisibility}
+              onRemoveDashboardVisibility={memberContentProps.onRemoveDashboardVisibility}
               onAddSubscription={memberContentProps.onAddSubscription}
               onUpdateSubscription={memberContentProps.onUpdateSubscription}
               onRemoveSubscription={memberContentProps.onRemoveSubscription}

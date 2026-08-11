@@ -29,6 +29,7 @@ type AccountSettingsProps = {
   onUpdateMemberColor: (memberId: string, color: string | null) => void;
   onUpdateMemberName: (memberId: string, name: string) => void;
   onSetChildCredentials: (memberId: string, username: string, password: string) => Promise<{ id: string; username: string }>;
+  onAssignRole: (memberId: string, roleId: string) => void;
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => void;
   onUpdateFixedCalendarTimes: (fixedCalendarTimes: boolean) => void;
@@ -51,6 +52,7 @@ export function AccountSettings({
   onUpdateMemberColor,
   onUpdateMemberName,
   onSetChildCredentials,
+  onAssignRole,
   onUpdateCalendarSettings,
   onUpdateFixedTodoTimes,
   onUpdateFixedCalendarTimes,
@@ -333,6 +335,7 @@ export function AccountSettings({
             }}
             onRemoveCalendarShare={onRemoveCalendarShare}
             onSetChildCredentials={onSetChildCredentials}
+            onAssignRole={onAssignRole}
             onShareCalendar={onShareCalendar}
             onSetDashboardVisibility={onSetDashboardVisibility}
             onRemoveDashboardVisibility={onRemoveDashboardVisibility}

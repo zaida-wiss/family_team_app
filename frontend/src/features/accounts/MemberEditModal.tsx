@@ -17,6 +17,7 @@ type MemberEditModalProps = {
   onUpdateColor: (memberId: Id, color: string | null) => void;
   onUpdateAvatar: (memberId: Id, avatarUrl: string | null) => void;
   onSetChildCredentials: (memberId: Id, username: string, password: string) => Promise<{ id: string; username: string }>;
+  onAssignRole: (memberId: Id, roleId: Id) => void;
   onShareCalendar: (calendarId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
   onSetDashboardVisibility: (calendarId: Id, memberId: Id) => void;
@@ -42,6 +43,7 @@ export function MemberEditModal({
   onUpdateColor,
   onUpdateAvatar,
   onSetChildCredentials,
+  onAssignRole,
   onShareCalendar,
   onRemoveCalendarShare,
   onSetDashboardVisibility,
@@ -183,9 +185,18 @@ export function MemberEditModal({
               value={name}
             />
           </label>
-          <small className="member-edit-modal__role">
-            {roles.find((r) => r.id === member.roleId)?.name ?? (member.isChild ? "Barn" : "Medlem")}
-          </small>
+          <label className="field-label">
+            Roll
+            <select
+              className="text-input"
+              onChange={(e) => onAssignRole(member.id, e.target.value)}
+              value={member.roleId}
+            >
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>{role.name}</option>
+              ))}
+            </select>
+          </label>
 
           {isChildMember && (
             <div className="member-edit-modal__section">

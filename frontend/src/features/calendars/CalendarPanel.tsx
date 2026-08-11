@@ -8,6 +8,7 @@ import type { ImportedCalendarEvent } from "./calendarIcs";
 import { canEditCalendar, formatTimeRange } from "./calendarPanelHelpers";
 import { WordTagInput } from "./WordTagInput";
 import { CalendarShareSection } from "./CalendarShareSection";
+import { MyDashboardCalendarsSection } from "./MyDashboardCalendarsSection";
 import { CalendarCreateCard } from "./CalendarCreateCard";
 import { CalendarManagementCard } from "./CalendarManagementCard";
 import { AppleCalDavAccountsSection } from "./AppleCalDavAccountsSection";
@@ -28,6 +29,8 @@ type CalendarPanelProps = {
   onImportCalendar: (calendarId: Id, sourceName: string, events: ImportedCalendarEvent[]) => void;
   onShareCalendar: (calendarId: Id, memberId: Id, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: Id, memberId: Id) => void;
+  onSetDashboardVisibility: (calendarId: Id, memberId: Id) => void;
+  onRemoveDashboardVisibility: (calendarId: Id, memberId: Id) => void;
   onAddSubscription: (calendarId: Id, sub: Omit<IcsSubscription, "id" | "calendarId" | "lastSyncedAt">) => void;
   onUpdateSubscription: (calendarId: Id, subId: Id, patch: Partial<Pick<IcsSubscription, "includeWords" | "excludeWords" | "displaySymbol">>) => Promise<void>;
   onRemoveSubscription: (calendarId: Id, subId: Id) => void;
@@ -60,6 +63,8 @@ export function CalendarPanel({
   onImportCalendar,
   onRemoveCalendarShare,
   onShareCalendar,
+  onSetDashboardVisibility,
+  onRemoveDashboardVisibility,
   onAddSubscription,
   onUpdateSubscription,
   onRemoveSubscription,
@@ -163,6 +168,14 @@ export function CalendarPanel({
           onRemoveCalendarShare={onRemoveCalendarShare}
         />
       )}
+
+      <MyDashboardCalendarsSection
+        calendars={calendars}
+        members={members}
+        currentMember={currentMember}
+        onSetDashboardVisibility={onSetDashboardVisibility}
+        onRemoveDashboardVisibility={onRemoveDashboardVisibility}
+      />
 
       {!managementOnly && selectedCalendar && (
         <CalendarEventForm
