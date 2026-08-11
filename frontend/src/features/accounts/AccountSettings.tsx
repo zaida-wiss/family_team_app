@@ -33,6 +33,7 @@ type AccountSettingsProps = {
   onUpdateCalendarSettings: (settings: CalendarSettings) => void;
   onUpdateFixedTodoTimes: (fixedTodoTimes: boolean) => void;
   onUpdateFixedCalendarTimes: (fixedCalendarTimes: boolean) => void;
+  onUpdateAccount: (patch: Partial<Account>) => void;
   onShareCalendar: (calendarId: string, memberId: string, access: AccessLevel) => void;
   onRemoveCalendarShare: (calendarId: string, memberId: string) => void;
   onSetDashboardVisibility: (calendarId: string, memberId: string) => void;
@@ -56,12 +57,23 @@ export function AccountSettings({
   onUpdateCalendarSettings,
   onUpdateFixedTodoTimes,
   onUpdateFixedCalendarTimes,
+  onUpdateAccount,
   onShareCalendar,
   onRemoveCalendarShare,
   onSetDashboardVisibility,
   onRemoveDashboardVisibility,
 }: AccountSettingsProps) {
   const [name, setName] = useState("");
+  // Familjens namn (2026-08-11, flyttad hit från Inställningar → Konto →
+  // Konto, se AccountSetup.tsx för hela bakgrunden — "Konto" ska bara
+  // innehålla uppgifter om ANVÄNDAREN, inte vilka familjer den är med i).
+  const [accountName, setAccountName] = useState(account.name);
+
+  function saveAccountName() {
+    const trimmedName = accountName.trim();
+    if (!trimmedName || trimmedName === account.name) return;
+    onUpdateAccount({ name: trimmedName });
+  }
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [confirmOwnDataDelete, setConfirmOwnDataDelete] = useState(false);
   // Redigera-medlem-modal (2026-07-22) — se MemberEditModal.tsx. Ersätter den
@@ -117,6 +129,24 @@ export function AccountSettings({
 
   return (
     <>
+      {canManageMembers && (
+        <div className="settings-sub">
+          <h3 className="settings-sub-title">Familjens namn</h3>
+          <label className="field-label">
+            Namn
+            <input
+              className="text-input"
+              onChange={(e) => setAccountName(e.target.value)}
+              placeholder="t.ex. Familjen Solbacken"
+              value={accountName}
+            />
+          </label>
+          <button className="primary-button" onClick={saveAccountName} type="button">
+            Spara
+          </button>
+        </div>
+      )}
+
       {canManageMembers && (
         <div className="settings-sub">
           <h3 className="settings-sub-title">Skapa ny medl</h3>

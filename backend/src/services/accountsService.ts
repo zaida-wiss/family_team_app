@@ -155,12 +155,49 @@ export async function getAccount(id: string) {
   return account;
 }
 
-export async function updateAccount(id: string, patch: unknown) {
-  const account = await AccountModel.findOne({ id });
+// Säkerhetsfynd (2026-08-11, upptäckt under flytten av "Familjens namn"
+// bort från Inställningar → Konto) — denna funktion tog tidigare emot
+// req.body OFILTRERAT (Object.assign(account, patch)) och ingen
+// medlemskaps-/behörighetskontroll alls, bara requireAuth (giltig JWT för
+// VILKET konto som helst). Två separata OWASP-brister på samma gång:
+// dels IDOR (vem som helst inloggad kunde döpa om ETT ANNAT KONTOS familj
+// via PUT /api/accounts/<annat-konto-id>), dels mass assignment (patchen
+// gick rakt in i Mongoose-dokumentet, skulle ha kunnat sätta t.ex.
+// createdBy eller deletedAt om anroparen gissat rätt fältnamn). Fixat med
+// samma två-stegs mönster som redan finns i den här filen: medlemskaps-
+// kontroll (samma form som deleteAccount ovan) + canManageMembers (samma
+// admin-nivå som transferAccountOwnership), samt ett strikt Zod-schema som
+// bara accepterar de fält som legitimt patchas härifrån (accountsApi.ts) —
+// `.strict()` avvisar okända fält istället för att tyst ignorera dem.
+const updateAccountSchema = z.object({
+  name: z.string().min(1, "Kontonamn krävs").max(80).optional(),
+  calendarSettings: z.object({
+    showWeekNumbers: z.boolean(),
+    showHolidays: z.boolean(),
+    holidayBgColor: z.string(),
+    holidayTextColor: z.string(),
+    subscriptionUrl: z.string().nullable()
+  }).strict().optional(),
+  fixedTodoTimes: z.boolean().optional(),
+  fixedCalendarTimes: z.boolean().optional(),
+  defaultRecipeShoppingListId: z.string().nullable().optional()
+}).strict();
+
+export async function updateAccount(accountId: string, memberId: string | null | undefined, patch: unknown) {
+  const member = await MemberModel.findOne({ id: memberId, deletedAt: null });
+  if (!member || member.accountId !== accountId) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const roles = await getAllRoles(accountId);
+  if (!hasPermission(member, roles, "canManageMembers")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const safePatch = validate(updateAccountSchema, patch);
+  const account = await AccountModel.findOne({ id: accountId });
   if (!account) {
     throw new AppError(404, "Konto hittades inte");
   }
-  Object.assign(account, patch);
+  Object.assign(account, safePatch);
   await account.save();
 }
 

@@ -281,10 +281,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
           label: "Konto",
           content: (
             <AccountSetup
-              account={activeAccount}
               currentMember={currentMember}
               myAvatarUrl={settingsProps.myAvatarUrl}
-              onUpdateAccount={settingsProps.onUpdateAccount}
               onUpdateMyAvatar={settingsProps.onUpdateMyAvatar}
             />
           )
@@ -379,6 +377,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
                 onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
                 onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
                 onUpdateFixedCalendarTimes={settingsProps.onUpdateFixedCalendarTimes}
+                onUpdateAccount={settingsProps.onUpdateAccount}
                 onShareCalendar={memberContentProps.onShareCalendar}
                 onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
                 onSetDashboardVisibility={memberContentProps.onSetDashboardVisibility}

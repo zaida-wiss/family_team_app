@@ -3,31 +3,29 @@ import { ImagePlus, Loader, X } from "lucide-react";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { uploadImage } from "../../utils/uploadImage";
 import { reportApiError } from "../../api";
-import type { Account, Member } from "@shared/types";
+import type { Member } from "@shared/types";
 
 type AccountSetupProps = {
-  account: Account;
   currentMember: Member;
   myAvatarUrl: string | null;
-  onUpdateAccount: (account: Account) => void;
   onUpdateMyAvatar: (avatarUrl: string | null) => Promise<void>;
 };
 
+// Rent ANVÄNDAR-innehåll (2026-08-11, Zaidas fynd: "det står fortfarande
+// familjekonto under konto i inställningar. Där skall endast uppgifter om
+// användaren finnas, inte vilka familjer användaren är med i") — den här
+// komponenten visade tidigare ÄVEN ett "Familjens namn"-fält (redigerar
+// account.name, det AKTIVA KONTOTS/familjens namn, inte något om
+// användaren själv) under Inställningar → Konto → Konto. Flyttad till
+// AccountSettings.tsx (Familj → Familjemedlemmar, bakom canManageMembers)
+// — samma resonemang som redan användes för "Skapa ny familj" tidigare
+// samma dag (flyttad från Konto → Familj → Mina familjekonton).
 export function AccountSetup({
-  account,
   currentMember,
   myAvatarUrl,
-  onUpdateAccount,
   onUpdateMyAvatar
 }: AccountSetupProps) {
-  const [name, setName] = useState(account.name);
   const [uploading, setUploading] = useState(false);
-
-  function saveAccount() {
-    const trimmedName = name.trim();
-    if (!trimmedName) return;
-    onUpdateAccount({ ...account, name: trimmedName });
-  }
 
   // 2026-08-10, Zaidas önskemål: "Man ska kunna lägga till bild på sitt
   // konto. Då får man automatiskt den bilden i de familjer man är med i,
@@ -94,22 +92,6 @@ export function AccountSetup({
             </button>
           ) : null}
         </div>
-      </div>
-
-      <div className="settings-sub">
-        <h3 className="settings-sub-title">Kontonamn</h3>
-        <label className="field-label">
-          Familjens namn
-          <input
-            className="text-input"
-            onChange={(event) => setName(event.target.value)}
-            placeholder="t.ex. Familjen Solbacken"
-            value={name}
-          />
-        </label>
-        <button className="primary-button" onClick={saveAccount} type="button">
-          Spara
-        </button>
       </div>
     </>
   );

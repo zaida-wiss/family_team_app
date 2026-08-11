@@ -15,7 +15,7 @@ accountsRouter.get("/:id", async (req, res) => {
 });
 
 accountsRouter.put("/:id", requireAuth, async (req, res) => {
-  await accountsService.updateAccount(req.params.id, req.body);
+  await accountsService.updateAccount(req.params.id, req.memberId, req.body);
   res.json({ ok: true });
 });
 
