@@ -74,10 +74,16 @@ test("RoleEditor: en raderad medlem visas inte i Tilldela roll-listan", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "Inställningar" }).click();
   await page.getByRole("button", { name: "Familj" }).click();
-  await page.getByRole("button", { name: "Roller & behörigheter" }).click();
+  // 2026-08-11, Story 2-flikkonsolidering — Roller & behörigheter (RoleEditor)
+  // slogs ihop in i Familjemedlemmar, ingen egen flik längre. Medlemsnamnet
+  // finns nu på SAMMA sida två gånger (medlemslistan ovanför + Tilldela
+  // roll-griden här) — lokatorn måste därför skopas till just Tilldela
+  // roll-sektionen, annars blir getByText tvetydig (strict mode-krock).
+  await page.getByRole("button", { name: "Familjemedlemmar" }).click();
 
-  await expect(page.getByText("Aktiv förälder")).toBeVisible();
-  await expect(page.getByText("Raderad förälder")).toHaveCount(0);
+  const assignRoleSection = page.locator(".settings-sub", { has: page.getByRole("heading", { name: "Tilldela roll" }) });
+  await expect(assignRoleSection.getByText("Aktiv förälder")).toBeVisible();
+  await expect(assignRoleSection.getByText("Raderad förälder")).toHaveCount(0);
 });
 
 test("ShoppingListsPanel: en raderad medlem erbjuds inte i dela-med-listan", async ({ page }) => {

@@ -213,16 +213,31 @@ function MembershipRow({
       </div>
 
       {expanded && (
-        <ul className="child-share-list" aria-label={`Medlemmar i ${membership.accountName}`}>
-          {(loadedMembers ?? []).map((member) => (
-            <li key={member.id}>
-              <small>
-                {member.name}
-                {member.isChild ? " (barn)" : ""}
-              </small>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="child-share-list" aria-label={`Medlemmar i ${membership.accountName}`}>
+            {(loadedMembers ?? []).map((member) => (
+              <li key={member.id}>
+                <small>
+                  {member.name}
+                  {member.isChild ? " (barn)" : ""}
+                </small>
+              </li>
+            ))}
+          </ul>
+          {/* 2026-08-11, Zaidas önskemål: "vad där inne skall var och en
+              bestämma vad de vill dela med sig till övriga familjemedlemmar.
+              Endast barnens inställningar kan ses av föräldrarna, de vuxna
+              ska bara kunna se vad de själva valt att dela med sig av" —
+              rent förklarande text, ingen ny data. Vuxnas delning är redan
+              opt-in/privat-som-standard (ADR/Story 3, 2026-08-11) och styrs
+              från Kalender-fliken, inte härifrån — den här listan visar
+              bara namn, aldrig kalendrar/uppgifter för andra vuxna. */}
+          <p className="empty-note">
+            Vuxna delar bara det de själva valt att dela med familjen (t.ex. kalenderhändelser —
+            se Kalender-fliken). Barns kalendrar och inställningar hanteras av familjens
+            administratörer under Familjemedlemmar.
+          </p>
+        </>
       )}
 
       {error && (

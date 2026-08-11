@@ -85,6 +85,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
     onUpdateDefaultRecipeShoppingList,
     canManageMembers,
     canManageRoles,
+    canSeeMembers,
     canViewTrash,
     fontId,
     setFontId,
@@ -356,6 +357,18 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
       icon: <Users aria-hidden="true" size={22} />,
       subcategories: [
         {
+          // 2026-08-11, Story 2-flikkonsolidering (se docs/.../2026-08-11-
+          // installningar-familjekonto-omorganisation.md) — Roller &
+          // behörigheter (RoleEditor.tsx) slogs ihop hit, avgränsat till BARA
+          // dessa två (Zaidas val): medlemslista och rolltilldelning är
+          // genuint samma ansvarsområde (administrera familjens medlemmar),
+          // till skillnad från Barn → Barnkonton (ChildSettings.tsx, önskningar
+          // + dashboard-tema för REDAN skapade barn — ett annat ämne,
+          // medvetet uppdelat från Godkännande/Data redan 2026-07-28,
+          // rördes INTE av denna sammanslagning). RoleEditor gated på
+          // canManageRoles INUTI innehållet istället för som en egen
+          // array-villkorad flik, samma mönster som AccountSettings.tsx
+          // redan använder internt för sina canManageMembers-sektioner.
           id: "members",
           label: "Familjemedlemmar",
           content: (
@@ -388,44 +401,47 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
                   <InviteForm accountId={activeAccount.id} roles={roles} />
                 </div>
               )}
+              {canManageRoles && (
+                <RoleEditor
+                  members={members}
+                  roles={roles}
+                  onAssignRole={settingsProps.onAssignRole}
+                  onCreateRole={settingsProps.onCreateRole}
+                  onTogglePermission={settingsProps.onTogglePermission}
+                />
+              )}
             </>
           )
         },
-        {
-          id: "my-memberships",
-          label: "Mina familjekonton",
-          content: (
-            <MyMembershipsSettings
-              currentMember={currentMember}
-              onCreateFamily={settingsProps.onCreateFamily}
-              onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
-              onLogout={onLogout}
-            />
-          )
-        },
+        // Gated på canSeeMembers (2026-08-11, Zaidas önskemål: "samtliga
+        // familjemedlemmar som har behörighet skall kunna se ... familjekonton"
+        // — tidigare synlig för ALLA oavsett behörighet). Samma befintliga
+        // permission som redan styr "Se medlemsvyn (andras dashboard)" i
+        // Hem-vyn (canSeeMembersPanel) — default PÅ för alla roller, så ingen
+        // befintlig användare tappar åtkomst, men en roll där den stängts av
+        // tappar den nu även här, konsekvent med resten av appen.
+        ...(canSeeMembers
+          ? [
+              {
+                id: "my-memberships",
+                label: "Mina familjekonton",
+                content: (
+                  <MyMembershipsSettings
+                    currentMember={currentMember}
+                    onCreateFamily={settingsProps.onCreateFamily}
+                    onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
+                    onLogout={onLogout}
+                  />
+                )
+              }
+            ]
+          : []),
         ...(canManageMembers
           ? [
               {
                 id: "family-connections",
                 label: "Familjeanslutningar",
                 content: <FamilyConnectionSettings accountId={activeAccount.id} members={members} />
-              }
-            ]
-          : []),
-        ...(canManageRoles
-          ? [
-              {
-                id: "roles",
-                label: "Roller & behörigheter",
-                content: (
-                  <RoleEditor
-                    members={members}
-                    roles={roles}
-                    onAssignRole={settingsProps.onAssignRole}
-                    onCreateRole={settingsProps.onCreateRole}
-                    onTogglePermission={settingsProps.onTogglePermission}
-                  />
-                )
               }
             ]
           : [])
