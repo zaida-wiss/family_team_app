@@ -120,6 +120,17 @@
      större bara när root-typsnittet redan gjort 2.75rem större än det. */
   width: max(44px, 2.75rem);
   height: max(44px, 2.75rem);
+  /* flex-shrink:0 (2026-08-11, Zaidas fynd: "familjenavbaren blir för
+     smal, alla skall kunna trycka på knapparna, inte bara barn") —
+     width/height ovan sätter bara knappens ÖNSKADE storlek (flex-basis),
+     inte ett verkligt tak mot att krympas. .controlRow (mobil) är
+     flex-wrap:nowrap + overflow-x:auto, men utan flex-shrink:0 krymper
+     flexbox ändå knapparna under 44px så fort raden (familjeväljare +
+     medlemsikon + flikikoner) inte får plats på bredden — precis det
+     scroll:en var tänkt att hantera istället. flex-shrink:0 tvingar
+     fram horisontell scroll i stället för att klämma ihop en touch-
+     target under WCAG:s minimum. */
+  flex-shrink: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--card);
@@ -145,6 +156,10 @@
 .familyLabel {
   display: flex;
   align-items: center;
+  /* Samma flex-shrink:0-fynd som .tabButton ovan (2026-08-11) — annars
+     krymper familjeväljaren till oläsbar bredd på samma trånga rad
+     istället för att raden scrollar horisontellt. */
+  flex-shrink: 0;
 }
 
 .srOnly {
