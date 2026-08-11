@@ -1,5 +1,6 @@
 import "../children/ChildShareSettings.css";
 import { useState } from "react";
+import { CreateAccountForm } from "../auth/CreateAccountForm";
 import { useMyMemberships } from "../todos/useCrossAccountFamilyState";
 import type { Id, Member, MembershipMemberSummary, MyMembership } from "@shared/types";
 
@@ -7,6 +8,7 @@ type Props = {
   currentMember: Member;
   onUpdateHiddenCrossAccountIds: (memberId: Id, hiddenCrossAccountIds: Id[]) => void;
   onLogout: () => Promise<void>;
+  onCreateFamily: (name: string) => Promise<void>;
 };
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
@@ -17,7 +19,7 @@ type Props = {
 // membersService.ts/accountsService.ts för behörighetsreglerna
 // (skaparen måste överlåta innan den kan gå ur, sista medlemmen får inte
 // gå ur, bara skaparen får radera).
-export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccountIds, onLogout }: Props) {
+export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccountIds, onLogout, onCreateFamily }: Props) {
   const hidden = currentMember.hiddenCrossAccountIds ?? [];
   const {
     memberships,
@@ -28,6 +30,7 @@ export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccoun
     transferOwnership,
     deleteCreatedAccount
   } = useMyMemberships(currentMember.id, hidden, onUpdateHiddenCrossAccountIds);
+  const [creatingFamily, setCreatingFamily] = useState(false);
 
   async function handleMutated(accountId: Id) {
     if (accountId === currentMember.accountId) {
@@ -68,6 +71,28 @@ export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccoun
           ))}
         </ul>
       )}
+
+      {/* Ny familj (2026-08-11, flyttad hit från Konto → Konto — Zaidas
+          fynd: att skapa ett NYTT familjekonto hör ihop med listan över
+          familjer man redan är med i/kan byta mellan, inte med att redigera
+          DET AKTUELLA kontots namn) — samma onCreateFamily som tidigare. */}
+      <div className="settings-sub">
+        <h3 className="settings-sub-title">Ny familj</h3>
+        <p className="empty-note">Du kan vara med i flera familjer samtidigt — byt mellan dem i Inställningar → Konto → Byt vy.</p>
+        {creatingFamily ? (
+          <CreateAccountForm
+            onCancel={() => setCreatingFamily(false)}
+            onSubmit={async (familyName) => {
+              await onCreateFamily(familyName);
+              setCreatingFamily(false);
+            }}
+          />
+        ) : (
+          <button className="secondary-button" onClick={() => setCreatingFamily(true)} type="button">
+            Skapa ny familj
+          </button>
+        )}
+      </div>
     </div>
   );
 }

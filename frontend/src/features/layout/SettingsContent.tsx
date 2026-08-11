@@ -257,85 +257,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
       ]
     },
     {
-      id: "family",
-      label: "Familj",
-      icon: <Users aria-hidden="true" size={22} />,
-      subcategories: [
-        {
-          id: "members",
-          label: "Familjemedlemmar",
-          content: (
-            <>
-              <AccountSettings
-                account={activeAccount}
-                currentMember={currentMember}
-                members={members}
-                roles={roles}
-                calendars={calendars}
-                onCreateMember={settingsProps.onCreateMember}
-                onDeleteMember={settingsProps.onDeleteMember}
-                onDeleteOwnData={settingsProps.onDeleteOwnData}
-                onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
-                onUpdateMemberColor={settingsProps.onUpdateMemberColor}
-                onUpdateMemberName={settingsProps.onUpdateMemberName}
-                onSetChildCredentials={settingsProps.onSetChildCredentials}
-                onAssignRole={settingsProps.onAssignRole}
-                onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
-                onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
-                onUpdateFixedCalendarTimes={settingsProps.onUpdateFixedCalendarTimes}
-                onShareCalendar={memberContentProps.onShareCalendar}
-                onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
-                onSetDashboardVisibility={memberContentProps.onSetDashboardVisibility}
-                onRemoveDashboardVisibility={memberContentProps.onRemoveDashboardVisibility}
-              />
-              {canManageMembers && (
-                <div className="settings-sub">
-                  <InviteForm accountId={activeAccount.id} roles={roles} />
-                </div>
-              )}
-            </>
-          )
-        },
-        {
-          id: "my-memberships",
-          label: "Mina familjekonton",
-          content: (
-            <MyMembershipsSettings
-              currentMember={currentMember}
-              onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
-              onLogout={onLogout}
-            />
-          )
-        },
-        ...(canManageMembers
-          ? [
-              {
-                id: "family-connections",
-                label: "Familjeanslutningar",
-                content: <FamilyConnectionSettings accountId={activeAccount.id} members={members} />
-              }
-            ]
-          : []),
-        ...(canManageRoles
-          ? [
-              {
-                id: "roles",
-                label: "Roller & behörigheter",
-                content: (
-                  <RoleEditor
-                    members={members}
-                    roles={roles}
-                    onAssignRole={settingsProps.onAssignRole}
-                    onCreateRole={settingsProps.onCreateRole}
-                    onTogglePermission={settingsProps.onTogglePermission}
-                  />
-                )
-              }
-            ]
-          : [])
-      ]
-    },
-    {
       id: "account",
       label: "Konto",
       icon: <UserCog aria-hidden="true" size={22} />,
@@ -348,7 +269,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
               account={activeAccount}
               currentMember={currentMember}
               myAvatarUrl={settingsProps.myAvatarUrl}
-              onCreateFamily={settingsProps.onCreateFamily}
               onUpdateAccount={settingsProps.onUpdateAccount}
               onUpdateMyAvatar={settingsProps.onUpdateMyAvatar}
             />
@@ -418,6 +338,86 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
       ]
     },
     {
+      id: "family",
+      label: "Familj",
+      icon: <Users aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "members",
+          label: "Familjemedlemmar",
+          content: (
+            <>
+              <AccountSettings
+                account={activeAccount}
+                currentMember={currentMember}
+                members={members}
+                roles={roles}
+                calendars={calendars}
+                onCreateMember={settingsProps.onCreateMember}
+                onDeleteMember={settingsProps.onDeleteMember}
+                onDeleteOwnData={settingsProps.onDeleteOwnData}
+                onUpdateMemberAvatar={settingsProps.onUpdateMemberAvatar}
+                onUpdateMemberColor={settingsProps.onUpdateMemberColor}
+                onUpdateMemberName={settingsProps.onUpdateMemberName}
+                onSetChildCredentials={settingsProps.onSetChildCredentials}
+                onAssignRole={settingsProps.onAssignRole}
+                onUpdateCalendarSettings={settingsProps.onUpdateCalendarSettings}
+                onUpdateFixedTodoTimes={settingsProps.onUpdateFixedTodoTimes}
+                onUpdateFixedCalendarTimes={settingsProps.onUpdateFixedCalendarTimes}
+                onShareCalendar={memberContentProps.onShareCalendar}
+                onRemoveCalendarShare={memberContentProps.onRemoveCalendarShare}
+                onSetDashboardVisibility={memberContentProps.onSetDashboardVisibility}
+                onRemoveDashboardVisibility={memberContentProps.onRemoveDashboardVisibility}
+              />
+              {canManageMembers && (
+                <div className="settings-sub">
+                  <InviteForm accountId={activeAccount.id} roles={roles} />
+                </div>
+              )}
+            </>
+          )
+        },
+        {
+          id: "my-memberships",
+          label: "Mina familjekonton",
+          content: (
+            <MyMembershipsSettings
+              currentMember={currentMember}
+              onCreateFamily={settingsProps.onCreateFamily}
+              onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
+              onLogout={onLogout}
+            />
+          )
+        },
+        ...(canManageMembers
+          ? [
+              {
+                id: "family-connections",
+                label: "Familjeanslutningar",
+                content: <FamilyConnectionSettings accountId={activeAccount.id} members={members} />
+              }
+            ]
+          : []),
+        ...(canManageRoles
+          ? [
+              {
+                id: "roles",
+                label: "Roller & behörigheter",
+                content: (
+                  <RoleEditor
+                    members={members}
+                    roles={roles}
+                    onAssignRole={settingsProps.onAssignRole}
+                    onCreateRole={settingsProps.onCreateRole}
+                    onTogglePermission={settingsProps.onTogglePermission}
+                  />
+                )
+              }
+            ]
+          : [])
+      ]
+    },
+    {
       id: "calendar",
       label: "Kalender",
       icon: <CalendarDays aria-hidden="true" size={22} />,
@@ -479,95 +479,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
           id: "birthdays",
           label: "🎂 Födelsedagar",
           content: <BirthdaysSettings />
-        }
-      ]
-    },
-    {
-      id: "shopping",
-      label: "Inköpslistor",
-      icon: <ShoppingCart aria-hidden="true" size={22} />,
-      subcategories: [
-        {
-          id: "shopping-lists",
-          label: "Inköpslistor",
-          content: (
-            <>
-              {/* Standardläge för "Visa avklarade" i Inköp-panelen
-                  (2026-07-27, Zaidas önskemål: "defaultläge skall gå att
-                  ställa in under inköpslistorna i inställningarna") — gäller
-                  bara listor utan ett eget, redan sparat val på DENNA enhet
-                  (se ShoppingView.tsx, localStorage). */}
-              <div className="settings-sub">
-                <label className="field-label toggle-label">
-                  <span>Visa avklarade som standard</span>
-                  <input
-                    checked={shoppingShowCompletedDefault ?? true}
-                    onChange={(e) => onUpdateShoppingShowCompletedDefault(e.target.checked)}
-                    type="checkbox"
-                  />
-                </label>
-                <p className="settings-sub-desc">
-                  Gäller listor du inte redan valt ett eget läge för på just den här enheten.
-                </p>
-              </div>
-              <ShoppingListsPanel
-                managementOnly
-                currentMember={currentMember}
-                members={members}
-                roles={roles}
-                shoppingLists={shoppingLists}
-                onAddItem={memberContentProps.onAddShoppingItem}
-                onCreateList={memberContentProps.onCreateShoppingList}
-                onDeleteList={memberContentProps.onDeleteShoppingList}
-                onRenameList={memberContentProps.onRenameShoppingList}
-                onShareList={memberContentProps.onShareShoppingList}
-                onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
-                onToggleItem={memberContentProps.onToggleShoppingItem}
-              />
-            </>
-          )
-        },
-        {
-          id: "shopping-import-export",
-          label: "📥 Importera/exportera",
-          content: (
-            <ShoppingImportExport
-              currentMemberId={currentMember.id}
-              onImport={memberContentProps.onImportShoppingItems}
-              shoppingLists={shoppingLists}
-            />
-          )
-        }
-      ]
-    },
-    {
-      // Egen kategori för recept (2026-07-26, Zaidas önskemål: "recept ska
-      // ha egen kategori i inställningar där man kan ladda ner, importera
-      // och exportera... istället för i receptvyn") — importflödet låg
-      // tidigare direkt i Recept-panelen, flyttat hit helt (samma
-      // "panelen visar bara det man faktiskt gör där, resten i
-      // Inställningar"-princip som redan gäller Todos, ADR 2026-07-05/06).
-      id: "recipes",
-      label: "Recept",
-      icon: <ChefHat aria-hidden="true" size={22} />,
-      subcategories: [
-        {
-          id: "recipes",
-          label: "Import/export",
-          content: <RecipeImportExport onImport={onImportRecipes} recipes={recipes} />
-        },
-        {
-          // Standard-inköpslista (2026-07-27, Zaidas önskemål: se
-          // RecipeShoppingListSettings.tsx för fullständigt resonemang).
-          id: "shopping-list",
-          label: "Standardlista",
-          content: (
-            <RecipeShoppingListSettings
-              account={activeAccount}
-              onUpdate={onUpdateDefaultRecipeShoppingList}
-              shoppingLists={shoppingLists}
-            />
-          )
         }
       ]
     },
@@ -691,6 +602,120 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
       ]
     },
     {
+      id: "shopping",
+      label: "Inköpslistor",
+      icon: <ShoppingCart aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "shopping-lists",
+          label: "Inköpslistor",
+          content: (
+            <>
+              {/* Standardläge för "Visa avklarade" i Inköp-panelen
+                  (2026-07-27, Zaidas önskemål: "defaultläge skall gå att
+                  ställa in under inköpslistorna i inställningarna") — gäller
+                  bara listor utan ett eget, redan sparat val på DENNA enhet
+                  (se ShoppingView.tsx, localStorage). */}
+              <div className="settings-sub">
+                <label className="field-label toggle-label">
+                  <span>Visa avklarade som standard</span>
+                  <input
+                    checked={shoppingShowCompletedDefault ?? true}
+                    onChange={(e) => onUpdateShoppingShowCompletedDefault(e.target.checked)}
+                    type="checkbox"
+                  />
+                </label>
+                <p className="settings-sub-desc">
+                  Gäller listor du inte redan valt ett eget läge för på just den här enheten.
+                </p>
+              </div>
+              <ShoppingListsPanel
+                managementOnly
+                currentMember={currentMember}
+                members={members}
+                roles={roles}
+                shoppingLists={shoppingLists}
+                onAddItem={memberContentProps.onAddShoppingItem}
+                onCreateList={memberContentProps.onCreateShoppingList}
+                onDeleteList={memberContentProps.onDeleteShoppingList}
+                onRenameList={memberContentProps.onRenameShoppingList}
+                onShareList={memberContentProps.onShareShoppingList}
+                onRemoveListShare={memberContentProps.onRemoveShoppingListShare}
+                onToggleItem={memberContentProps.onToggleShoppingItem}
+              />
+            </>
+          )
+        },
+        {
+          id: "shopping-import-export",
+          label: "📥 Importera/exportera",
+          content: (
+            <ShoppingImportExport
+              currentMemberId={currentMember.id}
+              onImport={memberContentProps.onImportShoppingItems}
+              shoppingLists={shoppingLists}
+            />
+          )
+        }
+      ]
+    },
+    {
+      // Egen kategori för recept (2026-07-26, Zaidas önskemål: "recept ska
+      // ha egen kategori i inställningar där man kan ladda ner, importera
+      // och exportera... istället för i receptvyn") — importflödet låg
+      // tidigare direkt i Recept-panelen, flyttat hit helt (samma
+      // "panelen visar bara det man faktiskt gör där, resten i
+      // Inställningar"-princip som redan gäller Todos, ADR 2026-07-05/06).
+      id: "recipes",
+      label: "Recept",
+      icon: <ChefHat aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "recipes",
+          label: "Import/export",
+          content: <RecipeImportExport onImport={onImportRecipes} recipes={recipes} />
+        },
+        {
+          // Standard-inköpslista (2026-07-27, Zaidas önskemål: se
+          // RecipeShoppingListSettings.tsx för fullständigt resonemang).
+          id: "shopping-list",
+          label: "Standardlista",
+          content: (
+            <RecipeShoppingListSettings
+              account={activeAccount}
+              onUpdate={onUpdateDefaultRecipeShoppingList}
+              shoppingLists={shoppingLists}
+            />
+          )
+        }
+      ]
+    },
+    {
+      id: "household",
+      label: "Hushåll",
+      icon: <KeyRound aria-hidden="true" size={22} />,
+      subcategories: [
+        {
+          id: "household-passwords",
+          label: "Lösenord",
+          content: (
+            <HouseholdPinGate pinState={householdPin}>
+              <HouseholdSecretsSettings kind="password" />
+            </HouseholdPinGate>
+          )
+        },
+        {
+          id: "household-subscriptions",
+          label: "Abonnemang",
+          content: (
+            <HouseholdPinGate pinState={householdPin}>
+              <HouseholdSecretsSettings kind="subscription" />
+            </HouseholdPinGate>
+          )
+        }
+      ]
+    },
+    {
       id: "children",
       label: "Barn",
       icon: <Baby aria-hidden="true" size={22} />,
@@ -807,31 +832,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
               onAdd={onAddShopItem}
               onUpdate={onUpdateShopItem}
             />
-          )
-        }
-      ]
-    },
-    {
-      id: "household",
-      label: "Hushåll",
-      icon: <KeyRound aria-hidden="true" size={22} />,
-      subcategories: [
-        {
-          id: "household-passwords",
-          label: "Lösenord",
-          content: (
-            <HouseholdPinGate pinState={householdPin}>
-              <HouseholdSecretsSettings kind="password" />
-            </HouseholdPinGate>
-          )
-        },
-        {
-          id: "household-subscriptions",
-          label: "Abonnemang",
-          content: (
-            <HouseholdPinGate pinState={householdPin}>
-              <HouseholdSecretsSettings kind="subscription" />
-            </HouseholdPinGate>
           )
         }
       ]

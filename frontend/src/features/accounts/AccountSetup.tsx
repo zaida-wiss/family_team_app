@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ImagePlus, Loader, X } from "lucide-react";
-import { CreateAccountForm } from "../auth/CreateAccountForm";
 import { MemberAvatar } from "../../components/MemberAvatar";
 import { uploadImage } from "../../utils/uploadImage";
 import { reportApiError } from "../../api";
@@ -11,7 +10,6 @@ type AccountSetupProps = {
   currentMember: Member;
   myAvatarUrl: string | null;
   onUpdateAccount: (account: Account) => void;
-  onCreateFamily: (name: string) => Promise<void>;
   onUpdateMyAvatar: (avatarUrl: string | null) => Promise<void>;
 };
 
@@ -20,11 +18,9 @@ export function AccountSetup({
   currentMember,
   myAvatarUrl,
   onUpdateAccount,
-  onCreateFamily,
   onUpdateMyAvatar
 }: AccountSetupProps) {
   const [name, setName] = useState(account.name);
-  const [creatingFamily, setCreatingFamily] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   function saveAccount() {
@@ -114,26 +110,6 @@ export function AccountSetup({
         <button className="primary-button" onClick={saveAccount} type="button">
           Spara
         </button>
-      </div>
-
-      <div className="settings-sub">
-        <h3 className="settings-sub-title">Ny familj</h3>
-        <p className="settings-sub-desc">
-          Du kan vara med i flera familjer samtidigt — byt mellan dem i hemvyn.
-        </p>
-        {creatingFamily ? (
-          <CreateAccountForm
-            onCancel={() => setCreatingFamily(false)}
-            onSubmit={async (familyName) => {
-              await onCreateFamily(familyName);
-              setCreatingFamily(false);
-            }}
-          />
-        ) : (
-          <button className="secondary-button" onClick={() => setCreatingFamily(true)} type="button">
-            Skapa ny familj
-          </button>
-        )}
       </div>
     </>
   );
