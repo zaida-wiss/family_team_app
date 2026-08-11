@@ -31,7 +31,7 @@
      cascade (ingen React-portal i vägen) — annars faller den tillbaka på
      bara HeroBar (64px). */
   .todo-detail-overlay {
-    bottom: calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--modal-bottom-reserve, 4rem) + env(safe-area-inset-bottom, 0px));
   }
 }
 

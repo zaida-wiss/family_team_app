@@ -1150,7 +1150,7 @@
    att undvika, .controlRow är där bara sticky:top, inte fixed:bottom. */
 @media (max-width: 1023px) {
   .theme-picker {
-    bottom: calc(var(--modal-bottom-reserve, 64px) + 16px);
+    bottom: calc(var(--modal-bottom-reserve, 4rem) + 16px);
   }
 }
 

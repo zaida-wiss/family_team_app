@@ -66,7 +66,7 @@
   .app-shell-content {
     flex: 1;
     min-height: 0;
-    padding: 16px 16px calc(64px + 16px);
+    padding: 16px 16px calc(4rem + 16px);
     overflow-y: auto;
     /* Samma "ingen flutter"-skydd som barnvyn (2026-08-10) — panelen
        scrollar fortfarande normalt (overflow-y:auto oförändrat), bara

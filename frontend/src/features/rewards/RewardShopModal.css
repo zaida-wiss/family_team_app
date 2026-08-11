@@ -19,7 +19,7 @@
 
 @media (max-width: 1023px) {
   .reward-shop-overlay {
-    bottom: calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--modal-bottom-reserve, 4rem) + env(safe-area-inset-bottom, 0px));
   }
 }
 

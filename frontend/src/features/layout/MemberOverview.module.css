@@ -54,23 +54,35 @@
 @media (max-width: 1023px) {
   .home {
     /* Rymmer den fasta controlRow-baren (se nedan) ovanför HeroBars
-       egna 64px — annars döljs scrollat innehålls sista bit bakom den. */
-    padding-bottom: 60px;
+       egna 4rem — annars döljs scrollat innehålls sista bit bakom den.
+       rem, inte px (2026-08-11, Zaidas fynd: "familjens navbar döljs nu
+       av den första navbaren på surfplattan") — HeroBars bottennav är
+       4rem hög (skalar med clamp(15px,13px+0.6vw,22px) på <html>, se
+       Shell.tsx), en bred mobil-brytpunkts-skärm (surfplatta i portrait,
+       fortfarande <1024px) ger ett STÖRRE root-typsnitt och därmed en
+       FYSISKT högre HeroBar än det gamla hårdkodade 60px antog — samma
+       reserv måste därför skalas i samma enhet för att aldrig bli för
+       liten. */
+    padding-bottom: 3.75rem;
   }
 
   .controlRow {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 64px;
+    /* Måste matcha HeroBar.module.css:s faktiska 4rem-höjd exakt (samma
+       rem-värde, inte ett omräknat px-tal) — annars täcker HeroBar över
+       denna rad så fort root-typsnittet vuxit förbi 16px (se .home ovan). */
+    bottom: 4rem;
     top: auto;
     z-index: 900;
     flex-wrap: nowrap;
     overflow-x: auto;
-    gap: 10px;
+    gap: 0.625rem;
     /* Halverad vertikal marginal (2026-08-04, Zaidas fynd: "marginalen upp
-       och ner bara hälften") — var 6px, nu 3px. */
-    padding: 3px 10px;
+       och ner bara hälften") — var 6px, nu 3px (nu 0.1875rem, samma
+       värde, rem för att skala med resten av raden). */
+    padding: 0.1875rem 0.625rem;
     background: var(--theme-nav-fg, var(--foreground));
     color: var(--theme-nav-bg-solid, var(--sidebar));
     box-shadow: 0 -1px 0 var(--border);
@@ -100,8 +112,14 @@
 .tabButton {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  /* max(), inte rent rem (2026-08-11, samma skalningsfynd som ovan) — 44px
+     är WCAG 2.5.5/2.5.8:s touch-target-MINIMUM, ett golv som aldrig får
+     underskridas. 2.75rem skalar uppåt i takt med HeroBars ikoner på en
+     bred skärm, men vid det minsta root-typsnittet i clamp:en (15px) blir
+     2.75rem bara 41.25px — under gränsen. max() garanterar 44px alltid,
+     större bara när root-typsnittet redan gjort 2.75rem större än det. */
+  width: max(44px, 2.75rem);
+  height: max(44px, 2.75rem);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--card);

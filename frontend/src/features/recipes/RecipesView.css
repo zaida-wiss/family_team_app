@@ -121,7 +121,7 @@
      samma formel istället för ett eget separat hårdkodat tal, ifall det
      ändras. */
   .recipe-modal-overlay {
-    bottom: calc(var(--modal-bottom-reserve, 64px) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--modal-bottom-reserve, 4rem) + env(safe-area-inset-bottom, 0px));
   }
 }
 

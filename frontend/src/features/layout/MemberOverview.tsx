@@ -370,7 +370,7 @@ export function MemberOverview({
         title="Visa medlemmar"
         type="button"
       >
-        <Users size={18} />
+        <Users size="1.125rem" />
       </button>
       {memberPickerOpen &&
         createPortal(
@@ -429,8 +429,18 @@ export function MemberOverview({
       // vanliga (icke-porterade) DOM-barn till den här komponenten när de
       // öppnas härifrån, så variabeln ärvs ner till dem via vanlig CSS-
       // cascade. Ingen variabel satt (TodosView.tsx/Inställningar m.fl.) ger
-      // CSS:ns egna, mindre default (64px) — HeroBar ensam.
-      style={enableTabs ? ({ "--modal-bottom-reserve": "124px" } as React.CSSProperties) : undefined}
+      // CSS:ns egna, mindre default (4rem) — HeroBar ensam.
+      // rem, inte px (2026-08-11, Zaidas fynd: "familjens navbar döljs nu
+      // av den första navbaren på surfplattan") — 124px var HeroBars och
+      // .home:s reserv HÅRDKODAT ADDERADE vid 16px root-typsnitt (64+60).
+      // Båda är nu uttryckta i rem (4rem/.home:s 3.75rem) eftersom
+      // HeroBars bottennav faktiskt VÄXER förbi 64px på en bred
+      // mobil-brytpunkts-skärm (surfplatta i portrait, root-typsnittet
+      // skalar via clamp(15px,13px+0.6vw,22px), se Shell.tsx) — samma
+      // calc() håller reserven i synk oavsett hur stort root-typsnittet
+      // faktiskt blivit, istället för att räkna ut och frysa en enda
+      // px-summa som bara stämde vid exakt 16px.
+      style={enableTabs ? ({ "--modal-bottom-reserve": "calc(4rem + 3.75rem)" } as React.CSSProperties) : undefined}
     >
       {enableTabs ? (
         <div className={styles.controlRow}>
@@ -465,7 +475,7 @@ export function MemberOverview({
                 title={label}
                 type="button"
               >
-                <Icon size={18} />
+                <Icon size="1.125rem" />
               </button>
             ))}
           </div>
