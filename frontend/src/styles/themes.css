@@ -501,9 +501,26 @@
 .app-shell.theme-spektrum,
 .app-shell.theme-juveltoner,
 .app-shell.theme-dova {
+  /* Fyra glows istället för två, högre opacitet (2026-08-12, Zaida: "det är
+     lite klent med färgerna i temat, lek mer med färgerna" + "det enda
+     stället där färgerna är bra är dashboarden, gör de andra sidorna lika
+     bra") — ChildDashboard.css:s egen bakgrund (radikalt mer levande, upp
+     till 42% opacitet + en tredje diagonal gradient-skikt) var förebilden.
+     Den HÄR gradienten (--theme-page-gradient) är redan den delade
+     sidbakgrunden för HELA appen (.app-shell/.app-shell-content nedan) —
+     alla paneler (Kalender/Todos/Inköp/Inställningar m.fl.) ärver den
+     redan automatiskt, så en enda höjning här lyfter samtliga sidor på en
+     gång, ingen anledning att kopiera in egna gradienter i varje panels
+     egen CSS-fil. c4/c5/c2 (tre GENUINT olika kulörer per tema, inte bara
+     ljusa/mörka nyanser av samma primary) + primary själv, spridda i var
+     sitt hörn — ingen textkontrastrisk (ligger alltid BAKOM ogenomskinliga
+     --card-ytor, samma säkra mönster som redan bevisat fungerar i Orkidé/
+     Skymnings glas-modaler ovan). */
   --theme-page-gradient:
-    radial-gradient(circle at 18% 15%, color-mix(in oklab, var(--c4) 20%, transparent) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 15% 10%, color-mix(in oklab, var(--c4) 32%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 88% 15%, color-mix(in oklab, var(--c5) 26%, transparent) 0%, transparent 40%),
+    radial-gradient(circle at 85% 90%, color-mix(in oklab, var(--primary) 30%, transparent) 0%, transparent 48%),
+    radial-gradient(circle at 12% 88%, color-mix(in oklab, var(--c2) 22%, transparent) 0%, transparent 45%),
     var(--background);
   background: var(--theme-page-gradient);
 }

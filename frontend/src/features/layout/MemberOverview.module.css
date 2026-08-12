@@ -128,7 +128,25 @@
        sig medvetet från HeroBar.module.css:s var(--primary) (samma
        temafärg, men den LJUSARE/mer mättade varianten) — "stor skillnad på
        navbarerna" utan att någon av dem blir vit. */
-    background: var(--primary-dark);
+    /* --control-row-glow (2026-08-12, Zaida: "Navbaren måste bli lika
+       levande som bakgrunden, blanda in flera färger") — samma teknik som
+       HeroBar.module.css:s --hero-glow (se dess kommentar för hela
+       resonemanget om varför sidbakgrundens --theme-page-gradient inte kan
+       återanvändas rakt av här: dess bas är var(--background), en NÄRA VIT
+       färg i ljust läge, exakt den "vit bakgrund i darkmode"-bugg som redan
+       fixades på DENNA rad tidigare samma dag). c5/c2 blandas in i
+       var(--primary-dark) istället för rena c-värden (c2/c5 inte
+       kontrastverifierade mot vit ikonfärg i alla teman) — förblir mörk i
+       båda lägena (--primary-dark byter aldrig ljushet i mörkt läge), får
+       en synlig, tema-egen färgvariation i hörnen istället för en flat
+       kulör. Två skilda hörn/färger än HeroBars (c5/c4 där) så de två
+       navbarerna fortsätter kännas synligt olika, inte bara en ljus/mörk-
+       variant av samma glow. */
+    --control-row-glow:
+      radial-gradient(circle at 85% 20%, color-mix(in oklab, var(--c5) 32%, var(--primary-dark)) 0%, transparent 60%),
+      radial-gradient(circle at 15% 80%, color-mix(in oklab, var(--c2) 26%, var(--primary-dark)) 0%, transparent 60%),
+      var(--primary-dark);
+    background: var(--control-row-glow);
     color: var(--primary-fg);
     box-shadow: 0 -1px 0 var(--border);
   }
@@ -346,6 +364,59 @@
    till), samma layout men utan pekar-affordance. */
 .memberPopupRow--static {
   cursor: default;
+}
+
+/* Medlemslistans kort (2026-08-12, Zaidas önskemål: "Låt medlemmarna få
+   små cards som är lättare att klicka rätt i") — en grid av kvadratiska
+   klickytor istället för tunna fullbredds-rader (som fortfarande används
+   för familjeväljaren ovan, .memberPopupRow/.familyPopupRow, oförändrade).
+   minmax(4.5rem,1fr) håller korten kompakta men ger fler kolumner på breda
+   skärmar, auto-fill radbryter naturligt. min-height 44px (WCAG 2.5.5/2.5.8
+   touch-target), i praktiken betydligt högre här (avatar+namn). */
+.memberCardList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: 8px;
+}
+
+.memberCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 10px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font: inherit;
+  color: var(--foreground);
+  text-align: center;
+  cursor: pointer;
+}
+
+.memberCard:hover {
+  background: var(--muted);
+}
+
+/* En annan familjs medlem går inte att klicka på (ingen dashboard att växla
+   till) — samma kort, bara utan pekar-affordance, matchar .memberPopupRow--static. */
+.memberCard--static {
+  cursor: default;
+}
+
+.memberCardName {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  font-size: 0.82rem;
+  word-break: break-word;
+}
+
+.memberCardName small {
+  color: var(--muted-fg);
+  font-size: 0.7rem;
 }
 
 /* Lägg till en uppgift, förinställd på den valda familjen (2026-08-01). */

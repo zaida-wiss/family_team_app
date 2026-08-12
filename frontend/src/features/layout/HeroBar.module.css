@@ -21,7 +21,25 @@
      sin EGEN bakgrund), en ändring här hade annars av misstag ändrat
      familjenavbaren också. .controlRow är nu frikopplad (läser
      var(--foreground)/var(--sidebar) direkt istället, se den filen). */
-  background: var(--primary);
+  /* --hero-glow (2026-08-12, Zaida: "Navbaren måste bli lika levande som
+     bakgrunden, blanda in flera färger") — en flat var(--primary) kändes
+     "klent" jämfört med sidbakgrundens --theme-page-gradient (se
+     themes.css). Kan inte bara återanvända den gradienten rakt av (dess
+     bas är var(--background), en NÄRA VIT färg i ljust läge — exakt den
+     "vit bakgrund"-bugg Zaida redan bad om att få bort härifrån samma dag,
+     se historiken). Löst med SAMMA TEKNIK (två color-mix()-glows), men
+     bara mot c4/c5 BLANDADE IN i var(--primary) (inte rena c4/c5, som INTE
+     är kontrastverifierade mot vit ikonfärg i alla teman) — resultatet
+     förblir dominerat av primary:s ljushet (kontrasten mot --primary-fg
+     opåverkad i praktiken) men får en synlig, tema-egen färgvariation i
+     hörnen. Definierad EN gång här, återanvänd av de två andra
+     .heroBar-reglerna nedan (cascade-specificitet, se deras kommentarer)
+     istället för att duplicera hela gradient-strängen tre gånger. */
+  --hero-glow:
+    radial-gradient(circle at 80% 15%, color-mix(in oklab, var(--c5) 40%, var(--primary)) 0%, transparent 60%),
+    radial-gradient(circle at 15% 85%, color-mix(in oklab, var(--c4) 30%, var(--primary)) 0%, transparent 60%),
+    var(--primary);
+  background: var(--hero-glow);
   color: var(--primary-fg);
   box-shadow: none;
   /* 2026-08-09, Zaidas önskemål: navbaren är ren UI-chrome (inget innehåll),
@@ -89,7 +107,7 @@
 }
 
 :global(.app-shell[class*="theme-"]) .heroBar {
-  background: var(--primary);
+  background: var(--hero-glow);
   color: var(--primary-fg);
 }
 
@@ -182,7 +200,7 @@
     bottom: 0;
     z-index: 999;
     height: 4rem;
-    background: var(--primary);
+    background: var(--hero-glow);
     color: var(--primary-fg);
   }
 

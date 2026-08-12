@@ -300,20 +300,31 @@ export function MemberOverview({
     return extra.filter((m) => m.accountId === selectedFamilyId);
   }, [activeFamilyMembers, extraMembers, ownAccountId, selectedFamilyId]);
 
+  // Föräldrar/vuxna överst, barn underst (2026-08-12, Zaidas önskemål) —
+  // stabil sortering (Array.prototype.sort är garanterat stabil sedan
+  // ES2019), gruppen skiftar bara vuxna/barn inbördes ordning, ändrar inte
+  // ordningen inom respektive grupp.
+  const sortedMembers = useMemo(
+    () => [...filteredMembers].sort((a, b) => Number(a.isChild) - Number(b.isChild)),
+    [filteredMembers]
+  );
+
   // aria-label prefixad "Visa..." (2026-07-31) — huvudnavigeringen (HeroBar)
   // har egna knappar med samma korta namn ("Kalender"/"Inköp"/"Todos"), en
   // krock annars för både skärmläsare och tester.
   const allTabs: { key: HomeTab; label: string; icon: LucideIcon; enabled: boolean }[] = [
+    // Medlemmar flyttad överst (2026-08-12, Zaidas önskemål: "sätt
+    // medlemsikonen bredvid ensam gubbe ikonen (personliga)") — ligger nu
+    // direkt intill onShowAppNav-knappen (User-ikonen) i DOM-ordningen
+    // istället för sist, före Inställningar. Ersätter sedan tidigare samma
+    // dag de två separata ikon+popup-mönstren (familjeväljaren och "Visa
+    // medlemmar") med EN riktig flik: familjeval + medlemslista, ingen
+    // popup. Se renderingen av effectiveTab === "members" nedan.
+    { key: "members", label: "Visa medlemmar", icon: Users, enabled: canSeeMembers },
     { key: "calendar", label: "Visa kalender", icon: CalendarDays, enabled: canSeeCalendar },
     { key: "shopping", label: "Visa inköpslista", icon: ShoppingCart, enabled: canSeeShopping },
     { key: "todos", label: "Visa todos", icon: CheckSquare, enabled: canSeeTodos },
-    { key: "mealplan", label: "Visa måltidsplanering", icon: UtensilsCrossed, enabled: true },
-    // Medlemmar (2026-08-12, Zaidas beslut: "ta bort dropdown och gå
-    // tillbaka till en sida man kommer till") — ersätter de tidigare två
-    // separata ikon+popup-mönstren (familjeväljaren och "Visa medlemmar")
-    // med EN riktig flik: familjeval + medlemslista, ingen popup. Se
-    // renderingen av effectiveTab === "members" nedan.
-    { key: "members", label: "Visa medlemmar", icon: Users, enabled: canSeeMembers }
+    { key: "mealplan", label: "Visa måltidsplanering", icon: UtensilsCrossed, enabled: true }
   ];
   const tabs = allTabs.filter((t) => t.enabled);
   // "vald vuxen"-vyn (enableTabs=false) visar alltid bara kalendern, oavsett
@@ -754,25 +765,31 @@ export function MemberOverview({
           <header className="section-header">
             <div><p className="eyebrow">Familj</p><h2>Medlemmar</h2></div>
           </header>
-          {filteredMembers.length === 0 ? (
+          {sortedMembers.length === 0 ? (
             <p className="empty-note">Inga medlemmar att visa.</p>
           ) : (
-            <div aria-label="Medlemslista" className={styles.membersTabList} role="group">
-              {filteredMembers.map((m) =>
+            // Små kort istället för fullbredds-rader (2026-08-12, Zaidas
+            // önskemål: "Låt medlemmarna få små cards som är lättare att
+            // klicka rätt i") — grid av kvadratiska klickytor (avatar+namn
+            // staplat) ger en mycket större, mer förlåtande träffyta per
+            // medlem än en tunn rad, särskilt på mobil. Vuxna/föräldrar
+            // överst, barn underst (sortedMembers, se ovan).
+            <div aria-label="Medlemslista" className={styles.memberCardList} role="group">
+              {sortedMembers.map((m) =>
                 m.isOwn ? (
                   <button
-                    className={styles.memberPopupRow}
+                    className={styles.memberCard}
                     key={m.id}
                     onClick={() => onSelectMember(m.id)}
                     type="button"
                   >
                     <MemberAvatar member={m} size="small" />
-                    <span>{m.name}</span>
+                    <span className={styles.memberCardName}>{m.name}</span>
                   </button>
                 ) : (
-                  <div className={`${styles.memberPopupRow} ${styles["memberPopupRow--static"]}`} key={`${m.accountId}-${m.id}`}>
+                  <div className={`${styles.memberCard} ${styles["memberCard--static"]}`} key={`${m.accountId}-${m.id}`}>
                     <MemberAvatar member={m} size="small" />
-                    <span>
+                    <span className={styles.memberCardName}>
                       {m.name}
                       {selectedFamilyId === "all" && (
                         <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
