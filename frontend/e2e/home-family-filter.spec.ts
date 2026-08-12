@@ -62,58 +62,47 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
 
   await page.goto("/");
 
-  // Medlemmar (2026-08-04: en ikon öppnar en popup istället för att visa
-  // varje avatar inline, se MemberOverview.tsx — "medlemmarna tar för stor
-  // plats i hemvyn"). Namnet visas som synlig text i popupen.
-  // "Visa medlemmar" (inte bara "Medlemmar") — samma "Visa X"-namnmönster
-  // som Hem-vyns övriga flikar (Visa kalender/Visa inköpslista/Visa todos)
-  // redan använder, sedan 2026-08-09 dessutom den ENDA vägen till en
-  // medlems dashboard (HeroBar.tsx:s egen Medlemmar-nav-ikon borttagen).
-  const membersIcon = page.getByLabel("Visa medlemmar");
-  async function openMembersPopup() {
-    if ((await membersIcon.getAttribute("aria-expanded")) !== "true") await membersIcon.click();
-  }
-  const membersPopup = page.getByLabel("Medlemslista");
+  // Medlemmar OCH familjeväljaren ligger sedan 2026-08-12 i en gemensam,
+  // riktig "Medlemmar"-flik (MemberOverview.tsx, Zaidas beslut: "ta bort
+  // drop down och gå tillbaka till en sida man kommer till") — ersätter de
+  // tidigare två separata ikon+popup-mönstren. Att kolla medlemmar/familjer
+  // innebär nu ett riktigt flikbyte, inte en overlay ovanpå Todos-fliken —
+  // helpers-funktionerna växlar därför alltid tillbaka till "Visa todos"
+  // efteråt så resten av testflödet är opåverkat.
+  const membersTab = page.getByRole("tab", { name: "Visa medlemmar" });
+  const todosTab = page.getByRole("tab", { name: "Visa todos" });
+  const membersList = page.getByLabel("Medlemslista");
+  const familyGroup = page.getByLabel("Familjeval");
   async function expectMemberVisible(name: string) {
-    await openMembersPopup();
-    await expect(membersPopup.getByText(name)).toBeVisible();
+    await membersTab.click();
+    await expect(membersList.getByText(name)).toBeVisible();
+    await todosTab.click();
   }
   async function expectMemberHidden(name: string) {
-    await openMembersPopup();
-    await expect(membersPopup.getByText(name)).not.toBeVisible();
+    await membersTab.click();
+    await expect(membersList.getByText(name)).not.toBeVisible();
+    await todosTab.click();
+  }
+  async function selectFamily(label: string) {
+    await membersTab.click();
+    await familyGroup.getByRole("button", { name: label }).click();
+    await todosTab.click();
   }
 
   // Todos ligger bakom en flik (2026-07-31) — inte synligt förrän man
   // klickar ikonen bredvid familjeväljaren.
-  await page.getByRole("tab", { name: "Visa todos" }).click();
+  await todosTab.click();
 
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expectMemberVisible("Förälder A");
   await expectMemberVisible("Nova");
 
-  // Familjeväljaren är sedan 2026-08-12 en ikon+popup (samma mönster som
-  // medlemsikonen ovan), inte längre en <select> — Zaidas fynd:
-  // "familjenavbaren blir för smal... för familjeväljaren som en droplista
-  // med ikon istället" (MemberOverview.tsx). Aria-labeln innehåller den
-  // just nu valda familjen ("Familj: Alla familjer" osv.) — matcha med
-  // regex istället för en exakt sträng som annars skulle brytas varje gång
-  // valet ändras.
-  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
-  const familyPopup = page.getByLabel("Familjeval");
-  async function openFamilyPopup() {
-    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
-  }
-  async function selectFamily(label: string) {
-    await openFamilyPopup();
-    await familyPopup.getByText(label, { exact: true }).click();
-  }
-
-  await expect(familyIcon).toBeVisible();
-  await openFamilyPopup();
-  await expect(familyPopup.getByText("Alla familjer")).toBeVisible();
-  await expect(familyPopup.getByText("Familjen A")).toBeVisible();
-  await expect(familyPopup.getByText("Familjen B")).toBeVisible();
+  await membersTab.click();
+  await expect(familyGroup.getByText("Alla familjer")).toBeVisible();
+  await expect(familyGroup.getByText("Familjen A")).toBeVisible();
+  await expect(familyGroup.getByText("Familjen B")).toBeVisible();
+  await todosTab.click();
 
   // Bara Familjen B — Familjen A:s uppgift/medlem försvinner, Familjen B:s
   // egna finns kvar.
@@ -149,5 +138,6 @@ test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", a
 
   await page.getByRole("tab", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Familj:/ })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await expect(page.getByLabel("Familjeval")).toHaveCount(0);
 });

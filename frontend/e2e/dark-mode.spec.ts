@@ -104,7 +104,7 @@ test("Mörkt läge: växeln finns bara för vuxenteman, sätter dark-mode-klasse
   // vyns egen navbar, ersätter sedan 2026-08-09 HeroBar.tsx:s borttagna
   // Medlemmar-ikon) kräver att man är på Hem-panelen först.
   await page.getByRole("button", { name: "Hem", exact: true }).click();
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(shell).toHaveClass(/theme-space/);
   await expect(shell).not.toHaveClass(/dark-mode/);

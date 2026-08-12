@@ -4,7 +4,7 @@ import type { CrossAccountRecipes } from "../api/recipes";
 import type { FamilyThreadSource } from "../features/todos/FamilyTodoThreads";
 import type { ImportResult, ImportUndo } from "../features/todos/useTodosState";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
+  AppPanel, Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
   Todo, TodoCategory, TodoThreadRange
 } from "@shared/types";
 
@@ -70,6 +70,11 @@ type Props = {
   onSetTodoImportUndo?: (undo: ImportUndo | null) => void;
   // "vald vuxen"-vyn (Medlemmar-panelen) sätter false — se MemberOverview.tsx.
   enableTabs?: boolean;
+  // Två navbarer, en i taget (2026-08-12) — bara relevanta när enableTabs är
+  // true (den riktiga Hem-vyn), se useShellState.ts/MemberOverview.tsx.
+  homeShowFamilyNav?: boolean;
+  onShowAppNav?: () => void;
+  onNavigate?: (panel: AppPanel) => void;
 };
 
 export function HomePage({
@@ -83,7 +88,7 @@ export function HomePage({
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
   members, categories, allTodos, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
-  enableTabs
+  enableTabs, homeShowFamilyNav, onShowAppNav, onNavigate
 }: Props) {
   return (
     <MemberOverview
@@ -134,6 +139,9 @@ export function HomePage({
       todoImportUndo={todoImportUndo}
       onSetTodoImportUndo={onSetTodoImportUndo}
       enableTabs={enableTabs}
+      homeShowFamilyNav={homeShowFamilyNav}
+      onShowAppNav={onShowAppNav}
+      onNavigate={onNavigate}
     />
   );
 }

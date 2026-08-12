@@ -77,7 +77,7 @@ test("PersonalDashboard visar bara riktigt tilldelade, synliga uppgifter — int
   // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
   // document.body, scopad via role="group"-behållaren för att undvika en
   // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Handla mat")).toBeVisible();

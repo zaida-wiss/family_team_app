@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { CalendarDays, Check, CheckSquare, Home, Plus, ShoppingCart, Upload, UtensilsCrossed, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, Check, CheckSquare, Plus, Settings, ShoppingCart, Upload, User, UtensilsCrossed, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -17,7 +16,7 @@ import { generateId } from "../../utils/uuid";
 import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
-  Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
+  AppPanel, Calendar, CalendarEvent, CalendarSettings, Id, Member, MembershipMemberSummary, Recipe, Role, ShoppingList,
   Todo, TodoCategory, TodoThreadRange
 } from "@shared/types";
 import styles from "./MemberOverview.module.css";
@@ -38,7 +37,7 @@ type FamilyOption = { accountId: Id; accountName: string };
 // bara EN sektion visas åt gången. Medlemmar-kortet (inte en av de fyra
 // ikonerna Zaida räknade upp) förblir alltid synligt ovanför, oberoende av
 // vald flik.
-type HomeTab = "calendar" | "shopping" | "todos" | "mealplan";
+type HomeTab = "calendar" | "shopping" | "todos" | "mealplan" | "members";
 
 type Props = {
   currentMember: Member;
@@ -132,6 +131,14 @@ type Props = {
   // innan flik-ombyggnaden, utan att kollidera med huvudnavets "Kalender"-
   // knapp (samma namn som den nya "Visa kalender"-flikknappen).
   enableTabs?: boolean;
+  // Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
+  // två navbarerna, personlig och familjer... tryck på en person (ikon)
+  // från familjenavbaren för att komma till din personliga vy") — se
+  // useShellState.ts:s homeShowFamilyNav-kommentar för hela bakgrunden.
+  // Bara relevant när enableTabs är true (den riktiga Hem-vyn).
+  homeShowFamilyNav?: boolean;
+  onShowAppNav?: () => void;
+  onNavigate?: (panel: AppPanel) => void;
 };
 
 export function MemberOverview({
@@ -181,6 +188,9 @@ export function MemberOverview({
   todoImportUndo = null,
   onSetTodoImportUndo,
   enableTabs = true,
+  homeShowFamilyNav = true,
+  onShowAppNav,
+  onNavigate,
 }: Props) {
   const ownAccountId = currentMember.accountId;
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
@@ -218,104 +228,10 @@ export function MemberOverview({
   // hit istället — kryssrutan hoppar över kategoriskapandet helt.
   const [noFamilyCategory, setNoFamilyCategory] = useState(false);
   const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
-  // Medlemsikonen (2026-08-04, Zaidas fynd: "medlemmarna tar för stor plats
-  // i hemvyn") — ersätter den tidigare alltid-synliga raden av avatarer med
-  // EN ikon (samma dropdown-framför-lång-lista-princip som CLAUDE.md redan
-  // föreskriver) som öppnar en portalad lista, samma mönster som
-  // ParentTodoThreadView.tsx:s kategorimeny (fixed position, stängs vid
-  // klick utanför).
-  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [memberPickerPos, setMemberPickerPos] = useState({ top: 0, left: 0 });
-  const memberIconRef = useRef<HTMLButtonElement>(null);
-  const memberPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!memberPickerOpen) return;
-    function handleOutsideClick(e: MouseEvent) {
-      if (memberPickerRef.current?.contains(e.target as Node)) return;
-      if (memberIconRef.current?.contains(e.target as Node)) return;
-      setMemberPickerOpen(false);
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMemberPickerOpen(false);
-    }
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [memberPickerOpen]);
-
-  function toggleMemberPicker() {
-    if (!memberPickerOpen && memberIconRef.current) {
-      const rect = memberIconRef.current.getBoundingClientRect();
-      const POPUP_WIDTH = 220;
-      // Uppskattad höjd (ingen exakt känd innan render) — räcker för att
-      // avgöra om popupen ska öppnas neråt eller uppåt. På mobil ligger
-      // ikonen numera i den fasta bottenraden (se .controlRow ovanför HeroBar,
-      // 2026-08-04) — under-plats saknas då nästan alltid, löst genom att
-      // öppna uppåt istället.
-      const ESTIMATED_HEIGHT = Math.min(filteredMembers.length * 48 + 12, 300);
-      const openUpward = window.innerHeight - rect.bottom < ESTIMATED_HEIGHT + 8;
-      setMemberPickerPos({
-        top: openUpward ? Math.max(8, rect.top - ESTIMATED_HEIGHT - 4) : rect.bottom + 4,
-        left: Math.min(rect.left, window.innerWidth - POPUP_WIDTH - 8)
-      });
-    }
-    setMemberPickerOpen((v) => !v);
-  }
 
   function setSelectedFamilyId(id: Id | "all") {
     setSelectedFamilyIdState(id);
     onUpdateHomeSelectedFamilyId?.(id === "all" ? null : id);
-  }
-
-  // Familjeväljaren som en ikon+popup istället för en <select> (2026-08-12,
-  // Zaidas fynd: "familjenavbaren blir för smal... för familjeväljaren som
-  // en droplista med ikon istället") — samma dropdown-framför-lång-lista-
-  // princip som CLAUDE.md redan föreskriver och som medlemsikonen nedan
-  // redan använder. En <select> med synlig text (upp till 220px bred, se
-  // gårdagens fund) tog stor plats i den redan trånga mobila .controlRow —
-  // en kompakt ikon löser trångboddheten rakt av, samma mönster dupliceras
-  // medvetet istället för att brytas ut till en delad hook (bara två
-  // instanser i den här filen, se system-riktlinjen om att inte
-  // premature-abstrahera för tidigt).
-  const [familyPickerOpen, setFamilyPickerOpen] = useState(false);
-  const [familyPickerPos, setFamilyPickerPos] = useState({ top: 0, left: 0 });
-  const familyIconRef = useRef<HTMLButtonElement>(null);
-  const familyPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!familyPickerOpen) return;
-    function handleOutsideClick(e: MouseEvent) {
-      if (familyPickerRef.current?.contains(e.target as Node)) return;
-      if (familyIconRef.current?.contains(e.target as Node)) return;
-      setFamilyPickerOpen(false);
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setFamilyPickerOpen(false);
-    }
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [familyPickerOpen]);
-
-  function toggleFamilyPicker() {
-    if (!familyPickerOpen && familyIconRef.current) {
-      const rect = familyIconRef.current.getBoundingClientRect();
-      const POPUP_WIDTH = 220;
-      const ESTIMATED_HEIGHT = Math.min((familyOptions.length + 1) * 48 + 12, 300);
-      const openUpward = window.innerHeight - rect.bottom < ESTIMATED_HEIGHT + 8;
-      setFamilyPickerPos({
-        top: openUpward ? Math.max(8, rect.top - ESTIMATED_HEIGHT - 4) : rect.bottom + 4,
-        left: Math.min(rect.left, window.innerWidth - POPUP_WIDTH - 8)
-      });
-    }
-    setFamilyPickerOpen((v) => !v);
   }
 
   // Medvetet INGET "återställ till Alla familjer om valet inte finns bland
@@ -391,120 +307,19 @@ export function MemberOverview({
     { key: "calendar", label: "Visa kalender", icon: CalendarDays, enabled: canSeeCalendar },
     { key: "shopping", label: "Visa inköpslista", icon: ShoppingCart, enabled: canSeeShopping },
     { key: "todos", label: "Visa todos", icon: CheckSquare, enabled: canSeeTodos },
-    { key: "mealplan", label: "Visa måltidsplanering", icon: UtensilsCrossed, enabled: true }
+    { key: "mealplan", label: "Visa måltidsplanering", icon: UtensilsCrossed, enabled: true },
+    // Medlemmar (2026-08-12, Zaidas beslut: "ta bort dropdown och gå
+    // tillbaka till en sida man kommer till") — ersätter de tidigare två
+    // separata ikon+popup-mönstren (familjeväljaren och "Visa medlemmar")
+    // med EN riktig flik: familjeval + medlemslista, ingen popup. Se
+    // renderingen av effectiveTab === "members" nedan.
+    { key: "members", label: "Visa medlemmar", icon: Users, enabled: canSeeMembers }
   ];
   const tabs = allTabs.filter((t) => t.enabled);
   // "vald vuxen"-vyn (enableTabs=false) visar alltid bara kalendern, oavsett
   // vilken flik som råkar ligga i state sedan tidigare (samma instans kan
   // återanvändas, se `key`-propen i MemberShellContent.tsx).
   const effectiveTab = enableTabs ? activeTab : "calendar";
-
-  const currentFamilyLabel = selectedFamilyId === "all" ? "Alla familjer" : familyNameById.get(selectedFamilyId) ?? "Okänd familj";
-
-  const familyPicker = showFamilyFilter && (
-    <>
-      <button
-        aria-expanded={familyPickerOpen}
-        aria-label={`Familj: ${currentFamilyLabel}`}
-        className={styles.tabButton}
-        onClick={toggleFamilyPicker}
-        ref={familyIconRef}
-        title={`Familj: ${currentFamilyLabel}`}
-        type="button"
-      >
-        <Home size="1.125rem" />
-      </button>
-      {familyPickerOpen &&
-        createPortal(
-          <div
-            aria-label="Familjeval"
-            className={styles.memberPopup}
-            ref={familyPickerRef}
-            role="group"
-            style={{ position: "fixed", top: familyPickerPos.top, left: familyPickerPos.left }}
-          >
-            <button
-              className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
-              onClick={() => { setSelectedFamilyId("all"); setFamilyPickerOpen(false); }}
-              type="button"
-            >
-              <span>Alla familjer</span>
-              {selectedFamilyId === "all" && <Check aria-hidden="true" size="1rem" />}
-            </button>
-            {familyOptions.map((f) => (
-              <button
-                className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
-                key={f.accountId}
-                onClick={() => { setSelectedFamilyId(f.accountId); setFamilyPickerOpen(false); }}
-                type="button"
-              >
-                <span>{f.accountName}</span>
-                {selectedFamilyId === f.accountId && <Check aria-hidden="true" size="1rem" />}
-              </button>
-            ))}
-          </div>,
-          document.body
-        )}
-    </>
-  );
-
-  // Medlemmar (2026-08-04, Zaidas önskemål: "Medlemmar skall visas
-  // tillsammans med familj och knappar, tänk minimalistiskt", utökat samma
-  // dag efter fynd: "medlemmarna tar för stor plats i hemvyn, ska vi sätta
-  // en ikon för medlemmar där istället?") — EN ikon (samma tabButton-stil
-  // som flikarna) öppnar en portalad lista istället för att visa varje
-  // avatar inline hela tiden. Egna medlemmar väljbara, andra familjers
-  // (cross-account/Familjeanslutning) statiska med familjenamn under.
-  const memberRow = canSeeMembers && filteredMembers.length > 0 && (
-    <>
-      <button
-        aria-expanded={memberPickerOpen}
-        aria-label="Visa medlemmar"
-        className={styles.tabButton}
-        onClick={toggleMemberPicker}
-        ref={memberIconRef}
-        title="Visa medlemmar"
-        type="button"
-      >
-        <Users size="1.125rem" />
-      </button>
-      {memberPickerOpen &&
-        createPortal(
-          <div
-            aria-label="Medlemslista"
-            className={styles.memberPopup}
-            ref={memberPickerRef}
-            role="group"
-            style={{ position: "fixed", top: memberPickerPos.top, left: memberPickerPos.left }}
-          >
-            {filteredMembers.map((m) =>
-              m.isOwn ? (
-                <button
-                  className={styles.memberPopupRow}
-                  key={m.id}
-                  onClick={() => { onSelectMember(m.id); setMemberPickerOpen(false); }}
-                  type="button"
-                >
-                  <MemberAvatar member={m} size="small" />
-                  <span>{m.name}</span>
-                </button>
-              ) : (
-                <div className={`${styles.memberPopupRow} ${styles["memberPopupRow--static"]}`} key={`${m.accountId}-${m.id}`}>
-                  <MemberAvatar member={m} size="small" />
-                  <span>
-                    {m.name}
-                    {selectedFamilyId === "all" && (
-                      <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
-                    )}
-                  </span>
-                </div>
-              )
-            )}
-          </div>,
-          document.body
-        )}
-    </>
-  );
 
   return (
     <div
@@ -527,21 +342,34 @@ export function MemberOverview({
       // cascade. Ingen variabel satt (TodosView.tsx/Inställningar m.fl.) ger
       // CSS:ns egna, mindre default (4rem) — HeroBar ensam.
       // rem, inte px (2026-08-11, Zaidas fynd: "familjens navbar döljs nu
-      // av den första navbaren på surfplattan") — 124px var HeroBars och
-      // .home:s reserv HÅRDKODAT ADDERADE vid 16px root-typsnitt (64+60).
-      // Båda är nu uttryckta i rem (4rem/.home:s 3.75rem) eftersom
-      // HeroBars bottennav faktiskt VÄXER förbi 64px på en bred
-      // mobil-brytpunkts-skärm (surfplatta i portrait, root-typsnittet
-      // skalar via clamp(15px,13px+0.6vw,22px), se Shell.tsx) — samma
-      // calc() håller reserven i synk oavsett hur stort root-typsnittet
-      // faktiskt blivit, istället för att räkna ut och frysa en enda
-      // px-summa som bara stämde vid exakt 16px.
-      style={enableTabs ? ({ "--modal-bottom-reserve": "calc(4rem + 3.75rem)" } as React.CSSProperties) : undefined}
+      // av den första navbaren på surfplattan") — HeroBars bottennav
+      // VÄXER förbi 16px-antagandet på en bred mobil-brytpunkts-skärm
+      // (surfplatta i portrait, root-typsnittet skalar via
+      // clamp(15px,13px+0.6vw,22px), se Shell.tsx), samma calc() håller
+      // reserven i synk. Bara 4rem nu (2026-08-12, inte längre "HeroBar +
+      // controlRow staplade") — de två navbarerna delar samma fysiska plats
+      // istället för att ligga ovanpå varandra, se Shell.tsx:s
+      // hideHeroBarOnMobile.
+      style={enableTabs ? ({ "--modal-bottom-reserve": "4rem" } as React.CSSProperties) : undefined}
     >
-      {enableTabs ? (
-        <div className={styles.controlRow}>
-          {familyPicker}
-          {memberRow}
+      {enableTabs && (
+        // Två navbarer, en i taget (2026-08-12) — homeShowFamilyNav styr
+        // bara MOBIL synlighet (CSS-klass nedan, .controlRow.appNavShowing),
+        // aldrig avmontering: på desktop (≥1024px) finns ingen
+        // platskonflikt med HeroBars sidopanel, controlRow ska alltid synas
+        // där oavsett växlingsläge (se MemberOverview.module.css).
+        <div className={`${styles.controlRow}${!homeShowFamilyNav ? ` ${styles.appNavShowing}` : ""}`}>
+          {onShowAppNav && (
+            <button
+              aria-label="Visa appens navigering"
+              className={`${styles.tabButton} ${styles.mobileOnlyIcon}`}
+              onClick={onShowAppNav}
+              title="Visa appens navigering"
+              type="button"
+            >
+              <User size="1.125rem" />
+            </button>
+          )}
           <div aria-label="Hem-vyns sektioner" className={styles.tabRow} role="tablist">
             {tabs.map(({ key, label, icon: Icon }) => (
               <button
@@ -560,9 +388,18 @@ export function MemberOverview({
               </button>
             ))}
           </div>
+          {onNavigate && (
+            <button
+              aria-label="Inställningar"
+              className={`${styles.tabButton} ${styles.mobileOnlyIcon}`}
+              onClick={() => onNavigate("settings")}
+              title="Inställningar"
+              type="button"
+            >
+              <Settings size="1.125rem" />
+            </button>
+          )}
         </div>
-      ) : (
-        memberRow
       )}
 
       {effectiveTab === "calendar" && canSeeCalendar && (
@@ -872,6 +709,81 @@ export function MemberOverview({
             </p>
           </article>
         )
+      )}
+
+      {/* Medlemmar-fliken (2026-08-12, Zaidas beslut: "Under medlemmar
+          skall man kunna styra vilka familjer som skall visas och se
+          medlemmarna i dessa, samt trycka på dem för att komma till
+          dashboarden. så ta bort drop down och gå tillbaka till en sida man
+          kommer till") — ersätter de tidigare två separata ikon+popup-
+          mönstren (familjeväljaren och "Visa medlemmar") med en riktig
+          sida: familjeval (om fler än en familj bidrar) + medlemslista.
+          Radstilen (.memberPopupRow/.familyPopupRow) återanvänds oförändrad
+          från de gamla popuperna — bara containern är ny (.membersTabList,
+          ingen popup-storleksbegränsning). */}
+      {effectiveTab === "members" && canSeeMembers && (
+        <article aria-labelledby="home-tab-members" className="dashboard" id="home-panel-members" key={`members-${tabResetKey}`} role="tabpanel" tabIndex={0}>
+          {showFamilyFilter && (
+            <>
+              <header className="section-header">
+                <div><p className="eyebrow">Familj</p><h2>Välj familj</h2></div>
+              </header>
+              <div aria-label="Familjeval" className={styles.membersTabList} role="group">
+                <button
+                  className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
+                  onClick={() => setSelectedFamilyId("all")}
+                  type="button"
+                >
+                  <span>Alla familjer</span>
+                  {selectedFamilyId === "all" && <Check aria-hidden="true" size="1rem" />}
+                </button>
+                {familyOptions.map((f) => (
+                  <button
+                    className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
+                    key={f.accountId}
+                    onClick={() => setSelectedFamilyId(f.accountId)}
+                    type="button"
+                  >
+                    <span>{f.accountName}</span>
+                    {selectedFamilyId === f.accountId && <Check aria-hidden="true" size="1rem" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <header className="section-header">
+            <div><p className="eyebrow">Familj</p><h2>Medlemmar</h2></div>
+          </header>
+          {filteredMembers.length === 0 ? (
+            <p className="empty-note">Inga medlemmar att visa.</p>
+          ) : (
+            <div aria-label="Medlemslista" className={styles.membersTabList} role="group">
+              {filteredMembers.map((m) =>
+                m.isOwn ? (
+                  <button
+                    className={styles.memberPopupRow}
+                    key={m.id}
+                    onClick={() => onSelectMember(m.id)}
+                    type="button"
+                  >
+                    <MemberAvatar member={m} size="small" />
+                    <span>{m.name}</span>
+                  </button>
+                ) : (
+                  <div className={`${styles.memberPopupRow} ${styles["memberPopupRow--static"]}`} key={`${m.accountId}-${m.id}`}>
+                    <MemberAvatar member={m} size="small" />
+                    <span>
+                      {m.name}
+                      {selectedFamilyId === "all" && (
+                        <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
+                      )}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </article>
       )}
     </div>
   );

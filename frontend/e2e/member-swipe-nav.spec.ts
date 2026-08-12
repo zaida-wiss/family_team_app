@@ -62,7 +62,7 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
 
   // Hem → Visa medlemmar → Nova (aktiveMembers-ordningen är vuxna-först-
   // sedan-barn, alltså [Testförälder, Nova] — Nova är index 1).
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -92,7 +92,7 @@ test("marginal-drag: ett kort drag som inte når andra sidan byter INTE medlem",
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -113,7 +113,7 @@ test("marginal-drag: nedtryck MITT i vyn (inte i marginalen) triggar ingen växl
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 

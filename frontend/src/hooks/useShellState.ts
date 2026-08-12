@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { accountsApi } from "../api";
 import { useAppState } from "./useAppState";
 import { useDeviceSetting } from "./useDeviceSetting";
@@ -23,6 +24,15 @@ export function useShellState(
   // (SettingsContent) — annars visar de "aktiv"-markering utifrån varsin egen state och
   // ett typsnittsbyte i den ena syns inte som markerad i den andra förrän omladdning.
   const { fontId, setFontId } = useAppFont();
+
+  // Två navbarer, en i taget (2026-08-12, Zaidas beslut) — Hem-vyns egen
+  // familjenavbar (MemberOverview.tsx) tar över HeroBars exakta plats
+  // istället för att ligga staplad ovanpå den. true = familjenavbaren visas
+  // (standard när man navigerar till Hem, se navigateFromHeroBar i
+  // Shell.tsx); false = HeroBar visas istället (familjenavbarens nya
+  // person-ikon sätter detta). Bara relevant på Hem-panelen — se Shell.tsx:s
+  // villkor för att dölja/visa HeroBar.
+  const [homeShowFamilyNav, setHomeShowFamilyNav] = useState(true);
 
   const {
     activeAccount, setActiveAccount,
@@ -198,6 +208,11 @@ export function useShellState(
     activeMembers,
     members,
     selectedDashboardMemberId,
+    // Två navbarer, en i taget (se kommentaren vid useState ovan) —
+    // MemberOverview.tsx:s person-ikon anropar onShowAppNav för att visa
+    // HeroBar istället för familjenavbaren.
+    homeShowFamilyNav,
+    onShowAppNav: () => setHomeShowFamilyNav(false),
     roles,
     todos,
     rewards,
@@ -533,6 +548,8 @@ export function useShellState(
     currentMember,
     activePanel,
     setActivePanel,
+    homeShowFamilyNav,
+    setHomeShowFamilyNav,
     panelNavResetKey,
     themePickerMember,
     handleThemeSelect,

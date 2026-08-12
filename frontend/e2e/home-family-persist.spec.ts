@@ -46,26 +46,28 @@ test("Hem-vyns familjefilter sparar senast valda familj och läser tillbaka den 
   );
 
   await page.goto("/");
-  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
-  // <select> (Zaidas fynd: "familjenavbaren blir för smal... för
-  // familjeväljaren som en droplista med ikon istället", MemberOverview.tsx)
-  // — aria-labeln innehåller den just nu valda familjen, matcha med regex.
-  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
-  await expect(familyIcon).toBeVisible();
-  await expect(familyIcon).toHaveAccessibleName("Familj: Alla familjer");
+  // Familjeväljaren ligger sedan 2026-08-12 i en riktig "Medlemmar"-flik
+  // istället för en <select>/ikon+popup (Zaidas fynd: "familjenavbaren blir
+  // för smal... ta bort drop down och gå tillbaka till en sida man kommer
+  // till", MemberOverview.tsx) — bockmarkeringen (Check-ikonen) på den
+  // valda raden visar det aktuella valet.
+  const membersTab = page.getByRole("tab", { name: "Visa medlemmar" });
+  const familyGroup = page.getByLabel("Familjeval");
+  await membersTab.click();
+  await expect(familyGroup.getByRole("button", { name: "Alla familjer" }).locator("svg")).toBeVisible();
 
   // updateMemberNavigation (useMembersState.ts) är avsiktligt fire-and-forget
   // — vänta in PATCH-anropet explicit innan sidomladdningen, annars kan
   // reload hinna före att MEMBER_A faktiskt uppdaterats i mock-servern.
   const patchDone = page.waitForResponse((res) => res.url().includes("/api/members/mem-a") && res.request().method() === "PATCH");
-  await familyIcon.click();
-  await page.getByLabel("Familjeval").getByText("Familjen B", { exact: true }).click();
-  await expect(familyIcon).toHaveAccessibleName("Familj: Familjen B");
+  await familyGroup.getByRole("button", { name: "Familjen B" }).click();
+  await expect(familyGroup.getByRole("button", { name: "Familjen B" }).locator("svg")).toBeVisible();
   await patchDone;
 
   // En sidomladdning läser nu tillbaka senast valda familj från servern
   // (MEMBER_A.homeSelectedFamilyId sattes av PATCH-anropet ovan) istället
   // för att återgå till "Alla familjer".
   await page.reload();
-  await expect(page.getByRole("button", { name: /^Familj:/ })).toHaveAccessibleName("Familj: Familjen B");
+  await membersTab.click();
+  await expect(familyGroup.getByRole("button", { name: "Familjen B" }).locator("svg")).toBeVisible();
 });

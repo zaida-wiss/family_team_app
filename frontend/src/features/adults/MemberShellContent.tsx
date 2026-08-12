@@ -91,6 +91,10 @@ type Props = {
   // server-side (samma updateMemberNavigation-mönster som ovan).
   homeSelectedFamilyId?: Id | null;
   onUpdateHomeSelectedFamilyId: (id: Id | null) => void;
+  // Två navbarer, en i taget (2026-08-12) — se useShellState.ts:s
+  // homeShowFamilyNav-kommentar för hela bakgrunden.
+  homeShowFamilyNav: boolean;
+  onShowAppNav: () => void;
   onNavigate: (panel: ShellPanel) => void;
   onSelectMember: (id: string) => void;
   onCreateTodo: (todo: Todo) => void;
@@ -177,6 +181,7 @@ export function MemberShellContent({
   todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
   todoThreadRange, todoThreadGap, todoBubbleSize,
   homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
+  homeShowFamilyNav, onShowAppNav,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
@@ -1061,6 +1066,9 @@ export function MemberShellContent({
         onSetTodoImportResult={onSetTodoImportResult}
         todoImportUndo={todoImportUndo}
         onSetTodoImportUndo={onSetTodoImportUndo}
+        homeShowFamilyNav={homeShowFamilyNav}
+        onShowAppNav={onShowAppNav}
+        onNavigate={onNavigate}
       />
       {children.length === 0 && canManageMembers && (
         <article className="dashboard" style={{ marginTop: "18px" }}>

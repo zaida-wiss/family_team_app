@@ -15,14 +15,18 @@
    är en vänsterspalt där, ingen bottennav att ligga ovanför.
    Mobil (2026-08-04, Zaidas rättelse med skärmdump av bottennaven: "kläm
    ihop allt ovanför denna navbar istället... en andra navbar i motsatt
-   färgkombination") — en egen, fast, kompakt navbar-rad som ligger
-   FYSISKT ovanför HeroBar.tsx:s fasta bottennav (64px hög), inte bara
-   scroll-fäst. z-index lägre än HeroBar (999) så den aldrig hamnar ovanpå
-   den. Färgerna är ett medvetet SWAP av samma två temavariabler HeroBar
-   själv använder (bakgrund↔text) — "motsatt färgkombination", inte en ny
-   hårdkodad kulör, håller sig därför korrekt genom alla ljusa/mörka/
-   barn-teman. .home:s egen bottenpadding (nedan) kompenserar så
+   färgkombination") — en egen, fast, kompakt navbar-rad, inte bara
+   scroll-fäst. Färgerna är ett medvetet SWAP av samma två temavariabler
+   HeroBar själv använder (bakgrund↔text) — "motsatt färgkombination",
+   inte en ny hårdkodad kulör, håller sig därför korrekt genom alla ljusa/
+   mörka/barn-teman. .home:s egen bottenpadding (nedan) kompenserar så
    scrollat innehåll aldrig hamnar bakom den.
+   Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
+   två navbarerna, personlig och familjer... visa bara en navbar åt
+   gången") — ligger numera i HeroBars EGEN plats (bottom:0), inte
+   staplad ovanför den som tidigare (bottom:4rem) — de två visas aldrig
+   samtidigt på mobil, se Shell.tsx:s hideHeroBarOnMobile och
+   .appNavShowing nedan.
    Bugg fixad (2026-08-10, Zaidas fynd: "familjenavbarens bakgrund är
    hårdkodad") — textfärgen (color: var(--theme-nav-bg)) läste tidigare
    RAKT AV --theme-nav-bg, som är en linear-gradient() för 10 av 11
@@ -51,29 +55,45 @@
   touch-action: none;
 }
 
+/* Person-ikonen ("Visa appens navigering") och Inställningar-ikonen
+   (2026-08-12) är bara meningsfulla på mobil, där de två navbarerna delar
+   samma fysiska plats (se .appNavShowing nedan) — på desktop (≥1024px)
+   finns HeroBars sidopanel ALLTID synlig, ingen platskonflikt, så en
+   dubblett-Inställningar-knapp här vore bara förvirrande brus (upptäckt
+   via en riktig dubblett-krock i e2e-sviten: två knappar med samma
+   tillgängliga namn samtidigt i DOM:en på desktop-bred viewport).
+   .tabButton.mobileOnlyIcon (två klasser, INTE bara .mobileOnlyIcon) —
+   annars vinner .tabButton:s egen display:grid i cascaden trots att denna
+   regel matchar också, eftersom båda har samma specificitet (en klass) och
+   .tabButton råkar definieras SENARE i filen (rad ~136). Två klasser ger
+   högre specificitet, garanterat vinnande oavsett filordning. */
+@media (min-width: 1024px) {
+  .tabButton.mobileOnlyIcon {
+    display: none;
+  }
+}
+
 @media (max-width: 1023px) {
   .home {
-    /* Rymmer den fasta controlRow-baren (se nedan) ovanför HeroBars
-       egna 4rem — annars döljs scrollat innehålls sista bit bakom den.
-       rem, inte px (2026-08-11, Zaidas fynd: "familjens navbar döljs nu
-       av den första navbaren på surfplattan") — HeroBars bottennav är
-       4rem hög (skalar med clamp(15px,13px+0.6vw,22px) på <html>, se
-       Shell.tsx), en bred mobil-brytpunkts-skärm (surfplatta i portrait,
-       fortfarande <1024px) ger ett STÖRRE root-typsnitt och därmed en
-       FYSISKT högre HeroBar än det gamla hårdkodade 60px antog — samma
-       reserv måste därför skalas i samma enhet för att aldrig bli för
-       liten. */
-    padding-bottom: 3.75rem;
+    /* Rymmer den fasta bottennaven (se nedan) — vilken av de två
+       navbarerna det än råkar vara, båda är 4rem höga. rem, inte px
+       (2026-08-11/12, se .controlRow nedan) — skalar med
+       clamp(15px,13px+0.6vw,22px) på <html>, Shell.tsx. */
+    padding-bottom: 4rem;
   }
 
+  /* Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
+     två navbarerna, personlig och familjer... visa bara en navbar åt
+     gången") — controlRow tar nu HeroBars EXAKTA plats (bottom:0) istället
+     för att ligga staplad ovanför den (tidigare bottom:4rem) — de två
+     konkurrerar inte längre om olika delar av samma yta, de delar samma
+     yta och visar bara en i taget (se Shell.tsx:s hideHeroBarOnMobile och
+     .appNavShowing nedan). */
   .controlRow {
     position: fixed;
     left: 0;
     right: 0;
-    /* Måste matcha HeroBar.module.css:s faktiska 4rem-höjd exakt (samma
-       rem-värde, inte ett omräknat px-tal) — annars täcker HeroBar över
-       denna rad så fort root-typsnittet vuxit förbi 16px (se .home ovan). */
-    bottom: 4rem;
+    bottom: 0;
     top: auto;
     z-index: 900;
     flex-wrap: nowrap;
@@ -86,6 +106,18 @@
     background: var(--theme-nav-fg, var(--foreground));
     color: var(--theme-nav-bg-solid, var(--sidebar));
     box-shadow: 0 -1px 0 var(--border);
+  }
+
+  /* Familjenavbarens person-ikon (2026-08-12) satte homeShowFamilyNav till
+     false — HeroBar tar då över (se HeroBar.module.css:s .hiddenOnMobile,
+     motsvarande CSS-döljning, inte avmontering). Bara på mobil — på
+     desktop finns ingen platskonflikt, controlRow ska alltid synas där
+     (se .controlRow ovan, som saknar denna regel utanför media-queryn).
+     .controlRow.appNavShowing (två klasser) — samma specificitetsfynd som
+     .tabButton.mobileOnlyIcon ovan, garanterar att regeln vinner oavsett
+     var i filen .controlRow:s egna display-deklarationer råkar ligga. */
+  .controlRow.appNavShowing {
+    display: none;
   }
 
   .tabButton {
@@ -210,24 +242,17 @@
   color: var(--muted-fg);
 }
 
-/* Medlemsikonen (2026-08-04, Zaidas fynd: "medlemmarna tar för stor plats i
-   hemvyn") — knappen själv återanvänder .tabButton, bara popupen är egen.
-   Portalad till document.body (samma mönster som ParentTodoThreadView.tsx:s
-   kategorimeny) så den aldrig klipps av controlRow:s egen overflow. */
-.memberPopup {
+/* Medlemmar-flikens familje-/medlemslistor (2026-08-12, ersätter de
+   tidigare två ikon+popup-mönstren — se MemberOverview.tsx:s "members"-
+   flikinnehåll för hela bakgrunden). Rad-stilen härunder (.memberPopupRow/
+   .familyPopupRow, namnen bevarade oförändrade) återanvänds oförändrad
+   från den gamla popupen — bara containern är ny, ingen popup-
+   storleksbegränsning (min/max-width, max-height, skugga) behövs längre
+   eftersom detta nu är vanligt sidinnehåll, inte en flytande overlay. */
+.membersTabList {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 180px;
-  max-width: 260px;
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 6px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  z-index: 950;
 }
 
 .memberPopupRow {

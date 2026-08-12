@@ -75,7 +75,7 @@ async function mockCommon(page: import("@playwright/test").Page) {
 
 async function selectChild(page: import("@playwright/test").Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 }
@@ -111,7 +111,7 @@ test("Ett klick på Hem tar tillbaka till den egna hemvyn (avväljer) och Visa m
   await page.getByRole("button", { name: "Hem", exact: true }).click();
 
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Visa medlemmar" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Visa medlemmar" })).toBeVisible();
 });
 
 // 2026-08-10, Zaidas fynd: "jag tappar navbarerna och blir fast på

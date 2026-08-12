@@ -60,7 +60,7 @@ test("vuxen som klickar sin egen profil ser sina uppgifter+kalender, inte Familj
   // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
   // document.body, scopad via role="group"-behållaren för att undvika en
   // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Hej Testförälder!")).toBeVisible();
@@ -72,7 +72,7 @@ test("vuxen som klickar en ANNAN vuxens profil ser NU den personens uppgifter+ka
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   await expect(page.getByText("Hej Lars!")).toBeVisible();
@@ -91,7 +91,7 @@ test("vuxen ser en redigera-knapp på sin EGEN dashboard, öppnar redigeringsmod
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Handla mat")).toBeVisible();
@@ -108,7 +108,7 @@ test("vuxen ser INGEN redigera-knapp på en ANNAN vuxens dashboard", async ({ pa
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Visa medlemmar" }).click();
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   await expect(page.getByText("Klippa gräset")).toBeVisible();

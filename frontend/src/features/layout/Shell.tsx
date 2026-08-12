@@ -129,6 +129,8 @@ export function Shell({
     currentMember,
     activePanel,
     setActivePanel,
+    homeShowFamilyNav,
+    setHomeShowFamilyNav,
     panelNavResetKey,
     themePickerMember,
     handleThemeSelect,
@@ -256,6 +258,38 @@ export function Shell({
     document.documentElement.style.fontSize = `calc(clamp(15px, 13px + 0.6vw, 22px) * ${scale})`;
   }, [effectiveTextSize]);
 
+  // Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
+  // två navbarerna, personlig och familjer... visa bara en navbar åt
+  // gången") — HeroBar ("personlig") och Hem-vyns egen familjenavbar
+  // (MemberOverview.tsx:s controlRow, "familjer") delar samma fysiska plats
+  // längst ner istället för att staplas ovanpå varandra. HeroBars Hem-knapp
+  // (huset) ska alltid ta en tillbaka till familjenavbaren — även om man
+  // redan står på Hem-panelen med HeroBar synlig (familjenavbarens nya
+  // person-ikon satte då homeShowFamilyNav till false) — därför en egen
+  // wrapper istället för att skicka setActivePanel direkt: en vanlig
+  // useEffect på activePanel hade missat just det fallet (samma
+  // panel-värde både före och efter, ingen förändring att reagera på).
+  function navigateFromHeroBar(panel: ShellState["activePanel"]) {
+    if (panel === "home") setHomeShowFamilyNav(true);
+    setActivePanel(panel);
+  }
+  // isChild-vyn (ChildShellContent) berörs inte av växlingen ovan — den har
+  // sin egen, redan etablerade kant-till-kant-hantering (se app-shell-full
+  // nedan) och render:ar aldrig MemberOverview.tsx:s familjenavbar
+  // överhuvudtaget. Utan detta villkor hade en isChild-medlem med
+  // activePanel==="home" (t.ex. kvarvarande persisterad state) kunnat tappa
+  // HeroBar helt utan att familjenavbaren tar över — den existerar bara i
+  // den vuxna Hem-vyn.
+  //
+  // CSS-döljning (display:none via HeroBar.module.css), INTE avmontering
+  // (villkorlig {hideHeroBar && <HeroBar/>}) — bar-växlingen är bara
+  // relevant på mobil, där de två navbarerna konkurrerar om samma fysiska
+  // bottenplats. På desktop (≥1024px) är HeroBar en sidopanel utan någon
+  // platskonflikt alls (Hem-vyns egen controlRow ligger sticky överst i
+  // INNEHÅLLET, en helt annan yta) — en avmonterad HeroBar hade strandat en
+  // desktop-användare helt utan sidonav så fort de öppnade Hem.
+  const hideHeroBarOnMobile = !currentMember.isChild && activePanel === "home" && homeShowFamilyNav;
+
   return (
     <main className={`app-shell theme-${shellTheme}${shellDarkMode ? " dark-mode" : ""}`}>
       {apiError && (
@@ -266,7 +300,8 @@ export function Shell({
 
       <HeroBar
         activePanel={activePanel}
-        onNavigate={setActivePanel}
+        hiddenOnMobile={hideHeroBarOnMobile}
+        onNavigate={navigateFromHeroBar}
       />
 
       <div

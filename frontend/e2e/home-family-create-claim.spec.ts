@@ -80,15 +80,17 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   );
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa todos" }).click();
+  const todosTab = page.getByRole("tab", { name: "Visa todos" });
+  await todosTab.click();
 
-  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
-  // <select> (MemberOverview.tsx, Zaidas fynd om trångbodd familjenavbar).
-  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
-  await expect(familyIcon).toBeVisible();
+  // Familjeväljaren ligger sedan 2026-08-12 i en riktig "Medlemmar"-flik,
+  // inte en <select>/ikon+popup (MemberOverview.tsx, Zaidas fynd om
+  // trångbodd familjenavbar) — att välja familj innebär nu ett riktigt
+  // flikbyte, så helper:n växlar alltid tillbaka till Todos.
   async function selectFamily(label: string) {
-    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
-    await page.getByLabel("Familjeval").getByText(label, { exact: true }).click();
+    await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+    await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
+    await todosTab.click();
   }
 
   // Min egen familj vald (default) — Familjen-poolen är tom vid start och
@@ -157,14 +159,17 @@ test("Hem-vyns Inköp-flik: ny lista, förinställd på vald familj — bara ege
   );
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
+  const shoppingTab = page.getByRole("tab", { name: "Visa inköpslista" });
+  await shoppingTab.click();
 
-  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
-  // <select> (MemberOverview.tsx, Zaidas fynd om trångbodd familjenavbar).
-  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
+  // Familjeväljaren ligger sedan 2026-08-12 i en riktig "Medlemmar"-flik,
+  // inte en <select>/ikon+popup (MemberOverview.tsx, Zaidas fynd om
+  // trångbodd familjenavbar) — att välja familj innebär nu ett riktigt
+  // flikbyte, så helper:n växlar alltid tillbaka till Inköp.
   async function selectFamily(label: string) {
-    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
-    await page.getByLabel("Familjeval").getByText(label, { exact: true }).click();
+    await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+    await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
+    await shoppingTab.click();
   }
 
   await selectFamily("Familjen A");

@@ -69,13 +69,15 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
 
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa måltidsplanering" }).click();
-  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
-  // <select> (MemberOverview.tsx, Zaidas fynd om trångbodd familjenavbar).
-  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
-  await expect(familyIcon).toBeVisible();
+  // Familjeväljaren ligger sedan 2026-08-12 i en riktig "Medlemmar"-flik,
+  // inte en <select>/ikon+popup (MemberOverview.tsx, Zaidas fynd om
+  // trångbodd familjenavbar) — att välja familj innebär nu ett riktigt
+  // flikbyte, så helper:n växlar alltid tillbaka till Måltidsplanering.
+  const mealplanTab = page.getByRole("tab", { name: "Visa måltidsplanering" });
   async function selectFamily(label: string) {
-    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
-    await page.getByLabel("Familjeval").getByText(label, { exact: true }).click();
+    await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+    await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
+    await mealplanTab.click();
   }
 
   // Familjen B (Mina familjekonton) — riktig måltidsplan, ingen "inte

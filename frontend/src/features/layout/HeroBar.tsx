@@ -11,6 +11,11 @@ import styles from "./HeroBar.module.css";
 
 type Props = {
   activePanel: ShellPanel;
+  // Två navbarer, en i taget (2026-08-12) — se Shell.tsx:s
+  // hideHeroBarOnMobile-kommentar för hela bakgrunden. CSS-döljning
+  // (display:none, bara på mobil), inte avmontering — HeroBar ska alltid
+  // förbli monterad på desktop där den är en sidopanel utan platskonflikt.
+  hiddenOnMobile?: boolean;
   onNavigate: (panel: ShellPanel) => void;
 };
 
@@ -24,9 +29,9 @@ type Props = {
 // kontobyte flyttat till Inställningar → Konto → Byt vy (samma
 // onSwitchAccount-funktion, se SettingsContent.tsx), båda medvetet
 // helt borttagna härifrån istället för bara omdesignade.
-export function HeroBar({ activePanel, onNavigate }: Props) {
+export function HeroBar({ activePanel, hiddenOnMobile, onNavigate }: Props) {
   return (
-    <nav className={styles.heroBar}>
+    <nav className={`${styles.heroBar}${hiddenOnMobile ? ` ${styles.hiddenOnMobile}` : ""}`}>
       <div className={styles.nav}>
         <NavBtn icon={<Home size="1.25rem" />} label="Hem" panel="home" active={activePanel === "home"} onNavigate={onNavigate} />
         <NavBtn icon={<CalendarDays size="1.25rem" />} label="Kalender" panel="calendar" active={activePanel === "calendar"} onNavigate={onNavigate} />

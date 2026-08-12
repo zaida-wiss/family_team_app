@@ -168,4 +168,18 @@
     background: var(--theme-nav-hover-bg);
     color: var(--theme-nav-fg);
   }
+
+  /* Två navbarer, en i taget (2026-08-12) — bara på mobil, där HeroBar
+     (fixed bottom) och Hem-vyns egen familjenavbar (MemberOverview.module
+     .css:s .controlRow, samma fysiska bottom:0-plats) tävlar om samma
+     utrymme. display:none, inte avmontering (se Shell.tsx) — HeroBar
+     förblir alltid monterad, bara osynlig/utan layoututrymme här.
+     .heroBar.hiddenOnMobile (två klasser) — garanterar att regeln vinner
+     cascaden oavsett var .heroBar:s egna display-deklarationer råkar ligga
+     i filen (samma specificitetsfynd som MemberOverview.module.css:s
+     .tabButton.mobileOnlyIcon, upptäckt via en riktig e2e-krock där en
+     enkel-klass-regel förlorade mot en senare enkel-klass-regel). */
+  .heroBar.hiddenOnMobile {
+    display: none;
+  }
 }
