@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Calendar, Id, Member, PurchasedReward, Role, Todo, TodoCategory } from "@shared/types";
+import type { AssignedSubtaskCard } from "../todos/selectors";
 
 import { ChildTimeline } from "./ChildTimeline";
 import { ChildHero } from "./ChildHero";
@@ -27,6 +28,10 @@ type Props = {
   timelineTodos: Todo[];
   activeChildTodos: Todo[];
   rejectedTodos: Todo[];
+  // Delmoment tilldelade barnet, mixade in bland de vanliga uppdragskorten
+  // (2026-08-12), se ChildTasksSection.tsx.
+  subtaskCards: AssignedSubtaskCard[];
+  onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onOpenRecords: () => void;
   onCreateWish: (childId: Id, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
@@ -55,6 +60,8 @@ export function ChildDashboard({
   timelineTodos,
   activeChildTodos,
   rejectedTodos,
+  subtaskCards,
+  onToggleSubtask,
   onOpenRecords,
   onCreateWish,
   onCompleteTodo,
@@ -145,6 +152,8 @@ export function ChildDashboard({
             onStartHold={startHold}
             onClearHold={clearHold}
             onCompleteTodo={onCompleteTodo}
+            subtaskCards={subtaskCards}
+            onToggleSubtask={onToggleSubtask}
           />
 
           <ChildRejectedTodos

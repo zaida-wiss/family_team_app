@@ -114,3 +114,42 @@ test("vuxen ser INGEN redigera-knapp på en ANNAN vuxens dashboard", async ({ pa
   await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expect(page.getByRole("button", { name: "Redigera Klippa gräset", exact: true })).toHaveCount(0);
 });
+
+// 2026-08-12, Zaidas önskemål: "delmoment man är signad på hamnar på
+// dashboarden, gärna emojin vid start med" — ett delmoment tilldelat mig
+// dyker upp som ett eget uppdragskort på MIN dashboard, även om HELA todon
+// tillhör någon annan (här: Lars "Klippa gräset"). Håll-in i två sekunder
+// bockar av delmomentet, precis som ett vanligt uppdragskort kompletterar
+// hela todon.
+test("vuxen ser ett uppdragskort för ett delmoment tilldelat DEM, med emojin som ikon; håll-in bockar av det", async ({ page }) => {
+  let toggledSubtaskId: string | null = null;
+  const larsTodoWithSubtask = {
+    ...LARS_TODO,
+    subtasks: [{ id: "sub-1", title: "🧺Diska", done: false, assignedTo: "mem-1" }]
+  };
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TODO, larsTodoWithSubtask] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-2/subtasks/sub-1", (route) => {
+    toggledSubtaskId = "sub-1";
+    return route.fulfill({ json: { done: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
+
+  // "Klippa gräset" (hela todon) tillhör Lars och ska INTE synas — bara
+  // dess delmoment, som ett eget kort med emojin extraherad ur titeln.
+  await expect(page.getByText("Handla mat")).toBeVisible();
+  await expect(page.getByText("Klippa gräset")).toHaveCount(0);
+  const subtaskCard = page.getByRole("button", { name: /Diska/ });
+  await expect(subtaskCard).toBeVisible();
+  await expect(subtaskCard.locator(".child-task-icon")).toHaveText("🧺");
+
+  await subtaskCard.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
+  await expect.poll(() => toggledSubtaskId, { timeout: 3000 }).toBe("sub-1");
+});

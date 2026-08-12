@@ -4,7 +4,7 @@ import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
-import { isTodoVisibleNow } from "../todos/selectors";
+import { getAssignedSubtaskCards, isTodoVisibleNow } from "../todos/selectors";
 
 type Props = {
   currentMember: Member;
@@ -19,6 +19,7 @@ type Props = {
   onCreateWish: (childId: string, starsNeeded: number, title?: string) => void;
   onCompleteTodo: (member: Member, todoId: string, roles: Role[], elapsedMs?: number | null) => void;
   onUncompleteTodo: (member: Member, todoId: string, roles: Role[]) => void;
+  onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onDismissRejectedTodo: (todoId: string, memberId: string) => void;
   onThemePickerOpen: (memberId: string) => void;
 };
@@ -36,6 +37,7 @@ export function ChildShellContent({
   onCreateWish,
   onCompleteTodo,
   onUncompleteTodo,
+  onToggleSubtask,
   onDismissRejectedTodo,
   onThemePickerOpen,
 }: Props) {
@@ -94,6 +96,7 @@ export function ChildShellContent({
       t.status === "rejected" &&
       t.deletedAt === null
   );
+  const subtaskCards = getAssignedSubtaskCards(currentMember.id, todos, categories, now);
 
   // Egen sida för Medaljer/Rekord (2026-07-06, Zaidas beslut) — nås via en
   // pokal-knapp i ChildHero istället för att alltid ligga synlig i dashboarden.
@@ -121,6 +124,8 @@ export function ChildShellContent({
       timelineTodos={todos}
       activeChildTodos={activeChildTodos}
       rejectedTodos={rejectedTodos}
+      subtaskCards={subtaskCards}
+      onToggleSubtask={onToggleSubtask}
       onOpenRecords={() => setView("records")}
       onCreateWish={onCreateWish}
       onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(currentMember, todoId, rolesRef.current, elapsedMs)}

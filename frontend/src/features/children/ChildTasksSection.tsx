@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
+import type { AssignedSubtaskCard } from "../todos/selectors";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useCountdownSound } from "../../hooks/useCountdownSound";
@@ -71,6 +72,15 @@ type Props = {
   heldTodoId: Id | null;
   onStartHold: (id: Id) => void;
   onClearHold: () => void;
+  // Delmoment tilldelade DENNA person, oavsett vem hela todon tillhör
+  // (2026-08-12, Zaidas önskemål: "delmoment man är signad på hamnar på
+  // dashboarden") — blandas rakt in i samma rutnät som de vanliga
+  // uppdragskorten, se getAssignedSubtaskCards (todos/selectors.ts). Egen
+  // håll-in-instans nedan (inte den delade heldTodoId/onStartHold ovan,
+  // som styrs av föräldern och bara känner till hela todos) eftersom ett
+  // bekräftat delmoment ska TOGGLA delmomentet, inte komplettera hela todon.
+  subtaskCards: AssignedSubtaskCard[];
+  onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   // Timerfunktion (2026-07-07, Zaidas önskemål) — separat väg förbi
   // håll-in-bekräftelsen: att trycka Klar på en pågående tidtagning ÄR
   // bekräftelsen, ingen ytterligare 2s-håll behövs ovanpå det.
@@ -93,7 +103,8 @@ const HOLD_DURATION_MS = 2000;
 // (ParentTodoThreadView.tsx/FamilyTodoThreads.tsx).
 const TRIPLE_TAP_MS = 300;
 
-export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo, onEditTodo }: Props) {
+export function ChildTasksSection({ todos, categories, today, timerNow, heldTodoId, onStartHold, onClearHold, onCompleteTodo, onEditTodo, subtaskCards, onToggleSubtask }: Props) {
+  const { heldId: heldSubtaskKey, startHold: startSubtaskHold, clearHold: clearSubtaskHold } = useHoldToConfirm(HOLD_DURATION_MS);
   // Bekräftelsekort för en avklarad ÖPPEN tidtagning (2026-08-10, Zaidas
   // önskemål: "vill jag se tiden den stannat på... innan den försvinner
   // efter 3 sekunder", sedan rättat samma dag: "det ska inte blinka grönt...
@@ -147,7 +158,7 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
     .filter((t) => !todos.some((x) => x.id === t.id));
   const renderTodos = flashExtras.length === 0 ? todos : [...todos, ...flashExtras];
 
-  if (renderTodos.length === 0) {
+  if (renderTodos.length === 0 && subtaskCards.length === 0) {
     return <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>;
   }
 
@@ -231,6 +242,35 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
               </span>
               {starBadge}
               {onEditTodo && <EditTodoButton onEditTodo={onEditTodo} todo={todo} />}
+            </div>
+          );
+        })}
+        {subtaskCards.map((card, i) => {
+          const key = `${card.todoId}:${card.subtaskId}`;
+          const nameClass = `child-task-name${card.title.length > 30 ? " child-task-name--long" : card.title.length > 18 ? " child-task-name--medium" : ""}`;
+          return (
+            <div
+              key={key}
+              className={[
+                "child-task-card",
+                heldSubtaskKey === key ? "child-task-card--holding" : "",
+              ].filter(Boolean).join(" ")}
+              style={{ animationDelay: `${(renderTodos.length + i) * 80}ms` }}
+              onPointerDown={() => startSubtaskHold(key, () => onToggleSubtask(card.todoId, card.subtaskId))}
+              onPointerLeave={clearSubtaskHold}
+              onPointerCancel={clearSubtaskHold}
+              onPointerUp={clearSubtaskHold}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="child-task-icon-circle">
+                <span className="child-task-icon">{card.emoji ?? "📋"}</span>
+              </div>
+              <span className="child-task-copy">
+                <span className={nameClass}>
+                  {card.title}
+                </span>
+              </span>
             </div>
           );
         })}

@@ -200,6 +200,7 @@ export function useShellState(
     todos,
     roles,
     categories: personalTodoCategories,
+    onToggleSubtask: toggleSubtask,
     ...sharedChildProps
   };
 

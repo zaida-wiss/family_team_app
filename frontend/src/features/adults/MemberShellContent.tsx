@@ -36,7 +36,7 @@ const RecipesView = lazy(() =>
 );
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
-import { getFamilyViewTodos, isDueWithinRange, isTodoVisibleNow } from "../todos/selectors";
+import { getAssignedSubtaskCards, getFamilyViewTodos, isDueWithinRange, isTodoVisibleNow } from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers, useCrossAccountRecipes, useCrossAccountShoppingLists } from "../todos/useCrossAccountFamilyState";
 import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
 import { generateId } from "../../utils/uuid";
@@ -706,6 +706,7 @@ export function MemberShellContent({
         t.status === "rejected" &&
         t.deletedAt === null
     );
+    const subtaskCards = getAssignedSubtaskCards(selectedDashboardMember.id, todos, personalCategories, now);
 
     // Rekord-sidan är inte längre bara för barn (2026-08-08) — en vuxens
     // egna ÖPPNA tidtagningar (todos utan Planerad tid) skickar nu sitt
@@ -740,6 +741,8 @@ export function MemberShellContent({
               timelineTodos={todos}
               activeChildTodos={activeChildTodos}
               rejectedTodos={rejectedTodos}
+              subtaskCards={subtaskCards}
+              onToggleSubtask={onToggleSubtask}
               onOpenRecords={() => setShowChildRecords(true)}
               onCreateWish={onCreateWish}
               onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, rolesRef.current, elapsedMs)}
@@ -771,6 +774,8 @@ export function MemberShellContent({
           timelineTodos={todos}
           activeTodos={activeChildTodos}
           rejectedTodos={rejectedTodos}
+          subtaskCards={subtaskCards}
+          onToggleSubtask={onToggleSubtask}
           onCompleteTodo={(todoId, elapsedMs) => onCompleteTodo(selectedDashboardMember, todoId, rolesRef.current, elapsedMs)}
           onDismissRejectedTodo={(todoId) =>
             onDismissRejectedTodo(todoId, selectedDashboardMember.id)

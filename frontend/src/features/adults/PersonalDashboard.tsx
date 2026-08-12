@@ -1,4 +1,5 @@
 import type { Calendar, Id, Member, Role, Todo, TodoCategory } from "@shared/types";
+import type { AssignedSubtaskCard } from "../todos/selectors";
 import { Trophy } from "lucide-react";
 
 import { ChildTimeline } from "../children/ChildTimeline";
@@ -36,6 +37,10 @@ type Props = {
   timelineTodos: Todo[];
   activeTodos: Todo[];
   rejectedTodos: Todo[];
+  // Delmoment tilldelade denna vuxna, mixade in bland de vanliga
+  // uppdragskorten (2026-08-12), se ChildTasksSection.tsx.
+  subtaskCards: AssignedSubtaskCard[];
+  onToggleSubtask: (todoId: Id, subtaskId: Id) => void;
   onCompleteTodo: (todoId: Id, elapsedMs?: number | null) => void;
   onDismissRejectedTodo: (todoId: Id) => void;
   // Rekord-sidan (2026-08-08, Zaidas önskemål: en öppen tidtagnings resultat
@@ -70,6 +75,8 @@ export function PersonalDashboard({
   timelineTodos,
   activeTodos,
   rejectedTodos,
+  subtaskCards,
+  onToggleSubtask,
   onCompleteTodo,
   onDismissRejectedTodo,
   onOpenRecords,
@@ -151,6 +158,8 @@ export function PersonalDashboard({
             onClearHold={clearHold}
             onCompleteTodo={onCompleteTodo}
             onEditTodo={onEditTodo}
+            subtaskCards={subtaskCards}
+            onToggleSubtask={onToggleSubtask}
           />
 
           <ChildRejectedTodos

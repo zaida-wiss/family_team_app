@@ -1,5 +1,6 @@
 import type { Id, Member, Role, Todo, TodoCategory, TodoSubtask, TodoThreadRange } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
+import { extractLeadingEmoji } from "../../utils/extractLeadingEmoji";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
 // avgör om en medlem är ett barn, antingen via member.isChild direkt eller
@@ -227,6 +228,46 @@ export function isTodoVisibleNow(
 // bockade gruppen.
 export function sortSubtasksForDisplay(subtasks: TodoSubtask[]): TodoSubtask[] {
   return [...subtasks].sort((a, b) => Number(a.done) - Number(b.done));
+}
+
+export type AssignedSubtaskCard = {
+  todoId: Id;
+  subtaskId: Id;
+  title: string;
+  emoji: string | null;
+};
+
+// Uppdragskort för tilldelade DELMOMENT (2026-08-12, Zaidas önskemål:
+// "delmoment man är signad på hamnar på dashboarden, gärna emojin vid start
+// med") — ett delmoment kan vara tilldelat en ANNAN medlem än den todon i
+// sig tillhör (SubtaskAssigneeButton.tsx, 2026-07-23), så denna går igenom
+// ALLA todos oavsett todo.assignedTo, till skillnad från activeChildTodos
+// (ChildShellContent.tsx/MemberShellContent.tsx) som bara ser på hela
+// todons egen tilldelning. Samma synlighetsvillkor som activeChildTodos
+// (status pending/expired, ingen mall, inte en dold kategori, inom
+// tidsfönstret) — annars skulle ett delmoment i en ännu inte startad eller
+// redan avklarad rutin dyka upp på dashboarden i onödan.
+export function getAssignedSubtaskCards(
+  memberId: Id,
+  todos: Todo[],
+  categories: TodoCategory[],
+  now: number
+): AssignedSubtaskCard[] {
+  const cards: AssignedSubtaskCard[] = [];
+  for (const todo of todos) {
+    if (todo.deletedAt !== null) continue;
+    if (todo.status !== "pending" && todo.status !== "expired") continue;
+    if (todo.recurrence.type !== "none") continue;
+    if (!isTodoVisibleNow(todo, now)) continue;
+    if (todo.personalCategoryId && categories.find((c) => c.id === todo.personalCategoryId)?.hidden) continue;
+
+    for (const subtask of todo.subtasks ?? []) {
+      if (subtask.done || subtask.assignedTo !== memberId) continue;
+      const { emoji, rest } = extractLeadingEmoji(subtask.title);
+      cards.push({ todoId: todo.id, subtaskId: subtask.id, title: rest || subtask.title, emoji });
+    }
+  }
+  return cards;
 }
 
 // Familjen-poolens tråd-etikett (2026-08-07, Zaidas önskemål: "den ska

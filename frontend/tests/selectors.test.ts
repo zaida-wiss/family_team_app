@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { getFamilyViewTodos, getMyTodosViewTodos, isTodoVisibleNow } from "../src/features/todos/selectors";
+import { getAssignedSubtaskCards, getFamilyViewTodos, getMyTodosViewTodos, isTodoVisibleNow } from "../src/features/todos/selectors";
 import { createMember, createRole, createTodo } from "./testUtils";
 
 // 2026-07-31, Zaidas önskemål: "i min egen todo vy skall endast mina egna
@@ -121,5 +121,52 @@ describe("getFamilyViewTodos", () => {
   test("en mjuk-raderad todo visas aldrig", () => {
     const todo = createTodo({ assignedTo: null, personalCategoryId: null, deletedAt: "2026-07-31T00:00:00.000Z" });
     expect(getFamilyViewTodos([todo], roles, [me, otherAdult, child], [])).toEqual([]);
+  });
+});
+
+// 2026-08-12, Zaidas önskemål: "delmoment man är signad på hamnar på
+// dashboarden, gärna emojin vid start med" — uppdragskort för DELMOMENT,
+// se ChildTasksSection.tsx.
+describe("getAssignedSubtaskCards", () => {
+  const NOW = new Date("2026-08-12T12:00:00.000Z").getTime();
+
+  test("ett obockat delmoment tilldelat mig ger ett kort, med emojin extraherad ur titeln", () => {
+    const todo = createTodo({
+      assignedTo: otherAdult.id,
+      subtasks: [{ id: "sub-1", title: "🧺Plocka in i diskmaskinen", done: false, assignedTo: me.id }]
+    });
+    expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([
+      { todoId: todo.id, subtaskId: "sub-1", title: "Plocka in i diskmaskinen", emoji: "🧺" }
+    ]);
+  });
+
+  test("ett delmoment tilldelat NÅGON ANNAN ger inget kort", () => {
+    const todo = createTodo({
+      subtasks: [{ id: "sub-1", title: "Dammsuga", done: false, assignedTo: otherAdult.id }]
+    });
+    expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([]);
+  });
+
+  test("ett redan avbockat delmoment ger inget kort", () => {
+    const todo = createTodo({
+      subtasks: [{ id: "sub-1", title: "Dammsuga", done: true, assignedTo: me.id }]
+    });
+    expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([]);
+  });
+
+  test("en todo utanför sitt tidsfönster ger inget kort för sina delmoment", () => {
+    const todo = createTodo({
+      visibleFrom: "2026-08-12T18:00:00.000Z",
+      subtasks: [{ id: "sub-1", title: "Dammsuga", done: false, assignedTo: me.id }]
+    });
+    expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([]);
+  });
+
+  test("en redan avklarad (approved) todos delmoment ger inget kort", () => {
+    const todo = createTodo({
+      status: "approved",
+      subtasks: [{ id: "sub-1", title: "Dammsuga", done: false, assignedTo: me.id }]
+    });
+    expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([]);
   });
 });
