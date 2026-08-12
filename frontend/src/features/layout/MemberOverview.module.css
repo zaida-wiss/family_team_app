@@ -71,6 +71,13 @@
   .tabButton.mobileOnlyIcon {
     display: none;
   }
+
+  /* Samma storlek som HeroBar.module.css:s .navBtn på desktop (2026-08-12,
+     Zaidas fynd: "Navbaren skall vara lika stor som den personliga"). */
+  .tabButton {
+    width: 4rem;
+    height: 4rem;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -120,19 +127,31 @@
     display: none;
   }
 
+  /* Exakt samma storlek som HeroBars .navBtn på mobil (2026-08-12, Zaidas
+     fynd: "Navbaren skall vara lika stor som den personliga... exakt samma
+     design, men motsatt i färg") — flex:1 1 0 fördelar knapparna jämnt
+     över radens bredd precis som HeroBar.module.css:s .navBtn, samma
+     min-width/height-värden. */
   .tabButton {
+    flex: 1 1 0;
+    min-width: 3.5rem;
+    height: 4rem;
     color: inherit;
-  }
-
-  .tabButton {
-    background: transparent;
-    border-color: transparent;
   }
 
   .tabButtonActive {
     background: var(--theme-nav-active-bg, var(--primary));
     color: var(--theme-nav-active-fg, var(--primary-fg));
-    border-color: transparent;
+  }
+
+  /* Matchar HeroBar.module.css:s mobila .navBtn:hover exakt.
+     .controlRow .tabButton:hover... (en extra klass i selektorn) — samma
+     specificitetsfynd som redan hittades flera gånger i den här filen:
+     utan den hade bas-hover-regeln (definierad senare i filen, samma
+     specificitet annars) tystat den här mobila färgen. */
+  .controlRow .tabButton:hover:not(.tabButtonActive) {
+    background: var(--theme-nav-hover-bg);
+    color: var(--theme-nav-fg);
   }
 }
 
@@ -141,31 +160,26 @@
   gap: 6px;
 }
 
+/* Exakt samma design som HeroBar.module.css:s .navBtn (2026-08-12, Zaidas
+   fynd: "Navbaren skall vara lika stor som den personliga. Samt inga
+   fyrkanter runt ikonerna... exakt samma design, men motsatt i färg") —
+   ingen bredd/höjd/ram/bakgrund här i bas-regeln alls, precis som .navBtn.
+   Storleken sätts ENDAST i de två media-queries nedan (mobil: flex:1 1 0
+   ovan; desktop: 4rem×4rem, se @media (min-width:1024px) längre ner) —
+   annars skulle den här bas-regeln (senare i filen än mobil-blocket, samma
+   specificitet) vinna cascaden och tysta mobil-storleken, exakt samma
+   buggklass som redan hittades och fixades för .mobileOnlyIcon.
+   flex-shrink:0 (2026-08-11, Zaidas fynd: "familjenavbaren blir för smal")
+   — utan den krymper flexbox ändå knapparna under WCAG:s 44px-minimum så
+   fort raden inte får plats, istället för att raden scrollar horisontellt
+   som tänkt (se .controlRow ovan). */
 .tabButton {
   display: grid;
   place-items: center;
-  /* max(), inte rent rem (2026-08-11, samma skalningsfynd som ovan) — 44px
-     är WCAG 2.5.5/2.5.8:s touch-target-MINIMUM, ett golv som aldrig får
-     underskridas. 2.75rem skalar uppåt i takt med HeroBars ikoner på en
-     bred skärm, men vid det minsta root-typsnittet i clamp:en (15px) blir
-     2.75rem bara 41.25px — under gränsen. max() garanterar 44px alltid,
-     större bara när root-typsnittet redan gjort 2.75rem större än det. */
-  width: max(44px, 2.75rem);
-  height: max(44px, 2.75rem);
-  /* flex-shrink:0 (2026-08-11, Zaidas fynd: "familjenavbaren blir för
-     smal, alla skall kunna trycka på knapparna, inte bara barn") —
-     width/height ovan sätter bara knappens ÖNSKADE storlek (flex-basis),
-     inte ett verkligt tak mot att krympas. .controlRow (mobil) är
-     flex-wrap:nowrap + overflow-x:auto, men utan flex-shrink:0 krymper
-     flexbox ändå knapparna under 44px så fort raden (familjeväljare +
-     medlemsikon + flikikoner) inte får plats på bredden — precis det
-     scroll:en var tänkt att hantera istället. flex-shrink:0 tvingar
-     fram horisontell scroll i stället för att klämma ihop en touch-
-     target under WCAG:s minimum. */
   flex-shrink: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--card);
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted-fg);
   cursor: pointer;
 }
@@ -173,7 +187,15 @@
 .tabButtonActive {
   background: var(--primary);
   color: var(--primary-fg);
-  border-color: var(--primary);
+}
+
+/* Hover fanns inte alls tidigare (döljdes av ram/bakgrund-"lådan" som just
+   togs bort) — matchar nu HeroBar.module.css:s .navBtn:hover, fast med
+   controlRow:s EGNA (icke bytta) desktop-färger, eftersom .controlRow bara
+   swappar till HeroBars nav-temavariabler på mobil (se .controlRow ovan). */
+.tabButton:hover:not(.tabButtonActive) {
+  background: var(--muted);
+  color: var(--foreground);
 }
 
 .shoppingLists {
