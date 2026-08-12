@@ -1,6 +1,6 @@
 import "./TodoDetailModal.css";
 import { Pencil, Play, X } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { fmtFullDate, fmtTime } from "../calendars/calendarHelpers";
 import { useModalA11y } from "../../hooks/useModalA11y";
 import { useOverlayDismiss } from "../../hooks/useOverlayDismiss";
@@ -28,6 +28,10 @@ type Props = {
   // Valfri (2026-08-01) — Hem-vyns familjetrådar (FamilyTodoThreads.tsx)
   // saknar en egen redigera-modal för todos i andra konton, döljer pennan.
   onEdit?: () => void;
+  // Valfri (2026-08-12, Zaidas önskemål: "så fort todos nått 100% avklarat
+  // så skall de försvinna automatisk och modalen skall stängas") — samma
+  // komplettera-callback som håll-in-gesten på bubblan redan använder.
+  onComplete?: (todoId: Id, elapsedMs?: number | null) => void;
 };
 
 function formatSchedule(todo: Todo): string | null {
@@ -160,7 +164,8 @@ export function TodoDetailView({
   members,
   onToggleSubtask,
   onClose,
-  onEdit
+  onEdit,
+  onComplete
 }: Props) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const subtasks = todo.subtasks ?? [];
@@ -170,6 +175,22 @@ export function TodoDetailView({
   const recurrence = formatRecurrence(todo);
   const overlay = useOverlayDismiss(onClose);
   const notesContent = useLinkifiedText(todo.notes);
+
+  // Autokomplettera vid 100% avklarade delmoment (2026-08-12). Guard mot
+  // status !== pending/expired så en redan avklarad todo (kan fortfarande
+  // öppnas här, se TodosView.tsx) inte triggar ett nytt, onödigt
+  // complete-anrop; autoCompletedRef förhindrar ett dubbelt anrop om effekten
+  // av någon anledning körs igen innan onClose hinner avmontera modalen.
+  const autoCompletedRef = useRef(false);
+  useEffect(() => {
+    if (autoCompletedRef.current) return;
+    if (!onComplete) return;
+    if (subtasks.length === 0 || progress !== 100) return;
+    if (todo.status !== "pending" && todo.status !== "expired") return;
+    autoCompletedRef.current = true;
+    onComplete(todo.id);
+    onClose();
+  }, [onComplete, onClose, progress, subtasks.length, todo.id, todo.status]);
 
   return (
     <div className="todo-detail-overlay" {...overlay}>

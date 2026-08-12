@@ -1371,6 +1371,7 @@ export function ParentTodoThreadView({
           categoryName={categories.find((c) => c.id === detailTodo.personalCategoryId)?.name ?? null}
           members={members}
           onToggleSubtask={onToggleSubtask}
+          onComplete={onCompleteTodo}
           onClose={() => setDetailTodoId(null)}
           onEdit={() => {
             setEditTodoId(detailTodo.id);

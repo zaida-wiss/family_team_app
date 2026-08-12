@@ -975,6 +975,7 @@ export function FamilyTodoThreads({
               assigneeName={assigneeNameFor(match.todo, match.source.members as unknown as Member[])}
               categoryName={null}
               members={match.source.members as unknown as Member[]}
+              onComplete={(todoId, elapsedMs) => match.source.onComplete(todoId, elapsedMs)}
               onClose={() => setDetailTodoId(null)}
               onEdit={
                 match.source.onEdit

@@ -469,6 +469,34 @@ test("Bollar i tråd: kort tryck öppnar visa-vyn med checklista, avbockning anr
   await expect(dialog).toHaveCount(0);
 });
 
+// Autokomplettera vid 100% avklarade delmoment (2026-08-12, Zaida: "så fort
+// todos nått 100% avklarat så skall de försvinna automatisk och modalen
+// skall stängas") — samma complete-anrop som håll-in-gesten på bubblan.
+test("Bollar i tråd: bockar av sista delmomentet slutför uppgiften automatiskt och stänger visa-vyn", async ({ page }) => {
+  let completedTodoId: string | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [PERSONAL_TODO_WITH_SUBTASKS] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-1/subtasks/sub-2", (route) => route.fulfill({ json: { done: true } }));
+  await page.route("**/api/todos/todo-1/complete", (route) => {
+    completedTodoId = "todo-1";
+    return route.fulfill({ json: { status: "approved" } });
+  });
+
+  await openThreadView(page);
+  await page.getByRole("button", { name: /Styrketräning/ }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("checkbox", { name: "Bänkpress" }).click();
+
+  await expect.poll(() => completedTodoId).toBe("todo-1");
+  await expect(dialog).toHaveCount(0);
+});
+
 // Delmoment-tilldelning (2026-07-23) — visa-vyn visar en liten färgad
 // markör med tilldelad medlems initial bredvid ett tilldelat delmoment.
 test("Bollar i tråd: visa-vyn visar en färgad markör för ett tilldelat delmoment", async ({ page }) => {
