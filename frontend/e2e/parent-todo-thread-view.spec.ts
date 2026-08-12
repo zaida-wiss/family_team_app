@@ -2111,6 +2111,51 @@ test("Ny uppgift-modalen: väljer en emoji som sparas på uppgiften", async ({ p
   expect((createdTodo?.visual as { value: string })?.value).toBe("🪥");
 });
 
+// Zaida (2026-08-12): utöver att välja i den svenska rutnätsväljaren ska man
+// kunna klistra in en egen emoji man kopierat någon annanstans ifrån — men
+// begränsat till ETT tecken, inte vilken text som helst. EmojiPickerPortal.tsx
+// bytte därför trigger-elementet från <button> till ett redigerbart fält.
+// Testet klistrar in en flerdelad ZWJ-familjeemoji (fyra hopfogade kodpunkter,
+// visas som EN bild) plus skräptext efteråt — verifierar både att Intl.Segmenter
+// räknar hela sekvensen som ett enda "tecken" (klipper inte sönder den) OCH att
+// skräptexten efter kastas bort.
+test("Ny uppgift-modalen: inklistrad emoji begränsas till ett tecken", async ({ page }) => {
+  let createdTodo: Record<string, unknown> | null = null;
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: createdTodo ? [createdTodo] : [] });
+    }
+    if (route.request().method() === "POST") {
+      createdTodo = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, json: { id: createdTodo.id } });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  await openThreadView(page);
+  await openCreateModalFromMyTasksThread(page);
+  const dialog = page.getByRole("dialog");
+
+  const emojiTrigger = dialog.locator(".todo-emoji-btn");
+  await emojiTrigger.click();
+  await emojiTrigger.evaluate((el) => {
+    const dataTransfer = new DataTransfer();
+    dataTransfer.setData("text", "👨‍👩‍👧‍👦skräptext");
+    el.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: dataTransfer, bubbles: true, cancelable: true })
+    );
+  });
+  await expect(emojiTrigger).toHaveValue("👨‍👩‍👧‍👦");
+
+  await dialog.getByLabel("Titel").fill("Familjeutflykt");
+  await dialog.getByRole("button", { name: "Skapa" }).click();
+
+  await expect.poll(() => createdTodo?.title).toBe("Familjeutflykt");
+  expect((createdTodo?.visual as { value: string })?.value).toBe("👨‍👩‍👧‍👦");
+});
+
 // Zaida: "när jag ska redigera den så kan jag [lägga till deluppgifter],
 // jag vill att det ska vara samma på bägge ställen" (2026-07-06) — checklista-
 // sektionen som redan fanns i TodoEditModal speglades in i TodoCreatorModal.

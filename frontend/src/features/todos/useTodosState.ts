@@ -64,6 +64,20 @@ export function useTodosState(fixedTodoTimes = false) {
   // optimistiska uppdateringen. Todo-id:n med en pågående mutation skyddas här
   // tills mutationen själv bekräftat resultatet.
   const pendingMutationIds = useRef<Set<Id>>(new Set());
+  // updateTodo skydd mot omkastad nätverksordning (2026-08-12, hittat under
+  // felsökning av TodoEditModal.tsx:s autospara för återkommande uppgifter:
+  // ett fältbyte som pausas >700ms mitt i, t.ex. kategori valt, sedan en
+  // paus, sedan emoji valt) kan trigga TVÅ separata debounce-varv — en
+  // tidig autospara med det GAMLA fältvärdet, sedan en till med det NYA.
+  // Två oberoende, samtidiga fetch()-anrop mot SAMMA todo-id har ingen
+  // garanterad ankomstordning (bekräftat: 60-67% felfrekvens under CPU-
+  // belastning, se sprintbackloggen) — anländer den tidiga (inaktuella)
+  // skrivningen sist vinner den, och det NYA fältvärdet skrivs tyst över.
+  // En kö per todo-id garanterar att skrivning nummer två inte ens SKICKAS
+  // förrän skrivning nummer ett har landat — samma anropsordning som
+  // ankomstordning, utan att fördröja det VANLIGA fallet (en enda
+  // uppdatering per id, kön är då bara ett redan avklarat promise).
+  const updateChains = useRef<Map<Id, Promise<unknown>>>(new Map());
   // syncScheduledTodos triggas oberoende från FEM källor (mount/SSE/
   // visibilitychange/30s-intervallet/efter-mutation, se refreshTodos-
   // kommentaren ovan) — utan detta skydd kan två anrop råka köra samtidigt,
@@ -232,13 +246,23 @@ export function useTodosState(fixedTodoTimes = false) {
   }
 
   function updateTodo(todoId: Id, patch: Partial<Todo>): Promise<{ ok: true } | { ok: false; error: unknown }> {
-    const request = todosApi.update(todoId, patch).then(
-      () => ({ ok: true as const }),
-      (error: unknown) => {
-        console.error(error);
-        return { ok: false as const, error };
-      }
-    );
+    // Väntar in en redan pågående skrivning mot SAMMA id (om någon) innan
+    // denna faktiskt skickas — se updateChains-kommentaren ovan. .catch här
+    // är bara för att en tidigare skrivnings fel inte ska avbryta KEDJAN
+    // (denna skrivning ska ändå skickas); det verkliga felet hanteras redan
+    // av den tidigare anropets egen .then/catch nedan.
+    const previous = updateChains.current.get(todoId) ?? Promise.resolve();
+    const request = previous
+      .catch(() => {})
+      .then(() => todosApi.update(todoId, patch))
+      .then(
+        () => ({ ok: true as const }),
+        (error: unknown) => {
+          console.error(error);
+          return { ok: false as const, error };
+        }
+      );
+    updateChains.current.set(todoId, request);
     setTodos((current) =>
       current.map((todo) => (todo.id === todoId ? { ...todo, ...patch } : todo))
     );

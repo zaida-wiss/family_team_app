@@ -224,13 +224,23 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÅTERKOMMANDE upp
   await page.getByPlaceholder("Sök på svenska...").fill("tandborste");
   await page.locator('button[title="Tandborste"]').click();
 
+  // Två separata poll:ar, INTE poll+synkront expect (2026-08-12, CI-fynd:
+  // kategori och emoji väljs som två separata UI-interaktioner — pausar man
+  // mellan dem (realistiskt för en riktig användare, och så gott som
+  // GARANTERAT under CPU-belastning i CI) hinner den 700ms debouncen i
+  // TodoEditModal.tsx spara kategorin FÖR SIG innan emojin ens är vald, en
+  // helt avsedd, korrekt två-stegssparning — inte en bugg i appen. Ett
+  // synkront expect direkt efter kategori-pollningen läste då den ÄNNU
+  // opparade mellansparningen (rätt kategori, gammal emoji) istället för att
+  // vänta in den andra, fullständiga sparningen. Ett eget poll på visual-
+  // fältet väntar in den, precis som poll:en på personalCategoryId redan gör.
   await expect.poll(() => templatePatch?.personalCategoryId).toBe("cat-family-fordon");
-  expect((templatePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
+  await expect.poll(() => (templatePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
 
   // Kärnregressionen: occurrence-patchen (från refreshRoutineOccurrence) ska
   // bära samma NYA värden, inte de gamla ("cat-family-rutiner"/"🚗").
   await expect.poll(() => occurrencePatch?.personalCategoryId).toBe("cat-family-fordon");
-  expect((occurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
+  await expect.poll(() => (occurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
 });
 
 // 2026-08-07, Zaidas fynd EFTER ovanstående test redan var grönt: "nu går
@@ -321,8 +331,11 @@ test("Hem-vyns familjetrådar: kategori- och emoji-byte på en ÄLDRE, ännu obe
 
   // Kärnregressionen: DEN ÖPPNADE, äldre occurrencen själv ska få de nya
   // värdena — inte bara mallen (som ovanstående test redan täcker).
+  // Två separata poll:ar, se kommentaren i föregående test — kategori och
+  // emoji sparas i två avsedda steg under CPU-belastning, ett synkront
+  // expect direkt efter kategori-pollningen hinner då läsa mellansparningen.
   await expect.poll(() => oldOccurrencePatch?.personalCategoryId).toBe("cat-family-fordon");
-  expect((oldOccurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
+  await expect.poll(() => (oldOccurrencePatch?.visual as { value: string } | undefined)?.value).toBe("🪥");
 
   await page.getByRole("button", { name: "Stäng" }).click();
   // Bubblan har flyttat sig till den nya kategorins tråd i UI:t.
