@@ -70,13 +70,22 @@
 }
 
 .navBtn.active {
-  /* var(--foreground) (2026-08-12, Zaidas önskemål: "färgen på den
+  /* var(--primary-dark) (2026-08-12, Zaidas önskemål: "färgen på den
      markerade knappen kan vara samma färg som den andra navbarens
-     bakgrund") — MemberOverview.module.css:s .controlRow har just den
-     bakgrunden (var(--foreground)), en medveten visuell koppling mellan de
-     två bararna istället för temats generiska --primary-accent. */
-  background: var(--foreground);
-  color: var(--sidebar);
+     bakgrund" — uppföljning samma dag: "det är fortfarande vit bakgrund
+     på navbaren i darkmode, håll bakgrundsfärgen mörk") —
+     MemberOverview.module.css:s .controlRow har just den bakgrunden.
+     Försökte först med var(--foreground)/var(--sidebar), men de är
+     TEXT-tokens designade för att just BYTA ljushet mellan ljust/mörkt
+     läge (mörk text i ljust läge → LJUS text i mörkt läge, se
+     themes.css:s .dark-mode-block: --foreground blir där 92% vit) — i
+     mörkt läge blev den "matchande" bakgrunden därför vit igen, precis
+     motsatsen till avsikten. --primary-dark är en redan befintlig,
+     handplockad mörk kulör PER TEMA (tokens.css) som INTE definieras om i
+     .dark-mode — samma mörka nyans oavsett läge, exakt vad en stabil
+     "bakgrundsfärg" (till skillnad från en "textfärg") behöver vara. */
+  background: var(--primary-dark);
+  color: var(--primary-fg);
 }
 
 :global(.app-shell[class*="theme-"]) .heroBar {
@@ -95,8 +104,8 @@
 }
 
 :global(.app-shell[class*="theme-"]) .navBtn.active {
-  background: var(--foreground);
-  color: var(--sidebar);
+  background: var(--primary-dark);
+  color: var(--primary-fg);
 }
 
 @media (min-width: 1024px) {
@@ -184,8 +193,8 @@
   }
 
   .navBtn.active {
-    background: var(--foreground);
-    color: var(--sidebar);
+    background: var(--primary-dark);
+    color: var(--primary-fg);
   }
 
   .navBtn:hover {

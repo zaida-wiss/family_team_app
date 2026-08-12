@@ -116,15 +116,20 @@
        telefonbredd. */
     gap: 0;
     padding: 0;
-    /* var(--foreground)/var(--sidebar) direkt, INTE längre via de delade
-       --theme-nav-fg/--theme-nav-bg-solid-variablerna (2026-08-12) —
-       frikopplad från HeroBar.module.css:s egna färger (som nu görs om
-       till en egen, mörk kulör, se den filen) så en ändring där aldrig av
-       misstag ändrar familjenavbarens bakgrund. Samma faktiska värden som
-       innan, bara oberoende av vad HeroBar råkar sätta --theme-nav-fg
-       till. */
-    background: var(--foreground);
-    color: var(--sidebar);
+    /* var(--primary-dark) (2026-08-12, Zaidas fynd: "det är fortfarande
+       vit bakgrund på navbaren i darkmode, håll bakgrundsfärgen mörk, men
+       en annan färg än personliga navbarens bakgrund") — försökte först
+       med var(--foreground) (frikopplad från HeroBar.module.css:s delade
+       --theme-nav-fg-variabel, se historiken), men --foreground är en
+       TEXT-token som medvetet BYTER ljushet i mörkt läge (blir 92% vit,
+       se themes.css:s .dark-mode-block) — fungerade bara i ljust läge.
+       --primary-dark är en redan befintlig, handplockad mörk kulör PER
+       TEMA som INTE definieras om i .dark-mode, mörk i båda lägena. Skiljer
+       sig medvetet från HeroBar.module.css:s var(--primary) (samma
+       temafärg, men den LJUSARE/mer mättade varianten) — "stor skillnad på
+       navbarerna" utan att någon av dem blir vit. */
+    background: var(--primary-dark);
+    color: var(--primary-fg);
     box-shadow: 0 -1px 0 var(--border);
   }
 
@@ -165,14 +170,12 @@
 
   /* Egen ljus overlay på controlRow:s mörka bakgrund (2026-08-12,
      frikopplad från HeroBar.module.css:s --theme-nav-hover-bg av samma
-     skäl som .tabButtonActive/.controlRow ovan).
-     .controlRow .tabButton:hover... (en extra klass i selektorn) — samma
-     specificitetsfynd som redan hittades flera gånger i den här filen:
-     utan den hade bas-hover-regeln (definierad senare i filen, samma
-     specificitet annars) tystat den här mobila färgen. */
+     skäl som .tabButtonActive/.controlRow ovan). var(--primary-fg), inte
+     var(--sidebar) (samma dags rättelse — --sidebar byter också ljushet i
+     mörkt läge, se .controlRow ovan, --primary-fg gör INTE det). */
   .controlRow .tabButton:hover:not(.tabButtonActive) {
-    background: color-mix(in oklch, var(--sidebar) 15%, transparent);
-    color: var(--sidebar);
+    background: color-mix(in oklch, var(--primary-fg) 15%, transparent);
+    color: var(--primary-fg);
   }
 }
 
