@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, CheckSquare, Plus, ShoppingCart, Upload, UtensilsCrossed, Users } from "lucide-react";
+import { CalendarDays, Check, CheckSquare, Home, Plus, ShoppingCart, Upload, UtensilsCrossed, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -271,6 +271,53 @@ export function MemberOverview({
     onUpdateHomeSelectedFamilyId?.(id === "all" ? null : id);
   }
 
+  // Familjeväljaren som en ikon+popup istället för en <select> (2026-08-12,
+  // Zaidas fynd: "familjenavbaren blir för smal... för familjeväljaren som
+  // en droplista med ikon istället") — samma dropdown-framför-lång-lista-
+  // princip som CLAUDE.md redan föreskriver och som medlemsikonen nedan
+  // redan använder. En <select> med synlig text (upp till 220px bred, se
+  // gårdagens fund) tog stor plats i den redan trånga mobila .controlRow —
+  // en kompakt ikon löser trångboddheten rakt av, samma mönster dupliceras
+  // medvetet istället för att brytas ut till en delad hook (bara två
+  // instanser i den här filen, se system-riktlinjen om att inte
+  // premature-abstrahera för tidigt).
+  const [familyPickerOpen, setFamilyPickerOpen] = useState(false);
+  const [familyPickerPos, setFamilyPickerPos] = useState({ top: 0, left: 0 });
+  const familyIconRef = useRef<HTMLButtonElement>(null);
+  const familyPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!familyPickerOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (familyPickerRef.current?.contains(e.target as Node)) return;
+      if (familyIconRef.current?.contains(e.target as Node)) return;
+      setFamilyPickerOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setFamilyPickerOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [familyPickerOpen]);
+
+  function toggleFamilyPicker() {
+    if (!familyPickerOpen && familyIconRef.current) {
+      const rect = familyIconRef.current.getBoundingClientRect();
+      const POPUP_WIDTH = 220;
+      const ESTIMATED_HEIGHT = Math.min((familyOptions.length + 1) * 48 + 12, 300);
+      const openUpward = window.innerHeight - rect.bottom < ESTIMATED_HEIGHT + 8;
+      setFamilyPickerPos({
+        top: openUpward ? Math.max(8, rect.top - ESTIMATED_HEIGHT - 4) : rect.bottom + 4,
+        left: Math.min(rect.left, window.innerWidth - POPUP_WIDTH - 8)
+      });
+    }
+    setFamilyPickerOpen((v) => !v);
+  }
+
   // Medvetet INGET "återställ till Alla familjer om valet inte finns bland
   // options"-säkerhetsnät här (ett tidigare försök togs bort igen samma
   // dag) — familyOptions byggs upp asynkront av flera hookar (cross-account/
@@ -351,6 +398,55 @@ export function MemberOverview({
   // vilken flik som råkar ligga i state sedan tidigare (samma instans kan
   // återanvändas, se `key`-propen i MemberShellContent.tsx).
   const effectiveTab = enableTabs ? activeTab : "calendar";
+
+  const currentFamilyLabel = selectedFamilyId === "all" ? "Alla familjer" : familyNameById.get(selectedFamilyId) ?? "Okänd familj";
+
+  const familyPicker = showFamilyFilter && (
+    <>
+      <button
+        aria-expanded={familyPickerOpen}
+        aria-label={`Familj: ${currentFamilyLabel}`}
+        className={styles.tabButton}
+        onClick={toggleFamilyPicker}
+        ref={familyIconRef}
+        title={`Familj: ${currentFamilyLabel}`}
+        type="button"
+      >
+        <Home size="1.125rem" />
+      </button>
+      {familyPickerOpen &&
+        createPortal(
+          <div
+            aria-label="Familjeval"
+            className={styles.memberPopup}
+            ref={familyPickerRef}
+            role="group"
+            style={{ position: "fixed", top: familyPickerPos.top, left: familyPickerPos.left }}
+          >
+            <button
+              className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
+              onClick={() => { setSelectedFamilyId("all"); setFamilyPickerOpen(false); }}
+              type="button"
+            >
+              <span>Alla familjer</span>
+              {selectedFamilyId === "all" && <Check aria-hidden="true" size="1rem" />}
+            </button>
+            {familyOptions.map((f) => (
+              <button
+                className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
+                key={f.accountId}
+                onClick={() => { setSelectedFamilyId(f.accountId); setFamilyPickerOpen(false); }}
+                type="button"
+              >
+                <span>{f.accountName}</span>
+                {selectedFamilyId === f.accountId && <Check aria-hidden="true" size="1rem" />}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </>
+  );
 
   // Medlemmar (2026-08-04, Zaidas önskemål: "Medlemmar skall visas
   // tillsammans med familj och knappar, tänk minimalistiskt", utökat samma
@@ -444,22 +540,7 @@ export function MemberOverview({
     >
       {enableTabs ? (
         <div className={styles.controlRow}>
-          {showFamilyFilter && (
-            <label className={`field-label ${styles.familyLabel}`} htmlFor="home-family-select" style={{ maxWidth: 220 }}>
-              <span className={styles.srOnly}>Familj</span>
-              <select
-                className="text-input"
-                id="home-family-select"
-                onChange={(e) => setSelectedFamilyId(e.target.value as Id | "all")}
-                value={selectedFamilyId}
-              >
-                <option value="all">Alla familjer</option>
-                {familyOptions.map((f) => (
-                  <option key={f.accountId} value={f.accountId}>{f.accountName}</option>
-                ))}
-              </select>
-            </label>
-          )}
+          {familyPicker}
           {memberRow}
           <div aria-label="Hem-vyns sektioner" className={styles.tabRow} role="tablist">
             {tabs.map(({ key, label, icon: Icon }) => (

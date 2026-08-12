@@ -69,19 +69,25 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
 
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa måltidsplanering" }).click();
-  const familyFilter = page.locator("#home-family-select");
-  await expect(familyFilter).toBeVisible();
+  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
+  // <select> (MemberOverview.tsx, Zaidas fynd om trångbodd familjenavbar).
+  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
+  await expect(familyIcon).toBeVisible();
+  async function selectFamily(label: string) {
+    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
+    await page.getByLabel("Familjeval").getByText(label, { exact: true }).click();
+  }
 
   // Familjen B (Mina familjekonton) — riktig måltidsplan, ingen "inte
   // tillgänglig"-text.
-  await familyFilter.selectOption({ label: "Familjen B" });
+  await selectFamily("Familjen B");
   await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toHaveCount(0);
   await expect(page.locator(".mealplan__grid")).toBeVisible();
 
   // Familjen C (bara en Familjeanslutning) — fortsatt inte tillgänglig.
-  await familyFilter.selectOption({ label: "Familjen C" });
+  await selectFamily("Familjen C");
   await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toBeVisible();
 
-  await familyFilter.selectOption({ label: ACCOUNT_A.name });
+  await selectFamily(ACCOUNT_A.name);
   await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toHaveCount(0);
 });

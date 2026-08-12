@@ -92,29 +92,46 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
   await expectMemberVisible("Förälder A");
   await expectMemberVisible("Nova");
 
-  const familyFilter = page.locator("#home-family-select");
-  await expect(familyFilter).toBeVisible();
-  await expect(page.getByRole("option", { name: "Alla familjer" })).toHaveCount(1);
-  await expect(page.getByRole("option", { name: "Familjen A" })).toHaveCount(1);
-  await expect(page.getByRole("option", { name: "Familjen B" })).toHaveCount(1);
+  // Familjeväljaren är sedan 2026-08-12 en ikon+popup (samma mönster som
+  // medlemsikonen ovan), inte längre en <select> — Zaidas fynd:
+  // "familjenavbaren blir för smal... för familjeväljaren som en droplista
+  // med ikon istället" (MemberOverview.tsx). Aria-labeln innehåller den
+  // just nu valda familjen ("Familj: Alla familjer" osv.) — matcha med
+  // regex istället för en exakt sträng som annars skulle brytas varje gång
+  // valet ändras.
+  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
+  const familyPopup = page.getByLabel("Familjeval");
+  async function openFamilyPopup() {
+    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
+  }
+  async function selectFamily(label: string) {
+    await openFamilyPopup();
+    await familyPopup.getByText(label, { exact: true }).click();
+  }
+
+  await expect(familyIcon).toBeVisible();
+  await openFamilyPopup();
+  await expect(familyPopup.getByText("Alla familjer")).toBeVisible();
+  await expect(familyPopup.getByText("Familjen A")).toBeVisible();
+  await expect(familyPopup.getByText("Familjen B")).toBeVisible();
 
   // Bara Familjen B — Familjen A:s uppgift/medlem försvinner, Familjen B:s
   // egna finns kvar.
-  await familyFilter.selectOption({ label: "Familjen B" });
+  await selectFamily("Familjen B");
   await expect(page.getByText("Klippa gräset")).toBeVisible();
   await expectMemberVisible("Nova");
   await expect(page.getByText("Handla mjölk")).not.toBeVisible();
   await expectMemberHidden("Förälder A");
 
   // Bara Familjen A (mitt eget konto) — omvänt.
-  await familyFilter.selectOption({ label: "Familjen A" });
+  await selectFamily("Familjen A");
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expectMemberVisible("Förälder A");
   await expect(page.getByText("Klippa gräset")).not.toBeVisible();
   await expectMemberHidden("Nova");
 
   // Tillbaka till Alla familjer — allt syns igen.
-  await familyFilter.selectOption({ label: "Alla familjer" });
+  await selectFamily("Alla familjer");
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
 });
@@ -132,5 +149,5 @@ test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", a
 
   await page.getByRole("tab", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(page.locator("#home-family-select")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Familj:/ })).toHaveCount(0);
 });

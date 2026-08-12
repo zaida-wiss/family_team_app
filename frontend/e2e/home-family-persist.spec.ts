@@ -46,21 +46,26 @@ test("Hem-vyns familjefilter sparar senast valda familj och läser tillbaka den 
   );
 
   await page.goto("/");
-  const familyFilter = page.locator("#home-family-select");
-  await expect(familyFilter).toBeVisible();
-  await expect(familyFilter).toHaveValue("all");
+  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
+  // <select> (Zaidas fynd: "familjenavbaren blir för smal... för
+  // familjeväljaren som en droplista med ikon istället", MemberOverview.tsx)
+  // — aria-labeln innehåller den just nu valda familjen, matcha med regex.
+  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
+  await expect(familyIcon).toBeVisible();
+  await expect(familyIcon).toHaveAccessibleName("Familj: Alla familjer");
 
   // updateMemberNavigation (useMembersState.ts) är avsiktligt fire-and-forget
   // — vänta in PATCH-anropet explicit innan sidomladdningen, annars kan
   // reload hinna före att MEMBER_A faktiskt uppdaterats i mock-servern.
   const patchDone = page.waitForResponse((res) => res.url().includes("/api/members/mem-a") && res.request().method() === "PATCH");
-  await familyFilter.selectOption({ label: "Familjen B" });
-  await expect(familyFilter).toHaveValue("acc-b");
+  await familyIcon.click();
+  await page.getByLabel("Familjeval").getByText("Familjen B", { exact: true }).click();
+  await expect(familyIcon).toHaveAccessibleName("Familj: Familjen B");
   await patchDone;
 
   // En sidomladdning läser nu tillbaka senast valda familj från servern
   // (MEMBER_A.homeSelectedFamilyId sattes av PATCH-anropet ovan) istället
   // för att återgå till "Alla familjer".
   await page.reload();
-  await expect(page.locator("#home-family-select")).toHaveValue("acc-b");
+  await expect(page.getByRole("button", { name: /^Familj:/ })).toHaveAccessibleName("Familj: Familjen B");
 });

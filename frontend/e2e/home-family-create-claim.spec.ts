@@ -82,14 +82,20 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa todos" }).click();
 
-  const familyFilter = page.locator("#home-family-select");
-  await expect(familyFilter).toBeVisible();
+  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
+  // <select> (MemberOverview.tsx, Zaidas fynd om trångbodd familjenavbar).
+  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
+  await expect(familyIcon).toBeVisible();
+  async function selectFamily(label: string) {
+    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
+    await page.getByLabel("Familjeval").getByText(label, { exact: true }).click();
+  }
 
   // Min egen familj vald (default) — Familjen-poolen är tom vid start och
   // därför dold (2026-08-07, hideWhenEmpty) — lägg till den FÖRSTA
   // okategoriserade uppgiften via "+"-knappens "Ingen kategori"-genväg
   // istället för trådens egen (i det här läget onåbara) kategorimeny.
-  await familyFilter.selectOption({ label: "Familjen A" });
+  await selectFamily("Familjen A");
   await page.getByRole("button", { name: "Ny familjekategori" }).click();
   await page.getByLabel("Ingen kategori").check();
   await page.getByLabel("Namn på uppgiften").fill("Handla mjölk");
@@ -99,7 +105,7 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   expect(lastOwnTodoPost?.personalCategoryId).toBeNull();
 
   // Familjen B (Mina familjekonton) — Lägg till en uppgift DÄR istället.
-  await familyFilter.selectOption({ label: "Familjen B" });
+  await selectFamily("Familjen B");
   const familyBThreadHeader = page.getByRole("button", { name: /^Familjen B\./ });
   await familyBThreadHeader.click();
   await page.getByRole("button", { name: "Lägg till uppgift" }).click();
@@ -153,19 +159,26 @@ test("Hem-vyns Inköp-flik: ny lista, förinställd på vald familj — bara ege
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
-  const familyFilter = page.locator("#home-family-select");
-  await familyFilter.selectOption({ label: "Familjen A" });
+  // Familjeväljaren är sedan 2026-08-12 en ikon+popup istället för en
+  // <select> (MemberOverview.tsx, Zaidas fynd om trångbodd familjenavbar).
+  const familyIcon = page.getByRole("button", { name: /^Familj:/ });
+  async function selectFamily(label: string) {
+    if ((await familyIcon.getAttribute("aria-expanded")) !== "true") await familyIcon.click();
+    await page.getByLabel("Familjeval").getByText(label, { exact: true }).click();
+  }
+
+  await selectFamily("Familjen A");
   await page.getByLabel("Lägg till en inköpslista").fill("Veckohandling");
   await page.getByLabel("Lägg till inköpslista").click();
   await expect.poll(() => lastOwnListPost?.name).toBe("Veckohandling");
 
-  await familyFilter.selectOption({ label: "Familjen B" });
+  await selectFamily("Familjen B");
   await expect(page.getByLabel("Lägg till en inköpslista")).toBeVisible();
   await page.getByLabel("Lägg till en inköpslista").fill("Handling i B");
   await page.getByLabel("Lägg till inköpslista").click();
   await expect.poll(() => crossAccountListPosted).toBe(true);
 
   // Familjen C (bara en Familjeanslutning) — ingen "lägg till lista"-form alls.
-  await familyFilter.selectOption({ label: "Familjen C" });
+  await selectFamily("Familjen C");
   await expect(page.getByLabel("Lägg till en inköpslista")).toHaveCount(0);
 });
