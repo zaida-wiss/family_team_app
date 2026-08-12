@@ -8,8 +8,21 @@
   margin: 0;
   border: none;
   border-radius: 0;
-  background: var(--theme-nav-bg, var(--sidebar));
-  color: var(--theme-nav-fg, var(--foreground));
+  /* var(--primary) (2026-08-12, Zaidas fynd: "istället för vit bakgrund
+     skall det vara en mörk och ljus text, men ändå så att man ser stor
+     skillnad på navbarerna") — --theme-nav-bg var i praktiken alltid nära
+     vit (var(--sidebar), oklch L 0.96 i samtliga teman, se tokens.css) för
+     ALLA teman, inte bara Klar. var(--primary) ger en mörk, mättad,
+     tema-egen kulör istället — samma variabel som redan används överallt
+     annars i appen som temats "signaturfärg", garanterat mörk/tydlig i
+     varenda tema (aldrig nära vit som --sidebar var). INTE längre
+     --theme-nav-fg/--theme-nav-bg — de variablerna delades tidigare med
+     MemberOverview.module.css:s .controlRow (som läser --theme-nav-fg som
+     sin EGEN bakgrund), en ändring här hade annars av misstag ändrat
+     familjenavbaren också. .controlRow är nu frikopplad (läser
+     var(--foreground)/var(--sidebar) direkt istället, se den filen). */
+  background: var(--primary);
+  color: var(--primary-fg);
   box-shadow: none;
   /* 2026-08-09, Zaidas önskemål: navbaren är ren UI-chrome (inget innehåll),
      inte del av WCAG 1.4.4/1.4.10:s zoombarhetskrav (det kravet gäller den
@@ -40,39 +53,50 @@
   border: none;
   border-radius: 0;
   background: transparent;
-  color: var(--theme-nav-muted, var(--muted-fg));
+  /* var(--primary-fg) — samma text/ikonfärg oavsett aktiv/inaktiv nu
+     (2026-08-12); den aktiva fliken skiljs redan ut via sin egen bakgrund
+     nedan, ingen separat "muted"-nyans behövs för det. */
+  color: var(--primary-fg);
   cursor: pointer;
 }
 
 .navBtn:hover,
 .navBtn:hover:not(.active) {
-  background: var(--theme-nav-hover-bg, transparent);
-  color: var(--theme-nav-fg, var(--foreground));
+  /* Ljus overlay på den mörka --primary-bakgrunden, fungerar oavsett tema
+     (2026-08-12) — ersätter --theme-nav-hover-bg, som var beräknad mot den
+     GAMLA ljusa bakgrunden och hade gett dålig kontrast mot den nya. */
+  background: color-mix(in oklch, var(--primary-fg) 18%, transparent);
+  color: var(--primary-fg);
 }
 
 .navBtn.active {
-  background: var(--theme-nav-active-bg, var(--primary));
-  color: var(--theme-nav-active-fg, var(--primary-fg));
+  /* var(--foreground) (2026-08-12, Zaidas önskemål: "färgen på den
+     markerade knappen kan vara samma färg som den andra navbarens
+     bakgrund") — MemberOverview.module.css:s .controlRow har just den
+     bakgrunden (var(--foreground)), en medveten visuell koppling mellan de
+     två bararna istället för temats generiska --primary-accent. */
+  background: var(--foreground);
+  color: var(--sidebar);
 }
 
 :global(.app-shell[class*="theme-"]) .heroBar {
-  background: var(--theme-nav-bg, var(--sidebar));
-  color: var(--theme-nav-fg, var(--foreground));
+  background: var(--primary);
+  color: var(--primary-fg);
 }
 
 :global(.app-shell[class*="theme-"]) .navBtn {
-  color: var(--theme-nav-muted, var(--muted-fg));
+  color: var(--primary-fg);
 }
 
 :global(.app-shell[class*="theme-"]) .navBtn:hover,
 :global(.app-shell[class*="theme-"]) .navBtn:hover:not(.active) {
-  background: var(--theme-nav-hover-bg, transparent);
-  color: var(--theme-nav-fg, var(--foreground));
+  background: color-mix(in oklch, var(--primary-fg) 18%, transparent);
+  color: var(--primary-fg);
 }
 
 :global(.app-shell[class*="theme-"]) .navBtn.active {
-  background: var(--theme-nav-active-bg, var(--primary));
-  color: var(--theme-nav-active-fg, var(--primary-fg));
+  background: var(--foreground);
+  color: var(--sidebar);
 }
 
 @media (min-width: 1024px) {
@@ -149,24 +173,24 @@
     bottom: 0;
     z-index: 999;
     height: 4rem;
-    background: var(--theme-nav-bg);
-    color: var(--theme-nav-fg);
+    background: var(--primary);
+    color: var(--primary-fg);
   }
 
   .navBtn {
     height: 4rem;
     border-radius: 0;
-    color: var(--theme-nav-muted);
+    color: var(--primary-fg);
   }
 
   .navBtn.active {
-    background: var(--theme-nav-active-bg);
-    color: var(--theme-nav-active-fg);
+    background: var(--foreground);
+    color: var(--sidebar);
   }
 
   .navBtn:hover {
-    background: var(--theme-nav-hover-bg);
-    color: var(--theme-nav-fg);
+    background: color-mix(in oklch, var(--primary-fg) 18%, transparent);
+    color: var(--primary-fg);
   }
 
   /* Två navbarer, en i taget (2026-08-12) — bara på mobil, där HeroBar

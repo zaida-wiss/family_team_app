@@ -105,13 +105,26 @@
     z-index: 900;
     flex-wrap: nowrap;
     overflow-x: auto;
-    gap: 0.625rem;
-    /* Halverad vertikal marginal (2026-08-04, Zaidas fynd: "marginalen upp
-       och ner bara hälften") — var 6px, nu 3px (nu 0.1875rem, samma
-       värde, rem för att skala med resten av raden). */
-    padding: 0.1875rem 0.625rem;
-    background: var(--theme-nav-fg, var(--foreground));
-    color: var(--theme-nav-bg-solid, var(--sidebar));
+    /* gap:0/padding:0, exakt som HeroBar.module.css:s .heroBar/.nav
+       (2026-08-12, Zaidas fynd: "nu får inte allt plats i navbaren",
+       uppföljning av "exakt samma design") — knapparnas STORLEK matchade
+       redan HeroBar, men mellanrummet gjorde det inte: 10px gap × 6
+       mellanrum + 20px padding = 80px bortslösat utrymme på en rad med EN
+       FLER knapp än HeroBars egen (familjenavbaren har person+5
+       flikar+inställningar = 7, HeroBar har 6) — exakt den extra marginal
+       som saknades för att sju 3.5rem-knappar skulle få plats på en vanlig
+       telefonbredd. */
+    gap: 0;
+    padding: 0;
+    /* var(--foreground)/var(--sidebar) direkt, INTE längre via de delade
+       --theme-nav-fg/--theme-nav-bg-solid-variablerna (2026-08-12) —
+       frikopplad från HeroBar.module.css:s egna färger (som nu görs om
+       till en egen, mörk kulör, se den filen) så en ändring där aldrig av
+       misstag ändrar familjenavbarens bakgrund. Samma faktiska värden som
+       innan, bara oberoende av vad HeroBar råkar sätta --theme-nav-fg
+       till. */
+    background: var(--foreground);
+    color: var(--sidebar);
     box-shadow: 0 -1px 0 var(--border);
   }
 
@@ -139,19 +152,27 @@
     color: inherit;
   }
 
+  /* var(--primary)/var(--primary-fg) direkt (2026-08-12, samma frikoppling
+     som .controlRow ovan) — det här ÄR redan HeroBars nya bakgrundsfärg
+     (se HeroBar.module.css), så den aktiva fliken här matchar automatiskt
+     "den andra navbarens bakgrund" (Zaidas önskemål), utan att de två
+     bararna behöver dela en variabel som en ändring i endera filen annars
+     riskerar att av misstag rubba för den andra. */
   .tabButtonActive {
-    background: var(--theme-nav-active-bg, var(--primary));
-    color: var(--theme-nav-active-fg, var(--primary-fg));
+    background: var(--primary);
+    color: var(--primary-fg);
   }
 
-  /* Matchar HeroBar.module.css:s mobila .navBtn:hover exakt.
+  /* Egen ljus overlay på controlRow:s mörka bakgrund (2026-08-12,
+     frikopplad från HeroBar.module.css:s --theme-nav-hover-bg av samma
+     skäl som .tabButtonActive/.controlRow ovan).
      .controlRow .tabButton:hover... (en extra klass i selektorn) — samma
      specificitetsfynd som redan hittades flera gånger i den här filen:
      utan den hade bas-hover-regeln (definierad senare i filen, samma
      specificitet annars) tystat den här mobila färgen. */
   .controlRow .tabButton:hover:not(.tabButtonActive) {
-    background: var(--theme-nav-hover-bg);
-    color: var(--theme-nav-fg);
+    background: color-mix(in oklch, var(--sidebar) 15%, transparent);
+    color: var(--sidebar);
   }
 }
 
@@ -169,14 +190,18 @@
    annars skulle den här bas-regeln (senare i filen än mobil-blocket, samma
    specificitet) vinna cascaden och tysta mobil-storleken, exakt samma
    buggklass som redan hittades och fixades för .mobileOnlyIcon.
-   flex-shrink:0 (2026-08-11, Zaidas fynd: "familjenavbaren blir för smal")
-   — utan den krymper flexbox ändå knapparna under WCAG:s 44px-minimum så
-   fort raden inte får plats, istället för att raden scrollar horisontellt
-   som tänkt (se .controlRow ovan). */
+   INGEN flex-shrink här längre (2026-08-12, Zaidas fynd: "nu får inte allt
+   plats i navbaren") — en kvarglömd flex-shrink:0 från gårdagens ANDRA
+   storleksmönster (statisk width+flex-shrink:0 som skydd) låg fortfarande
+   kvar här och vann samma cascade-strid som ovan (bas SENARE i filen än
+   mobilens flex:1 1 0, som annars sätter flex-shrink:1 via kortformen) —
+   resultatet blev att knapparna ALDRIG kunde krympa, bara tvinga fram
+   scroll för HELA överskottet direkt. min-width (mobil ovan/desktop nedan)
+   är nu den enda WCAG-skyddet, precis som i HeroBar — flex-shrink får
+   krympa fritt ner till den gränsen innan raden behöver scrolla. */
 .tabButton {
   display: grid;
   place-items: center;
-  flex-shrink: 0;
   border: none;
   border-radius: 0;
   background: transparent;
