@@ -1,0 +1,53 @@
+.family-completed-timeline {
+  margin-bottom: clamp(10px, 1.5vw, 16px);
+  padding: clamp(10px, 1.5vw, 14px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.family-completed-timeline__heading {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.family-completed-timeline__scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.family-completed-timeline__track {
+  position: relative;
+  min-width: 480px;
+  /* Rum för flera staplade ikoner i samma tidsfack (pinPositionsHorizontal,
+     ROW_STEP_PX 34px) utan att klippas av scroll-behållarens overflow. */
+  height: 160px;
+  border-top: 1px dashed var(--border);
+}
+
+.family-completed-timeline__hour {
+  position: absolute;
+  top: 0;
+  font-size: 0.7rem;
+  color: var(--muted-fg);
+  white-space: nowrap;
+}
+
+.family-completed-timeline__icon {
+  position: absolute;
+  top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--icon-accent, var(--primary)) 18%, var(--card));
+  border: 1.5px solid color-mix(in srgb, var(--icon-accent, var(--primary)) 55%, transparent);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: default;
+}

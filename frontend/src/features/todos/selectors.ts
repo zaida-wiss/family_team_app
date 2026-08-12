@@ -1,6 +1,7 @@
 import type { Id, Member, Role, Todo, TodoCategory, TodoSubtask, TodoThreadRange } from "@shared/types";
 import { hasPermission } from "../../utils/permissions";
 import { extractLeadingEmoji } from "../../utils/extractLeadingEmoji";
+import { toLocalDateStr } from "../calendars/calendarHelpers";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
 // avgör om en medlem är ett barn, antingen via member.isChild direkt eller
@@ -280,4 +281,60 @@ export function getAssignedSubtaskCards(
 export function familyPoolLabel(accountName: string): string {
   const stripped = accountName.replace(/^Familjen\s+/i, "").trim();
   return stripped || accountName;
+}
+
+export type FamilyCompletedTimelineItem = {
+  id: string;
+  title: string;
+  emoji: string | null;
+  completedAt: string;
+  assigneeId: Id | null;
+};
+
+// Hela familjens avklarade dag, som ikoner på en vågrät tidslinje
+// (FamilyCompletedTimeline.tsx, 2026-08-12, Zaidas önskemål: "hela
+// familjens samlade avklarade todos (även deluppgifter)... vågrät
+// tidslinje över dagen"). Samma "avklarat"-definition som den lodräta
+// per-persons ChildTimeline.tsx redan använder: status "done" (väntar
+// godkännande) ELLER "approved" räknas båda, inte bara godkända — annars
+// hade tidslinjen inte visat något förrän en förälder hunnit godkänna.
+// Delmoment har EGEN completedAt (2026-08-12) och räknas oberoende av
+// hela todons status — ett delmoment kan vara avklarat mitt i en ännu
+// pågående (pending) rutin.
+export function getFamilyCompletedTimelineItems(todos: Todo[], day: Date): FamilyCompletedTimelineItem[] {
+  const dayStr = toLocalDateStr(day);
+  const isToday = (isoStr: string) => toLocalDateStr(new Date(isoStr)) === dayStr;
+  const items: FamilyCompletedTimelineItem[] = [];
+
+  for (const todo of todos) {
+    if (todo.deletedAt !== null) continue;
+
+    if (
+      (todo.status === "done" || todo.status === "approved") &&
+      todo.completedAt !== null &&
+      isToday(todo.completedAt)
+    ) {
+      items.push({
+        id: `todo:${todo.id}`,
+        title: todo.title,
+        emoji: todo.visual.value || null,
+        completedAt: todo.completedAt,
+        assigneeId: todo.assignedTo
+      });
+    }
+
+    for (const subtask of todo.subtasks ?? []) {
+      if (!subtask.done || !subtask.completedAt || !isToday(subtask.completedAt)) continue;
+      const { emoji, rest } = extractLeadingEmoji(subtask.title);
+      items.push({
+        id: `subtask:${todo.id}:${subtask.id}`,
+        title: rest || subtask.title,
+        emoji,
+        completedAt: subtask.completedAt,
+        assigneeId: subtask.assignedTo ?? todo.assignedTo
+      });
+    }
+  }
+
+  return items.sort((a, b) => a.completedAt.localeCompare(b.completedAt));
 }

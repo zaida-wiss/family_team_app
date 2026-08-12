@@ -1,5 +1,11 @@
 import { describe, test, expect } from "vitest";
-import { getAssignedSubtaskCards, getFamilyViewTodos, getMyTodosViewTodos, isTodoVisibleNow } from "../src/features/todos/selectors";
+import {
+  getAssignedSubtaskCards,
+  getFamilyCompletedTimelineItems,
+  getFamilyViewTodos,
+  getMyTodosViewTodos,
+  isTodoVisibleNow
+} from "../src/features/todos/selectors";
 import { createMember, createRole, createTodo } from "./testUtils";
 
 // 2026-07-31, Zaidas önskemål: "i min egen todo vy skall endast mina egna
@@ -168,5 +174,69 @@ describe("getAssignedSubtaskCards", () => {
       subtasks: [{ id: "sub-1", title: "Dammsuga", done: false, assignedTo: me.id }]
     });
     expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([]);
+  });
+});
+
+// 2026-08-12, Zaidas önskemål: "hela familjens samlade avklarade todos
+// (även deluppgifter)... vågrät tidslinje över dagen" — se
+// FamilyCompletedTimeline.tsx.
+describe("getFamilyCompletedTimelineItems", () => {
+  const TODAY = new Date("2026-08-12T15:00:00.000Z");
+
+  test("en avklarad (done, väntar godkännande) todo räknas, precis som ChildTimeline.tsx redan gör", () => {
+    const todo = createTodo({ status: "done", completedAt: "2026-08-12T10:00:00.000Z" });
+    const result = getFamilyCompletedTimelineItems([todo], TODAY);
+    expect(result).toEqual([
+      { id: `todo:${todo.id}`, title: todo.title, emoji: todo.visual.value, completedAt: todo.completedAt, assigneeId: todo.assignedTo }
+    ]);
+  });
+
+  test("en godkänd (approved) todo räknas också", () => {
+    const todo = createTodo({ status: "approved", completedAt: "2026-08-12T10:00:00.000Z" });
+    expect(getFamilyCompletedTimelineItems([todo], TODAY)).toHaveLength(1);
+  });
+
+  test("en avklarad todo från en ANNAN dag räknas inte", () => {
+    const todo = createTodo({ status: "approved", completedAt: "2026-08-11T10:00:00.000Z" });
+    expect(getFamilyCompletedTimelineItems([todo], TODAY)).toEqual([]);
+  });
+
+  test("en fortfarande PENDING todo utan completedAt räknas inte", () => {
+    const todo = createTodo({ status: "pending", completedAt: null });
+    expect(getFamilyCompletedTimelineItems([todo], TODAY)).toEqual([]);
+  });
+
+  test("ett avklarat delmoment räknas OBEROENDE av hela todons egen status, emojin extraherad ur titeln", () => {
+    const todo = createTodo({
+      status: "pending",
+      completedAt: null,
+      subtasks: [{ id: "sub-1", title: "🧺Diska", done: true, completedAt: "2026-08-12T09:00:00.000Z", assignedTo: "mem-2" }]
+    });
+    const result = getFamilyCompletedTimelineItems([todo], TODAY);
+    expect(result).toEqual([
+      { id: `subtask:${todo.id}:sub-1`, title: "Diska", emoji: "🧺", completedAt: "2026-08-12T09:00:00.000Z", assigneeId: "mem-2" }
+    ]);
+  });
+
+  test("ett obockat delmoment räknas inte", () => {
+    const todo = createTodo({
+      subtasks: [{ id: "sub-1", title: "Diska", done: false, completedAt: null, assignedTo: "mem-2" }]
+    });
+    expect(getFamilyCompletedTimelineItems([todo], TODAY)).toEqual([]);
+  });
+
+  test("resultatet sorteras kronologiskt på completedAt", () => {
+    const early = createTodo({ id: "todo-early", status: "approved", completedAt: "2026-08-12T08:00:00.000Z" });
+    const late = createTodo({ id: "todo-late", status: "approved", completedAt: "2026-08-12T18:00:00.000Z" });
+    const result = getFamilyCompletedTimelineItems([late, early], TODAY);
+    expect(result.map((r) => r.id)).toEqual([`todo:${early.id}`, `todo:${late.id}`]);
+  });
+
+  test("en mjuk-raderad todos avklarade delmoment räknas inte", () => {
+    const todo = createTodo({
+      deletedAt: "2026-08-12T09:00:00.000Z",
+      subtasks: [{ id: "sub-1", title: "Diska", done: true, completedAt: "2026-08-12T09:00:00.000Z", assignedTo: "mem-2" }]
+    });
+    expect(getFamilyCompletedTimelineItems([todo], TODAY)).toEqual([]);
   });
 });

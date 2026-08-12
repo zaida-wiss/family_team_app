@@ -294,7 +294,7 @@ export function useTodosState(fixedTodoTimes = false) {
           : {
               ...todo,
               subtasks: todo.subtasks?.map((s) =>
-                s.id === subtaskId ? { ...s, done: !s.done } : s
+                s.id === subtaskId ? { ...s, done: !s.done, completedAt: !s.done ? new Date().toISOString() : null } : s
               )
             }
       )

@@ -904,6 +904,14 @@ export type TodoSubtask = {
   // Klienten räknar ner från timerStartedAt+timedMinutes (samma
   // "klienten mäter"-princip som ADR-0018).
   timerStartedAt?: string | null;
+  // Sätts AUTOMATISKT av backend (2026-08-12) när delmomentet går från
+  // obockat→bockat, nollställs vid av-bockning — samma
+  // "servern äger sina egna revisionsstämplar"-princip som Todo.completedAt.
+  // Krävs för att kunna placera ett avklarat delmoment på en tidslinje
+  // (FamilyCompletedTimeline.tsx), som annars bara vet ATT det blev klart,
+  // inte NÄR på dagen. Valfritt (som assignedTo/timedMinutes ovan) —
+  // saknas fältet tolkas det som null (aldrig avklarat).
+  completedAt?: string | null;
 };
 
 // Recept (2026-07-25, ADR-0028) — kontobred som TodoCategory sedan

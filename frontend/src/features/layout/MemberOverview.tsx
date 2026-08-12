@@ -12,6 +12,7 @@ import { SharedCategoryThreads } from "../todos/SharedCategoryThreads";
 import { SharedShoppingLists } from "../shopping/SharedShoppingLists";
 import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import { TodoImportExport } from "../todos/TodoImportExport";
+import { FamilyCompletedTimeline } from "../todos/FamilyCompletedTimeline";
 import { generateId } from "../../utils/uuid";
 import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 import type { CrossAccountRecipes } from "../../api/recipes";
@@ -437,6 +438,8 @@ export function MemberOverview({
 
       {effectiveTab === "todos" && canSeeTodos && (
         <article aria-labelledby="home-tab-todos" className="dashboard" id="home-panel-todos" key={`todos-${tabResetKey}`} role="tabpanel" tabIndex={0}>
+          <FamilyCompletedTimeline members={members} todos={allTodos} />
+
           {/* "+" (ny familjekategori) + import/export (2026-08-03, sökruta/
               titel/väntar-antal/Öppna-knapp borttagna 2026-08-04, Zaidas
               önskemål: "lägg ikonerna... och knapparna... bredvid varandra.

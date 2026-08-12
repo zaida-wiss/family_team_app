@@ -62,7 +62,9 @@ const todoSchema = new Schema<Todo>({
         assignedTo: { type: String, default: null },
         // Recept-integration (2026-07-25, ADR-0028) — se TodoSubtask i shared/types.ts.
         timedMinutes: { type: Number, default: null },
-        timerStartedAt: { type: String, default: null }
+        timerStartedAt: { type: String, default: null },
+        // Avklarat-tidsstämpel (2026-08-12) — se TodoSubtask i shared/types.ts.
+        completedAt: { type: String, default: null }
       }
     ],
     default: undefined

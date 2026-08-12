@@ -952,7 +952,11 @@ export async function createTodo(data: unknown) {
     title: encryptField(input.accountId, input.title),
     rejectedReason: encryptNullable(input.accountId, input.rejectedReason) ?? null,
     notes: encryptNullable(input.accountId, input.notes) ?? null,
-    subtasks: input.subtasks?.map((s) => ({ ...s, title: encryptField(input.accountId, s.title) }))
+    subtasks: input.subtasks?.map((s) => ({
+      ...s,
+      title: encryptField(input.accountId, s.title),
+      completedAt: s.done ? now : null
+    }))
   };
 
   const todo = new TodoModel(encrypted);
@@ -1154,7 +1158,18 @@ export async function updateTodo(id: string, accountId: string, data: unknown, m
   if (patch.title !== undefined) patch.title = encryptField(accountId, patch.title);
   if (patch.notes !== undefined) patch.notes = encryptNullable(accountId, patch.notes) ?? null;
   if (patch.subtasks !== undefined) {
-    patch.subtasks = patch.subtasks.map((s) => ({ ...s, title: encryptField(accountId, s.title) }));
+    // completedAt är server-ägt (se shared/types.ts) — härleds här från
+    // done-övergången istället för att lita på vad klienten skickade, samma
+    // princip som createdAt/updatedAt ovan. Ett redan avklarat delmoment som
+    // bara skickas om oförändrat (t.ex. vid en ren omordning) behåller sin
+    // ORIGINALA tidsstämpel istället för att tystamortera om till nu.
+    const existingSubtasks = new Map((todo.subtasks ?? []).map((s) => [s.id, s]));
+    const now = new Date().toISOString();
+    patch.subtasks = patch.subtasks.map((s) => {
+      const existing = existingSubtasks.get(s.id);
+      const completedAt = !s.done ? null : existing?.done ? existing.completedAt ?? null : now;
+      return { ...s, title: encryptField(accountId, s.title), completedAt };
+    });
   }
   // Samma "okategoriserad → Mina uppgifter"-upplösning som createTodo (se
   // resolvePersonalCategoryId) — en redigering som uttryckligen väljer
@@ -1383,21 +1398,32 @@ export async function toggleSubtask(id: string, accountId: string, subtaskId: st
     }
 
     const nextDone = !subtask.done;
+    const nowIso = new Date().toISOString();
     // Recept-integration (2026-07-25, ADR-0028) — ett tidsstyrt delmoment
     // (t.ex. "sätt in i ugnen, 25 min") startar sin nedräkning automatiskt
     // här, samma stund det bockas av. Klienten mäter/visar (samma princip
     // som ADR-0018), servern bara stämplar start-/nollställningstiden.
     const nextTimerStartedAt =
-      subtask.timedMinutes != null ? (nextDone ? new Date().toISOString() : null) : subtask.timerStartedAt ?? null;
+      subtask.timedMinutes != null ? (nextDone ? nowIso : null) : subtask.timerStartedAt ?? null;
+    // Avklarat-tidsstämpel (2026-08-12) — samma "servern äger sina egna
+    // revisionsstämplar"-princip som completeTodo, krävs för att kunna
+    // placera delmomentet på FamilyCompletedTimeline.tsx.
+    const nextCompletedAt = nextDone ? nowIso : null;
 
     const result = await TodoModel.updateOne(
       { id, accountId, subtasks: { $elemMatch: { id: subtaskId, done: subtask.done } } },
-      { $set: { "subtasks.$.done": nextDone, "subtasks.$.timerStartedAt": nextTimerStartedAt } }
+      {
+        $set: {
+          "subtasks.$.done": nextDone,
+          "subtasks.$.timerStartedAt": nextTimerStartedAt,
+          "subtasks.$.completedAt": nextCompletedAt
+        }
+      }
     );
 
     if (result.matchedCount > 0) {
       broadcastTodosChanged();
-      return { done: nextDone, timerStartedAt: nextTimerStartedAt };
+      return { done: nextDone, timerStartedAt: nextTimerStartedAt, completedAt: nextCompletedAt };
     }
     // Ingen träff — done-värdet hann ändras av ett annat samtidigt anrop
     // mellan vår läsning och skrivning. Läs om och försök igen.
