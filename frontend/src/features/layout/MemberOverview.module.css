@@ -172,7 +172,26 @@
     flex: 1 1 0;
     min-width: 3.5rem;
     height: 4rem;
-    color: inherit;
+  }
+
+  /* Fjärde instansen av samma cascade-specificitetsbugg (2026-08-12, Zaida:
+     "nu syns inte iconerna, i darkmode behöver de vara vita, i lightmode
+     svarta") — .tabButton ovan satte tidigare "color: inherit" här, men den
+     ovillkorliga bas-.tabButton (rad ~223, SAMMA specificitet, en klass)
+     kommer senare i filen och vann därför alltid, oavsett skärmbredd —
+     ikonerna fick var(--muted-fg) istället för den avsedda vita
+     var(--primary-fg), näst intill osynliga mot navbarens mörka bakgrund.
+     .controlRow .tabButton (två selektorer) ger garanterat högre
+     specificitet, oberoende av filordning — samma teknik som redan används
+     för hover ovan/.mobileOnlyIcon/.appNavShowing.
+     Ingen villkorlig ljust/mörkt-färg behövs: --primary-fg är samma vita
+     värde i båda lägena, och navbarens bakgrund (--primary-dark) är
+     MEDVETET oförändrad mellan lägena (se themes.css) — det är alltid en
+     mörk, mättad kulör, aldrig ljus. Vit text/ikon ger därför fullgod
+     kontrast i både ljust och mörkt läge; svart hade återskapat exakt
+     samma osynlighetsbugg i ljust läge. */
+  .controlRow .tabButton {
+    color: var(--primary-fg);
   }
 
   /* var(--primary)/var(--primary-fg) direkt (2026-08-12, samma frikoppling
