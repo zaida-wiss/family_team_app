@@ -179,7 +179,14 @@ describe("getAssignedSubtaskCards", () => {
       subtasks: [{ id: "sub-1", title: "🧺Plocka in i diskmaskinen", done: false, assignedTo: me.id }]
     });
     expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([
-      { todoId: todo.id, subtaskId: "sub-1", title: "Plocka in i diskmaskinen", emoji: "🧺" }
+      {
+        todoId: todo.id,
+        subtaskId: "sub-1",
+        title: "Plocka in i diskmaskinen",
+        emoji: "🧺",
+        visibleFrom: null,
+        expiresAt: null
+      }
     ]);
   });
 
@@ -211,6 +218,21 @@ describe("getAssignedSubtaskCards", () => {
       subtasks: [{ id: "sub-1", title: "Dammsuga", done: false, assignedTo: me.id }]
     });
     expect(getAssignedSubtaskCards(me.id, [todo], [], NOW)).toEqual([]);
+  });
+
+  // 2026-08-13, Zaidas fråga: "har deluppgifterna fått huvuduppgiftens
+  // sluttid?" — delmomentet har inget eget schema, kortet måste ärva
+  // förälder-todons visibleFrom/expiresAt för att kunna sorteras in bland
+  // de vanliga korten via compareTodosByEndThenStart.
+  test("kortet ärver förälder-todons visibleFrom/expiresAt", () => {
+    const todo = createTodo({
+      visibleFrom: "2026-08-12T09:00:00.000Z",
+      expiresAt: "2026-08-12T18:00:00.000Z",
+      subtasks: [{ id: "sub-1", title: "Dammsuga", done: false, assignedTo: me.id }]
+    });
+    const [card] = getAssignedSubtaskCards(me.id, [todo], [], NOW);
+    expect(card.visibleFrom).toBe("2026-08-12T09:00:00.000Z");
+    expect(card.expiresAt).toBe("2026-08-12T18:00:00.000Z");
   });
 });
 

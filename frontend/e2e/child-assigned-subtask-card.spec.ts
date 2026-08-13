@@ -83,3 +83,49 @@ test("barnet ser ett uppdragskort för ett delmoment tilldelat DEM, trots att he
   await subtaskCard.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
   await expect.poll(() => toggledSubtaskId, { timeout: 3000 }).toBe("sub-1");
 });
+
+// 2026-08-13, Zaidas fråga: "har deluppgifterna fått huvuduppgiftens
+// sluttid?" — delmomentet ärver förälder-todons visibleFrom/expiresAt och
+// blandas nu in i SAMMA sluttids-sorterade lista som de vanliga korten
+// (compareTodosByEndThenStart, todos/selectors.ts), inte längre en egen
+// osorterad klump sist.
+const now = Date.now();
+
+const OWN_TODO_LATE_END = {
+  id: "todo-own-1", accountId: "acc-1", title: "Duscha", createdBy: "mem-parent",
+  assignedTo: "mem-child", isShared: false, status: "pending", starValue: 1,
+  visual: { type: "lucide-icon", value: "Droplet" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: new Date(now + 3 * 3600_000).toISOString(),
+  deletedAt: null, deletedBy: null, personalCategoryId: null, notes: null, subtasks: []
+};
+
+const ROUTINE_EARLY_END = {
+  id: "todo-routine-2", accountId: "acc-1", title: "Morgonrutin", createdBy: "mem-parent",
+  assignedTo: "mem-parent", isShared: false, status: "pending", starValue: 0,
+  visual: { type: "lucide-icon", value: "Sun" }, recurrence: { type: "none" },
+  recurringSourceId: null, occurrenceDate: null, completedAt: null,
+  approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
+  rejectedReason: null, visibleFrom: null, expiresAt: new Date(now + 1 * 3600_000).toISOString(),
+  deletedAt: null, deletedBy: null, personalCategoryId: null, notes: null,
+  subtasks: [{ id: "sub-2", title: "🪥Borsta tänderna", done: false, assignedTo: "mem-child" }]
+};
+
+test("delmoment-kort med tidigare ärvd sluttid hamnar FÖRE ett vanligt kort med senare sluttid", async ({ page }) => {
+  await mockDataAPIs(page);
+  await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: LOGIN_RESPONSE }));
+  await page.route("**/api/members", (route) => route.fulfill({ json: [CHILD] }));
+  await page.route("**/api/roles", (route) => route.fulfill({ json: [CHILD_ROLE] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [OWN_TODO_LATE_END, ROUTINE_EARLY_END] });
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+
+  const cards = page.locator(".child-tasks-grid > *");
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0)).toContainText("Borsta tänderna");
+  await expect(cards.nth(1)).toContainText("Duscha");
+});

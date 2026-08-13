@@ -223,8 +223,14 @@ export function isTodoVisibleNow(
 // skall komma sist... som andra sortering skall de uppdrag med starttid
 // först komma först (om sluttiden är exakt samma)") — delad av
 // ChildShellContent.tsx och MemberShellContent.tsx, som tidigare hade var
-// sin kopia av en enklare sortering (bara stigande visibleFrom).
-export function compareTodosByEndThenStart(a: Todo, b: Todo): number {
+// sin kopia av en enklare sortering (bara stigande visibleFrom). Signaturen
+// tar bara de två tidsfälten (inte hela Todo) så att AssignedSubtaskCard
+// (som ärver dem från sin förälder-todo, se getAssignedSubtaskCards) kan
+// sorteras med SAMMA funktion, i samma lista som de vanliga korten.
+export function compareTodosByEndThenStart(
+  a: { visibleFrom: string | null; expiresAt: string | null },
+  b: { visibleFrom: string | null; expiresAt: string | null }
+): number {
   const aEnd = a.expiresAt ? new Date(a.expiresAt).getTime() : Number.POSITIVE_INFINITY;
   const bEnd = b.expiresAt ? new Date(b.expiresAt).getTime() : Number.POSITIVE_INFINITY;
   if (aEnd !== bEnd) return aEnd - bEnd;
@@ -251,6 +257,14 @@ export type AssignedSubtaskCard = {
   subtaskId: Id;
   title: string;
   emoji: string | null;
+  // Ärvda från förälder-todon (2026-08-13, Zaidas önskemål: "har
+  // deluppgifterna fått huvuduppgiftens sluttid?" — delmomentet har inget
+  // eget tidsfönster, se TodoSubtask i shared/types.ts) — så att
+  // compareTodosByEndThenStart kan sortera delmoment-kort IN BLAND de
+  // vanliga korten i EN gemensam lista, se ChildTasksSection.tsx, istället
+  // för en egen osorterad klump sist.
+  visibleFrom: string | null;
+  expiresAt: string | null;
 };
 
 // Uppdragskort för tilldelade DELMOMENT (2026-08-12, Zaidas önskemål:
@@ -280,7 +294,14 @@ export function getAssignedSubtaskCards(
     for (const subtask of todo.subtasks ?? []) {
       if (subtask.done || subtask.assignedTo !== memberId) continue;
       const { emoji, rest } = extractLeadingEmoji(subtask.title);
-      cards.push({ todoId: todo.id, subtaskId: subtask.id, title: rest || subtask.title, emoji });
+      cards.push({
+        todoId: todo.id,
+        subtaskId: subtask.id,
+        title: rest || subtask.title,
+        emoji,
+        visibleFrom: todo.visibleFrom,
+        expiresAt: todo.expiresAt,
+      });
     }
   }
   return cards;

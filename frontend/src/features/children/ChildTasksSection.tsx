@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Star } from "lucide-react";
 import type { Id, Todo, TodoCategory } from "@shared/types";
-import type { AssignedSubtaskCard } from "../todos/selectors";
+import { compareTodosByEndThenStart, type AssignedSubtaskCard } from "../todos/selectors";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useCountdownSound } from "../../hooks/useCountdownSound";
@@ -96,6 +96,11 @@ type Props = {
   onEditTodo?: (todo: Todo) => void;
 };
 
+// Dashboardens uppdragskort och tilldelade delmoment-kort renderas i EN
+// gemensam, sluttids-sorterad lista (2026-08-13, Zaidas fråga: "har
+// deluppgifterna fått huvuduppgiftens sluttid?") — se compareTodosByEndThenStart.
+type RenderItem = { kind: "todo"; todo: Todo } | { kind: "subtask"; card: AssignedSubtaskCard };
+
 const HOLD_DURATION_MS = 2000;
 // Tre snabba tryck startar timern (2026-08-08, Zaidas önskemål: "tidtagning
 // skall starta om man trycker 3 snabba tryck på uppgiften i både barnvy och
@@ -158,7 +163,18 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
     .filter((t) => !todos.some((x) => x.id === t.id));
   const renderTodos = flashExtras.length === 0 ? todos : [...todos, ...flashExtras];
 
-  if (renderTodos.length === 0 && subtaskCards.length === 0) {
+  // Delmoment ärver förälder-todons visibleFrom/expiresAt (se
+  // getAssignedSubtaskCards, todos/selectors.ts) så de kan sorteras med
+  // SAMMA regel, in bland de vanliga korten — inte längre en egen,
+  // osorterad klump sist.
+  const renderItems: RenderItem[] = [
+    ...renderTodos.map((todo): RenderItem => ({ kind: "todo", todo })),
+    ...subtaskCards.map((card): RenderItem => ({ kind: "subtask", card })),
+  ].sort((a, b) =>
+    compareTodosByEndThenStart(a.kind === "todo" ? a.todo : a.card, b.kind === "todo" ? b.todo : b.card)
+  );
+
+  if (renderItems.length === 0) {
     return <p className="empty-note">Inga uppgifter idag – bra jobbat!</p>;
   }
 
@@ -169,7 +185,39 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
         <span>{getTodayHeading(today)}</span>
       </div>
       <div className="child-tasks-grid">
-        {renderTodos.map((todo, i) => {
+        {renderItems.map((item, i) => {
+          if (item.kind === "subtask") {
+            const card = item.card;
+            const key = `${card.todoId}:${card.subtaskId}`;
+            const nameClass = `child-task-name${card.title.length > 30 ? " child-task-name--long" : card.title.length > 18 ? " child-task-name--medium" : ""}`;
+            return (
+              <div
+                key={key}
+                className={[
+                  "child-task-card",
+                  heldSubtaskKey === key ? "child-task-card--holding" : "",
+                ].filter(Boolean).join(" ")}
+                style={{ animationDelay: `${i * 80}ms` }}
+                onPointerDown={() => startSubtaskHold(key, () => onToggleSubtask(card.todoId, card.subtaskId))}
+                onPointerLeave={clearSubtaskHold}
+                onPointerCancel={clearSubtaskHold}
+                onPointerUp={clearSubtaskHold}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="child-task-icon-circle">
+                  <span className="child-task-icon">{card.emoji ?? "📋"}</span>
+                </div>
+                <span className="child-task-copy">
+                  <span className={nameClass}>
+                    {card.title}
+                  </span>
+                </span>
+              </div>
+            );
+          }
+
+          const todo = item.todo;
           const category = categories.find((c) => c.id === todo.personalCategoryId)?.name ?? "";
           const timeLeftPercent = getTimeLeftPercent(todo, timerNow);
           const style: TaskCardStyle = {
@@ -242,35 +290,6 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
               </span>
               {starBadge}
               {onEditTodo && <EditTodoButton onEditTodo={onEditTodo} todo={todo} />}
-            </div>
-          );
-        })}
-        {subtaskCards.map((card, i) => {
-          const key = `${card.todoId}:${card.subtaskId}`;
-          const nameClass = `child-task-name${card.title.length > 30 ? " child-task-name--long" : card.title.length > 18 ? " child-task-name--medium" : ""}`;
-          return (
-            <div
-              key={key}
-              className={[
-                "child-task-card",
-                heldSubtaskKey === key ? "child-task-card--holding" : "",
-              ].filter(Boolean).join(" ")}
-              style={{ animationDelay: `${(renderTodos.length + i) * 80}ms` }}
-              onPointerDown={() => startSubtaskHold(key, () => onToggleSubtask(card.todoId, card.subtaskId))}
-              onPointerLeave={clearSubtaskHold}
-              onPointerCancel={clearSubtaskHold}
-              onPointerUp={clearSubtaskHold}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="child-task-icon-circle">
-                <span className="child-task-icon">{card.emoji ?? "📋"}</span>
-              </div>
-              <span className="child-task-copy">
-                <span className={nameClass}>
-                  {card.title}
-                </span>
-              </span>
             </div>
           );
         })}
