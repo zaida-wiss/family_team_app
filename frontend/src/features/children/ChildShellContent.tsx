@@ -4,7 +4,7 @@ import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
-import { getAssignedSubtaskCards, isTodoVisibleNow } from "../todos/selectors";
+import { compareTodosByEndThenStart, getAssignedSubtaskCards, isTodoVisibleNow } from "../todos/selectors";
 
 type Props = {
   currentMember: Member;
@@ -85,11 +85,7 @@ export function ChildShellContent({
         isTodoVisibleNow(t, now) &&
         !(t.personalCategoryId && categories.find((c) => c.id === t.personalCategoryId)?.hidden)
     )
-    .sort((a, b) => {
-      const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
-      const bTime = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
-      return aTime - bTime;
-    });
+    .sort(compareTodosByEndThenStart);
   const rejectedTodos = todos.filter(
     (t) =>
       t.assignedTo === currentMember.id &&

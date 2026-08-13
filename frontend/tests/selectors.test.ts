@@ -1,5 +1,6 @@
 import { describe, test, expect } from "vitest";
 import {
+  compareTodosByEndThenStart,
   getAssignedSubtaskCards,
   getFamilyCompletedTimelineItems,
   getFamilyViewTodos,
@@ -43,6 +44,42 @@ describe("isTodoVisibleNow", () => {
     expect(
       isTodoVisibleNow({ visibleFrom: "2026-08-04T11:00:00.000Z", expiresAt: "2026-08-04T13:00:00.000Z" }, NOW)
     ).toBe(true);
+  });
+});
+
+// 2026-08-13, Zaidas önskemål: "korten [på dashboarden] sorteras så att det
+// som har närmast till sluttid skall komma först, de som inte har någon
+// sluttid skall komma sist. som andra sortering skall de uppdrag med
+// starttid först komma först (om sluttiden är exakt samma)" — delad av
+// ChildShellContent.tsx/MemberShellContent.tsx.
+describe("compareTodosByEndThenStart", () => {
+  test("sluttid närmast i tiden kommer först", () => {
+    const soon = createTodo({ id: "soon", expiresAt: "2026-08-13T10:00:00.000Z" });
+    const later = createTodo({ id: "later", expiresAt: "2026-08-13T12:00:00.000Z" });
+    expect([later, soon].sort(compareTodosByEndThenStart).map((t) => t.id)).toEqual(["soon", "later"]);
+  });
+
+  test("uppgifter utan sluttid hamnar sist, oavsett hur många som har sluttid", () => {
+    const noEnd = createTodo({ id: "no-end", expiresAt: null });
+    const withEnd = createTodo({ id: "with-end", expiresAt: "2026-08-13T10:00:00.000Z" });
+    expect([noEnd, withEnd].sort(compareTodosByEndThenStart).map((t) => t.id)).toEqual(["with-end", "no-end"]);
+  });
+
+  test("vid exakt samma sluttid vinner tidigast starttid", () => {
+    const laterStart = createTodo({
+      id: "later-start",
+      visibleFrom: "2026-08-13T09:00:00.000Z",
+      expiresAt: "2026-08-13T12:00:00.000Z"
+    });
+    const earlierStart = createTodo({
+      id: "earlier-start",
+      visibleFrom: "2026-08-13T08:00:00.000Z",
+      expiresAt: "2026-08-13T12:00:00.000Z"
+    });
+    expect([laterStart, earlierStart].sort(compareTodosByEndThenStart).map((t) => t.id)).toEqual([
+      "earlier-start",
+      "later-start"
+    ]);
   });
 });
 

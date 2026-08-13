@@ -36,7 +36,13 @@ const RecipesView = lazy(() =>
 );
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
-import { getAssignedSubtaskCards, getFamilyViewTodos, isDueWithinRange, isTodoVisibleNow } from "../todos/selectors";
+import {
+  compareTodosByEndThenStart,
+  getAssignedSubtaskCards,
+  getFamilyViewTodos,
+  isDueWithinRange,
+  isTodoVisibleNow,
+} from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers, useCrossAccountRecipes, useCrossAccountShoppingLists } from "../todos/useCrossAccountFamilyState";
 import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
 import { generateId } from "../../utils/uuid";
@@ -695,11 +701,7 @@ export function MemberShellContent({
             : isTodoVisibleNow(t, now)) &&
           !(t.personalCategoryId && personalCategories.find((c) => c.id === t.personalCategoryId)?.hidden)
       )
-      .sort((a, b) => {
-        const aTime = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
-        const bTime = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
-        return aTime - bTime;
-      });
+      .sort(compareTodosByEndThenStart);
     const rejectedTodos = todos.filter(
       (t) =>
         t.assignedTo === selectedDashboardMember.id &&

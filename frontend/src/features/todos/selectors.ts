@@ -218,6 +218,21 @@ export function isTodoVisibleNow(
   return from <= now && now < until;
 }
 
+// Dashboardens uppdragskort (2026-08-13, Zaidas önskemål: "det som har
+// närmast till sluttid skall komma först, de som inte har någon sluttid
+// skall komma sist... som andra sortering skall de uppdrag med starttid
+// först komma först (om sluttiden är exakt samma)") — delad av
+// ChildShellContent.tsx och MemberShellContent.tsx, som tidigare hade var
+// sin kopia av en enklare sortering (bara stigande visibleFrom).
+export function compareTodosByEndThenStart(a: Todo, b: Todo): number {
+  const aEnd = a.expiresAt ? new Date(a.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+  const bEnd = b.expiresAt ? new Date(b.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+  if (aEnd !== bEnd) return aEnd - bEnd;
+  const aStart = a.visibleFrom ? new Date(a.visibleFrom).getTime() : 0;
+  const bStart = b.visibleFrom ? new Date(b.visibleFrom).getTime() : 0;
+  return aStart - bStart;
+}
+
 // Avklarade delmoment längst ner i checklistan (2026-08-04, Zaidas önskemål)
 // — bara för LÄS-/bock-av-vyer (TodoDetailView.tsx), inte för redigera-
 // modalernas egen delmoment-editor (TodoCreatorModal.tsx/TodoEditModal.tsx),
