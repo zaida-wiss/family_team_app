@@ -1,0 +1,155 @@
+.todo-table__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.todo-table__filter {
+  min-width: 9rem;
+  flex: 1 1 9rem;
+}
+
+/* Scroll horisontellt istället för att krympa celler under touch-target-
+   minimumet på smala skärmar — samma princip som redan etablerad för
+   familjenavbaren, se CLAUDE.md:s historik. */
+.todo-table__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.todo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.todo-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 1;
+}
+
+.todo-table th {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.todo-table__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0 0.25rem;
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.todo-table__sort-btn:hover {
+  color: var(--primary);
+}
+
+.todo-table__row:nth-child(even) {
+  background: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.todo-table__cell {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.todo-table__cell--icon {
+  width: 3rem;
+  text-align: center;
+}
+
+.todo-table__cell--title {
+  min-width: 12rem;
+}
+
+.todo-table__cell .text-input {
+  min-height: 2.75rem;
+  min-width: 8rem;
+}
+
+.todo-table__cell--datetime .text-input {
+  min-width: 11rem;
+}
+
+.todo-table__stars-input {
+  min-width: 4rem !important;
+}
+
+.todo-table__cell--stars {
+  text-align: right;
+}
+
+.todo-table__cell--status {
+  min-width: 9rem;
+}
+
+.todo-table__status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.todo-table__status-badge--pending {
+  background: color-mix(in oklch, var(--muted-fg) 18%, var(--card));
+  color: var(--muted-fg);
+}
+
+.todo-table__status-badge--done {
+  background: color-mix(in oklch, var(--secondary-fg) 18%, var(--card));
+  color: var(--secondary-fg);
+}
+
+.todo-table__status-badge--approved {
+  background: color-mix(in oklch, var(--primary) 18%, var(--card));
+  color: var(--primary-dark);
+}
+
+.todo-table__status-badge--rejected,
+.todo-table__status-badge--expired {
+  background: color-mix(in oklch, var(--destructive) 18%, var(--card));
+  color: var(--destructive);
+}
+
+.todo-table__status-actions,
+.todo-table__reject-form {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.todo-table__reject-form .text-input {
+  min-height: 2.75rem;
+  min-width: 8rem;
+}
+
+.todo-table__cell--details {
+  white-space: nowrap;
+}
+
+.todo-table__cell--details span {
+  margin-right: 0.4rem;
+}
+
+.todo-table__cell--actions {
+  display: flex;
+  gap: 0.3rem;
+  white-space: nowrap;
+}

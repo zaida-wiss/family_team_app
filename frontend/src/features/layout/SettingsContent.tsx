@@ -16,6 +16,7 @@ import { TodoHistory } from "../todos/TodoHistory";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
+import { TodoTableSettings } from "../todos/TodoTableSettings";
 import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
 import { FamilyConnectionSettings } from "../accounts/FamilyConnectionSettings";
 import { HouseholdSecretsSettings } from "../settings/HouseholdSecretsSettings";
@@ -563,6 +564,32 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
               onCreateTaskTemplate={onCreateTaskTemplate}
               onDeleteTodo={onDeleteTodo}
               onRefreshRoutine={settingsProps.onRefreshRoutine}
+            />
+          )
+        },
+        {
+          // 2026-08-13, Zaidas önskemål: "filtrera och sortera för att
+          // snabbt och enkelt skapa ordning och struktur... snabbt ändra...
+          // det ska självklart vara möjligt att även redigera via en
+          // modal" — en tabellvy över alla todos (samma getVisibleTodos-
+          // synlighet som Historik/Engångsuppgifter), inline-redigerbar
+          // med Pencil-knappen som fallback till den vanliga TodoEditModal.
+          id: "table",
+          label: "📊 Tabellvy",
+          content: (
+            <TodoTableSettings
+              currentMember={currentMember}
+              members={members}
+              roles={roles}
+              todos={todos}
+              categories={personalCategories}
+              onUpdateTodo={onUpdateTodo}
+              onCreateCategory={onCreateCategory}
+              onCreateTaskTemplate={onCreateTaskTemplate}
+              onDeleteTodo={onDeleteTodo}
+              onRefreshRoutine={settingsProps.onRefreshRoutine}
+              onApproveTodo={settingsProps.onApproveTodo}
+              onRejectTodo={settingsProps.onRejectTodo}
             />
           )
         },
