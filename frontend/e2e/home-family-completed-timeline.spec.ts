@@ -82,7 +82,7 @@ test("Hem-vyns Todos-flik: avklarade todos OCH delmoment idag visas som ikoner i
   await expect(subtaskIcon).toHaveAttribute("title", /Diska — Nova/);
 });
 
-test("Hem-vyns Todos-flik: ikonerna har en 3px börder i den utförande medlemmens färg, samt en räknare för dagens totalantal (2026-08-15, Zaida: se vem som utfört uppgifterna + hur många idag)", async ({ page }) => {
+test("Hem-vyns Todos-flik: ikonerna har den utförande medlemmens färg som bakgrund, samt en räknare för dagens totalantal (2026-08-15, Zaida: se vem som utfört uppgifterna + hur många idag)", async ({ page }) => {
   const now = new Date();
   const todayAt = (h: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, 0, 0).toISOString();
   const memberWithColor = { ...MEMBER, color: "#3366ff" };
@@ -104,9 +104,8 @@ test("Hem-vyns Todos-flik: ikonerna har en 3px börder i den utförande medlemme
   await expect(timeline.locator(".family-completed-timeline__count")).toHaveText("2");
 
   const icons = timeline.locator(".family-completed-timeline__icon");
-  await expect(icons.nth(0)).toHaveCSS("border-color", "rgb(51, 102, 255)");
-  await expect(icons.nth(0)).toHaveCSS("border-width", "3px");
-  await expect(icons.nth(1)).toHaveCSS("border-color", "rgb(255, 51, 102)");
+  await expect(icons.nth(0)).toHaveCSS("background-color", "rgb(51, 102, 255)");
+  await expect(icons.nth(1)).toHaveCSS("background-color", "rgb(255, 51, 102)");
 });
 
 test("Hem-vyns Todos-flik: Visa statistik hämtar och visar de senaste 14 dagarnas trend, lat-hämtad först vid utfällning", async ({ page }) => {

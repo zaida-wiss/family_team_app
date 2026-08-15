@@ -1,30 +1,17 @@
-/* Samma visuella språk som barnens ChildTimeline.css (2026-08-15, Zaida:
-   "denna sektion skall vara lika snygg som timeline i dashboarden... Samma
-   storlek, samma utseende") — samma färgade gradient-formel (--c0…--c4,
-   temats egna toner, fungerar i alla teman/ljus/mörkt läge eftersom
-   variablerna sätts globalt i themes.css), samma ljusa textfärg (--on-c4).
-   Tidsaxeln (timmarkeringar/nu-linje/staplingsmatematik) borttagen samma dag
-   (Zaida: "Tidslinjen gör höjden för hög. Ta bort tidslinjen och låt
-   ikonerna komma i turordning och gå i läsordning") — bara en vanlig
-   flex-wrap-lista i den ordning familjen avklarar uppgifter kvar. */
+/* Ingen egen kortbakgrund/börder längre (2026-08-15, uppföljning samma dag,
+   Zaida: "det blev inte bra... Dels kall inte vara någon särskild bakgrund
+   eller ens voarder för denna sektion. Även om det är en separat sektion så
+   skall den flyta ihop med resten på sidan"). Sektionen sitter nu direkt på
+   panelens egen redan delade sidbakgrund (--theme-page-gradient, satt på
+   .app-shell-content/.dashboard högre upp) istället för att täcka den med
+   ett eget mörkt gradient-kort — samma princip som resten av Todos-flikens
+   innehåll (SharedCategoryThreads m.fl.), som aldrig haft en egen kortyta.
+   Text använder därför vanliga sidtexttokens (--foreground/--muted-fg)
+   istället för den tidigare kortspecifika --on-c4. */
 .family-completed-timeline {
   display: flex;
   flex-direction: column;
-  /* Inget flex:1/min-height längre (2026-08-15, uppföljning samma dag:
-     "ta bort mellanrummet uppåt och nedåt till navbaren. Allt skall vara
-     synligt på skärmen utan att skrolla") — kortet hugger nu bara till sin
-     egna naturliga höjd (ikonlistan), sträcker sig inte längre för att
-     fylla kvarvarande sidutrymme, se MemberOverview.module.css:s samma
-     dags borttagna .todosPanel-mekanik. */
-  padding: clamp(10px, 1.5vw, 16px);
-  border: 2px solid color-mix(in srgb, var(--c1, #ffffff) 42%, transparent);
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--c1, #ffffff) 38%, transparent), transparent 34%),
-    radial-gradient(circle at 12% 88%, color-mix(in srgb, var(--c2, #ffffff) 28%, transparent), transparent 38%),
-    linear-gradient(160deg, var(--c4, #111111), color-mix(in srgb, var(--c0, #333333) 56%, var(--black, #000000)));
-  color: var(--on-c4, #ffffff);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--black, #000000) 20%, transparent);
+  padding: clamp(10px, 1.5vw, 16px) 0;
 }
 
 .family-completed-timeline__header {
@@ -39,7 +26,7 @@
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--on-c4, #ffffff);
+  color: var(--foreground);
 }
 
 /* Dagens totalantal (2026-08-15, Zaida: "kunna se hur många uppgifter
@@ -53,15 +40,15 @@
   height: 1.6rem;
   padding: 0 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--on-c4, #ffffff) 18%, transparent);
+  background: var(--muted);
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--on-c4, #ffffff);
+  color: var(--foreground);
 }
 
 .family-completed-timeline .empty-note {
   margin: 0;
-  color: color-mix(in srgb, var(--on-c4, #ffffff) 75%, transparent);
+  color: var(--muted-fg);
 }
 
 .family-completed-timeline__list {
@@ -69,9 +56,8 @@
   flex-wrap: wrap;
   align-content: flex-start;
   /* Inget mellanrum (2026-08-15, Zaida: "tryck ihop dem utan att de ligger
-     på varandra") — själva 3px-bordern (nedan) räcker som visuell
-     avgränsare mellan ikonerna, de får aldrig riktigt röra vid varandras
-     ikon-YTA eftersom border-box redan räknar in bordern i elementets mått. */
+     på varandra") — ikonerna är nu solida, fyllda cirklar (se nedan) som
+     redan syns tydligt mot varandra utan en extra kantlinje. */
   gap: 0;
   margin: 0;
   padding: 0;
@@ -90,12 +76,14 @@
   height: clamp(1.5rem, 2.6vw, 2.1rem);
   font-size: clamp(1rem, 1.8vw, 1.4rem);
   line-height: 1;
-  /* Vem som utfört uppgiften (2026-08-15, Zaida: "3px tjock boarderlinje
-     runt ikonen") — färgen sätts inline per ikon (assignee.color, samma
-     "member.color = identitet"-princip som MemberAvatar.tsx/SubtaskAssigneeButton.tsx
-     redan använder), CSS:en sätter bara bredd/form/fallback. border-radius
-     gör den till en cirkel istället för en fyrkant runt emojin. */
-  border: 3px solid var(--primary);
+  /* Vem som utfört uppgiften (2026-08-15, uppföljning: "medlemmens färg
+     skall vara i bakgrunden på ikonen istället") — färgen sätts inline per
+     ikon (assignee.color, samma "member.color = identitet"-princip som
+     FamilyTodoThreads.tsx/SubtaskAssigneeButton.tsx redan använder som
+     BAKGRUND, inte kant), CSS:en sätter bara bredd/form/fallback.
+     border-radius gör den till en cirkel istället för en fyrkant runt
+     emojin. */
+  background: var(--primary);
   border-radius: 50%;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
   cursor: default;
@@ -109,7 +97,7 @@
   background: none;
   font-size: 0.8rem;
   font-weight: 600;
-  color: color-mix(in srgb, var(--on-c4, #ffffff) 85%, transparent);
+  color: var(--muted-fg);
   text-decoration: underline;
   cursor: pointer;
 }

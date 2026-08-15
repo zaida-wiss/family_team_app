@@ -22,14 +22,23 @@ type Props = {
 // redan sorterar stigande på completedAt.
 //
 // Uppföljning samma dag (Zaida: "kunna se vem som utfört uppgifterna...
-// 3px tjock boarderlinje runt ikonen", "tryck ihop dem utan att de ligger
-// på varandra", "hur många uppgifter familjen gjort för dagen", "följa över
-// tid i en statistik"): assignee.color som ikonens bordercolor (samma
-// "member.color = identitet"-princip som redan används i FamilyTodoThreads.tsx/
-// SubtaskAssigneeButton.tsx/MemberAvatar.tsx), listans gap borttaget (se
-// FamilyCompletedTimeline.css), items.length som en synlig räknare, samt en
-// expanderbar FamilyCompletedStats (lat-hämtad, bara vid utfällning) för
-// trenden bakåt i tiden.
+// hur många uppgifter familjen gjort för dagen", "följa över tid i en
+// statistik"): listans gap borttaget, items.length som en synlig räknare,
+// samt en expanderbar FamilyCompletedStats (lat-hämtad, bara vid
+// utfällning) för trenden bakåt i tiden.
+//
+// Ytterligare en uppföljning, samma dag (Zaida: "det blev inte bra,
+// medlemmens färg skall vara i bakgrunden på ikonen istället... Dels kall
+// inte vara någon särskild bakgrund eller ens voarder för denna sektion.
+// Även om det är en separat sektion så skall den flyta ihop med resten på
+// sidan"): en första version satte assignee.color som en 3px bordercolor
+// runt ikonen och gav sektionen ett eget mörkt kort-utseende (kopierat från
+// ChildTimeline.css, se historiken) — ersatt med assignee.color som
+// ikonens BAKGRUND (samma "member.color = identitet"-princip som
+// FamilyTodoThreads.tsx/SubtaskAssigneeButton.tsx redan använder som
+// bakgrund, inte kant) och sektionens egen bakgrund/börder/box-shadow
+// borttagen helt (se FamilyCompletedTimeline.css) — sitter nu direkt på
+// panelens delade sidbakgrund istället för att bryta av den.
 export function FamilyCompletedTimeline({ todos, members }: Props) {
   const items = getFamilyCompletedTimelineItems(todos, new Date());
   const [statsOpen, setStatsOpen] = useState(false);
@@ -50,7 +59,7 @@ export function FamilyCompletedTimeline({ todos, members }: Props) {
               <li
                 className="family-completed-timeline__icon"
                 key={item.id}
-                style={{ borderColor: assignee?.color ?? "var(--primary)" }}
+                style={{ background: assignee?.color ?? "var(--primary)" }}
                 title={`${item.title} — ${assignee?.name ?? "Familjen"}, ${fmtTime(item.completedAt)}`}
               >
                 <span aria-hidden="true">{item.emoji ?? "✅"}</span>

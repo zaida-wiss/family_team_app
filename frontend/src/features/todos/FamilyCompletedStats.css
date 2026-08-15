@@ -1,38 +1,38 @@
-/* Expanderbar stapeldiagram-statistik i Idag i familjen-kortet (2026-08-15)
-   — samma mörka gradient-kort som FamilyCompletedTimeline.css, staplarna
-   använder kortets egna --c1-accent (samma kulör som redan bär kortets
-   kant/glöd) som enda seriefärg, text i --on-c4 (kortets redan etablerade
-   ljusa textton). Enkla, fasta mått (ingen clamp/vw) — kortet är litet och
-   redan responsivt via flex-wrap på ikonlistan ovanför. */
+/* Expanderbar stapeldiagram-statistik i Idag i familjen-sektionen
+   (2026-08-15). Ingen egen kortbakgrund längre (samma dags uppföljning,
+   se FamilyCompletedTimeline.css) — sitter direkt på panelens delade
+   sidbakgrund, vanliga textokens (--foreground/--muted-fg/--border) istället
+   för kortspecifika --on-c4/--c1. Enkla, fasta mått (ingen clamp/vw) —
+   sektionen är liten och redan responsiv via flex-wrap på ikonlistan
+   ovanför. */
 .family-completed-stats {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--on-c4, #ffffff) 20%, transparent);
+  border-top: 1px solid var(--border);
 }
 
 .family-completed-stats__empty {
   margin: 10px 0 0;
   font-size: 0.85rem;
-  color: color-mix(in srgb, var(--on-c4, #ffffff) 75%, transparent);
+  color: var(--muted-fg);
 }
 
 .family-completed-stats__summary {
   margin: 0 0 8px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: color-mix(in srgb, var(--on-c4, #ffffff) 85%, transparent);
+  color: var(--foreground);
 }
 
 .family-completed-stats__bars {
   display: flex;
   align-items: flex-end;
-  /* 2px surface gap mellan varje stapel (dataviz-skillen) — kortets egen
-     bakgrund (gradienten) gör separationen, ingen kantlinje ritas. */
+  /* 2px surface gap mellan varje stapel (dataviz-skillen). */
   gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--on-c4, #ffffff) 25%, transparent);
+  border-bottom: 1px solid var(--border);
 }
 
 .family-completed-stats__col {
@@ -63,7 +63,7 @@
 }
 
 .family-completed-stats__hit:focus-visible {
-  outline: 2px solid var(--on-c4, #ffffff);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -74,11 +74,11 @@
   max-width: 24px;
   margin: 0 auto;
   border-radius: 4px 4px 0 0;
-  background: var(--c1, #ffffff);
+  background: var(--primary);
 }
 
 .family-completed-stats__label {
   font-size: 0.6rem;
-  color: color-mix(in srgb, var(--on-c4, #ffffff) 70%, transparent);
+  color: var(--muted-fg);
   white-space: nowrap;
 }
