@@ -169,6 +169,41 @@ export async function getTodosHistoryPage(accountId: string, page: number, pageS
   };
 }
 
+// Statistik-underlag för FamilyCompletedTimeline.tsx:s "följ över tid"
+// (2026-08-15, Zaida) — huvud-endpointen (getAllTodos ovan) rensar bort
+// godkända uppgifter äldre än 7 dagar, så en trend över flera veckor måste
+// hämtas separat härifrån istället. Returnerar bara RÅA completedAt-
+// tidsstämplar (inga titlar, ingen dekryptering behövs) — frontend bucketar
+// dem per lokal dag med samma toLocalDateStr som getFamilyCompletedTimelineItems
+// använder för "idag", så definitionen av vilken dag en uppgift räknas till
+// hålls konsekvent på ETT ställe istället för duplicerad här i UTC.
+export async function getCompletedStats(accountId: string, sinceIso: string): Promise<string[]> {
+  const todos = await TodoModel.find(
+    {
+      accountId,
+      deletedAt: null,
+      $or: [
+        { status: { $in: ["done", "approved"] }, completedAt: { $gte: sinceIso } },
+        { "subtasks.completedAt": { $gte: sinceIso } }
+      ]
+    },
+    { _id: 0, status: 1, completedAt: 1, "subtasks.done": 1, "subtasks.completedAt": 1 }
+  ).lean();
+
+  const timestamps: string[] = [];
+  for (const todo of todos) {
+    if ((todo.status === "done" || todo.status === "approved") && todo.completedAt && todo.completedAt >= sinceIso) {
+      timestamps.push(todo.completedAt);
+    }
+    for (const subtask of todo.subtasks ?? []) {
+      if (subtask.done && subtask.completedAt && subtask.completedAt >= sinceIso) {
+        timestamps.push(subtask.completedAt);
+      }
+    }
+  }
+  return timestamps;
+}
+
 // Dela ett barns todos med en annan vuxen (ADR-0024, 2026-07-22), utökad
 // 2026-07-27 till ALLT kopplat till barnets konto (Zaidas önskemål) — hittar
 // alla barn (i VILKET konto som helst) som delat med den inloggade

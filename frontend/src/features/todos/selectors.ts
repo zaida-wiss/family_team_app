@@ -374,3 +374,31 @@ export function getFamilyCompletedTimelineItems(todos: Todo[], day: Date): Famil
 
   return items.sort((a, b) => a.completedAt.localeCompare(b.completedAt));
 }
+
+export type CompletedStatsDay = {
+  dateStr: string;
+  count: number;
+};
+
+// Bucketerar rå completedAt-tidsstämplar (todosApi.getCompletedStats) per
+// LOKAL dag (2026-08-15) — samma toLocalDateStr som getFamilyCompletedTimelineItems
+// använder för "idag", så en uppgift avklarad t.ex. 23:50 lokal tid hamnar i
+// samma dag här som i "Idag i familjen"-listan, inte en dag senare via UTC.
+// `days` dagar tillbaka INKLUSIVE idag, äldst först (passar direkt in i en
+// stapeldiagram-rendering utan omvänd loop i UI-lagret).
+export function bucketCompletedStatsByDay(timestamps: string[], today: Date, days: number): CompletedStatsDay[] {
+  const counts = new Map<string, number>();
+  for (const iso of timestamps) {
+    const dateStr = toLocalDateStr(new Date(iso));
+    counts.set(dateStr, (counts.get(dateStr) ?? 0) + 1);
+  }
+
+  const buckets: CompletedStatsDay[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(today);
+    day.setDate(day.getDate() - i);
+    const dateStr = toLocalDateStr(day);
+    buckets.push({ dateStr, count: counts.get(dateStr) ?? 0 });
+  }
+  return buckets;
+}

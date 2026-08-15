@@ -28,6 +28,16 @@ todosRouter.get("/history", requireAuth, attachAccountId, async (req, res) => {
   res.json(await todos.getTodosHistoryPage(req.accountId!, page ?? 1, cappedPageSize));
 });
 
+// Statistik-underlag för FamilyCompletedTimeline.tsx (2026-08-15) — fast
+// 14-dagarsfönster, se todosService.ts:s getCompletedStats för varför en
+// egen väg behövs (huvud-GET / rensar godkända uppgifter efter 7 dagar).
+const COMPLETED_STATS_DAYS = 14;
+todosRouter.get("/completed-stats", requireAuth, attachAccountId, async (req, res) => {
+  const since = new Date();
+  since.setDate(since.getDate() - COMPLETED_STATS_DAYS);
+  res.json(await todos.getCompletedStats(req.accountId!, since.toISOString()));
+});
+
 todosRouter.post("/", requireAuth, attachAccountId, async (req, res) => {
   res.status(201).json(await todos.createTodo({ ...req.body, accountId: req.accountId! }));
 });

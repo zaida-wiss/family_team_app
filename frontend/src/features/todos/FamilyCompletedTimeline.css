@@ -27,9 +27,34 @@
   box-shadow: 0 8px 24px color-mix(in srgb, var(--black, #000000) 20%, transparent);
 }
 
-.family-completed-timeline__heading {
+.family-completed-timeline__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 8px;
+}
+
+.family-completed-timeline__heading {
+  margin: 0;
   font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--on-c4, #ffffff);
+}
+
+/* Dagens totalantal (2026-08-15, Zaida: "kunna se hur många uppgifter
+   familjen gjort för dagen") — samma items.length som redan styr listan
+   nedanför, bara synliggjort. */
+.family-completed-timeline__count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--on-c4, #ffffff) 18%, transparent);
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--on-c4, #ffffff);
 }
@@ -43,7 +68,11 @@
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 8px;
+  /* Inget mellanrum (2026-08-15, Zaida: "tryck ihop dem utan att de ligger
+     på varandra") — själva 3px-bordern (nedan) räcker som visuell
+     avgränsare mellan ikonerna, de får aldrig riktigt röra vid varandras
+     ikon-YTA eftersom border-box redan räknar in bordern i elementets mått. */
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -53,6 +82,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   /* Något större än gårdagens tidslinje-ikoner (0.65–1.1rem) — utan
      tidsaxel att sprida ut dem längs är de nu det enda innehållet i en
      enkel, radbrytande lista, och läses bättre i en tydligare storlek. */
@@ -60,6 +90,26 @@
   height: clamp(1.5rem, 2.6vw, 2.1rem);
   font-size: clamp(1rem, 1.8vw, 1.4rem);
   line-height: 1;
+  /* Vem som utfört uppgiften (2026-08-15, Zaida: "3px tjock boarderlinje
+     runt ikonen") — färgen sätts inline per ikon (assignee.color, samma
+     "member.color = identitet"-princip som MemberAvatar.tsx/SubtaskAssigneeButton.tsx
+     redan använder), CSS:en sätter bara bredd/form/fallback. border-radius
+     gör den till en cirkel istället för en fyrkant runt emojin. */
+  border: 3px solid var(--primary);
+  border-radius: 50%;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
   cursor: default;
+}
+
+.family-completed-timeline__stats-toggle {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--on-c4, #ffffff) 85%, transparent);
+  text-decoration: underline;
+  cursor: pointer;
 }

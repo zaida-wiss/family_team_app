@@ -1,0 +1,84 @@
+/* Expanderbar stapeldiagram-statistik i Idag i familjen-kortet (2026-08-15)
+   — samma mörka gradient-kort som FamilyCompletedTimeline.css, staplarna
+   använder kortets egna --c1-accent (samma kulör som redan bär kortets
+   kant/glöd) som enda seriefärg, text i --on-c4 (kortets redan etablerade
+   ljusa textton). Enkla, fasta mått (ingen clamp/vw) — kortet är litet och
+   redan responsivt via flex-wrap på ikonlistan ovanför. */
+.family-completed-stats {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--on-c4, #ffffff) 20%, transparent);
+}
+
+.family-completed-stats__empty {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--on-c4, #ffffff) 75%, transparent);
+}
+
+.family-completed-stats__summary {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--on-c4, #ffffff) 85%, transparent);
+}
+
+.family-completed-stats__bars {
+  display: flex;
+  align-items: flex-end;
+  /* 2px surface gap mellan varje stapel (dataviz-skillen) — kortets egen
+     bakgrund (gradienten) gör separationen, ingen kantlinje ritas. */
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--on-c4, #ffffff) 25%, transparent);
+}
+
+.family-completed-stats__col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.family-completed-stats__track {
+  position: relative;
+  width: 100%;
+  height: 64px;
+}
+
+.family-completed-stats__hit {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.family-completed-stats__hit:focus-visible {
+  outline: 2px solid var(--on-c4, #ffffff);
+  outline-offset: 2px;
+}
+
+.family-completed-stats__bar {
+  width: 100%;
+  /* Bar-spec: ≤24px tjock, 4px rundad datakant uppåt, fyrkantig mot
+     baslinjen (dataviz-skillen: marks-and-anatomy.md). */
+  max-width: 24px;
+  margin: 0 auto;
+  border-radius: 4px 4px 0 0;
+  background: var(--c1, #ffffff);
+}
+
+.family-completed-stats__label {
+  font-size: 0.6rem;
+  color: color-mix(in srgb, var(--on-c4, #ffffff) 70%, transparent);
+  white-space: nowrap;
+}

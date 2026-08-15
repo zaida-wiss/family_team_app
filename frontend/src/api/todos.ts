@@ -116,6 +116,9 @@ export const todosApi = {
   // mjuk-raderade todos alls (var tidigare kvar 30 dagar).
   getHistoryPage: (page: number, pageSize: number) =>
     request<PaginatedTodos>(api(`todos/history?page=${page}&pageSize=${pageSize}`)),
+  // Statistik-underlag för FamilyCompletedTimeline.tsx (2026-08-15) — se
+  // backend-routens kommentar för varför ett eget, 14-dagars fönster.
+  getCompletedStats: () => request<string[]>(api("todos/completed-stats")),
   // Dela ett barns todos med en annan vuxen, icke-transitivt (ADR-0024) —
   // utökad till allt kopplat till barnets konto, se SharedChildData ovan.
   getSharedChildren: () => request<SharedChildData[]>(api("todos/shared-children")),

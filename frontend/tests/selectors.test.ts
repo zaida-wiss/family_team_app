@@ -1,5 +1,6 @@
 import { describe, test, expect } from "vitest";
 import {
+  bucketCompletedStatsByDay,
   compareTodosByEndThenStart,
   getAssignedSubtaskCards,
   getFamilyCompletedTimelineItems,
@@ -297,5 +298,32 @@ describe("getFamilyCompletedTimelineItems", () => {
       subtasks: [{ id: "sub-1", title: "Diska", done: true, completedAt: "2026-08-12T09:00:00.000Z", assignedTo: "mem-2" }]
     });
     expect(getFamilyCompletedTimelineItems([todo], TODAY)).toEqual([]);
+  });
+});
+
+describe("bucketCompletedStatsByDay", () => {
+  const TODAY = new Date("2026-08-12T15:00:00.000Z");
+
+  test("bucketerar rå completedAt-tidsstämplar per lokal dag, äldst först, N dagar tillbaka inklusive idag", () => {
+    const result = bucketCompletedStatsByDay(
+      ["2026-08-10T09:00:00.000Z", "2026-08-12T08:00:00.000Z", "2026-08-12T18:00:00.000Z"],
+      TODAY,
+      3
+    );
+    expect(result).toEqual([
+      { dateStr: "2026-08-10", count: 1 },
+      { dateStr: "2026-08-11", count: 0 },
+      { dateStr: "2026-08-12", count: 2 }
+    ]);
+  });
+
+  test("en dag utan några tidsstämplar alls får en egen 0-räknad bucket, inte hoppas över", () => {
+    const result = bucketCompletedStatsByDay([], TODAY, 3);
+    expect(result.map((b) => b.count)).toEqual([0, 0, 0]);
+  });
+
+  test("en tidsstämpel utanför fönstret räknas fortfarande om den råkar matcha en av bucketarnas dagsträng (inget filter i sig — anroparen ansvarar för att bara skicka in tidsstämplar inom fönstret)", () => {
+    const result = bucketCompletedStatsByDay(["2020-01-01T00:00:00.000Z"], TODAY, 3);
+    expect(result.every((b) => b.count === 0)).toBe(true);
   });
 });

@@ -82,6 +82,66 @@ test("Hem-vyns Todos-flik: avklarade todos OCH delmoment idag visas som ikoner i
   await expect(subtaskIcon).toHaveAttribute("title", /Diska — Nova/);
 });
 
+test("Hem-vyns Todos-flik: ikonerna har en 3px börder i den utförande medlemmens färg, samt en räknare för dagens totalantal (2026-08-15, Zaida: se vem som utfört uppgifterna + hur många idag)", async ({ page }) => {
+  const now = new Date();
+  const todayAt = (h: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, 0, 0).toISOString();
+  const memberWithColor = { ...MEMBER, color: "#3366ff" };
+  const childWithColor = { ...CHILD, color: "#ff3366" };
+
+  const MINE = todo({ id: "todo-mine", title: "Diska", status: "approved", completedAt: todayAt(9), assignedTo: memberWithColor.id });
+  const CHILD_TODO = todo({ id: "todo-child", title: "Borsta tänder", assignedTo: childWithColor.id, status: "approved", completedAt: todayAt(10) });
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [memberWithColor, childWithColor] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [MINE, CHILD_TODO] });
+    return route.fulfill({ json: {} });
+  });
+
+  await openHomeTodosTab(page);
+
+  const timeline = page.locator(".family-completed-timeline");
+  await expect(timeline.locator(".family-completed-timeline__count")).toHaveText("2");
+
+  const icons = timeline.locator(".family-completed-timeline__icon");
+  await expect(icons.nth(0)).toHaveCSS("border-color", "rgb(51, 102, 255)");
+  await expect(icons.nth(0)).toHaveCSS("border-width", "3px");
+  await expect(icons.nth(1)).toHaveCSS("border-color", "rgb(255, 51, 102)");
+});
+
+test("Hem-vyns Todos-flik: Visa statistik hämtar och visar de senaste 14 dagarnas trend, lat-hämtad först vid utfällning", async ({ page }) => {
+  let statsRequested = false;
+  const now = new Date();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/completed-stats", (route) => {
+    statsRequested = true;
+    return route.fulfill({ json: [now.toISOString(), now.toISOString(), yesterday.toISOString()] });
+  });
+
+  await openHomeTodosTab(page);
+
+  const timeline = page.locator(".family-completed-timeline");
+  expect(statsRequested).toBe(false);
+
+  await timeline.getByRole("button", { name: "Visa statistik" }).click();
+
+  const stats = timeline.locator(".family-completed-stats");
+  await expect(stats).toBeVisible();
+  await expect(stats.getByText("3 avklarade de senaste 14 dagarna")).toBeVisible();
+  expect(statsRequested).toBe(true);
+  await expect(stats.locator(".family-completed-stats__col")).toHaveCount(14);
+
+  await timeline.getByRole("button", { name: "Dölj statistik" }).click();
+  await expect(stats).toBeHidden();
+});
+
 test("Hem-vyns Todos-flik: tom lista visar en platshållartext när inget är avklarat idag", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
