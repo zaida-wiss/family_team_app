@@ -130,6 +130,13 @@ export function TodoEditModal({
       plannedDurationMinutes:
         timerEnabled && plannedDurationMinutesInput
           ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+          : null,
+      // Auto-stopp (2026-08-15, samma "mallen saknade timer-fält"-fix som
+      // raderna ovan, fast för timerMaxMinutes) — bara relevant utan
+      // Planerad tid.
+      timerMaxMinutes:
+        timerEnabled && !plannedDurationMinutesInput && timerMaxMinutesInput
+          ? Math.max(1, Math.min(720, Math.floor(Number(timerMaxMinutesInput)) || 1))
           : null
     }).then(() => {
       setTemplateSaved(true);

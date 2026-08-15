@@ -42,8 +42,9 @@ test("Todos-import/export: laddar ner mallen med rätt rubriker", async ({ page 
   // 2026-08-09: kolumnordningen omkastad (Zaidas önskemål: de fält man
   // fyller i FÖRST för hand överst) — importen läser fortsatt av NAMN, inte
   // position, så bara denna förväntade sträng behövde uppdateras.
+  // 2026-08-15: "Timer auto-stopp (min)" tillagd direkt efter "Timer (min)".
   expect(text.split(/\r?\n/)[0]).toBe(
-    "Emoji,Titel,Egen kategori,Delmoment,Anteckningar,Stjärnor,Timer,Timer (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Familj,Tilldelad,Id,Skapad,Ändrad,Radera"
+    "Emoji,Titel,Egen kategori,Delmoment,Anteckningar,Stjärnor,Timer,Timer (min),Timer auto-stopp (min),Startdatum,Slutdatum,Fler tidsrutor,Återkommer,Intervall,Veckodagar,Slutar,Familj,Tilldelad,Id,Skapad,Ändrad,Radera"
   );
 });
 
@@ -147,8 +148,9 @@ test("Todos-import/export: exporterar mina egna uppgifter som CSV", async ({ pag
   // Anteckningar/Stjärnor/Timer/Timer (min)/Startdatum/Slutdatum/Fler
   // tidsrutor/Återkommer/Intervall/Veckodagar/Slutar/Familj/Tilldelad/Id/
   // Skapad/Ändrad/Radera) — bara ordningen i arrayen nedan behövde ändras.
+  // 2026-08-15: "Timer auto-stopp (min)" tillagd direkt efter "Timer (min)".
   expect(lines[1]).toBe(
-    ["Star", "Min uppgift", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Mig själv", "todo-1", "", "", ""].join(",")
+    ["Star", "Min uppgift", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Mig själv", "todo-1", "", "", ""].join(",")
   );
 });
 
@@ -210,9 +212,10 @@ test("Todos-import/export: en återkommande uppgift (varannan vecka på mån+ons
   // ifylld för todos exporterade från en annan familj — se todosToCsv).
   // 2026-08-09: kolumnordningen omkastad, se motsvarande kommentar i testet
   // ovan — bara ordningen i arrayen nedan behövde ändras.
+  // 2026-08-15: "Timer auto-stopp (min)" tillagd direkt efter "Timer (min)".
   expect(exportedCsv.split(/\r?\n/)[1]).toBe(
     [
-      "Star", "Träna", "", "", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "Mig själv", "todo-1", "", "", ""
+      "Star", "Träna", "", "", "", "", "", "", "", expectedStart, "", "", "Vecka", "2", '"mån,ons"', "", "", "Mig själv", "todo-1", "", "", ""
     ].join(",")
   );
 

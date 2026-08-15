@@ -326,6 +326,9 @@ export function TodoCreatorModal({
     // ett barn (isForChild), samma spärr som fältet självt redan har.
     setTimerEnabled(template.timerEnabled ?? false);
     setPlannedDurationMinutesInput(template.plannedDurationMinutes ? String(template.plannedDurationMinutes) : "");
+    // Auto-stopp (2026-08-15) — samma "mallen saknade timer-fält"-fix som
+    // raden ovan, fast för timerMaxMinutes.
+    setTimerMaxMinutesInput(template.timerMaxMinutes ? String(template.timerMaxMinutes) : "");
   }
 
   // Mallbibliotek: skapar en HEL kategori i ett svep utifrån en kategori-mall
@@ -370,6 +373,8 @@ export function TodoCreatorModal({
         // Tidtagning (2026-08-06, Zaidas fynd: "mallen saknade timer-fält").
         timerEnabled: task.timerEnabled ?? false,
         plannedDurationMinutes: task.plannedDurationMinutes ?? null,
+        // Auto-stopp (2026-08-15) — samma fältparitet-princip som raden ovan.
+        timerMaxMinutes: task.timerMaxMinutes ?? null,
         elapsedMs: null
       });
     }

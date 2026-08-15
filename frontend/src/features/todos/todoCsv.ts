@@ -1,8 +1,9 @@
 import type {
-  Id, Member, RecurrenceEnd, RecurrenceRule, RecurrenceUnit, Todo, TodoCategory, TodoSubtask, TodoTimeWindow, Weekday
+  Id, Member, RecurrenceEnd, RecurrenceRule, RecurrenceUnit, Role, Todo, TodoCategory, TodoSubtask, TodoTimeWindow, Weekday
 } from "@shared/types";
 import { WEEKDAY_SHORT, dateOnlyToISO } from "./recurringTodos";
 import { generateId } from "../../utils/uuid";
+import { isChildMember } from "./selectors";
 
 // Import/export av todos via kalkylark (2026-07-05, Zaidas önskemål, utökad
 // samma dag till att även täcka återkommelse — Zaida upptäckte att
@@ -46,6 +47,11 @@ export const TODO_CSV_HEADERS = [
   "Stjärnor",
   "Timer",
   "Timer (min)",
+  // Auto-stopp (2026-08-15, samma fält som modalernas "Stanna timern
+  // automatiskt efter", tillagt i Todo 2026-08-08 men kvarglömt i CSV:n
+  // fram tills nu) — bara relevant utan "Timer (min)" (en nedräkning har
+  // redan sin egen naturliga gräns, se TodoCreatorModal.tsx).
+  "Timer auto-stopp (min)",
   "Startdatum",
   "Slutdatum",
   "Fler tidsrutor",
@@ -283,6 +289,15 @@ export function buildTemplateCsv(): string {
     Titel: "Städa rummet", Emoji: "🧹", Tilldelad: SELF_LABEL, "Egen kategori": "Hushåll",
     Stjärnor: "3", Timer: YES_LABEL, "Timer (min)": "25"
   };
+  // 7) Tidtagning utan planerad tid — "Timer: Ja" men "Timer (min)" tomt ger
+  //    en vanlig, öppen tidtagning istället för en nedräkning. "Timer
+  //    auto-stopp (min)" (2026-08-15, 1–720) stänger av den automatiskt om
+  //    den glöms igång — tomt ger standardvärdet 120 min (2h).
+  const withOpenTimer: Record<TodoCsvHeader, string> = {
+    ...blankRow(),
+    Titel: "Läsa läxa", Emoji: "📖", Tilldelad: SELF_LABEL, "Egen kategori": "Skola",
+    Timer: YES_LABEL, "Timer auto-stopp (min)": "45"
+  };
   // Radera (2026-08-04) — kräver ett riktigt Id från en tidigare export, en
   // helt ny rad utan Id kan aldrig raderas (det finns inget att matcha mot).
   // Den här exempelraden fungerar alltså bara som illustration i just mallen,
@@ -312,6 +327,7 @@ export function buildTemplateCsv(): string {
     rowFromFields(recurringMultiWindow),
     rowFromFields(recurringWithEnd),
     rowFromFields(withTimer),
+    rowFromFields(withOpenTimer),
     rowFromFields(deleteExample),
     rowFromFields(otherFamilyExample)
   ].join("\r\n");
@@ -491,6 +507,8 @@ function buildTodoCsvRow(
     Stjärnor: todo.starValue > 0 ? String(todo.starValue) : "",
     Timer: todo.timerEnabled ? YES_LABEL : "",
     "Timer (min)": todo.timerEnabled && todo.plannedDurationMinutes ? String(todo.plannedDurationMinutes) : "",
+    "Timer auto-stopp (min)":
+      todo.timerEnabled && !todo.plannedDurationMinutes && todo.timerMaxMinutes ? String(todo.timerMaxMinutes) : "",
     // Lokala Date-getters (inte en rå ISO-sträng-slice, som läser UTC och
     // kan hamna en dag fel beroende på tidszon) — inkluderar nu klockslag,
     // inte bara datum (2026-07-05, Zaidas fynd).
@@ -580,6 +598,8 @@ export type ParsedTodoRow = {
   starValue: number;
   timerEnabled: boolean;
   plannedDurationMinutes: number | null;
+  // Auto-stopp (2026-08-15) — se TODO_CSV_HEADERS-kommentaren.
+  timerMaxMinutes: number | null;
   visibleFrom: string | null;
   expiresAt: string | null;
   recurrence: RecurrenceRule;
@@ -613,7 +633,10 @@ export type ParsedTodoRow = {
 export type OtherFamilyForImport = {
   accountId: Id;
   accountName: string;
-  members: { id: Id; name: string }[];
+  // isChild (2026-08-15) — krävs för att stjärn-nollställningen nedan ska
+  // kunna avgöra barn/vuxen även för en rad routad till en ANNAN familj
+  // (effectiveMembers), inte bara mitt eget konto.
+  members: { id: Id; name: string; isChild: boolean }[];
 };
 
 export type TodoCsvParseResult = {
@@ -653,7 +676,13 @@ export function parseTodoCsv(
   currentMemberId: Id,
   defaultAssignee: Id | null = currentMemberId,
   isFamilyScope = false,
-  otherFamiliesForImport: OtherFamilyForImport[] = []
+  otherFamiliesForImport: OtherFamilyForImport[] = [],
+  // roles (2026-08-15) — krävs för isChildMember (samma helper modalerna
+  // använder) för att avgöra vem Stjärnor ska nollställas för. Tidigare
+  // gissade koden bara utifrån "Mig själv"/"Familjen" (isSelf), vilket
+  // missade en namngiven ANNAN vuxen familjemedlem — se isKnownNonChild
+  // nedan.
+  roles: Role[] = []
 ): TodoCsvParseResult {
   const table = parseCsvText(text);
   if (table.length === 0) {
@@ -675,6 +704,7 @@ export function parseTodoCsv(
   const starsCol = col("Stjärnor");
   const timerCol = col("Timer");
   const timerMinutesCol = col("Timer (min)");
+  const timerMaxMinutesCol = col("Timer auto-stopp (min)");
   const startCol = col("Startdatum");
   const endCol = col("Slutdatum");
   const extraWindowsCol = col("Fler tidsrutor");
@@ -767,6 +797,7 @@ export function parseTodoCsv(
         starValue: 0,
         timerEnabled: false,
         plannedDurationMinutes: null,
+        timerMaxMinutes: null,
         visibleFrom: null,
         expiresAt: null,
         recurrence: { type: "none" },
@@ -823,12 +854,19 @@ export function parseTodoCsv(
       }
     }
 
-    // En olöst rad är inte "jag själv"/"Familjen" (den väntar på att mappas
-    // till en riktig medlem, troligen ett barn) — annars skulle Stjärnor/
-    // Timer nollställas innan mappningen ens gjorts. En familje-uppgift
-    // (assignedTo: null) nollställs av samma anledning som "mig själv" —
-    // ingen specifik mottagare att belöna med stjärnor.
-    const isSelf = (assignedTo === currentMemberId || assignedTo === null) && !unresolvedAssigneeLabel;
+    // Stjärnor är barn-specifikt (2026-08-15-fix, samma regel som modalerna:
+    // "starValue: isChildRecipient ? starValue : 0", TodoCreatorModal.tsx)
+    // — nollställs för ALLA icke-barn-mottagare, inte bara "Mig själv"/
+    // "Familjen" (den gamla isSelf-flaggan missade en namngiven ANNAN vuxen
+    // familjemedlem, som då kunde importeras med ett kvarvarande stjärnvärde
+    // trots att modalerna aldrig tillåter det). En olöst rad väntar på att
+    // mappas (troligen ett barn) — nollställs INTE förrän mappningen är
+    // gjord, annars skulle ett barns stjärnor kunna nollställas i onödan
+    // innan man ens hunnit välja vem raden faktiskt gäller. En familje-
+    // uppgift (assignedTo: null) räknas alltid som icke-barn — ingen
+    // specifik mottagare att belöna med stjärnor.
+    const recipientMember = assignedTo ? effectiveMembers.find((m) => m.id === assignedTo) : undefined;
+    const isKnownNonChild = !unresolvedAssigneeLabel && !isChildMember(recipientMember, roles);
     // Kategori gäller nu VILKEN mottagare som helst (2026-07-08, ADR-0020,
     // Zaidas beslut: "kategorierna kan vara samma, vi behöver ingen
     // rutinkategori, det räcker med kategori") — tidigare gällde det bara
@@ -865,6 +903,15 @@ export function parseTodoCsv(
     const timerMinutesRaw = cellValue(cells, timerMinutesCol);
     const plannedDurationMinutes = timerMinutesRaw
       ? Math.max(1, Math.min(480, parseInt(timerMinutesRaw, 10) || 1))
+      : null;
+
+    // Auto-stopp (2026-08-15) — bara relevant utan Planerad tid, precis som
+    // i modalerna (en nedräkning har redan sin egen naturliga gräns). En
+    // ifylld cell trots att Timer (min) också är ifylld ignoreras tyst,
+    // samma "irrelevant för den här radtypen"-hållning som Slutar redan har.
+    const timerMaxMinutesRaw = cellValue(cells, timerMaxMinutesCol);
+    const timerMaxMinutes = timerMaxMinutesRaw && !plannedDurationMinutes
+      ? Math.max(1, Math.min(720, parseInt(timerMaxMinutesRaw, 10) || 1))
       : null;
 
     const startRaw = cellValue(cells, startCol);
@@ -986,9 +1033,13 @@ export function parseTodoCsv(
       unresolvedAssigneeLabel,
       personalCategoryId,
       newCategoryName,
-      starValue: isSelf ? 0 : starValue,
-      timerEnabled: isSelf ? false : timerEnabled,
-      plannedDurationMinutes: isSelf ? null : plannedDurationMinutes,
+      starValue: isKnownNonChild ? 0 : starValue,
+      // Timer gäller ALLA mottagare sedan 2026-08-07 (se TodoCreatorModal.tsx)
+      // — nollställs inte längre baserat på mottagare, till skillnad från
+      // Stjärnor ovan.
+      timerEnabled,
+      plannedDurationMinutes,
+      timerMaxMinutes,
       visibleFrom: finalVisibleFrom,
       expiresAt: finalExpiresAt,
       recurrence,

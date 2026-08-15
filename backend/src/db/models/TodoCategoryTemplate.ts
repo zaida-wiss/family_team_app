@@ -22,7 +22,9 @@ const taskSchema = {
   starValue: { type: Number, required: true },
   // Tidtagning (2026-08-06) — se TodoTemplate.ts:s motsvarande kommentar.
   timerEnabled: { type: Boolean, default: false },
-  plannedDurationMinutes: { type: Number, default: null }
+  plannedDurationMinutes: { type: Number, default: null },
+  // Auto-stopp (2026-08-15) — se TodoTemplate.ts:s motsvarande kommentar.
+  timerMaxMinutes: { type: Number, default: null }
 };
 
 const todoCategoryTemplateSchema = new Schema<TodoCategoryTemplate>({

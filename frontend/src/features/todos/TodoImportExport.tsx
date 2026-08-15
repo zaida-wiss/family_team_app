@@ -93,6 +93,7 @@ function buildNewTodo(row: ParsedTodoRow, currentMemberId: Id, categoryId: Id | 
     starValue: row.starValue,
     timerEnabled: row.timerEnabled,
     plannedDurationMinutes: row.plannedDurationMinutes,
+    timerMaxMinutes: row.timerMaxMinutes,
     elapsedMs: null,
     visual: { type: "lucide-icon", value: row.emoji },
     recurrence: row.recurrence,
@@ -147,6 +148,7 @@ function buildUpdatePatch(row: ParsedTodoRow, categoryId: Id | null, existing?: 
     starValue: row.starValue,
     timerEnabled: row.timerEnabled,
     plannedDurationMinutes: row.plannedDurationMinutes,
+    timerMaxMinutes: row.timerMaxMinutes,
     recurrence: row.recurrence,
     visibleFrom: row.visibleFrom,
     expiresAt: row.expiresAt,
@@ -169,6 +171,7 @@ function extractPatchFields(todo: Todo): Partial<Todo> {
     starValue: todo.starValue,
     timerEnabled: todo.timerEnabled,
     plannedDurationMinutes: todo.plannedDurationMinutes,
+    timerMaxMinutes: todo.timerMaxMinutes,
     recurrence: todo.recurrence,
     visibleFrom: todo.visibleFrom,
     expiresAt: todo.expiresAt,
@@ -293,7 +296,11 @@ export function TodoImportExport({
     accountName: t.accountName,
     members: (crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? []).map((m) => ({
       id: m.id,
-      name: m.name
+      name: m.name,
+      // isChild (2026-08-15) — MembershipMemberSummary bär redan detta,
+      // krävs av parseTodoCsv för att kunna nollställa Stjärnor korrekt
+      // även för en rad routad till en ANNAN familj.
+      isChild: m.isChild
     }))
   }));
   const [newFamilyTodoTitle, setNewFamilyTodoTitle] = useState("");
@@ -752,7 +759,8 @@ export function TodoImportExport({
       // Familj-kolumnens routing till en annan familj är bara meningsfull i
       // PERSONLIG scope (Inställningar) — Hem-vyns familje-import (isFamilyScope)
       // handlar redan om en specifik, redan vald familj.
-      isFamilyScope ? [] : otherFamiliesForImport
+      isFamilyScope ? [] : otherFamiliesForImport,
+      roles
     );
 
     const unresolvedLabels = [

@@ -1137,6 +1137,10 @@ export type TodoTemplateTask = {
   // .timedMinutes en gång var (2026-07-27).
   timerEnabled?: boolean;
   plannedDurationMinutes?: number | null;
+  // Auto-stopp för en öppen tidtagning (2026-08-15) — samma fält som Todo
+  // självt (2026-08-08), tidigare kvarglömt i mallen på precis samma sätt
+  // som timerEnabled/plannedDurationMinutes en gång var (se kommentaren ovan).
+  timerMaxMinutes?: number | null;
 };
 
 // Fristående uppgiftsmall (kan hämtas oberoende av kategori, t.ex. via "Lägg

@@ -34,6 +34,12 @@ export function TodoTemplateEditModal({ template, onUpdate, onClose }: Props) {
   const [plannedDurationMinutesInput, setPlannedDurationMinutesInput] = useState(
     template.plannedDurationMinutes ? String(template.plannedDurationMinutes) : ""
   );
+  // Auto-stopp (2026-08-15) — samma fält som TodoCreatorModal.tsx/
+  // TodoEditModal.tsx, kvarglömt här sedan den här modalen byggdes
+  // 2026-08-06 (två dagar innan fältet ens fanns).
+  const [timerMaxMinutesInput, setTimerMaxMinutesInput] = useState(
+    template.timerMaxMinutes ? String(template.timerMaxMinutes) : ""
+  );
   const [recurrence, setRecurrence] = useState<RecurrenceRule>(template.recurrence);
   const [subtasks, setSubtasks] = useState<DraftSubtask[]>(
     template.subtasks.map((s) => ({ key: generateId(), title: s.title, timedMinutes: s.timedMinutes ?? null }))
@@ -103,6 +109,10 @@ export function TodoTemplateEditModal({ template, onUpdate, onClose }: Props) {
         plannedDurationMinutes:
           timerEnabled && plannedDurationMinutesInput
             ? Math.max(1, Math.min(480, Math.floor(Number(plannedDurationMinutesInput)) || 1))
+            : null,
+        timerMaxMinutes:
+          timerEnabled && !plannedDurationMinutesInput && timerMaxMinutesInput
+            ? Math.max(1, Math.min(720, Math.floor(Number(timerMaxMinutesInput)) || 1))
             : null
       });
       onClose();
@@ -210,6 +220,21 @@ export function TodoTemplateEditModal({ template, onUpdate, onClose }: Props) {
                 placeholder="T.ex. 10"
                 type="number"
                 value={plannedDurationMinutesInput}
+              />
+            </label>
+          )}
+
+          {timerEnabled && !plannedDurationMinutesInput && (
+            <label className="field-label">
+              Stanna timern automatiskt efter (minuter)
+              <input
+                className="text-input"
+                max={720}
+                min={1}
+                onChange={(e) => setTimerMaxMinutesInput(e.target.value)}
+                placeholder="120 (2h) om tomt"
+                type="number"
+                value={timerMaxMinutesInput}
               />
             </label>
           )}

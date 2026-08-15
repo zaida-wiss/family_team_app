@@ -29,12 +29,15 @@ describe("todoCsv", () => {
   // stannar kvar tills avklarad, och en timer-uppgift) — Zaidas önskemål om
   // att tydligt visa "kvarstående vs. försvinner efter en tid vs.
   // återkommande vs. timer" i en och samma nedladdningsbara mall.
-  test("buildTemplateCsv innehåller alla rubriker plus exempel för kvarstående-, försvinner-, enkel återkommande-, flera-tidsrutor-, slutar-, timer- och radera-uppgifter", () => {
+  // 2026-08-15: en nionde exempelrad visar "Timer auto-stopp (min)" — se
+  // TODO_CSV_HEADERS-kommentaren i todoCsv.ts (fältet fanns i appen sedan
+  // 2026-08-08 men saknades helt i mallen fram tills nu).
+  test("buildTemplateCsv innehåller alla rubriker plus exempel för kvarstående-, försvinner-, enkel återkommande-, flera-tidsrutor-, slutar-, timer-, auto-stopp- och radera-uppgifter", () => {
     const csv = buildTemplateCsv();
     const table = parseCsvText(csv);
     const headerIndex = new Map(table[0].map((h, i) => [h, i]));
     expect(table[0]).toEqual([...TODO_CSV_HEADERS]);
-    expect(table.length).toBe(9);
+    expect(table.length).toBe(10);
     const titleCol = headerIndex.get("Titel")!;
     expect(table[1][titleCol]).toBe("Handla mat");
     expect(table[1][headerIndex.get("Startdatum")!]).toBe("");
@@ -50,13 +53,16 @@ describe("todoCsv", () => {
     expect(table[6][titleCol]).toBe("Städa rummet");
     expect(table[6][headerIndex.get("Timer")!]).toBe("Ja");
     expect(table[6][headerIndex.get("Timer (min)")!]).toBe("25");
-    expect(table[7][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
-    expect(table[7][headerIndex.get("Radera")!]).toBe("Ja");
-    // 2026-08-06: en åttonde exempelrad visar Familj-kolumnen ifylld — bara
+    expect(table[7][titleCol]).toBe("Läsa läxa");
+    expect(table[7][headerIndex.get("Timer")!]).toBe("Ja");
+    expect(table[7][headerIndex.get("Timer auto-stopp (min)")!]).toBe("45");
+    expect(table[8][headerIndex.get("Id")!]).toBe("todo-x-från-en-export");
+    expect(table[8][headerIndex.get("Radera")!]).toBe("Ja");
+    // 2026-08-06: en exempelrad visar Familj-kolumnen ifylld — bara
     // förekommande på riktiga exporterade rader från "Andra familjer", tom
     // annars (se raderna ovan, alla har en tom Familj-cell).
-    expect(table[8][headerIndex.get("Familj")!]).toBe("Familjen Andersson");
-    for (let i = 1; i <= 7; i++) {
+    expect(table[9][headerIndex.get("Familj")!]).toBe("Familjen Andersson");
+    for (let i = 1; i <= 8; i++) {
       expect(table[i][headerIndex.get("Familj")!]).toBe("");
     }
   });
@@ -518,9 +524,8 @@ describe("todoCsv", () => {
     expect(rows[0].subtasks.every((s) => s.done === false)).toBe(true);
   });
 
-  // Timerfunktion (2026-07-07) — "Timer"-kolumnen (Ja/Nej) rundtrippar precis
-  // som Stjärnor: bara meningsfull för barn-tilldelade uppgifter, tvingas
-  // till false för Mig själv-rader (samma mönster som starValue).
+  // Timerfunktion (2026-07-07) — "Timer"-kolumnen (Ja/Nej) rundtrippar för en
+  // barn-tilldelad uppgift, precis som Stjärnor.
   test("todosToCsv → parseTodoCsv tur och retur bevarar Timer-kolumnen för en barn-tilldelad uppgift", () => {
     const members = [
       createMember("mem-1", { name: "Zaida" }),
@@ -543,17 +548,55 @@ describe("todoCsv", () => {
     expect(rows[0].plannedDurationMinutes).toBe(15);
   });
 
-  test("parseTodoCsv: Timer och Timer (min) sätts alltid till false/null för Mig själv-rader, oavsett kolumnernas värde", () => {
+  // 2026-08-15-fix: Timer gäller ALLA mottagare sedan 2026-08-07 (se
+  // TodoCreatorModal.tsx) — tidigare nollställde CSV-importen tyst Timer/
+  // Timer (min)/Timer auto-stopp för "Mig själv"/"Familjen"-rader ändå,
+  // vilket bl.a. gjorde mallens egen "Läsa läxa"-exempelrad (Tilldelad: Mig
+  // själv, Timer: Ja) verkningslös vid en faktisk import. Stjärnor är
+  // fortfarande barn-specifikt och nollställs.
+  test("parseTodoCsv: Timer/Timer (min)/Timer auto-stopp bevaras för Mig själv-rader, bara Stjärnor nollställs", () => {
     const members = [createMember("mem-1", { name: "Zaida" })];
     const csv = [
-      "Titel,Tilldelad,Timer,Timer (min)",
-      "Handla mat,Mig själv,Ja,15"
+      "Titel,Tilldelad,Stjärnor,Timer,Timer (min)",
+      "Handla mat,Mig själv,5,Ja,15"
     ].join("\r\n");
 
     const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
     expect(errors).toEqual([]);
-    expect(rows[0].timerEnabled).toBe(false);
-    expect(rows[0].plannedDurationMinutes).toBeNull();
+    expect(rows[0].starValue).toBe(0);
+    expect(rows[0].timerEnabled).toBe(true);
+    expect(rows[0].plannedDurationMinutes).toBe(15);
+  });
+
+  test("parseTodoCsv: Timer auto-stopp bevaras för en Familjen-rad, bara relevant utan Timer (min)", () => {
+    const members = [createMember("mem-1", { name: "Zaida" })];
+    const csv = [
+      "Titel,Tilldelad,Timer,Timer auto-stopp (min)",
+      "Läsa läxa,Familjen,Ja,45"
+    ].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows[0].timerEnabled).toBe(true);
+    expect(rows[0].timerMaxMinutes).toBe(45);
+  });
+
+  // 2026-08-15-fix: den gamla "isSelf"-flaggan nollställde bara Stjärnor för
+  // "Mig själv"/"Familjen" — en namngiven ANNAN vuxen familjemedlem missades
+  // helt, till skillnad från modalerna som alltid nollställer Stjärnor för
+  // icke-barn-mottagare (TodoCreatorModal.tsx: "starValue: isChildRecipient
+  // ? starValue : 0").
+  test("parseTodoCsv: Stjärnor nollställs även för en namngiven ANNAN vuxen familjemedlem, inte bara Mig själv/Familjen", () => {
+    const members = [
+      createMember("mem-1", { name: "Zaida" }),
+      createMember("mem-2", { name: "Lars", isChild: false })
+    ];
+    const csv = ["Titel,Tilldelad,Stjärnor", "Städa rummet,Lars,5"].join("\r\n");
+
+    const { rows, errors } = parseTodoCsv(csv, members, [], "mem-1");
+    expect(errors).toEqual([]);
+    expect(rows[0].assignedTo).toBe("mem-2");
+    expect(rows[0].starValue).toBe(0);
   });
 
   test("todosToCsv → parseTodoCsv tur och retur bevarar emoji, saknad emoji faller tillbaka på ⭐ vid import", () => {
@@ -822,8 +865,8 @@ describe("todoCsv", () => {
         accountId: "acc-2",
         accountName: "Wiss Kolmodin",
         members: [
-          { id: "mem-lars", name: "Lars" },
-          { id: "mem-hanna", name: "Hanna" }
+          { id: "mem-lars", name: "Lars", isChild: false },
+          { id: "mem-hanna", name: "Hanna", isChild: false }
         ]
       }
     ];

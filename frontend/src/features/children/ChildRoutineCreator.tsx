@@ -218,7 +218,12 @@ export function ChildRoutineCreator({
                 ...templateFields,
                 assignedTo: childId,
                 timerEnabled: existing.timerEnabled,
-                plannedDurationMinutes: existing.plannedDurationMinutes
+                plannedDurationMinutes: existing.plannedDurationMinutes,
+                // Auto-stopp (2026-08-15) — samma fältparitet-princip som
+                // raderna ovan (denna enklare rutinskapare exponerar aldrig
+                // timerfälten själv, bara bevarar den redan existerande
+                // rutinens värden oförändrade).
+                timerMaxMinutes: existing.timerMaxMinutes
               }, fixedTodoTimes)
             );
           }

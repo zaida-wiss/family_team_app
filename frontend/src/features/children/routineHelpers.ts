@@ -129,6 +129,8 @@ export function copyRoutineTemplate(source: Todo, targetChildId: Id, createdBy: 
     timeWindows: source.timeWindows,
     timerEnabled: source.timerEnabled,
     plannedDurationMinutes: source.plannedDurationMinutes,
+    // Auto-stopp (2026-08-15) — samma fältparitet-princip som raderna ovan.
+    timerMaxMinutes: source.timerMaxMinutes,
     elapsedMs: null,
     subtasks: source.subtasks?.map((s) => ({ id: `subtask-${generateId()}` as Id, title: s.title, done: false }))
   };

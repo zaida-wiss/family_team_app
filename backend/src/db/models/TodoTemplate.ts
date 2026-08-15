@@ -30,6 +30,8 @@ const todoTemplateSchema = new Schema<TodoTemplate>({
   // påminnelse som notes/subtasks[].timedMinutes ovan.
   timerEnabled: { type: Boolean, default: false },
   plannedDurationMinutes: { type: Number, default: null },
+  // Auto-stopp (2026-08-15) — se shared/types.ts:s TodoTemplateTask-kommentar.
+  timerMaxMinutes: { type: Number, default: null },
   createdAt: { type: String, required: true },
   deletedAt: { type: String, default: null },
   deletedBy: { type: String, default: null }

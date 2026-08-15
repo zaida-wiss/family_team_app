@@ -417,7 +417,9 @@ export const TodoTemplateTaskSchema = z.object({
   starValue: z.number().int().min(0),
   // Tidtagning (2026-08-06) — se TodoTemplateTask i shared/types.ts.
   timerEnabled: z.boolean().optional(),
-  plannedDurationMinutes: z.number().int().min(1).max(480).nullable().optional()
+  plannedDurationMinutes: z.number().int().min(1).max(480).nullable().optional(),
+  // Auto-stopp för en öppen tidtagning (2026-08-15) — se TodoTemplateTask.
+  timerMaxMinutes: z.number().int().min(1).max(720).nullable().optional()
 });
 
 export const CreateTodoTemplateBodySchema = TodoTemplateTaskSchema;

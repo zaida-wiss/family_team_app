@@ -87,6 +87,8 @@ export async function updateTaskTemplate(id: string, accountId: string, memberId
   // faktiskt skrevs av update-funktionen).
   template.timerEnabled = encrypted.timerEnabled ?? false;
   template.plannedDurationMinutes = encrypted.plannedDurationMinutes ?? null;
+  // Auto-stopp (2026-08-15) — samma "glömda här"-bugklass som raderna ovan.
+  template.timerMaxMinutes = encrypted.timerMaxMinutes ?? null;
   template.markModified("subtasks");
   await template.save();
   return decryptTask(accountId, template.toObject());
