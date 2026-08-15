@@ -172,40 +172,6 @@ export function pinPositions(
   return result;
 }
 
-// Vågrät motsvarighet till pinPositions ovan (2026-08-12, FamilyCompletedTimeline.tsx)
-// — tiden avgör X-positionen (left) istället för Y (top), grupperad i samma
-// SLOT_SIZE-fack. Krockande ikoner inom samma tidsfack staplas lodrätt
-// nedåt (ROW_STEP_PX) istället för att spridas åt sidan, eftersom sidled
-// redan är upptaget av tidsaxeln.
-export function pinPositionsHorizontal(
-  items: { id: string; isoTime: string }[],
-  range: TimelineRange
-) {
-  // Bredare fack än den lodräta pinPositions (14 min) — den vågräta
-  // tidslinjen är visuellt mycket kortare (bredd, inte höjd), så två saker
-  // några minuter isär (t.ex. 18:00/18:05) fick annars varsitt NÄSTAN
-  // identiskt men separat X-läge (delvis överlappande, förvirrande) istället
-  // för att staplas rent i samma kolumn.
-  const SLOT_SIZE = 30;
-  const ROW_STEP_PX = 34;
-
-  const groups = new Map<number, string[]>();
-  for (const { id, isoTime } of items) {
-    const slot = Math.round(minuteOfDay(isoTime) / SLOT_SIZE);
-    const g = groups.get(slot) ?? [];
-    g.push(id);
-    groups.set(slot, g);
-  }
-  const result = new Map<string, { left: string; top: string }>();
-  for (const [slot, ids] of groups) {
-    const baseLeft = Math.max(0, Math.min(100, ((slot * SLOT_SIZE) - range.startMinute) / (range.endMinute - range.startMinute) * 100));
-    ids.forEach((id, i) => {
-      result.set(id, { left: `${baseLeft}%`, top: `${i * ROW_STEP_PX}px` });
-    });
-  }
-  return result;
-}
-
 const THEME_EVENT_COLORS = ["var(--c1)", "var(--c0)", "var(--c2)", "var(--c3)"];
 
 export function calendarThemeColor(calendarId: string): string {

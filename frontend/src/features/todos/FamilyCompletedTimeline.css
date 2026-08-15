@@ -1,21 +1,23 @@
 /* Samma visuella språk som barnens ChildTimeline.css (2026-08-15, Zaida:
-   "denna sektion skall vara lika snygg som timeline i dashboarden. Små
-   ikoner som samlas i tidslinjen. Samma storlek, samma utseende") — samma
-   färgade gradient-formel (--c0…--c4, temats egna toner, fungerar i alla
-   teman/ljus/mörkt läge eftersom variablerna sätts globalt i themes.css),
-   samma ljusa textfärg (--on-c4), samma små, blekta, kant-/bakgrundslösa
-   punktikoner som .child-tl-reward-pin--done — bara vågrät istället för
-   lodrät. */
+   "denna sektion skall vara lika snygg som timeline i dashboarden... Samma
+   storlek, samma utseende") — samma färgade gradient-formel (--c0…--c4,
+   temats egna toner, fungerar i alla teman/ljus/mörkt läge eftersom
+   variablerna sätts globalt i themes.css), samma ljusa textfärg (--on-c4).
+   Tidsaxeln (timmarkeringar/nu-linje/staplingsmatematik) borttagen samma dag
+   (Zaida: "Tidslinjen gör höjden för hög. Ta bort tidslinjen och låt
+   ikonerna komma i turordning och gå i läsordning") — bara en vanlig
+   flex-wrap-lista i den ordning familjen avklarar uppgifter kvar. */
 .family-completed-timeline {
   display: flex;
   flex-direction: column;
-  /* flex:1 (2026-08-15, uppföljning: "sektionen skall... uppta det
-     mellanrum som idag finns mellan todosektionen och navbar") — växer in i
-     det extra utrymme .todosPanel/.home ger den (se MemberOverview.module.css)
-     när todo-listan ovanför är kort nog att lämna tomrum, utan effekt när
-     den redan är längre än skärmen. min-height är ett golv, inte ett tak. */
+  /* flex:1 (2026-08-15, "sektionen skall... uppta det mellanrum som idag
+     finns mellan todosektionen och navbar") — växer in i det extra utrymme
+     .todosPanel/.home ger den (se MemberOverview.module.css) när
+     todo-listan ovanför är kort nog att lämna tomrum, utan effekt när den
+     redan är längre än skärmen. Inget min-height-golv längre (samma
+     ändring som tog bort tidslinjen) — innehållet (en enkel ikonlista) ska
+     inte tvingas ta mer plats än det själv behöver.  */
   flex: 1;
-  min-height: 200px;
   padding: clamp(10px, 1.5vw, 16px);
   border: 2px solid color-mix(in srgb, var(--c1, #ffffff) 42%, transparent);
   border-radius: 20px;
@@ -35,78 +37,31 @@
 }
 
 .family-completed-timeline .empty-note {
+  margin: 0;
   color: color-mix(in srgb, var(--on-c4, #ffffff) 75%, transparent);
 }
 
-.family-completed-timeline__scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-.family-completed-timeline__track {
-  position: relative;
-  min-width: 480px;
-  height: 100%;
-  /* Rum för flera staplade ikoner i samma tidsfack (pinPositionsHorizontal,
-     ROW_STEP_PX 34px) utan att klippas — golv, inte tak, nu när tracket
-     flex-fyller kortet istället för en fast höjd. */
-  min-height: 160px;
-}
-
-.family-completed-timeline__hour {
-  position: absolute;
-  top: 0;
-  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
-  color: var(--on-c4, #ffffff);
-  color: color-mix(in srgb, var(--on-c4, #ffffff) 82%, var(--c2, #ffffff));
-  font-size: clamp(0.72rem, 1.1vw, 0.9rem);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.family-completed-timeline__now {
-  position: absolute;
-  top: 20px;
-  bottom: 0;
-  z-index: 8;
-  width: 2px;
-  border-radius: 999px;
-  background: var(--c3, #fff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3, #fff) 14%, transparent);
-  pointer-events: none;
-}
-
-.family-completed-timeline__now::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--c3, #fff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3, #fff) 20%, transparent);
-  transform: translate(-50%, -50%);
+.family-completed-timeline__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .family-completed-timeline__icon {
-  position: absolute;
-  /* top sätts alltid inline (pos.top från pinPositionsHorizontal, staplar
-     krockande ikoner i samma tidsfack) — ingen CSS-fallback behövs här. */
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateX(-50%);
-  /* Samma storleksformel som ChildTimeline.css:s .child-tl-reward-pin--done
-     (avklarade uppdrag där) — "samma storlek, samma utseende", bara vågrät.
-     Opacitet något högre (0.8 mot 0.65) eftersom ikonerna HÄR är sektionens
-     enda innehåll, inte en sekundär lager ovanpå en redan fullmatad
-     kalendervy. */
-  font-size: clamp(0.65rem, 1.2vw, 1.1rem);
+  /* Något större än gårdagens tidslinje-ikoner (0.65–1.1rem) — utan
+     tidsaxel att sprida ut dem längs är de nu det enda innehållet i en
+     enkel, radbrytande lista, och läses bättre i en tydligare storlek. */
+  width: clamp(1.5rem, 2.6vw, 2.1rem);
+  height: clamp(1.5rem, 2.6vw, 2.1rem);
+  font-size: clamp(1rem, 1.8vw, 1.4rem);
   line-height: 1;
-  opacity: 0.8;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
   cursor: default;
 }
