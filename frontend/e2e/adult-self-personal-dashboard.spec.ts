@@ -153,3 +153,32 @@ test("vuxen ser ett uppdragskort för ett delmoment tilldelat DEM, med emojin so
   await subtaskCard.dispatchEvent("pointerdown", { pointerId: 1, button: 0 });
   await expect.poll(() => toggledSubtaskId, { timeout: 3000 }).toBe("sub-1");
 });
+
+// 2026-08-15, Zaida: "oavsett delmoment eller uppgift så vill jag ha en ikon
+// som visar att jag klarat av den på min tidslinje" — den lodräta
+// tidslinjen (ChildTimeline.tsx, delad med barnens dashboard) kände
+// tidigare bara till avklarade HELA todos, aldrig delmoment. Verifierar att
+// en vuxens EGEN tidslinje nu visar en pin för båda: en hel avklarad todo
+// (mem-1s egen) OCH ett delmoment (på Lars todo, tilldelat mem-1).
+const NOW_ISO = new Date().toISOString();
+const COMPLETED_TODO = { ...TODO, status: "approved", completedAt: NOW_ISO };
+const LARS_TODO_WITH_COMPLETED_SUBTASK = {
+  ...LARS_TODO,
+  subtasks: [{ id: "sub-1", title: "🧺Diska", done: true, assignedTo: "mem-1", completedAt: NOW_ISO }],
+};
+test("vuxen ser en tidslinje-ikon för både en avklarad hel uppgift och ett avklarat delmoment", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, OTHER_ADULT] }));
+  await page.route("**/api/todos", (route) =>
+    route.fulfill({ json: [COMPLETED_TODO, LARS_TODO_WITH_COMPLETED_SUBTASK] })
+  );
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
+
+  const donePins = page.locator(".child-tl-reward-pin--done");
+  await expect(donePins).toHaveCount(2);
+  await expect(page.locator(".child-tl-reward-pin--done[title='Handla mat']")).toBeVisible();
+  await expect(page.locator(".child-tl-reward-pin--done[title='Diska']")).toBeVisible();
+});

@@ -7,6 +7,7 @@ import { expandForRange, fmtTime, resolveDisplaySymbol, toLocalDateStr } from ".
 import { hasPermission } from "../../utils/permissions";
 import type { EnrichedEvent } from "../calendars/CalendarEventList";
 import { TimelineEventDetail } from "./TimelineEventDetail";
+import { getFamilyCompletedTimelineItems } from "../todos/selectors";
 import {
   assignLanes,
   buildTodoMarkers,
@@ -184,17 +185,19 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
     (pr) => toLocalDateStr(new Date(pr.startsAt)) === selectedDayStr
   );
 
-  const completedTodos = todos.filter(
-    (t) =>
-      t.assignedTo === child.id &&
-      (t.status === "done" || t.status === "approved") &&
-      t.completedAt !== null &&
-      toLocalDateStr(new Date(t.completedAt)) === selectedDayStr &&
-      t.deletedAt === null
+  // Både hela avklarade uppgifter OCH avklarade delmoment ger en ikon här
+  // (2026-08-15, Zaida: "oavsett delmoment eller uppgift så vill jag ha en
+  // ikon som visar att jag klarat av den på min tidslinje") — återanvänder
+  // samma enhetliga "avklarat"-definition som FamilyCompletedTimeline.tsx:s
+  // vågräta tidslinje redan bygger på (selectors.ts), istället för det
+  // tidigare egna filtret här som bara kände till hela todo-objekt, aldrig
+  // delmoment.
+  const completedItems = getFamilyCompletedTimelineItems(todos, selectedDay).filter(
+    (item) => item.assigneeId === child.id
   );
 
   const todoPinPos = pinPositions(
-    completedTodos.map((t) => ({ id: t.id, isoTime: t.completedAt! })),
+    completedItems.map((item) => ({ id: item.id, isoTime: item.completedAt })),
     timelineRange
   );
   const rewardPinPos = pinPositions(
@@ -245,18 +248,18 @@ export function ChildTimeline({ calendars, child, roles, selectedDay, todos, pur
                   );
                 })}
 
-                {/* Completed todo pins */}
-                {completedTodos.map((t) => {
-                  const pos = todoPinPos.get(t.id);
+                {/* Completed todo/subtask pins */}
+                {completedItems.map((item) => {
+                  const pos = todoPinPos.get(item.id);
                   if (!pos) return null;
                   return (
                     <div
-                      key={t.id}
+                      key={item.id}
                       className="child-tl-reward-pin child-tl-reward-pin--done"
                       style={{ top: pos.top, left: pos.left }}
-                      title={t.title}
+                      title={item.title}
                     >
-                      {t.visual.value}
+                      {item.emoji ?? "✅"}
                     </div>
                   );
                 })}
