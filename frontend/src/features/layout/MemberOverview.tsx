@@ -437,7 +437,7 @@ export function MemberOverview({
       )}
 
       {effectiveTab === "todos" && canSeeTodos && (
-        <article aria-labelledby="home-tab-todos" className={`dashboard ${styles.todosPanel}`} id="home-panel-todos" key={`todos-${tabResetKey}`} role="tabpanel" tabIndex={0}>
+        <article aria-labelledby="home-tab-todos" className="dashboard" id="home-panel-todos" key={`todos-${tabResetKey}`} role="tabpanel" tabIndex={0}>
           {/* "+" (ny familjekategori) + import/export (2026-08-03, sökruta/
               titel/väntar-antal/Öppna-knapp borttagna 2026-08-04, Zaidas
               önskemål: "lägg ikonerna... och knapparna... bredvid varandra.
@@ -606,13 +606,14 @@ export function MemberOverview({
           <SharedCategoryThreads range={todoThreadRange} todoBubbleSize={todoBubbleSize} todoThreadGap={todoThreadGap} />
 
           {/* Flyttad hit, sist i sektionen (2026-08-15, Zaida: "sektionen
-              skall flyttas under todo-sektionen, bollarna och korten, och
-              uppta det mellanrum som idag finns mellan todosektionen och
-              navbar") — var tidigare först i panelen. .todosPanel ovan gör
-              hela artikeln till en flex-kolumn som minst fyller skärmen
-              (MemberOverview.module.css), så den här sista sektionen
-              (flex:1, FamilyCompletedTimeline.css) sträcker ut sig och
-              täcker precis det utrymme som annars blivit tomt. */}
+              skall flyttas under todo-sektionen, bollarna och korten") —
+              var tidigare först i panelen. Ingen egen fyllnadsmekanik
+              längre (samma dags uppföljning: "ta bort mellanrummet uppåt
+              och nedåt till navbaren. Allt skall vara synligt på skärmen
+              utan att skrolla") — hugger nu bara till sin egna naturliga
+              höjd, se FamilyCompletedTimeline.css och den
+              #home-panel-todos-scopade min-height-fixen i
+              ParentTodoThreadView.css. */}
           <FamilyCompletedTimeline members={members} todos={allTodos} />
         </article>
       )}

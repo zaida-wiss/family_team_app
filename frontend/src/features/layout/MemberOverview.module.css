@@ -4,29 +4,18 @@
   /* Minimerad (2026-08-09, Zaidas önskemål: "Gör todo listan så att den
      upptar mest plats på skärmen") — var 12px. */
   gap: 8px;
-  /* Fyller minst hela den synliga ytan (2026-08-15, Zaida: flytta "Idag i
-     familjen" sist i Todos-sektionen och låt den uppta mellanrummet ner
-     till navbaren). 32px kompenserar .app-shell-content:s egna 16px padding
-     per sida (layout.css, den enda gemensamma föräldern för alla paneler).
-     border-box (base.css) gör att mobilens padding-bottom:4rem nedan redan
-     räknas in i denna höjd automatiskt — ingen extra subtraktion behövs.
-     Ren golv-egenskap: gör ingenting när innehållet redan är längre än
-     skärmen, ger bara .todosPanel (nedan) något att flex:1-växa in i när
-     det inte är det. */
-  min-height: calc(100dvh - 32px);
-}
-
-/* Todos-fliken specifikt (2026-08-15, samma ändring som ovan) — egen klass
-   istället för på den delade, ostylade "dashboard"-klassen (används även av
-   Inköp/Måltidsplan/Medlemmar-flikarna, som inte ska påverkas). Gör hela
-   panelen till en flex-kolumn som sträcker sig till .home:s fulla höjd, så
-   sista barnet (FamilyCompletedTimeline) kan flex:1-fylla det som blir
-   över. */
-.todosPanel {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  /* min-height: calc(100dvh - 32px) + .todosPanel (flex:1-fyllnad) togs bort
+     igen samma dag (2026-08-15, Zaida: "ta bort mellanrummet uppåt och
+     nedåt till navbaren. Allt skall vara synligt på skärmen utan att
+     skrolla") — den mekaniken sträckte medvetet ut FamilyCompletedTimeline-
+     kortet (och i förlängningen hela panelen) för att FYLLA kvarvarande
+     yta, men den verkliga grundorsaken till gapen var .todo-thread-view:s
+     egen, mycket större min-height (ParentTodoThreadView.css, avsedd för
+     den FRISTÅENDE Todos-panelen som inte har något under sig) — fixad där
+     istället (#home-panel-todos-scopad), se den filens kommentar. Med den
+     fixen och FamilyCompletedTimeline.css:s borttagna flex:1 (samma dag)
+     behövs ingen fyllnadsmekanik längre: allt hugger nu bara till sin egna
+     naturliga höjd, ingen konstgjord sträckning i endera riktningen. */
 }
 
 /* Familjefilter + medlemmar + flikikoner på samma rad (2026-07-31, Zaidas

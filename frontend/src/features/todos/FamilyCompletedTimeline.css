@@ -10,14 +10,12 @@
 .family-completed-timeline {
   display: flex;
   flex-direction: column;
-  /* flex:1 (2026-08-15, "sektionen skall... uppta det mellanrum som idag
-     finns mellan todosektionen och navbar") — växer in i det extra utrymme
-     .todosPanel/.home ger den (se MemberOverview.module.css) när
-     todo-listan ovanför är kort nog att lämna tomrum, utan effekt när den
-     redan är längre än skärmen. Inget min-height-golv längre (samma
-     ändring som tog bort tidslinjen) — innehållet (en enkel ikonlista) ska
-     inte tvingas ta mer plats än det själv behöver.  */
-  flex: 1;
+  /* Inget flex:1/min-height längre (2026-08-15, uppföljning samma dag:
+     "ta bort mellanrummet uppåt och nedåt till navbaren. Allt skall vara
+     synligt på skärmen utan att skrolla") — kortet hugger nu bara till sin
+     egna naturliga höjd (ikonlistan), sträcker sig inte längre för att
+     fylla kvarvarande sidutrymme, se MemberOverview.module.css:s samma
+     dags borttagna .todosPanel-mekanik. */
   padding: clamp(10px, 1.5vw, 16px);
   border: 2px solid color-mix(in srgb, var(--c1, #ffffff) 42%, transparent);
   border-radius: 20px;
