@@ -106,13 +106,20 @@ export async function setCategoryHidden(id: string, accountId: string, memberId:
 // familjekategorier visas redan kontobrett, ingen ägarfiltrering.
 //
 // PERSONLIGA samlingskategorin (isFamily:false) är däremot EN PER MEDLEM
-// (scopead på memberId, alltid namngiven "Mina uppgifter") — till skillnad
-// från familjekategorier filtrerar ParentTodoThreadView.tsx:s kolumner
-// personliga kategorier på `category.memberId === currentMember.id` (för
-// att inte visa andra vuxnas tomma kategorier som klutter, se
-// "myCategories" i ParentTodoThreadView.tsx). En delad, kontobred "Mina
-// uppgifter" hade alltså bara synts för den som råkade skapa den först —
-// varje vuxen behöver sin EGEN.
+// (scopead på memberId) — till skillnad från familjekategorier filtrerar
+// ParentTodoThreadView.tsx:s kolumner personliga kategorier på
+// `category.memberId === currentMember.id` (för att inte visa andra
+// vuxnas tomma kategorier som klutter, se "myCategories" i
+// ParentTodoThreadView.tsx). En delad, kontobred kategori hade alltså bara
+// synts för den som råkade skapa den först — varje vuxen behöver sin EGEN.
+//
+// Namnet (2026-08-14, Zaidas beslut vid utökningen till "alltid en
+// kategori", se CLAUDE.md-historiken) är numera kontots namn för BÅDA
+// varianterna (t.ex. "Familjen Wiss Kolmodin") — tidigare hette den
+// personliga varianten alltid bokstavligen "Mina uppgifter". Att en vuxen
+// kan vara medlem i FLERA familjekonton (Mina familjekonton) gör
+// kontonamnet nödvändigt för att skilja åt vilken familjs samlingskategori
+// man tittar på, exakt samma skäl som familjevarianten redan hade.
 export async function getOrCreateUncategorizedCollector(accountId: string, memberId: string, isFamily: boolean) {
   const existing = await TodoCategoryModel.findOne({
     accountId,
@@ -123,11 +130,8 @@ export async function getOrCreateUncategorizedCollector(accountId: string, membe
   });
   if (existing) return existing;
 
-  let name = "Mina uppgifter";
-  if (isFamily) {
-    const account = await AccountModel.findOne({ id: accountId });
-    name = account?.name ?? "Familjen";
-  }
+  const account = await AccountModel.findOne({ id: accountId });
+  const name = account?.name ?? "Familjen";
   const category = await TodoCategoryModel.create({
     id: `todo-category-${crypto.randomUUID()}`,
     accountId,

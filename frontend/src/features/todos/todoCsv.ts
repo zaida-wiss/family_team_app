@@ -55,13 +55,16 @@ export const TODO_CSV_HEADERS = [
   "Slutar",
   // Familj (2026-08-06, Zaidas önskemål: "gör det tydligare i mallen och
   // import och export vilken familj uppgiften tillhör. Om det står tomt
-  // där så tillhör den kontoinnehavaren själv") — REN VISNING, ingen ny
-  // import-mekanik: en tom cell betyder alltid ditt eget konto (den enda
-  // möjligheten för en rad du själv importerar), en ifylld cell (bara
-  // förekommande på exporterade rader från "Andra familjer" — Mina
-  // familjekonton/Familjeanslutningar) visar VILKEN annan familj raden hör
-  // till. parseTodoCsv läser aldrig denna kolumn — precis som Skapad/Ändrad
-  // är den bara till för att göra en export/mall självförklarande.
+  // där så tillhör den kontoinnehavaren själv") — en tom cell betyder alltid
+  // ditt eget konto (den enda möjligheten för en rad du själv importerar),
+  // en ifylld cell (bara förekommande på exporterade rader från "Andra
+  // familjer" — Mina familjekonton/Familjeanslutningar) visar VILKEN annan
+  // familj raden hör till. UPPDATERAD 2026-08-08 (Zaidas önskemål: "om det
+  // står en familj jag är med i... då innebär det att den inte skall vara
+  // min egen todo, utan just den familjens todo") — till skillnad från
+  // Skapad/Ändrad LÄSER parseTodoCsv numera denna kolumn (se familyCol/
+  // targetFamily nedan): en ifylld cell som matchar ett känt familjekonto
+  // routar hela raden dit istället för till importörens eget konto.
   "Familj",
   "Tilldelad",
   "Id",

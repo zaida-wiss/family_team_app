@@ -177,6 +177,28 @@ export function TodoCreatorModal({
   const [submitting, setSubmitting] = useState(false);
 
   const isForChild = assigneeIds.some(isRecipientChild);
+  // "Ingen kategori" döljs för vuxen-tilldelade uppgifter (2026-08-14, Zaidas
+  // beslut) — backend (resolvePersonalCategoryId, todosService.ts) ger ändå
+  // automatiskt en fallback-kategori åt varje vuxen-tilldelad uppgift utan
+  // vald kategori, så valet vore missvisande där. Familjen/barn-mottagare
+  // rörs inte av fallbacken (assignedTo===null resp. isChildMemberId, se
+  // samma fil) — "Ingen kategori" förblir därför ett giltigt, verkligt val
+  // så fort NÅGON av de valda mottagarna är Familjen eller ett barn. Finns
+  // det ännu inga egna kategorier alls syns valet oavsett — annars blir
+  // dropdownen bara "+ Ny kategori…", vilket hade tvingat fram en manuell
+  // kategori varje gång istället för att låta backend-fallbacken sköta det.
+  const personalCategories = categories.filter((c) => !c.isFamily);
+  const showNoCategoryOption =
+    personalCategories.length === 0 ||
+    assigneeIds.length === 0 ||
+    assigneeIds.some((id) => id === FAMILY_VALUE || isRecipientChild(id));
+
+  useEffect(() => {
+    if (!showNoCategoryOption && selectedCategoryId === NO_CATEGORY_VALUE) {
+      setSelectedCategoryId(personalCategories[0]?.id ?? NO_CATEGORY_VALUE);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNoCategoryOption]);
 
   // Rekommenderad ikon åt barnet (2026-07-08, Zaidas önskemål) — föreslår en
   // passande emoji utifrån titeln så fort minst ett barn är valt, så länge
@@ -556,8 +578,8 @@ export function TodoCreatorModal({
               onChange={(e) => setSelectedCategoryId(e.target.value)}
               value={selectedCategoryId}
             >
-              <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
-              {categories.filter((category) => !category.isFamily).map((category) => (
+              {showNoCategoryOption && <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>}
+              {personalCategories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>

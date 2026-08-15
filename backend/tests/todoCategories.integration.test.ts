@@ -303,10 +303,12 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
 
   // 2026-08-06, Zaidas rättelse: "detsamma gäller i min egen todo-vy.
   // Okategoriserade uppgifter skall skapa 'Mina uppgifter'" — samma riktiga,
-  // auto-skapade samlingskategori-mekanism som familjevyn, bara alltid
-  // namngiven "Mina uppgifter" och scopead PER MEDLEM (till skillnad från
-  // familjens EN delade per konto) — se getOrCreateUncategorizedCollector.
-  it("radera en PERSONLIG kategori med en uppgift: en samlingskategori 'Mina uppgifter' skapas automatiskt, uppgiften flyttas dit", async () => {
+  // auto-skapade samlingskategori-mekanism som familjevyn, scopead PER
+  // MEDLEM (till skillnad från familjens EN delade per konto) — se
+  // getOrCreateUncategorizedCollector. Namnet (2026-08-14, se samma
+  // funktions kommentar) är numera kontots namn, precis som familjevarianten
+  // redan hade — inte längre bokstavligen "Mina uppgifter".
+  it("radera en PERSONLIG kategori med en uppgift: en samlingskategori (namngiven efter kontot) skapas automatiskt, uppgiften flyttas dit", async () => {
     const category = await request(app)
       .post("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -337,7 +339,7 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
     const personalCollector = (list.body as Array<{ id: string; name: string; isFamily: boolean; memberId: string; isUncategorizedCollector?: boolean }>)
       .find((c) => c.isUncategorizedCollector && !c.isFamily);
     expect(personalCollector).toBeDefined();
-    expect(personalCollector?.name).toBe("Mina uppgifter");
+    expect(personalCollector?.name).toBe(accountName);
     expect(personalCollector?.memberId).toBe(memberId);
 
     const todos = await request(app)
@@ -352,7 +354,7 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
   // skapat en uppgift i den. Var och en ska få sin EGEN "Mina uppgifter",
   // inte dela en gemensam (annars hade den bara synts för en av dem, se
   // getOrCreateUncategorizedCollector:s kommentar om memberId-scopning).
-  it("radera en PERSONLIG kategori med uppgifter skapade av TVÅ olika vuxna: var och en får sin EGEN 'Mina uppgifter'", async () => {
+  it("radera en PERSONLIG kategori med uppgifter skapade av TVÅ olika vuxna: var och en får sin EGEN samlingskategori", async () => {
     const roles = await request(app)
       .get("/api/roles")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -580,10 +582,15 @@ describe.skipIf(!RUN)("deleteCategory: uppgifter blir okategoriserade, familjeka
 
 // 2026-08-06, Zaidas önskemål: "Okategoriserade uppgifter skall skapa 'Mina
 // uppgifter'" — gäller inte bara kategoriradering (se ovan) utan även en
-// helt vanlig skapelse/redigering där "Ingen kategori" väljs, det vanligaste
-// sättet en uppgift faktiskt blir okategoriserad på (TodoCreatorModal.tsx:s
-// "Ingen kategori"-val är en förstklassig, alltid tillgänglig knapp).
-describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgift löser sig direkt till 'Mina uppgifter'", () => {
+// helt vanlig skapelse/redigering utan vald kategori. UPPDATERAD 2026-08-14
+// (se todoCategoriesService.ts:s getOrCreateUncategorizedCollector-kommentar)
+// — "Ingen kategori" är inte längre en förstklassig, alltid synlig knapp i
+// TodoCreatorModal.tsx/TodoEditModal.tsx för en vuxen mottagare (backend
+// löser ändå om till samma samlingskategori oavsett), men resolvern här i
+// backend är oförändrad — testerna nedan verifierar fortfarande att servern
+// själv aldrig lämnar en vuxen-tilldelad uppgift kategorilös, oavsett vad en
+// klient råkar skicka.
+describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgift löser sig direkt till en auto-skapad samlingskategori", () => {
   beforeAll(async () => {
     await connectDB();
   });
@@ -596,6 +603,7 @@ describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgif
   let accessToken: string;
   let memberId: string;
   let childMemberId: string;
+  const accountName = "Skaparfamiljen";
 
   it("sätter upp konto + ett barn", async () => {
     const register = await request(app)
@@ -605,7 +613,7 @@ describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgif
     const setup = await request(app)
       .post("/api/accounts/setup")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ name: "Skaparfamiljen" });
+      .send({ name: accountName });
     memberId = (setup.body as { membership: { member: { id: string } } }).membership.member.id;
 
     const roles = await request(app)
@@ -621,7 +629,7 @@ describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgif
     childMemberId = (child.body as { id: string }).id;
   });
 
-  it("skapar en personlig uppgift utan personalCategoryId: löses direkt till en auto-skapad 'Mina uppgifter'", async () => {
+  it("skapar en personlig uppgift utan personalCategoryId: löses direkt till en auto-skapad samlingskategori", async () => {
     const todoId = `todo-create-uncategorized-${crypto.randomUUID()}`;
     const create = await request(app)
       .post("/api/todos")
@@ -647,7 +655,7 @@ describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgif
     const collector = (list.body as Array<{ id: string; name: string; isUncategorizedCollector?: boolean }>)
       .find((c) => c.isUncategorizedCollector);
     expect(collector).toBeDefined();
-    expect(collector?.name).toBe("Mina uppgifter");
+    expect(collector?.name).toBe(accountName);
     expect(todo?.personalCategoryId).toBe(collector!.id);
   });
 
@@ -670,7 +678,7 @@ describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgif
     expect(todo?.personalCategoryId).toBeNull();
   });
 
-  it("en BARN-tilldelad uppgift rörs INTE — förblir null, aldrig omdirigerad till en vuxens 'Mina uppgifter'", async () => {
+  it("en BARN-tilldelad uppgift rörs INTE — förblir null, aldrig omdirigerad till en vuxens samlingskategori", async () => {
     const todoId = `todo-create-child-${crypto.randomUUID()}`;
     await request(app)
       .post("/api/todos")
@@ -689,7 +697,7 @@ describe.skipIf(!RUN)("createTodo/updateTodo: en okategoriserad personlig uppgif
     expect(todo?.personalCategoryId).toBeNull();
   });
 
-  it("redigerar en kategoriserad uppgift till 'Ingen kategori': löses om till 'Mina uppgifter' istället för att bli null", async () => {
+  it("redigerar en kategoriserad uppgift till 'Ingen kategori': löses om till samlingskategorin istället för att bli null", async () => {
     const category = await request(app)
       .post("/api/todo-categories")
       .set("Authorization", `Bearer ${accessToken}`)

@@ -182,6 +182,21 @@ export function TodoEditModal({
         : seriesSource.assignedTo
   );
   const isForChild = isRecipientChild(assigneeId);
+  // "Ingen kategori" döljs för vuxen-tilldelade uppgifter (2026-08-14, samma
+  // beslut/motivering som TodoCreatorModal.tsx) — familyScope/barn/Familjen
+  // rörs inte av backendens fallback-kategori, så valet förblir meningsfullt
+  // där. Håller alltid kvar valet om det inte finns någon annan kategori att
+  // välja i det aktuella scopet (annars bara "+ Ny kategori…" kvar).
+  const categoriesInScope = categories.filter((category) => Boolean(category.isFamily) === familyScope);
+  const showNoCategoryOption =
+    familyScope || isForChild || assigneeId === FAMILY_VALUE || categoriesInScope.length === 0;
+
+  useEffect(() => {
+    if (!showNoCategoryOption && selectedCategoryId === NO_CATEGORY_VALUE) {
+      setSelectedCategoryId(categoriesInScope[0]?.id ?? NO_CATEGORY_VALUE);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNoCategoryOption]);
   // Sträng, inte tal (2026-07-07-fix) — se samma resonemang i TodoCreatorModal.tsx.
   const [starValueInput, setStarValueInput] = useState(String(seriesSource.starValue));
   const starValue = Math.max(0, Math.floor(Number(starValueInput)) || 0);
@@ -636,9 +651,8 @@ export function TodoEditModal({
               onChange={(e) => setSelectedCategoryId(e.target.value)}
               value={selectedCategoryId}
             >
-              <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>
-              {categories
-                .filter((category) => Boolean(category.isFamily) === familyScope)
+              {showNoCategoryOption && <option value={NO_CATEGORY_VALUE}>Ingen kategori</option>}
+              {categoriesInScope
                 .filter(
                   (category) =>
                     !familyScope ||

@@ -104,7 +104,22 @@ async function switchToListViewInSettings(page: import("@playwright/test").Page)
 // vill det gör ett eget selectOption tillbaka till "+ Ny kategori…").
 async function openCreateModalFromMyTasksThread(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Ny kategori" }).click();
-  await page.getByRole("dialog").getByRole("combobox", { name: "Kategori" }).selectOption({ label: "Ingen kategori" });
+  const categorySelect = page.getByRole("dialog").getByRole("combobox", { name: "Kategori" });
+  // Knappen öppnar modalen direkt i "+Ny kategori…"-läge (se kommentaren
+  // ovanför denna funktion) — de flesta test bryr sig inte om att skapa en
+  // kategori, så väljaren nollställs bort från det. "Ingen kategori" döljs
+  // numera (2026-08-14) när mottagaren redan är en vuxen OCH det finns
+  // riktiga kategorier att välja bland istället — backend ger ändå
+  // automatiskt en fallback-kategori, se TodoCreatorModal.tsx:s
+  // showNoCategoryOption. Finns valet, använd det; annars räcker det att
+  // peka om till den FÖRSTA riktiga kategorin (index 0 — "Ingen kategori"
+  // ligger alltid först när den syns, så index 0 är annars den första
+  // riktiga kategorin), bara "+Ny kategori…"-läget ska undvikas.
+  if (await categorySelect.locator('option[value="__none__"]').count()) {
+    await categorySelect.selectOption({ label: "Ingen kategori" });
+  } else {
+    await categorySelect.selectOption({ index: 0 });
+  }
 }
 
 async function openCreateModalFromCategoryThread(page: import("@playwright/test").Page, categoryLabel: string) {
