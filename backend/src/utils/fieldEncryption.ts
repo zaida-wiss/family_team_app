@@ -27,8 +27,19 @@ function requireMasterKey(): Buffer {
 
 const MASTER_KEY = requireMasterKey();
 
+// Härledningen är deterministisk (samma accountId + MASTER_KEY ger alltid
+// samma nyckel) — cachas i processminnet så att t.ex. en todo-lista med
+// hundratals krypterade fält (titel/anteckningar/delmomentstitlar) inte gör
+// om samma synkrona hkdfSync-anrop en gång per fält. Ingen TTL/invalidering
+// behövs: MASTER_KEY är oföränderlig under processens livstid.
+const accountKeyCache = new Map<string, Buffer>();
+
 function deriveAccountKey(accountId: string): Buffer {
-  return Buffer.from(hkdfSync("sha256", MASTER_KEY, Buffer.alloc(0), accountId, 32));
+  const cached = accountKeyCache.get(accountId);
+  if (cached) return cached;
+  const key = Buffer.from(hkdfSync("sha256", MASTER_KEY, Buffer.alloc(0), accountId, 32));
+  accountKeyCache.set(accountId, key);
+  return key;
 }
 
 // Versionsprefixad lagringssträng (v1:<iv>:<authTag>:<ciphertext>, alla base64) i
