@@ -1,19 +1,46 @@
+/* Samma visuella språk som barnens ChildTimeline.css (2026-08-15, Zaida:
+   "denna sektion skall vara lika snygg som timeline i dashboarden. Små
+   ikoner som samlas i tidslinjen. Samma storlek, samma utseende") — samma
+   färgade gradient-formel (--c0…--c4, temats egna toner, fungerar i alla
+   teman/ljus/mörkt läge eftersom variablerna sätts globalt i themes.css),
+   samma ljusa textfärg (--on-c4), samma små, blekta, kant-/bakgrundslösa
+   punktikoner som .child-tl-reward-pin--done — bara vågrät istället för
+   lodrät. */
 .family-completed-timeline {
-  margin-bottom: clamp(10px, 1.5vw, 16px);
-  padding: clamp(10px, 1.5vw, 14px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  /* flex:1 (2026-08-15, uppföljning: "sektionen skall... uppta det
+     mellanrum som idag finns mellan todosektionen och navbar") — växer in i
+     det extra utrymme .todosPanel/.home ger den (se MemberOverview.module.css)
+     när todo-listan ovanför är kort nog att lämna tomrum, utan effekt när
+     den redan är längre än skärmen. min-height är ett golv, inte ett tak. */
+  flex: 1;
+  min-height: 200px;
+  padding: clamp(10px, 1.5vw, 16px);
+  border: 2px solid color-mix(in srgb, var(--c1, #ffffff) 42%, transparent);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--c1, #ffffff) 38%, transparent), transparent 34%),
+    radial-gradient(circle at 12% 88%, color-mix(in srgb, var(--c2, #ffffff) 28%, transparent), transparent 38%),
+    linear-gradient(160deg, var(--c4, #111111), color-mix(in srgb, var(--c0, #333333) 56%, var(--black, #000000)));
+  color: var(--on-c4, #ffffff);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--black, #000000) 20%, transparent);
 }
 
 .family-completed-timeline__heading {
   margin: 0 0 8px;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--foreground);
+  color: var(--on-c4, #ffffff);
+}
+
+.family-completed-timeline .empty-note {
+  color: color-mix(in srgb, var(--on-c4, #ffffff) 75%, transparent);
 }
 
 .family-completed-timeline__scroll {
+  flex: 1;
+  min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -21,33 +48,65 @@
 .family-completed-timeline__track {
   position: relative;
   min-width: 480px;
+  height: 100%;
   /* Rum för flera staplade ikoner i samma tidsfack (pinPositionsHorizontal,
-     ROW_STEP_PX 34px) utan att klippas av scroll-behållarens overflow. */
-  height: 160px;
-  border-top: 1px dashed var(--border);
+     ROW_STEP_PX 34px) utan att klippas — golv, inte tak, nu när tracket
+     flex-fyller kortet istället för en fast höjd. */
+  min-height: 160px;
 }
 
 .family-completed-timeline__hour {
   position: absolute;
   top: 0;
-  font-size: 0.7rem;
-  color: var(--muted-fg);
+  /* Fallback för webbläsare utan color-mix()-stöd — ogiltig deklaration ignoreras. */
+  color: var(--on-c4, #ffffff);
+  color: color-mix(in srgb, var(--on-c4, #ffffff) 82%, var(--c2, #ffffff));
+  font-size: clamp(0.72rem, 1.1vw, 0.9rem);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.family-completed-timeline__now {
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  z-index: 8;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--c3, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3, #fff) 14%, transparent);
+  pointer-events: none;
+}
+
+.family-completed-timeline__now::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c3, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c3, #fff) 20%, transparent);
+  transform: translate(-50%, -50%);
 }
 
 .family-completed-timeline__icon {
   position: absolute;
-  top: 18px;
+  /* top sätts alltid inline (pos.top från pinPositionsHorizontal, staplar
+     krockande ikoner i samma tidsfack) — ingen CSS-fallback behövs här. */
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--icon-accent, var(--primary)) 18%, var(--card));
-  border: 1.5px solid color-mix(in srgb, var(--icon-accent, var(--primary)) 55%, transparent);
-  font-size: 1.15rem;
+  /* Samma storleksformel som ChildTimeline.css:s .child-tl-reward-pin--done
+     (avklarade uppdrag där) — "samma storlek, samma utseende", bara vågrät.
+     Opacitet något högre (0.8 mot 0.65) eftersom ikonerna HÄR är sektionens
+     enda innehåll, inte en sekundär lager ovanpå en redan fullmatad
+     kalendervy. */
+  font-size: clamp(0.65rem, 1.2vw, 1.1rem);
   line-height: 1;
+  opacity: 0.8;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
   cursor: default;
 }

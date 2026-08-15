@@ -24,6 +24,11 @@ export function FamilyCompletedTimeline({ todos, members }: Props) {
     DEFAULT_TIMELINE_RANGE
   );
 
+  const now = new Date();
+  const nowMinute = now.getHours() * 60 + now.getMinutes();
+  const showNow = nowMinute >= DEFAULT_TIMELINE_RANGE.startMinute && nowMinute <= DEFAULT_TIMELINE_RANGE.endMinute;
+  const nowPct = ((nowMinute - DEFAULT_TIMELINE_RANGE.startMinute) / (DEFAULT_TIMELINE_RANGE.endMinute - DEFAULT_TIMELINE_RANGE.startMinute)) * 100;
+
   return (
     <section aria-label="Familjens avklarade idag" className="family-completed-timeline">
       <h3 className="family-completed-timeline__heading">Idag i familjen</h3>
@@ -50,6 +55,11 @@ export function FamilyCompletedTimeline({ todos, members }: Props) {
                 </span>
               );
             })}
+
+            {showNow && (
+              <div aria-hidden="true" className="family-completed-timeline__now" style={{ left: `${nowPct}%` }} />
+            )}
+
             {items.map((item) => {
               const pos = positions.get(item.id);
               if (!pos) return null;
@@ -58,11 +68,12 @@ export function FamilyCompletedTimeline({ todos, members }: Props) {
                 <div
                   className="family-completed-timeline__icon"
                   key={item.id}
-                  style={{
-                    left: pos.left,
-                    top: pos.top,
-                    ...(assignee?.color ? { "--icon-accent": assignee.color } : {})
-                  }}
+                  // +24px (2026-08-15) — pos.top är bara STAPLINGSordning
+                  // inom samma tidsfack (0px, 34px, …), inte en kronologisk
+                  // Y-position som i den lodräta pinPositions — utan offset
+                  // hamnar den första ikonen i varje fack exakt på samma
+                  // rad som timmarkeringarna (top:0), rakt ovanpå siffrorna.
+                  style={{ left: pos.left, top: `calc(${pos.top} + 24px)` }}
                   title={`${item.title} — ${assignee?.name ?? "Familjen"}, ${fmtTime(item.completedAt)}`}
                 >
                   <span aria-hidden="true">{item.emoji ?? "✅"}</span>
