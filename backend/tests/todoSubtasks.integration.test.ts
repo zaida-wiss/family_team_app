@@ -88,8 +88,14 @@ describe.skipIf(!RUN)("Todo-delmoment", () => {
       .send({});
     expect(toggle.status).toBe(200);
     // timerStartedAt tillkom 2026-07-25 (ADR-0028, recept-integrationen) —
-    // null här eftersom detta delmoment saknar timedMinutes.
-    expect(toggle.body).toEqual({ done: true, timerStartedAt: null });
+    // null här eftersom detta delmoment saknar timedMinutes. completedAt
+    // tillkom 2026-08-12 (FamilyCompletedTimeline) — en riktig tidsstämpel
+    // eftersom delmomentet just nu bockas av.
+    expect(toggle.body).toEqual({
+      done: true,
+      timerStartedAt: null,
+      completedAt: expect.any(String)
+    });
 
     const list = await request(app)
       .get("/api/todos")
@@ -109,7 +115,8 @@ describe.skipIf(!RUN)("Todo-delmoment", () => {
       .set("x-member-id", memberId)
       .send({});
     expect(toggle.status).toBe(200);
-    expect(toggle.body).toEqual({ done: false, timerStartedAt: null });
+    // completedAt nollställs igen när delmomentet togglas tillbaka.
+    expect(toggle.body).toEqual({ done: false, timerStartedAt: null, completedAt: null });
   });
 
   it("404 om delmomentet inte finns", async () => {

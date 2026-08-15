@@ -79,22 +79,29 @@ async function mockCommon(page: import("@playwright/test").Page) {
 test("Bara mina kalendrar-snabbknappen döljer delade kalendrar, Visa alla återställer", async ({ page }) => {
   await mockCommon(page);
 
+  // Samma händelse renderas både som en månadsvy-pill OCH en radtext i
+  // listläget samtidigt — getByText matchar då båda och Playwright kastar
+  // ett strict-mode-fel. Scopat till pillen (samma mönster som redan
+  // används i calendar-event-symbol.spec.ts) ger en entydig lokator.
+  const ownPill = page.locator(".cal-event-pill[title='Mitt eget möte']");
+  const sharedPill = page.locator(".cal-event-pill[title='Lars tandläkarbesök']");
+
   await page.goto("/");
   await page.getByRole("button", { name: "Kalender", exact: true }).click();
 
-  await expect(page.getByText("Mitt eget möte")).toBeVisible();
-  await expect(page.getByText("Lars tandläkarbesök")).toBeVisible();
+  await expect(ownPill).toBeVisible();
+  await expect(sharedPill).toBeVisible();
 
   await page.getByRole("button", { name: "Filtrera kalendrar" }).click();
   await page.getByRole("button", { name: "Bara mina kalendrar" }).click();
 
-  await expect(page.getByText("Mitt eget möte")).toBeVisible();
-  await expect(page.getByText("Lars tandläkarbesök")).not.toBeVisible();
+  await expect(ownPill).toBeVisible();
+  await expect(sharedPill).not.toBeVisible();
 
   await page.getByRole("button", { name: "Visa alla" }).click();
 
-  await expect(page.getByText("Mitt eget möte")).toBeVisible();
-  await expect(page.getByText("Lars tandläkarbesök")).toBeVisible();
+  await expect(ownPill).toBeVisible();
+  await expect(sharedPill).toBeVisible();
 });
 
 test("Bara mina kalendrar-knappen syns inte om jag inte har några delade kalendrar", async ({ page }) => {
