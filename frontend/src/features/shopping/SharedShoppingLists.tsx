@@ -9,6 +9,13 @@ import type { Id, Member } from "@shared/types";
 
 type Props = {
   currentMember: Member;
+  // Hem-vyns familjefilter (2026-08-16, Zaidas fynd: "där ska inga andra
+  // familjers listor synas om t.ex. det är 'wiss Kolmodin' som är vald att
+  // visas") — en lista delad med mig FRÅN en annan familj (ADR-0026) visades
+  // tidigare alltid, oavsett vilken familj som var vald i Hem-vyns filter
+  // ovanför. "all" = ingen filtrering, samma "Alla familjer"-betydelse som
+  // MemberOverview.tsx:s egen filteredShoppingLists.
+  selectedFamilyId: Id | "all";
 };
 
 function ListIcon({ icon }: { icon: string | null }) {
@@ -24,11 +31,14 @@ function ListIcon({ icon }: { icon: string | null }) {
 // SharedChildrenThreads.tsx (ADR-0024): en delad lista hör inte till mitt
 // eget kontos vanliga sharedWith/dela-flöde, och listan/dess ägare kan
 // inte hanteras härifrån.
-export function SharedShoppingLists({ currentMember }: Props) {
+export function SharedShoppingLists({ currentMember, selectedFamilyId }: Props) {
   const { sharedLists, addItem, toggleItem, removeItem } = useSharedShoppingLists();
   const [draftItems, setDraftItems] = useState<Record<Id, string>>({});
 
-  if (sharedLists.length === 0) return null;
+  const visibleLists =
+    selectedFamilyId === "all" ? sharedLists : sharedLists.filter((entry) => entry.list.accountId === selectedFamilyId);
+
+  if (visibleLists.length === 0) return null;
 
   function submitAdd(listId: Id, listAccountId: Id) {
     const title = draftItems[listId]?.trim();
@@ -48,7 +58,7 @@ export function SharedShoppingLists({ currentMember }: Props) {
 
   return (
     <div className="dashboard-list">
-      {sharedLists.map(({ list, access }) => {
+      {visibleLists.map(({ list, access }) => {
         const activeItems = list.items.filter((i) => i.deletedAt === null);
         const editable = access === "edit";
 

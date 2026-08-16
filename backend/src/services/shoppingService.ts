@@ -109,6 +109,70 @@ export async function createCrossAccountShoppingList(callerUserId: string, targe
   return createList(data, targetAccountId, memberInTarget.id);
 }
 
+// Redigera VAROR i en lista som tillhör ETT AV MINA ANDRA konton
+// (2026-08-16, Zaidas önskemål: "Listor måste gå att redigera i familjens
+// listvy"). Medvetet INTE requireEditAccess/canEditSharedResource (som
+// getCrossAccountShoppingLists ovan redan valde bort för LÄSNING, samma
+// "hela familjen delar"-resonemang) — den kontrollen jämför resource.ownerId/
+// sharedWith mot memberId, och min medlems-id i MÅLKONTOT är en helt annan
+// post än currentMember.id i mitt EGET konto, så en sådan koll hade
+// felaktigt nekat mig redigering av listor jag (i mitt andra konto) äger.
+// Bara ett genuint medlemskap + canEditShoppingLists-behörighet i
+// MÅLKONTOT krävs, samma bar som createCrossAccountShoppingList ovan.
+async function requireCrossAccountEditAccess(callerUserId: string, targetAccountId: string) {
+  const member = await MemberModel.findOne({ userId: callerUserId, accountId: targetAccountId, deletedAt: null });
+  if (!member) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  const roles = await getAllRoles(targetAccountId);
+  if (!hasPermission(member, roles, "canEditShoppingLists")) {
+    throw new AppError(403, "Åtkomst nekad");
+  }
+  return member;
+}
+
+export async function addCrossAccountItem(callerUserId: string, targetAccountId: string, listId: string, item: unknown) {
+  const member = await requireCrossAccountEditAccess(callerUserId, targetAccountId);
+  const list = await ShoppingListModel.findOne({ id: listId, accountId: targetAccountId });
+  if (!list) {
+    throw new AppError(404, "Inköpslista hittades inte");
+  }
+  const validated = ShoppingItemSchema.parse(item);
+  list.items.push({ ...validated, createdBy: member.id } as any);
+  await list.save();
+}
+
+export async function toggleCrossAccountItem(callerUserId: string, targetAccountId: string, listId: string, itemId: string) {
+  await requireCrossAccountEditAccess(callerUserId, targetAccountId);
+  const list = await ShoppingListModel.findOne({ id: listId, accountId: targetAccountId });
+  if (!list) {
+    throw new AppError(404, "Inköpslista hittades inte");
+  }
+  const item = list.items.find((i) => i.id === itemId);
+  if (!item) {
+    throw new AppError(404, "Vara hittades inte");
+  }
+  item.done = !item.done;
+  list.markModified("items");
+  await list.save();
+}
+
+export async function deleteCrossAccountItem(callerUserId: string, targetAccountId: string, listId: string, itemId: string) {
+  const member = await requireCrossAccountEditAccess(callerUserId, targetAccountId);
+  const list = await ShoppingListModel.findOne({ id: listId, accountId: targetAccountId });
+  if (!list) {
+    throw new AppError(404, "Inköpslista hittades inte");
+  }
+  const item = list.items.find((i) => i.id === itemId);
+  if (!item) {
+    throw new AppError(404, "Vara hittades inte");
+  }
+  item.deletedAt = new Date().toISOString();
+  item.deletedBy = member.id;
+  list.markModified("items");
+  await list.save();
+}
+
 export async function addItem(listId: string, accountId: string, memberId: string, item: unknown) {
   const list = await ShoppingListModel.findOne({ id: listId, accountId });
   if (!list) {

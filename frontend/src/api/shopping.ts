@@ -55,6 +55,22 @@ export const shoppingApi = {
       method: "POST",
       body: JSON.stringify(list)
     }),
+  // Redigera VAROR i en lista i ett av mina andra konton (2026-08-16, se
+  // shopping/:id/items ovan för motsvarande i mitt eget konto).
+  addCrossAccountItem: (targetAccountId: string, listId: string, item: ShoppingList["items"][number]) =>
+    request<{ ok: boolean }>(api(`shopping/cross-account/${targetAccountId}/${listId}/items`), {
+      method: "POST",
+      body: JSON.stringify(item)
+    }),
+  toggleCrossAccountItem: (targetAccountId: string, listId: string, itemId: string) =>
+    request<{ ok: boolean }>(api(`shopping/cross-account/${targetAccountId}/${listId}/items/${itemId}/toggle`), {
+      method: "PATCH",
+      body: JSON.stringify({})
+    }),
+  removeCrossAccountItem: (targetAccountId: string, listId: string, itemId: string) =>
+    request<{ ok: boolean }>(api(`shopping/cross-account/${targetAccountId}/${listId}/items/${itemId}`), {
+      method: "DELETE"
+    }),
   create: (list: ShoppingList) =>
     request<{ id: string }>(api("shopping"), { method: "POST", body: JSON.stringify(list) }),
   addItem: (listId: string, item: ShoppingList["items"][number]) =>

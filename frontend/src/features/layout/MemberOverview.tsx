@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, Check, CheckSquare, Plus, Settings, ShoppingCart, Upload, User, UtensilsCrossed, Users } from "lucide-react";
+import type { ClipboardEvent } from "react";
+import { CalendarDays, Check, CheckSquare, Plus, Settings, ShoppingCart, Trash2, Upload, User, UtensilsCrossed, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -10,6 +11,7 @@ import type { FamilyThreadSource } from "../todos/FamilyTodoThreads";
 import { SharedChildrenThreads } from "../todos/SharedChildrenThreads";
 import { SharedCategoryThreads } from "../todos/SharedCategoryThreads";
 import { SharedShoppingLists } from "../shopping/SharedShoppingLists";
+import { splitPastedShoppingItems } from "../shopping/parseShoppingPaste";
 import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { FamilyCompletedTimeline } from "../todos/FamilyCompletedTimeline";
@@ -21,6 +23,7 @@ import type {
   Todo, TodoCategory, TodoThreadRange
 } from "@shared/types";
 import styles from "./MemberOverview.module.css";
+import shoppingStyles from "../shopping/ShoppingLists.module.css";
 
 // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
 // familj, då vill jag att endast den familjens kalenderhändelser, todos och
@@ -102,6 +105,16 @@ type Props = {
   // göra inköpslistor i familjer man inte är medlem i").
   onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
   shoppingCreatableFamilyAccountIds?: Set<Id>;
+  // Redigerbara varor i familjens listvy (2026-08-16, Zaidas fynd: "Listor
+  // måste gå att redigera i familjens listvy") — samma editable-gräns som
+  // "ny lista"-formuläret ovan (shoppingCreatableFamilyAccountIds: mitt
+  // eget konto + Mina familjekonton, ALDRIG en Familjeanslutning). Tar
+  // hela listan (inte bara dess id) så anroparen (MemberShellContent.tsx)
+  // kan avgöra om list.accountId är mitt eget konto eller ett av mina
+  // andra — och därmed vilken av de två skilda API-vägarna som ska anropas.
+  onToggleHomeShoppingItem?: (list: ShoppingList, itemId: Id) => void;
+  onAddHomeShoppingItem?: (list: ShoppingList, title: string) => void;
+  onDeleteHomeShoppingItem?: (list: ShoppingList, itemId: Id) => void;
   // Sökruta + "+"-knapp (ny familjekategori) + massimport/export av
   // familjens uppgifter (2026-08-03, Zaidas önskemål: "en sökruta och en
   // plusknapp där jag kan lägga till kategorier och uppgifter... kunna
@@ -177,6 +190,9 @@ export function MemberOverview({
   todoThreadRange = "today",
   onCreateFamilyShoppingList,
   shoppingCreatableFamilyAccountIds,
+  onToggleHomeShoppingItem,
+  onAddHomeShoppingItem,
+  onDeleteHomeShoppingItem,
   members = [],
   categories = [],
   allTodos = [],
@@ -212,6 +228,9 @@ export function MemberOverview({
     setTabResetKey((k) => k + 1);
   }
   const [newListName, setNewListName] = useState("");
+  // Redigerbara varor i familjens listvy (2026-08-16) — draft-text per
+  // lista, samma mönster som SharedShoppingLists.tsx:s egen draftItems.
+  const [homeShoppingDraftItems, setHomeShoppingDraftItems] = useState<Record<Id, string>>({});
   // "+"-knapp (ny familjekategori) + import/export-panel (2026-08-03) — se
   // Props-kommentaren ovan.
   const [addingFamilyCategory, setAddingFamilyCategory] = useState(false);
@@ -661,6 +680,30 @@ export function MemberOverview({
               {activeLists.map((l) => {
                 const activeItems = l.items.filter((i) => i.deletedAt === null);
                 const remaining = activeItems.filter((i) => !i.done).length;
+                // Redigerbara varor (2026-08-16, Zaidas fynd: "Listor måste
+                // gå att redigera i familjens listvy") — samma gräns som
+                // "ny lista"-formuläret ovan: mitt eget konto eller Mina
+                // familjekonton (genuint medlemskap), aldrig en
+                // Familjeanslutning (bara läsbar sammanfattning där).
+                const listAccountId = l.accountId ?? ownAccountId;
+                const editable =
+                  Boolean(onToggleHomeShoppingItem) && (shoppingCreatableFamilyAccountIds?.has(listAccountId) ?? false);
+                const draft = homeShoppingDraftItems[l.id] ?? "";
+
+                function submitAdd() {
+                  const trimmed = draft.trim();
+                  if (!trimmed) return;
+                  onAddHomeShoppingItem?.(l, trimmed);
+                  setHomeShoppingDraftItems((prev) => ({ ...prev, [l.id]: "" }));
+                }
+
+                function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
+                  const items = splitPastedShoppingItems(e.clipboardData.getData("text"));
+                  if (items.length <= 1) return;
+                  e.preventDefault();
+                  items.forEach((title) => onAddHomeShoppingItem?.(l, title));
+                }
+
                 return (
                   <div className={styles.shoppingList} key={l.id}>
                     <header>
@@ -675,11 +718,47 @@ export function MemberOverview({
                     {activeItems.length === 0 ? (
                       <p className="empty-note">Tom lista.</p>
                     ) : (
-                      <ul>
+                      <ul className={shoppingStyles.items}>
                         {activeItems.map((item) => (
-                          <li className={item.done ? styles.shoppingItemDone : ""} key={item.id}>{item.title}</li>
+                          <li className={shoppingStyles.itemRow} key={item.id}>
+                            <span className={`${shoppingStyles.itemLabel}${item.done ? ` ${shoppingStyles.done}` : ""}`}>
+                              <input
+                                aria-label={item.title}
+                                checked={item.done}
+                                disabled={!editable}
+                                onChange={() => onToggleHomeShoppingItem?.(l, item.id)}
+                                type="checkbox"
+                              />
+                              <span>{item.title}</span>
+                            </span>
+                            {editable && (
+                              <button
+                                aria-label={`Ta bort ${item.title}`}
+                                className="icon-button danger"
+                                onClick={() => onDeleteHomeShoppingItem?.(l, item.id)}
+                                type="button"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </li>
                         ))}
                       </ul>
+                    )}
+                    {editable && (
+                      <div className={shoppingStyles.addRow}>
+                        <input
+                          className="text-input"
+                          onChange={(e) => setHomeShoppingDraftItems((prev) => ({ ...prev, [l.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter") submitAdd(); }}
+                          onPaste={handlePaste}
+                          placeholder="Lägg till vara"
+                          value={draft}
+                        />
+                        <button aria-label="Lägg till vara" className="icon-button" onClick={submitAdd} type="button">
+                          <Plus size={16} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
@@ -689,8 +768,11 @@ export function MemberOverview({
 
           {/* En annan familjs delade lista (ADR-0026, externalSharedWith) —
               flyttad hit från Inköp-panelen (2026-08-01, Zaidas rättelse: "de
-              skall endast synas i hemvyn"), oförändrad komponent/logik. */}
-          <SharedShoppingLists currentMember={currentMember} />
+              skall endast synas i hemvyn"), oförändrad komponent/logik.
+              selectedFamilyId (2026-08-16, Zaidas fynd: "där ska inga andra
+              familjers listor synas om t.ex. det är 'wiss Kolmodin' som är
+              vald att visas") — visades tidigare ALLTID oavsett filtret. */}
+          <SharedShoppingLists currentMember={currentMember} selectedFamilyId={selectedFamilyId} />
         </article>
       )}
 

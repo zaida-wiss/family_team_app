@@ -188,7 +188,57 @@ export function useCrossAccountShoppingLists() {
     return shoppingApi.createCrossAccountList(accountId, newList).then(refresh);
   }
 
-  return { groups, createCrossAccountList };
+  // Redigera VAROR i en lista i ett av mina andra konton (2026-08-16, Zaidas
+  // önskemål: "Listor måste gå att redigera i familjens listvy") — samma
+  // optimistiska mönster som SharedShoppingLists.tsx:s useSharedShoppingLists.
+  // createdBy nedan är bara en lokal platshållare (servern sätter alltid om
+  // det till min RIKTIGA medlemspost i målkontot, samma resonemang som
+  // createCrossAccountList ovan) — currentMember.id (mitt EGET kontos
+  // medlems-id) skulle vara fel post i målkontot, men spelar ingen roll
+  // eftersom refresh() synkar det korrekta värdet direkt efteråt.
+  function updateItem(accountId: Id, listId: Id, mutate: (items: ShoppingList["items"]) => ShoppingList["items"]) {
+    setGroups((current) =>
+      current.map((group) =>
+        group.accountId !== accountId
+          ? group
+          : { ...group, lists: group.lists.map((list) => (list.id !== listId ? list : { ...list, items: mutate(list.items) })) }
+      )
+    );
+  }
+
+  function addItem(accountId: Id, listId: Id, title: string, memberId: Id) {
+    const newItem = {
+      id: `shopping-item-${generateId()}`,
+      title,
+      createdBy: memberId,
+      done: false,
+      deletedAt: null,
+      deletedBy: null
+    };
+    updateItem(accountId, listId, (items) => [...items, newItem]);
+    shoppingApi.addCrossAccountItem(accountId, listId, newItem).then(refresh).catch((error) => {
+      console.error(error);
+      refresh();
+    });
+  }
+
+  function toggleItem(accountId: Id, listId: Id, itemId: Id) {
+    updateItem(accountId, listId, (items) => items.map((item) => (item.id === itemId ? { ...item, done: !item.done } : item)));
+    shoppingApi.toggleCrossAccountItem(accountId, listId, itemId).catch((error) => {
+      console.error(error);
+      refresh();
+    });
+  }
+
+  function removeItem(accountId: Id, listId: Id, itemId: Id) {
+    updateItem(accountId, listId, (items) => items.filter((item) => item.id !== itemId));
+    shoppingApi.removeCrossAccountItem(accountId, listId, itemId).catch((error) => {
+      console.error(error);
+      refresh();
+    });
+  }
+
+  return { groups, createCrossAccountList, addItem, toggleItem, removeItem };
 }
 
 // Mina familjekonton — recept (2026-08-01, Zaidas önskemål, för måltids-

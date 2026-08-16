@@ -43,6 +43,25 @@ shoppingRouter.post("/cross-account/:targetAccountId", async (req, res) => {
   res.status(201).json(await shopping.createCrossAccountShoppingList(req.userId!, req.params.targetAccountId, req.body));
 });
 
+// Redigera VAROR i en lista i ett av mina andra konton (2026-08-16, Zaidas
+// önskemål: "Listor måste gå att redigera i familjens listvy"). Fyra
+// segment (targetAccountId/id/items[/itemId]) — kan aldrig kollidera med
+// /:id/items nedan (två segment), ingen registreringsordning krävs.
+shoppingRouter.post("/cross-account/:targetAccountId/:id/items", async (req, res) => {
+  await shopping.addCrossAccountItem(req.userId!, req.params.targetAccountId, req.params.id, req.body);
+  res.status(201).json({ ok: true });
+});
+
+shoppingRouter.patch("/cross-account/:targetAccountId/:id/items/:itemId/toggle", async (req, res) => {
+  await shopping.toggleCrossAccountItem(req.userId!, req.params.targetAccountId, req.params.id, req.params.itemId);
+  res.json({ ok: true });
+});
+
+shoppingRouter.delete("/cross-account/:targetAccountId/:id/items/:itemId", async (req, res) => {
+  await shopping.deleteCrossAccountItem(req.userId!, req.params.targetAccountId, req.params.id, req.params.itemId);
+  res.json({ ok: true });
+});
+
 // Delning mellan FAMILJER (ADR-0026) — rör INTE den vanliga kontoscopade
 // GET / ovan, en helt separat, additiv väg. Måste registreras FÖRE
 // PATCH/DELETE-rutterna med /:id nedan, annars matchar Express "shared"

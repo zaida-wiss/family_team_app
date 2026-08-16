@@ -54,6 +54,10 @@ type Props = {
   // konto eller Mina familjekonton, se MemberShellContent.tsx.
   onCreateFamilyShoppingList?: (accountId: Id, name: string) => void;
   shoppingCreatableFamilyAccountIds?: Set<Id>;
+  // Redigerbara varor i familjens listvy (2026-08-16) — se MemberOverview.tsx.
+  onToggleHomeShoppingItem?: (list: ShoppingList, itemId: Id) => void;
+  onAddHomeShoppingItem?: (list: ShoppingList, title: string) => void;
+  onDeleteHomeShoppingItem?: (list: ShoppingList, itemId: Id) => void;
   // Sökruta/plus-knapp/import-export i Todos-fliken (2026-08-03) — se
   // MemberOverview.tsx.
   members?: Member[];
@@ -86,6 +90,7 @@ export function HomePage({
   familyThreadSources, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
   todoThreadGap, todoBubbleSize, todoThreadRange,
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
+  onToggleHomeShoppingItem, onAddHomeShoppingItem, onDeleteHomeShoppingItem,
   members, categories, allTodos, onCreateCategory, onCreateTodo, onUpdateTodo, onDeleteTodo,
   todoImportResult, onSetTodoImportResult, todoImportUndo, onSetTodoImportUndo,
   enableTabs, homeShowFamilyNav, onShowAppNav, onNavigate
@@ -127,6 +132,9 @@ export function HomePage({
       todoThreadRange={todoThreadRange}
       onCreateFamilyShoppingList={onCreateFamilyShoppingList}
       shoppingCreatableFamilyAccountIds={shoppingCreatableFamilyAccountIds}
+      onToggleHomeShoppingItem={onToggleHomeShoppingItem}
+      onAddHomeShoppingItem={onAddHomeShoppingItem}
+      onDeleteHomeShoppingItem={onDeleteHomeShoppingItem}
       members={members}
       categories={categories}
       allTodos={allTodos}
