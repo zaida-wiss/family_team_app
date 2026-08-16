@@ -504,6 +504,15 @@ export function TodoEditModal({
       hasMountedRef.current = true;
       return;
     }
+    // Schemalägg INGET autospar alls medan "+ Ny kategori…"-läget är
+    // aktivt — valet av det läget (själva bytet av selectedCategoryId) är
+    // EN av de här beroendena, så bara det räcker för att en gammal
+    // 700ms-timer annars körs medan namnet fortfarande skrivs, oavsett hur
+    // fort/långsamt man skriver. performSave läser newCategoryName FÄRSK
+    // via en closure (inte via denna effekt), så en sådan timer hade ändå
+    // skapat en kategori av ett halvfärdigt namn. handleClose flushar
+    // kategoriskapelsen explicit när modalen stängs istället.
+    if (isCreatingCategory) return;
     if (saveTimeoutRef.current !== null) window.clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
       saveTimeoutRef.current = null;
@@ -515,9 +524,15 @@ export function TodoEditModal({
         saveTimeoutRef.current = null;
       }
     };
+    // newCategoryName är MEDVETET UTESLUTEN härifrån — annars triggar varje
+    // tangenttryckning i "Namn på ny kategori"-fältet ett autospar efter 700ms
+    // som skapar en kategori av det då halvfärdigt skrivna namnet, pekar om
+    // selectedCategoryId bort från NEW_CATEGORY_VALUE och därmed avmonterar
+    // fältet mitt i skrivandet. Namnet sparas ändå — se handleClose, som
+    // flushar en pågående kategoriskapelse explicit vid stängning.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    title, emoji, selectedCategoryId, newCategoryName, assigneeId, starValueInput, timerEnabled,
+    title, emoji, selectedCategoryId, assigneeId, starValueInput, timerEnabled,
     plannedDurationMinutesInput, timerMaxMinutesInput, recurrence, visibleFrom, expiresAt, startDate, timeWindows,
     notes, subtasks
   ]);
@@ -537,6 +552,10 @@ export function TodoEditModal({
     if (saveTimeoutRef.current !== null) {
       window.clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
+      void performSaveRef.current();
+    } else if (isCreatingCategory && newCategoryName.trim()) {
+      // newCategoryName schemalägger inget eget autospar (se deps-kommentaren
+      // ovan) — flusha kategoriskapelsen explicit här så den ändå sparas.
       void performSaveRef.current();
     }
     onClose();

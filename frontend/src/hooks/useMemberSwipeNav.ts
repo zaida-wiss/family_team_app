@@ -165,18 +165,20 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       snapshot.style.inset = "0";
       snapshot.style.zIndex = "1";
       snapshot.style.transformOrigin = direction === 1 ? "left center" : "right center";
-      snapshot.style.willChange = "transform, box-shadow";
+      // Bara transform/opacity animeras — båda kompositor-egenskaper som
+      // aldrig tvingar en repaint. box-shadow (tidigare försök att antyda
+      // djup) provocerade fram en repaint av HELA den nyss klonade,
+      // potentiellt stora dashboard-ytan varje bildruta under hela
+      // rotationen, rakt emot syftet med snapshot-mönstret — bytt mot en
+      // opacitetstoning som ger samma "sidan lyfter bort"-känsla utan att
+      // måla om något.
+      snapshot.style.willChange = "transform, opacity";
       snapshot.style.pointerEvents = "none";
       // Rotationen går förbi 90° (till 110°, se rAF-blocket nedan) för att
       // sidan ska hinna kännas helt bortvikt innan den tas bort — utan
       // detta hade den sista biten (90°→110°) visat sidans SPEGELVÄNDA
       // baksida istället för att förbli dold.
       snapshot.style.backfaceVisibility = "hidden";
-      // Ett svagt skuggdrag i vikningsriktningen antyder djup medan sidan
-      // lyfter, tonar bort mot slutet av rotationen (se rAF-blocket nedan).
-      snapshot.style.boxShadow = direction === 1
-        ? "18px 0 32px -12px rgba(0,0,0,0.4)"
-        : "-18px 0 32px -12px rgba(0,0,0,0.4)";
       el!.appendChild(snapshot);
 
       // Byt medlem — den nya personens innehåll ritas nu UNDER
@@ -187,18 +189,37 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // Dubbel rAF (samma beprövade mönster som redan användes här innan)
       // garanterar att webbläsaren hunnit måla den nya, riktiga sidan under
       // ögonblicksbilden innan viknings-animationen ens börjar.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          snapshot.style.transition = `transform ${FLIP_MS}ms ease-in, box-shadow ${FLIP_MS}ms ease-in`;
-          snapshot.style.transform = `perspective(${width * 2.5}px) rotateY(${direction * -110}deg)`;
-          snapshot.style.boxShadow = "0 0 0 rgba(0,0,0,0)";
-        });
-      });
-
-      window.setTimeout(() => {
+      // Städar upp ögonblicksbilden när VIKNINGEN faktiskt tar slut, inte
+      // efter en gissad fast tid — en ren setTimeout räknade tidigare från
+      // commit()-anropet, INNAN den dubbla rAF-fördröjningen ens hunnit
+      // starta den riktiga CSS-transitionen, vilket under belastning kunde
+      // ta bort ögonblicksbilden medan den fortfarande syntes mitt i
+      // rotationen (ett tvärt hopp istället för en mjuk avslutning).
+      // transitionend är den faktiska signalen; en generös safety-timeout
+      // finns bara kvar som skyddsnät om eventet av någon anledning
+      // uteblir. e.target-kollen behövs eftersom klonen är en HEL
+      // dashboard-subtree — ett barns egen, orelaterade CSS-transition
+      // (t.ex. en hover-effekt) skulle annars kunna bubbla upp och trigga
+      // städningen för tidigt.
+      let settled = false;
+      function finish() {
+        if (settled) return;
+        settled = true;
         snapshot.remove();
         animating = false;
-      }, FLIP_MS + 30);
+      }
+      snapshot.addEventListener("transitionend", (e) => {
+        if (e.target === snapshot) finish();
+      });
+      window.setTimeout(finish, FLIP_MS + 150);
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          snapshot.style.transition = `transform ${FLIP_MS}ms ease-in, opacity ${FLIP_MS}ms ease-in`;
+          snapshot.style.transform = `perspective(${width * 2.5}px) rotateY(${direction * -110}deg)`;
+          snapshot.style.opacity = "0.4";
+        });
+      });
     }
 
     function onPointerDown(e: PointerEvent) {

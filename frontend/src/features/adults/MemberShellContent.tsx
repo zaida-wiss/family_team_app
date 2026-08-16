@@ -305,7 +305,13 @@ export function MemberShellContent({
   // Mina familjekonton (2026-08-01, Zaidas önskemål: "samma gäller
   // inköpslistan" — sedan rättad till ENDAST genuint medlemskap, aldrig en
   // Familjeanslutning, se createCrossAccountList-kommentaren).
-  const { groups: crossAccountShoppingGroups, createCrossAccountList } = useCrossAccountShoppingLists();
+  const {
+    groups: crossAccountShoppingGroups,
+    createCrossAccountList,
+    addItem: addCrossAccountShoppingItem,
+    toggleItem: toggleCrossAccountShoppingItem,
+    removeItem: removeCrossAccountShoppingItem
+  } = useCrossAccountShoppingLists();
   // Måltidsplanering (2026-08-01, Zaidas önskemål: "man ska inte heller
   // kunna planera måltider med andra familjer, utan då måste man först göra
   // en familj med dessa familjer som medlemmar") — ENDAST Mina familjekonton.
@@ -736,6 +742,7 @@ export function MemberShellContent({
         <div ref={memberSwipeNavRef}>
           <Suspense fallback={null}>
             <ChildDashboard
+              key={selectedDashboardMember.id}
               child={selectedDashboardMember}
               calendars={calendars}
               roles={roles}
@@ -769,6 +776,7 @@ export function MemberShellContent({
       <div ref={memberSwipeNavRef}>
         <Suspense fallback={null}>
         <PersonalDashboard
+          key={selectedDashboardMember.id}
           member={selectedDashboardMember}
           calendars={calendars}
           roles={roles}
@@ -1023,6 +1031,38 @@ export function MemberShellContent({
     createCrossAccountList(accountId, name, null);
   }
 
+  // Redigerbara varor i familjens listvy (2026-08-16, Zaidas fynd: "Listor
+  // måste gå att redigera i familjens listvy") — samma konto-gräns som
+  // handleCreateFamilyShoppingList ovan: mitt eget konto använder de
+  // vanliga (redan befintliga) onAddShoppingItem m.fl., ett av Mina
+  // familjekonton använder de nya cross-account-varianterna. En
+  // Familjeanslutning (connectionShoppingGroups) hamnar aldrig här —
+  // MemberOverview.tsx:s editable-koll (shoppingCreatableFamilyAccountIds)
+  // döljer redan redigeringsläget för dem.
+  function handleToggleHomeShoppingItem(list: ShoppingList, itemId: Id) {
+    if ((list.accountId ?? currentMember.accountId) === currentMember.accountId) {
+      onToggleShoppingItem(list.id, itemId);
+      return;
+    }
+    toggleCrossAccountShoppingItem(list.accountId!, list.id, itemId);
+  }
+
+  function handleAddHomeShoppingItem(list: ShoppingList, title: string) {
+    if ((list.accountId ?? currentMember.accountId) === currentMember.accountId) {
+      onAddShoppingItem(list.id, title);
+      return;
+    }
+    addCrossAccountShoppingItem(list.accountId!, list.id, title, currentMember.id);
+  }
+
+  function handleDeleteHomeShoppingItem(list: ShoppingList, itemId: Id) {
+    if ((list.accountId ?? currentMember.accountId) === currentMember.accountId) {
+      onDeleteShoppingItem(list.id, itemId);
+      return;
+    }
+    removeCrossAccountShoppingItem(list.accountId!, list.id, itemId);
+  }
+
   // Ingen vald → översikten
   return (
     <>
@@ -1062,6 +1102,9 @@ export function MemberShellContent({
         todoThreadRange={todoThreadRange}
         onCreateFamilyShoppingList={handleCreateFamilyShoppingList}
         shoppingCreatableFamilyAccountIds={homeShoppingCreatableAccountIds}
+        onToggleHomeShoppingItem={handleToggleHomeShoppingItem}
+        onAddHomeShoppingItem={handleAddHomeShoppingItem}
+        onDeleteHomeShoppingItem={handleDeleteHomeShoppingItem}
         members={members}
         categories={personalCategories}
         allTodos={todos}

@@ -91,6 +91,70 @@ test("Hem-vyns familjetrådar: byte av kategori i redigera-modalen sparas faktis
   await expect.poll(() => patchedBody?.personalCategoryId).toBe("cat-family-fordon");
 });
 
+// 2026-08-16, Zaidas fynd: "i todo när man vill skapa en ny kategori så går
+// det inte att skriva mer än ett par bokstäver så stängs det ner" —
+// autospar-effektens beroende-array innehöll `newCategoryName`, så en paus
+// i skrivandet (eller bara normal skrivtakt) triggade autospar efter 700ms
+// MEDAN namnet fortfarande var halvskrivet. performSave skapade då tyst en
+// riktig kategori av det ofärdiga namnet och pekade om selectedCategoryId
+// bort från "+ Ny kategori…"-läget, vilket avmonterade textfältet mitt i
+// skrivandet. Verifierar att fältet överlever långsam, paus-innehållande
+// inskrivning och att kategorin ändå skapas med det KOMPLETTA namnet när
+// modalen stängs.
+test("Hem-vyns familjetrådar: fältet för nytt kategorinamn i redigera-modalen stängs inte medan man skriver, kategorin skapas med hela namnet vid stängning", async ({ page }) => {
+  let createCalls: string[] = [];
+  let patchedBody: Record<string, unknown> | null = null;
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as { name: string };
+      createCalls.push(body.name);
+      return route.fulfill({
+        json: {
+          id: "cat-new-hushall", accountId: "acc-1", memberId: "mem-1", name: body.name,
+          isFamily: true, deletedAt: null, deletedBy: null, createdAt: "2024-01-01T00:00:00.000Z"
+        }
+      });
+    }
+    return route.fulfill({ json: [FAMILY_CATEGORY] });
+  });
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [FAMILY_TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/todos/todo-kvall", (route) => {
+    if (route.request().method() === "PATCH") {
+      patchedBody = { ...patchedBody, ...(route.request().postDataJSON() as object) };
+    }
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa todos" }).click();
+
+  await page.getByRole("button", { name: /^Kvällsrutiner,/ }).click();
+  await page.getByRole("button", { name: "Redigera uppgift" }).click();
+  await page.getByLabel(/^Kategori/).selectOption({ label: "+ Ny kategori…" });
+
+  const nameInput = page.getByLabel("Namn på ny kategori");
+  await expect(nameInput).toBeVisible();
+  // pressSequentially med fördröjning sträcker ut skrivandet över långt mer
+  // än den gamla 700ms-debouncen (17 tecken × 150ms ≈ 2,5s) — reproducerar
+  // exakt den skrivtakt som tidigare stängde fältet efter bara ett par
+  // tecken.
+  await nameInput.pressSequentially("Hushållsutgifter", { delay: 150 });
+
+  await expect(nameInput).toBeVisible();
+  await expect(nameInput).toHaveValue("Hushållsutgifter");
+  expect(createCalls).toHaveLength(0);
+
+  await page.getByRole("button", { name: "Stäng" }).click();
+
+  await expect.poll(() => createCalls).toEqual(["Hushållsutgifter"]);
+  await expect.poll(() => patchedBody?.personalCategoryId).toBe("cat-new-hushall");
+});
+
 // 2026-08-06, Zaidas fynd: "det är även fortfarande problem med
 // autentisering och behörighet att radera todos" — TodoEditModal.tsx:s
 // handleDelete stängde modalen OVILLKORLIGT direkt efter att onDeleteTodo
