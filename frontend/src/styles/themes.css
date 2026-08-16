@@ -750,9 +750,15 @@
    elementet självt för de teman som saknar ett eget block — en egenskap
    satt direkt på elementet vinner alltid över en ärvd, oavsett
    specificitet, så barnens redan korrekta teman (theme-space m.fl.)
-   förblir helt opåverkade. */
+   förblir helt opåverkade. --c4 samtidigt (2026-08-16, uppföljning) —
+   ChildTasks.css:s .child-task-card--subtask använder --c4 som sin egen
+   bakgrund (den svatch --on-c4 handplockades för att kontrastera mot,
+   se den filens kommentar) — utan denna rad hade --c4 haft SAMMA
+   arvsläcka som --on-c4 hade (adult-temats egen --c4, en helt annan
+   färg, oparad med --foreground). */
 .child-dashboard {
   --on-c4: var(--foreground);
+  --c4: var(--background);
 }
 
 /* Cosmic Cobalt */
@@ -1143,6 +1149,16 @@
 .child-dashboard[class*="theme-"] .child-task-card--subtask {
   color: var(--on-c4, var(--foreground));
   border-color: var(--on-c4, var(--foreground));
+  /* 2026-08-16, uppföljning ("det är för liten fix") — regeln ovan
+     (.child-task-card, samma specificitet, källkodsordning) sätter också
+     background: var(--task-bg), OGILTIGT för ett delmoment (se
+     ChildTasks.css:s huvudkommentar) och faller därför till transparent
+     igen — matchar och överskriver här, annars vinner ChildTasks.css:s
+     .child-task-card--subtask-regel aldrig (lägre specificitet). --c4
+     (INTE --card, se ChildTasks.css:s kommentar om varför --card gav vit
+     text mot en ljus yta på mörka barnteman) — samma svatch --on-c4 här
+     ovan redan är handplockad att kontrastera mot. */
+  background: var(--c4, var(--card, var(--white)));
 }
 
 .child-dashboard[class*="theme-"] .child-task-card::after {

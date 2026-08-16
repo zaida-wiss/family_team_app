@@ -136,25 +136,33 @@
    i båda ljus/mörkt-lägen.) */
 .child-task-card--subtask {
   border: 2px solid var(--on-c4, var(--foreground, var(--black, #000)));
-  /* Halo i motsatt polaritet (2026-08-16, sidofynd vid verifiering mot
-     Zaidas EGET tema/skärmdump) — .child-dashboard.css:s bakgrund är en
-     BLANDNING av flera svatcher (c1/c2/c4/c0/c5 i olika hörn), inte en
-     enda platt färg. --on-c4/--foreground väljer rätt polaritet i
-     GENOMSNITT för hela ytan, men ett enskilt kort kan ändå råka landa på
-     ett hörn som lokalt går åt andra hållet (t.ex. ett mörkt lila parti i
-     ett annars ljust tema) — då blir en helt SVART kant fortfarande
-     osynlig mot just DEN fläcken. --background (samma ljus/mörk-läge-
-     token, motsatt polaritet mot --foreground per definition) som en
-     mjuk yttre glöd runt kanten fungerar som ett säkerhetsnät oavsett
-     lokal bakgrundsvariation, utan att ändra den avsedda svart/vit-
-     växlingen. */
-  box-shadow: 0 0 0 1.5px var(--background, var(--white, #fff));
+  /* En RIKTIG, nästan solid bakgrund (2026-08-16, uppföljning — Zaidas
+     fynd: "det är för liten fix") — en tunn halo (tidigare försök, se
+     git-historik) var för subtil för att räknas som en riktig lösning.
+     .child-dashboard.css:s bakgrund är en BLANDNING av flera svatcher i
+     olika hörn, inte en enda platt färg — --on-c4/--foreground väljer rätt
+     textpolaritet i GENOMSNITT, men ett kort kan ändå landa på ett lokalt
+     mörkt/ljust hörn där kontrasten ändå blir dålig. Lösningen är att
+     sluta försöka läsa av den bakgrunden alls: kortet får en egen, nästan
+     ogenomskinlig yta.
+     --c4 (INTE --card, se git-historik för ett rundabordsförsök som gick
+     fel) — --c4 är exakt den svatch som varje temas --on-c4 handplockades
+     för att kontrastera mot (samma par som .child-dashboard.css:s egen
+     bakgrundsgradient redan bygger på, c4 är dess dominerande stopp). Ett
+     första försök använde --card (appens generella kort-bakgrund) istället
+     — såg bra ut i vissa teman men gav VIT text mot en LJUS --card-yta på
+     mörka barnteman som Rymden (--card är alltid ljus i normalfallet,
+     eftersom barn saknar mörkt-läge-växeln — helt frikopplad från vilken
+     polaritet --on-c4 råkar välja för just DET temat). --c4/--on-c4 är
+     samma källa och därför ALLTID korrekt parade, för både riktiga
+     barnteman OCH bas-fallbacken nedan (.child-dashboard { --c4:
+     var(--background) }, matchar samma --foreground-fallback som on-c4). */
+  background: var(--c4, var(--card, var(--white, #fff)));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--black, #000) 18%, transparent);
 }
 
 .child-task-card--subtask .child-task-name {
   color: var(--on-c4, var(--foreground, var(--black, #000)));
-  /* Samma halo-princip som border-box-shadow ovan, för texten. */
-  text-shadow: 0 0 3px var(--background, var(--white, #fff)), 0 0 6px var(--background, var(--white, #fff));
 }
 
 .child-task-card > * {
