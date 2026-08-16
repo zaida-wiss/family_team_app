@@ -121,13 +121,40 @@
    --on-c4 är samma redan handplockade, per-tema OCH per-läge svart/vitt-
    kontrasttoken som resten av dashboarden (.child-dashboard/
    .child-tasks-heading) redan använder för sin egen text mot EXAKT samma
-   bakgrund — återanvänds här istället för att gissa en egen tröskel. */
+   bakgrund — återanvänds här istället för att gissa en egen tröskel.
+   --foreground som ANDRA fallback (inte --black direkt), samma kedja som
+   .child-dashboard.css:s egen `color: var(--on-c4, var(--foreground))`
+   (2026-08-16, sidofynd: PersonalDashboard.tsx delar denna klass men
+   defaultar till "clear" när dashboardTheme är null — inget sådant
+   barntema finns i themes.css:s CHILD THEME TOKENS-block, så --on-c4 är
+   OSATT där. Bakgrunden faller då tillbaka till --background/--primary
+   via ChildDashboard.css:s egna --c4/--c0-fallbacks, som KAN vara mörk
+   beroende på den vuxnes EGET tema — --black hade då blivit fel, precis
+   som Zaida fann: "jag kan ändå inte läsa texten på uppdragskorten... när
+   det kommer till delmomenten" på sin egen, mörka lila vuxendashboard.
+   --foreground är redan garanterat kontrastsäker mot just den bakgrunden
+   i båda ljus/mörkt-lägen.) */
 .child-task-card--subtask {
-  border: 2px solid var(--on-c4, var(--black, #000));
+  border: 2px solid var(--on-c4, var(--foreground, var(--black, #000)));
+  /* Halo i motsatt polaritet (2026-08-16, sidofynd vid verifiering mot
+     Zaidas EGET tema/skärmdump) — .child-dashboard.css:s bakgrund är en
+     BLANDNING av flera svatcher (c1/c2/c4/c0/c5 i olika hörn), inte en
+     enda platt färg. --on-c4/--foreground väljer rätt polaritet i
+     GENOMSNITT för hela ytan, men ett enskilt kort kan ändå råka landa på
+     ett hörn som lokalt går åt andra hållet (t.ex. ett mörkt lila parti i
+     ett annars ljust tema) — då blir en helt SVART kant fortfarande
+     osynlig mot just DEN fläcken. --background (samma ljus/mörk-läge-
+     token, motsatt polaritet mot --foreground per definition) som en
+     mjuk yttre glöd runt kanten fungerar som ett säkerhetsnät oavsett
+     lokal bakgrundsvariation, utan att ändra den avsedda svart/vit-
+     växlingen. */
+  box-shadow: 0 0 0 1.5px var(--background, var(--white, #fff));
 }
 
 .child-task-card--subtask .child-task-name {
-  color: var(--on-c4, var(--black, #000));
+  color: var(--on-c4, var(--foreground, var(--black, #000)));
+  /* Samma halo-princip som border-box-shadow ovan, för texten. */
+  text-shadow: 0 0 3px var(--background, var(--white, #fff)), 0 0 6px var(--background, var(--white, #fff));
 }
 
 .child-task-card > * {

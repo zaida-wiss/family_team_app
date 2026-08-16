@@ -730,6 +730,31 @@
   --black: #000000;
 }
 
+/* 2026-08-16, sidofynd vid Zaidas kontrastfynd på delmoment-korten:
+   PersonalDashboard.tsx (en vuxens egen dashboard) återanvänder samma
+   `.child-dashboard theme-${dashboardTheme}`-klass som barnens, men en
+   vuxens dashboardTheme är ett AV DE VANLIGA VUXENTEMANA (t.ex. "dusk",
+   "clear", "sunset") — inget av dem har något eget block här nedanför
+   (bara de tio riktiga barntemana har). Utan ett eget block ÄRVER
+   .child-dashboard sitt --on-c4 istället från förfadern .app-shell.theme-X
+   (ADULT THEMES-sektionen ovan), som visserligen också definierar --on-c4
+   men för ett HELT ANNAT syfte (kontrastpar mot ADULT-UI-element som
+   .todos-bubble-header__title, inte mot den här komponentens egen
+   bakgrundsgradient). Eftersom en ÄRVD egenskap räknas som "satt" utlöses
+   ALDRIG fallback-ledet i var(--on-c4, var(--foreground)) (används redan
+   flera ställen, t.ex. ChildDashboard.css:s .child-dashboard/
+   .child-tasks-heading OCH den nya .child-task-card--subtask-regeln) —
+   fallbacken var i praktiken dödkod för alla vuxna. Denna bas-regel
+   (lägre specificitet än varje .child-dashboard.theme-X-block nedan,
+   källkodsordning avgör) sätter --on-c4 DIREKT på .child-dashboard-
+   elementet självt för de teman som saknar ett eget block — en egenskap
+   satt direkt på elementet vinner alltid över en ärvd, oavsett
+   specificitet, så barnens redan korrekta teman (theme-space m.fl.)
+   förblir helt opåverkade. */
+.child-dashboard {
+  --on-c4: var(--foreground);
+}
+
 /* Cosmic Cobalt */
 .app-shell.theme-cosmic-cobalt,
 .child-dashboard.theme-cosmic-cobalt {
@@ -1107,10 +1132,17 @@
    .child-task-card--subtask-regel (enklare specificitet) räcker inte här.
    --on-c4 är samma redan handplockade, per-barntema kontrasttoken som
    resten av dashboarden använder för sin egen text mot exakt samma
-   bakgrund. */
+   bakgrund. --foreground som ANDRA fallback, inte --black (2026-08-16,
+   sidofynd: PersonalDashboard.tsx delar .child-dashboard-klassen men
+   defaultar till "clear" när dashboardTheme är null — "clear" har inget
+   eget block här ovan, så --on-c4 är OSATT för en vuxens dashboard i
+   normalfallet. Bakgrunden faller då tillbaka till --background/--primary
+   (ChildDashboard.css), som kan vara mörk beroende på den vuxnes EGET
+   tema — --black blev därför fel just i det fallet, se samma
+   fallback-kedja i ChildTasks.css:s .child-task-card--subtask). */
 .child-dashboard[class*="theme-"] .child-task-card--subtask {
-  color: var(--on-c4, var(--black));
-  border-color: var(--on-c4, var(--black));
+  color: var(--on-c4, var(--foreground));
+  border-color: var(--on-c4, var(--foreground));
 }
 
 .child-dashboard[class*="theme-"] .child-task-card::after {
