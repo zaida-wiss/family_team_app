@@ -195,6 +195,7 @@ export function ChildTasksSection({ todos, categories, today, timerNow, heldTodo
                 key={key}
                 className={[
                   "child-task-card",
+                  "child-task-card--subtask",
                   heldSubtaskKey === key ? "child-task-card--holding" : "",
                 ].filter(Boolean).join(" ")}
                 style={{ animationDelay: `${i * 80}ms` }}

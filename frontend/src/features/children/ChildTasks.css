@@ -107,6 +107,29 @@
   transform: scale(0.97) rotate(0deg);
 }
 
+/* Delmoment-kort (2026-08-16, Zaidas fynd: "vi behöver mer kontrast på
+   delmomenten i dashboarden... vit text om bakgrunden är mörk... en vit
+   ram om bakgrunden är mörk. Är den ljus ska det vara svart istället") —
+   till skillnad från vanliga uppdragskort (alltid en garanterat LJUS
+   pastellbakgrund via getTaskStyle/--cat-*-bg, blandad mot vitt oavsett
+   tema/läge, se KNOWN_CATEGORIES ovan) har ett delmoment inget eget
+   kategori-fält och får därför ALDRIG --task-accent/--task-bg satt — utan
+   dem blir både .child-task-card:s border- och background-deklaration
+   ogiltig CSS (invalid at computed-value time) och faller tyst bort helt,
+   så kortet syns direkt mot .child-dashboard.css:s egen flerfärgade
+   gradient, som KAN vara mörk på vissa ställen beroende på tema/läge.
+   --on-c4 är samma redan handplockade, per-tema OCH per-läge svart/vitt-
+   kontrasttoken som resten av dashboarden (.child-dashboard/
+   .child-tasks-heading) redan använder för sin egen text mot EXAKT samma
+   bakgrund — återanvänds här istället för att gissa en egen tröskel. */
+.child-task-card--subtask {
+  border: 2px solid var(--on-c4, var(--black, #000));
+}
+
+.child-task-card--subtask .child-task-name {
+  color: var(--on-c4, var(--black, #000));
+}
+
 .child-task-card > * {
   position: relative;
   z-index: 2;

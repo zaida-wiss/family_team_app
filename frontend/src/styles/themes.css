@@ -1096,6 +1096,23 @@
   border-color: color-mix(in srgb, var(--task-accent) 38%, transparent);
 }
 
+/* Delmoment-kort (2026-08-16, Zaidas fynd: "vi behöver mer kontrast på
+   delmomenten i dashboarden") — regeln ovan sätter ovillkorligt svart text
+   + en border-color härledd ur --task-accent, som ett delmoment ALDRIG har
+   (inget kategori-fält på ett delmoment, se ChildTasksSection.tsx) — ogiltig
+   CSS faller tyst bort till "currentcolor", som i sin tur blir samma
+   ovillkorliga svart från raden ovan. Måste stå EFTER och matcha samma
+   .child-dashboard[class*="theme-"]-prefix (samma specificitet, källkods-
+   ordning avgör) för att vinna — ChildTasks.css:s egen
+   .child-task-card--subtask-regel (enklare specificitet) räcker inte här.
+   --on-c4 är samma redan handplockade, per-barntema kontrasttoken som
+   resten av dashboarden använder för sin egen text mot exakt samma
+   bakgrund. */
+.child-dashboard[class*="theme-"] .child-task-card--subtask {
+  color: var(--on-c4, var(--black));
+  border-color: var(--on-c4, var(--black));
+}
+
 .child-dashboard[class*="theme-"] .child-task-card::after {
   background: var(--task-accent);
 }
