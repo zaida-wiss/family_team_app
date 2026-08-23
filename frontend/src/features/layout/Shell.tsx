@@ -298,11 +298,24 @@ export function Shell({
         </div>
       )}
 
-      <HeroBar
-        activePanel={activePanel}
-        hiddenOnMobile={hideHeroBarOnMobile}
-        onNavigate={navigateFromHeroBar}
-      />
+      {/* Ett riktigt inloggat barn (currentMember.isChild) ska ENDAST se sin
+          egen dashboard — ingen meny, ingen navigering till andra paneler
+          (2026-08-23, Zaida: "ingenting annat än deras dashboard skall
+          visas. Ingen meny, ingenting. Endast en sida"). HeroBar renderades
+          tidigare ändå (bara CSS-övermålad på desktop, fullt synlig OCH
+          tryckbar på mobil eftersom hideHeroBarOnMobile alltid var false för
+          isChild) — knapptryck gjorde ingenting eftersom PanelRouter redan
+          tvingar fram ChildShellContent oavsett activePanel, men chrome:et
+          syntes ändå och gick att fokusera med tangentbord/skärmläsare.
+          Barnets egna funktioner (tema/belöningsbutik/plånbok/rekord) ligger
+          kvar oförändrade i ChildStarsPanel, inne i dashboarden själv. */}
+      {!currentMember.isChild && (
+        <HeroBar
+          activePanel={activePanel}
+          hiddenOnMobile={hideHeroBarOnMobile}
+          onNavigate={navigateFromHeroBar}
+        />
+      )}
 
       <div
         className={`app-shell-content${
