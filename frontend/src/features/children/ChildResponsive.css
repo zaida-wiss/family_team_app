@@ -1,5 +1,13 @@
 /* Base: ≤430px (smallest screens) */
-.app-shell-content:has(.child-dashboard) {
+/* 64px-reservationen är bara till för HeroBars fasta bottenfält — som
+   sedan 2026-08-23 INTE renderas alls för ett riktigt inloggat barn
+   (currentMember.isChild, se Shell.tsx). Bara .app-shell-full--inline
+   (en VUXEN som tittar på en vald medlems dashboard via "Visa medlemmar"
+   — HeroBar fortfarande synlig där) ska reservera platsen; ett riktigt
+   barns egen, helt kant-till-kant-vy (bar .app-shell-full, ingen
+   --inline) faller nu tillbaka på ChildDashboard.css:s bas-höjd
+   (calc(100dvh - 20px)), ingen kvarglömd tom "vit navbar"-remsa. */
+.app-shell-content.app-shell-full--inline:has(.child-dashboard) {
   padding: 0 0 64px;
 }
 

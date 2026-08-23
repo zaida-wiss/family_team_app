@@ -136,13 +136,18 @@
 }
 
 @media (max-width: 1023px) {
-  .child-dashboard {
+  /* Samma HeroBar-reservation som ChildResponsive.css:s bas-regel, se
+     kommentaren där — scopead till .app-shell-full--inline (vuxen som
+     tittar på en vald medlems dashboard, HeroBar fortfarande synlig) så
+     ett riktigt inloggat barns egen vy (ingen --inline) inte längre får
+     en tom 64px-reservation för en bottenmeny som inte längre renderas. */
+  .app-shell-full--inline .child-dashboard {
     height: calc(100dvh - 64px);
     max-height: calc(100dvh - 64px);
     padding-bottom: 0;
   }
 
-  .app-shell-content:has(.child-dashboard) {
+  .app-shell-content.app-shell-full--inline:has(.child-dashboard) {
     padding-bottom: 64px;
   }
 }

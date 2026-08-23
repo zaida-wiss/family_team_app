@@ -200,8 +200,21 @@ export function Shell({
       (m) => m.id === memberContentProps.selectedDashboardMemberId && m.deletedAt === null
     ) ?? currentMember;
 
+  // !currentMember.isChild-vakten (2026-08-23, Zaida: "jag ser mitt eget
+  // färgtema högst upp [i barnets inloggning]") — activePanel/
+  // selectedDashboardMemberId kan vara kvar från en TIDIGARE vuxen-session
+  // på samma flik (logout/barn-inloggning nollställer aldrig
+  // window.location, till skillnad från "byt vy"-flödet i
+  // useAppNavigation.ts). Utan denna vakt läste ett riktigt inloggat barn
+  // (vars PanelRouter redan ovillkorligt tvingar fram ChildShellContent,
+  // se rad 69 ovan) ändå in en kvarglömd vuxen-medlems tema på HELA
+  // app-skalets bakgrund (theme-${shellTheme} nedan) — osynligt bakom
+  // barnets egen dashboard-gradient tills en CSS-glipa (se ChildDashboard.
+  // css/ChildResponsive.css) avslöjade en flik av fel färg i kanten. Ett
+  // riktigt inloggat barn ska ALLTID se sitt EGET tema, oavsett vad
+  // activePanel råkar peka på.
   const visibleThemeMember =
-    activePanel === "members" ? selectedDashboardMember : currentMember;
+    !currentMember.isChild && activePanel === "members" ? selectedDashboardMember : currentMember;
 
   // Fast/kant-till-kant skal (2026-08-09, Zaidas fynd: "jag vill inte kunna
   // skrolla bort bakgrunden så att det blir vitt... Den hoppat[e] upp och
