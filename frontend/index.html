@@ -2,9 +2,39 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover (2026-08-23, Zaidas fråga om Safaris adressfält/
+         fram-bak-knappar på iPhone) — KRÄVS för att env(safe-area-inset-*)
+         överhuvudtaget ska returnera ett verkligt värde (annars alltid 0px,
+         Safari håller redan innehållet innanför säkra ytan automatiskt utan
+         denna flagga). Flera CSS-filer (MemberEditModal.css/CalendarView.css/
+         ChildBanknotesModal.css m.fl.) har redan `env(safe-area-inset-bottom)`
+         skrivet sedan tidigare, men det var i praktiken dött utan denna
+         flagga — aktiveras nu på riktigt, särskilt viktigt i standalone-läge
+         (Lägg till på hemskärmen) där appen ritas ända ut i hörnen. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Familjeapp med kalender, uppgifter, inköpslistor och belöningar för hela familjen." />
     <title>Familje- och teamapp</title>
+    <!-- Hemskärms-/standalone-läge (2026-08-23, Zaida: "går det att få bort"
+         Safaris adressfält/fram-bak-knappar) — dessa tre apple-mobile-web-
+         app-taggarna är det som faktiskt gör att "Lägg till på hemskärmen"
+         öppnar appen HELT UTAN Safaris eget gränssnitt, som en riktig app.
+         Utan capable:yes öppnas en hemskärmsgenväg fortfarande i vanlig
+         Safari med chrome kvar — appen hade ALDRIG haft detta, oavsett hur
+         många gånger den redan lagts till på en hemskärm. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- "black" (INTE "black-translucent") — translucent gör statusfältet
+         genomskinligt och ritar appens EGET innehåll ända upp under det,
+         vilket kräver env(safe-area-inset-top)-padding överallt högst upp
+         (finns inte i koden än, ingen sida är byggd för det). "black" ger
+         en solid, egen statusfältsyta som iOS reserverar utrymme för separat
+         — noll risk att en rubrik/knapp hamnar dold bakom den, utan att
+         någon ny CSS behövs för detta första steg. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Familjeappen" />
+    <meta name="theme-color" content="#457650" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/icons/favicon-32.png" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <script src="/font-init.js" defer></script>
