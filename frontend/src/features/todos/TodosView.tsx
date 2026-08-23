@@ -1,9 +1,10 @@
+import "./TodosView.css";
 import { CheckCircle2, Pencil, Trash2, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Id, Member, Reward, Role, Todo, TodoCategory, TodoCategoryTemplate, TodoTemplate, TodoTemplateTask, TodoThreadRange, TodoViewMode } from "@shared/types";
 import { TodoCreatorModal } from "./TodoCreatorModal";
 import { TodoEditModal } from "./TodoEditModal";
-import { ParentTodoThreadView } from "./ParentTodoThreadView";
+import { ParentTodoThreadView, accentColorForIndex } from "./ParentTodoThreadView";
 import { TodoThreadToolbar } from "./TodoThreadToolbar";
 import { FamilyTodoThreads } from "./FamilyTodoThreads";
 import type { FamilyThreadSource } from "./FamilyTodoThreads";
@@ -169,6 +170,21 @@ export function TodosView({
     (t) => t.status === "done",
     (t) => t.completedAt
   );
+  // Kategorifärg i listläget (2026-08-23, Zaidas önskemål: "todo som inte är
+  // i bollform, utan listform" ska få ett liknande utseende) — samma
+  // accentColorForIndex-cykling som ParentTodoThreadView.tsx redan använder
+  // för kategoritrådarnas bakgrundsfärg, med SAMMA filtrering/ordning
+  // (endast egna, icke-familje, icke-dolda kategorier) så en kategori får
+  // exakt samma färg i båda vyerna. Todos utan matchande kategori (Familjen/
+  // barn/dold kategori) faller tillbaka på var(--primary), samma fallback
+  // som bubblornas --thread-accent redan har.
+  const categoryAccents = useMemo(() => {
+    const mine = personalCategories.filter((c) => c.memberId === currentMember.id && !c.isFamily && !c.hidden);
+    const map = new Map<Id, string>();
+    mine.forEach((category, index) => map.set(category.id, accentColorForIndex(index)));
+    return map;
+  }, [personalCategories, currentMember.id]);
+
   const canCreate = hasPermission(currentMember, roles, "canCreateTodos");
   const suggestedRewards = canApproveTodos
     ? rewards.filter((r) => r.status === "suggested" && r.deletedAt === null)
@@ -402,14 +418,23 @@ export function TodosView({
           </div>
         )}
 
-        {todoViewMode === "list" && listSortedTodos.map((todo) => (
-          <div className="dashboard-row todo-dashboard-row" key={todo.id}>
+        {todoViewMode === "list" && listSortedTodos.map((todo) => {
+          const accent = (todo.personalCategoryId && categoryAccents.get(todo.personalCategoryId)) || "var(--primary)";
+          return (
+          <div
+            className="dashboard-row todo-dashboard-row"
+            key={todo.id}
+            style={{ "--todo-list-accent": accent } as React.CSSProperties}
+          >
             <input
               aria-label={`Välj ${todo.title} för massradering`}
               checked={selectedListTodoIds.has(todo.id)}
               onChange={() => toggleListTodoSelected(todo.id)}
               type="checkbox"
             />
+            <span className="todo-list-row__icon" aria-hidden="true">
+              {todo.visual.value}
+            </span>
             <span>
               {todo.title}
               <small>{getAssigneeName(todo, allMembers)}</small>
@@ -424,7 +449,8 @@ export function TodosView({
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {visibleTodos.length === 0 && !canCreate && (
           <p className="empty-note">Inga todos att visa.</p>

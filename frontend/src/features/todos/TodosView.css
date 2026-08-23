@@ -1,0 +1,21 @@
+/* 2026-08-23, Zaidas önskemål: "todo som inte är i bollform, utan
+   listform" ska få ett liknande utseende — bollformens
+   (ParentTodoThreadView.tsx) kategorifärg (--thread-accent, cyklar genom
+   temats --c0…--c7 via accentColorForIndex) och emoji-ikon återanvänds här
+   som en kompakt badge, inte den fulla bubbel-gradienten/tidsbrådska-logiken
+   (medvetet avgränsat, se AskUserQuestion-svaret samma dag — bara
+   utseende/färg, inte håll-in/delmoment/gruppering). --todo-list-accent
+   sätts som inline style per rad (TodosView.tsx), samma mönster som
+   --thread-accent redan används på tråd-wrappern. */
+.todo-list-row__icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--todo-list-accent, var(--primary)) 22%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--todo-list-accent, var(--primary)) 45%, transparent);
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
