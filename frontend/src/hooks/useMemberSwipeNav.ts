@@ -19,6 +19,8 @@ import { useCallback, useRef } from "react";
 // under draget (ingen translateX per rörelseevent). Vid släpp: har draget
 // passerat halva bredden (SWIPE_COMMIT_RATIO), spelas en kontrollerad
 // sidvändnings-animation (commit()) — annars görs ingenting alls.
+// **UPPDATERAD 2026-08-23, se nedan** — detta gäller numera bara MUS-
+// varianten. Touch fick en riktig, levande vändning.
 //
 // 2026-08-09, uppföljning #8/#9 (Zaidas fynd: "man skall kunna dra fingret
 // fast i 45 graders vingel och den skall ändå ta det som att man försöker
@@ -57,11 +59,53 @@ import { useCallback, useRef } from "react";
 // riskera att webbläsaren tar över och aldrig släpper. Ingen momentum/
 // studs vid listans ändar (native har det, detta har det inte) — ett
 // medvetet, litet avkall mot att svepet äntligen blir 100% pålitligt.
+//
+// 2026-08-23, uppföljning: "det skall vara som att vända blad i en e-bok."
+// Sänkt tröskel/kortare animation (se konstanterna nedan) gjorde svaret
+// snabbare, men vändningen spelades ändå bara upp EFTER släpp — ingen
+// levande koppling mellan fingrets position och sidans vinkel under
+// SJÄLVA draget, vilket inte känns som en riktig e-boks sidvändning (där
+// sidan följer fingret pixel för pixel och man SER hur långt man kommit
+// innan man släpper). Löst för TOUCH genom att flytta ögonblicksbilden och
+// medlemsbytet TIDIGARE — så fort axeln avgörs vågrät (samma punkt där
+// everHorizontal redan sattes), inte vid släpp (se beginPeel/updatePeel/
+// settlePeel nedan). Rotationen/opaciteten sätts sedan DIREKT (ingen CSS-
+// transition) för varje pekar-rörelseevent, proportionellt mot hur stor
+// andel av bredden fingret dragit i den låsta riktningen — sidan följer
+// alltså fingret exakt. Eftersom medlemmen redan bytts UNDER den
+// fortfarande täckande ögonblicksbilden (transform startar på rotateY(0),
+// identisk yta) syns bytet aldrig förrän ögonblicksbilden faktiskt roterar
+// bort. Släpps fingret innan tröskeln (SWIPE_COMMIT_RATIO) nåtts fjädrar
+// sidan tillbaka till platt/odold — och EFTERSOM bytet redan skett måste
+// det då ångras (byt tillbaka), men först EFTER att ögonblicksbilden fullt
+// återställts (rotateY(0), opacitet 1, alltså fullt övertäckande igen) —
+// samma "byt bakom en redan täckande kopia är osynligt"-princip som redan
+// användes för det fullbordade svepet. Musens marginal-drag (isMouse) är
+// MEDVETET oförändrad, ingen levande spårning där (se uppföljning #6 ovan)
+// — bara touch fick den nya, levande vändningen.
 const VERTICAL_DOMINANCE_RATIO = 1.5;
-const SWIPE_COMMIT_RATIO = 0.5;
+// 2026-08-23, Zaida: "jag vill ha snabbare reaktion så att jag inte hinner
+// swipa flera gånger i tron om att det nog inte fungerade" — sänkt från 0.5.
+// Vid 0.5 krävdes ett drag över HALVA skärmens bredd innan något alls
+// hände — ett normalt, snabbt svep som inte når hela vägen gav då noll
+// respons och kändes trasigt. 0.3 kräver fortfarande en tydlig, avsiktlig
+// rörelse (inte bara några pixlar) men committar vid en realistisk
+// swipe-distans. Gäller båda input-typerna.
+const SWIPE_COMMIT_RATIO = 0.3;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
 const DESKTOP_MARGIN_PX = 48;
-const FLIP_MS = 260;
+// 2026-08-23, samma Zaida-fynd: kortad från 260ms för en snabbare, mer
+// direkt "sidan vänds"-känsla — halverar samtidigt tiden innan nästa svep
+// tillåts (animating-låset). Fungerar nu som REFERENSVÄRDE för en fullt
+// spelad vändning (0%→100%) — touch-vändningen (settlePeel) skalar ner
+// duration proportionellt mot hur mycket som redan syns/återstår, se
+// nedan, så den faktiska speltiden vid släpp oftast är KORTARE än detta.
+const FLIP_MS = 180;
+// 2026-08-23: golv för settlePeel-animationen (se nedan) — utan ett golv
+// skulle ett släpp EXAKT vid tröskeln (progress≈SWIPE_COMMIT_RATIO) eller
+// EXAKT vid start (progress≈0) ge en nära nog momentan, ryckig hop-övergång
+// istället för en kort men mjuk rörelse.
+const MIN_SETTLE_MS = 80;
 
 // Hittar den NÄRMASTE genuint skrollbara förfadern (overflow-y auto/scroll
 // OCH faktiskt mer innehåll än plats) mellan den vidrörda noden och
@@ -86,6 +130,13 @@ type Options = {
   onPrev: () => void;
 };
 
+// En pågående, levande sidvändning (touch, 2026-08-23) — se filhuvudet.
+type PeelState = {
+  snapshot: HTMLElement;
+  direction: 1 | -1;
+  width: number;
+};
+
 type GestureState = {
   pointerId: number;
   x: number;
@@ -106,6 +157,10 @@ type GestureState = {
   // uppföljning #11) — null om gesten startade utanför all skrollbar yta,
   // då finns inget att driva manuellt oavsett axel.
   scrollTarget: Element | null;
+  // Touchens levande sidvändning, om en sådan har påbörjats (2026-08-23) —
+  // null tills axeln avgörs vågrät. Låser samtidigt axeln till "horizontal"
+  // för resten av gesten (se onPointerMove).
+  peel: PeelState | null;
 };
 
 export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Options) {
@@ -124,7 +179,10 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     const gestureRef: { current: GestureState | null } = { current: null };
     // Blockerar en NY gest medan förra gestens övergång fortfarande spelar
     // (2026-08-09) — annars kan ett snabbt andra svep starta mitt i en
-    // pågående animation och se ryckigt/dubbelt ut.
+    // pågående animation och se ryckigt/dubbelt ut. Sätts numera redan när
+    // en touch-peel PÅBÖRJAS (2026-08-23), inte bara vid själva
+    // avslutningsanimationen — täcker hela den period då medlemmen kan
+    // vara "optimistiskt" bytt men ännu inte slutgiltigt bekräftad/ångrad.
     let animating = false;
     // Positioneringskontext för ögonblicksbilden nedan (position:absolute;
     // inset:0 måste positioneras relativt just el, inte en ännu högre
@@ -142,21 +200,11 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     //
     // Löst genom att aldrig flytta den RIKTIGA ytan alls: en FRUSEN
     // ÖGONBLICKSBILD (cloneNode) av den nuvarande sidan läggs OVANPÅ
-    // (position:absolute, högre z-index) innehållet, medan den riktiga,
-    // NYA sidan byts in UNDER ögonblicksbilden i samma task (onNext/
-    // onPrev) — den nya sidan täcker alltså hela ytan från första bildrutan,
-    // långt innan ögonblicksbilden ens börjar röra sig. Bara
-    // ögonblicksbilden roteras bort (rotateY, som att vika ett blad kring
-    // dess bindningskant) och tas bort när den är klar — aldrig ett tomt
-    // mellanrum, aldrig skalets bakgrund synlig.
-    function commit(dx: number) {
-      animating = true;
-      const width = el!.getBoundingClientRect().width || 1;
-      // Svep åt vänster (nästa medlem) viker sidan bort kring dess VÄNSTRA
-      // kant, som att vända framåt i en bok. Svep åt höger (föregående)
-      // viker den bort kring den HÖGRA kanten, som att bläddra bakåt.
-      const direction: 1 | -1 = dx < 0 ? 1 : -1;
-
+    // (position:absolute, högre z-index) innehållet. Både mus-varianten
+    // (commit(), release-styrd) och touch-varianten (beginPeel/updatePeel/
+    // settlePeel, 2026-08-23, levande) delar samma ögonblicksbild-uppsättning
+    // (createSnapshot).
+    function createSnapshot(direction: 1 | -1): HTMLElement {
       const snapshot = el!.cloneNode(true) as HTMLElement;
       // Skärmläsare ska aldrig se den frusna, overksamma dubblettkopian —
       // bara den riktiga, nya sidan under den.
@@ -169,17 +217,47 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // aldrig tvingar en repaint. box-shadow (tidigare försök att antyda
       // djup) provocerade fram en repaint av HELA den nyss klonade,
       // potentiellt stora dashboard-ytan varje bildruta under hela
-      // rotationen, rakt emot syftet med snapshot-mönstret — bytt mot en
-      // opacitetstoning som ger samma "sidan lyfter bort"-känsla utan att
-      // måla om något.
+      // rotationen, rakt emot syftet med snapshot-mönstret.
       snapshot.style.willChange = "transform, opacity";
       snapshot.style.pointerEvents = "none";
-      // Rotationen går förbi 90° (till 110°, se rAF-blocket nedan) för att
-      // sidan ska hinna kännas helt bortvikt innan den tas bort — utan
-      // detta hade den sista biten (90°→110°) visat sidans SPEGELVÄNDA
-      // baksida istället för att förbli dold.
+      // Rotationen går förbi 90° (till 110°, se nedan) för att sidan ska
+      // hinna kännas helt bortvikt innan den tas bort — utan detta hade
+      // den sista biten (90°→110°) visat sidans SPEGELVÄNDA baksida
+      // istället för att förbli dold.
       snapshot.style.backfaceVisibility = "hidden";
+
+      // Statisk skugga längs kanten som viks bort (2026-08-23, "e-bok"-
+      // känslan) — mörknar mot den fria/roterande kanten, som ljuset på
+      // ett riktigt pappersblad som lyfts. Ren bakgrundsgradient, ändras
+      // aldrig för sig själv (bara HELA ögonblicksbilden roteras/tonas) —
+      // ingen extra repaint-kostnad utöver den redan existerande
+      // transform/opacity.
+      const shadow = document.createElement("div");
+      shadow.style.position = "absolute";
+      shadow.style.inset = "0";
+      shadow.style.pointerEvents = "none";
+      shadow.style.background =
+        direction === 1
+          ? "linear-gradient(to right, transparent 55%, rgba(0,0,0,0.35) 100%)"
+          : "linear-gradient(to left, transparent 55%, rgba(0,0,0,0.35) 100%)";
+      snapshot.appendChild(shadow);
+
       el!.appendChild(snapshot);
+      return snapshot;
+    }
+
+    // MUS-varianten (marginal-drag, release-styrd) — ingen levande
+    // spårning under draget (se uppföljning #6), hela vändningen spelas
+    // upp EFTER släpp. Touch använder istället beginPeel/updatePeel/
+    // settlePeel nedan.
+    function commit(dx: number) {
+      animating = true;
+      const width = el!.getBoundingClientRect().width || 1;
+      // Svep åt vänster (nästa medlem) viker sidan bort kring dess VÄNSTRA
+      // kant, som att vända framåt i en bok. Svep åt höger (föregående)
+      // viker den bort kring den HÖGRA kanten, som att bläddra bakåt.
+      const direction: 1 | -1 = dx < 0 ? 1 : -1;
+      const snapshot = createSnapshot(direction);
 
       // Byt medlem — den nya personens innehåll ritas nu UNDER
       // ögonblicksbilden, i samma synkrona task.
@@ -189,18 +267,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // Dubbel rAF (samma beprövade mönster som redan användes här innan)
       // garanterar att webbläsaren hunnit måla den nya, riktiga sidan under
       // ögonblicksbilden innan viknings-animationen ens börjar.
-      // Städar upp ögonblicksbilden när VIKNINGEN faktiskt tar slut, inte
-      // efter en gissad fast tid — en ren setTimeout räknade tidigare från
-      // commit()-anropet, INNAN den dubbla rAF-fördröjningen ens hunnit
-      // starta den riktiga CSS-transitionen, vilket under belastning kunde
-      // ta bort ögonblicksbilden medan den fortfarande syntes mitt i
-      // rotationen (ett tvärt hopp istället för en mjuk avslutning).
-      // transitionend är den faktiska signalen; en generös safety-timeout
-      // finns bara kvar som skyddsnät om eventet av någon anledning
-      // uteblir. e.target-kollen behövs eftersom klonen är en HEL
-      // dashboard-subtree — ett barns egen, orelaterade CSS-transition
-      // (t.ex. en hover-effekt) skulle annars kunna bubbla upp och trigga
-      // städningen för tidigt.
       let settled = false;
       function finish() {
         if (settled) return;
@@ -220,6 +286,84 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
           snapshot.style.opacity = "0.4";
         });
       });
+    }
+
+    // Hur stor andel [0,1] av bredden fingret dragit i peel-gestens LÅSTA
+    // riktning — negativ/motsatt rörelse (draget "tillbaka") clampas till 0,
+    // inte till ett negativt tal, så sidan aldrig viks förbi platt i fel
+    // riktning inom samma gest.
+    function peelProgress(peel: PeelState, dx: number): number {
+      const raw = peel.direction === 1 ? -dx : dx;
+      return Math.min(Math.max(raw / peel.width, 0), 1);
+    }
+
+    // Påbörjar TOUCH-vändningen så fort axeln avgörs vågrät (2026-08-23) —
+    // tidigare (release-styrd) hände detta först vid commit(). Ögonblicks-
+    // bilden läggs på UTAN transition (rotateY(0), fullt opak — identisk
+    // med den riktiga ytan den täcker) och medlemmen byts DIREKT UNDER den
+    // i samma synkrona task, precis som mus-varianten gjorde vid release —
+    // bytet är alltså redan osynligt gjort innan draget ens fortsätter.
+    function beginPeel(g: GestureState, dx: number) {
+      const width = el!.getBoundingClientRect().width || 1;
+      const direction: 1 | -1 = dx < 0 ? 1 : -1;
+      const snapshot = createSnapshot(direction);
+      snapshot.style.transition = "none";
+      g.peel = { snapshot, direction, width };
+      animating = true;
+      if (direction === 1) onNextRef.current();
+      else onPrevRef.current();
+    }
+
+    // Sätter rotation/opacitet DIREKT (ingen transition) proportionellt mot
+    // fingrets aktuella position — anropas varje pointermove medan peelen
+    // pågår, ger samma "sidan följer fingret pixel för pixel"-känsla som en
+    // riktig e-boksapp.
+    function updatePeel(g: GestureState, dx: number) {
+      const peel = g.peel;
+      if (!peel) return;
+      const progress = peelProgress(peel, dx);
+      snapshotSetAngle(peel, progress);
+    }
+
+    function snapshotSetAngle(peel: PeelState, progress: number) {
+      peel.snapshot.style.transform = `perspective(${peel.width * 2.5}px) rotateY(${peel.direction * -110 * progress}deg)`;
+      peel.snapshot.style.opacity = String(1 - 0.6 * progress);
+    }
+
+    // Avslutar en pågående touch-peel vid släpp/avbrott (2026-08-23) — om
+    // draget hunnit förbi SWIPE_COMMIT_RATIO fullbordas vändningen (samma
+    // mål-vinkel/opacitet som mus-varianten), annars fjädrar sidan tillbaka
+    // till platt/odold. Animationens längd skalas mot hur mycket som
+    // FAKTISKT återstår (inte alltid hela FLIP_MS) — har fingret redan
+    // dragit 90% av vägen behöver bara de sista 10% animeras, känns
+    // omedelbart snarare än att spela om en hel vändning från början.
+    function settlePeel(g: GestureState, dx: number) {
+      const peel = g.peel!;
+      const progress = peelProgress(peel, dx);
+      const committed = progress >= SWIPE_COMMIT_RATIO;
+      const duration = Math.max(FLIP_MS * (committed ? 1 - progress : progress), MIN_SETTLE_MS);
+
+      peel.snapshot.style.transition = `transform ${duration}ms ease-out, opacity ${duration}ms ease-out`;
+      snapshotSetAngle(peel, committed ? 1 : 0);
+
+      let settled = false;
+      function finish() {
+        if (settled) return;
+        settled = true;
+        if (!committed) {
+          // Ögonblicksbilden täcker återigen HELT (rotateY(0), opacitet 1)
+          // — bytet som gjordes optimistiskt i beginPeel ångras nu, osynligt
+          // bakom den fortfarande fullt täckande kopian, innan den tas bort.
+          if (peel.direction === 1) onPrevRef.current();
+          else onNextRef.current();
+        }
+        peel.snapshot.remove();
+        animating = false;
+      }
+      peel.snapshot.addEventListener("transitionend", (e) => {
+        if (e.target === peel.snapshot) finish();
+      });
+      window.setTimeout(finish, duration + 150);
     }
 
     function onPointerDown(e: PointerEvent) {
@@ -246,7 +390,8 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         isMouse,
         axis: "unknown",
         everHorizontal: false,
-        scrollTarget: isMouse ? null : findScrollableAncestor(e.target as Element | null, el!)
+        scrollTarget: isMouse ? null : findScrollableAncestor(e.target as Element | null, el!),
+        peel: null
       };
     }
 
@@ -282,6 +427,11 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       if (Math.max(Math.abs(dx), Math.abs(dy)) >= AXIS_DECIDE_THRESHOLD_PX) {
         g.axis = Math.abs(dy) > Math.abs(dx) * VERTICAL_DOMINANCE_RATIO ? "vertical" : "horizontal";
       }
+      // En påbörjad peel LÅSER axeln till vågrät för resten av gesten
+      // (2026-08-23) — en sidvändning som redan bytt medlem under
+      // ögonblicksbilden ska aldrig plötsligt tolkas om som listskroll
+      // mitt i draget.
+      if (g.peel) g.axis = "horizontal";
 
       // 2026-08-10, uppföljning #12 (Zaidas fynd: barnens tre-tryck-gest för
       // att starta todo-timern missade tryck så fort listan inte låg
@@ -301,6 +451,8 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
 
       if (g.axis === "horizontal") {
         g.everHorizontal = true;
+        if (!g.peel) beginPeel(g, dx);
+        updatePeel(g, dx);
       } else if (g.scrollTarget) {
         // Manuell "nativ känns"-scroll (2026-08-09, uppföljning #11) —
         // ersätter den nativa panorering vi medvetet stängt av i CSS:en.
@@ -316,6 +468,15 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         el!.releasePointerCapture(e.pointerId);
       }
 
+      const dx = e.clientX - g.x;
+
+      // Touch med en påbörjad levande peel (2026-08-23) — avgör själv om
+      // vändningen fullbordas eller fjädrar tillbaka, se settlePeel.
+      if (g.peel) {
+        settlePeel(g, dx);
+        return;
+      }
+
       if (!g.everHorizontal) {
         // Aldrig klassad vågrät (rent lodrätt svep, eller för kort rörelse
         // för att avgöras, eller ett musklick som aldrig lämnade
@@ -323,7 +484,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         return;
       }
 
-      const dx = e.clientX - g.x;
       // Samma andels-tröskel för båda input-typerna — kräver en stor andel
       // av bredden, inte bara några pixlar, så t.ex. en vanlig
       // textmarkering med musen aldrig räknas som en växling.
@@ -342,8 +502,13 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         if (g.isMouse && el!.hasPointerCapture(e.pointerId)) {
           el!.releasePointerCapture(e.pointerId);
         }
-        // Inget att fjädra tillbaka (se filhuvudets uppföljning #6) —
-        // innehållet flyttades aldrig under draget.
+        if (g.peel) {
+          // Gesten avbröts (t.ex. systemgest tar över) mitt i en peel —
+          // samma "fjädra tillbaka"-hantering som ett vanligt släpp under
+          // tröskeln (2026-08-23), eftersom medlemmen redan hunnit bytas
+          // optimistiskt i beginPeel.
+          settlePeel(g, e.clientX - g.x);
+        }
       }
     }
 

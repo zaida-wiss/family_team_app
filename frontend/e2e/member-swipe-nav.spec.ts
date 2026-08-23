@@ -128,3 +128,98 @@ test("marginal-drag: nedtryck MITT i vyn (inte i marginalen) triggar ingen växl
 
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 });
+
+// 2026-08-23, Zaida: "det skall vara som att vända blad i en e-bok" —
+// touch-varianten (till skillnad från mus-marginaldraget ovan) tracker nu
+// fingret LEVANDE under draget (beginPeel/updatePeel i useMemberSwipeNav.ts)
+// istället för att bara reagera vid släpp. Simuleras här med dispatchEvent
+// + pointerType:"touch" (samma mönster som redan används för håll-in-gester
+// i todo-timer.spec.ts) eftersom page.mouse alltid ger pointerType:"mouse".
+// bubbles:true krävs eftersom eventen dispatchas på .child-dashboard men
+// själva lyssnaren sitter på dess omslutande <div ref={memberSwipeNavRef}>.
+test("touch-svep: en fullbordad vändning följer fingret och byter medlem", async ({ page }) => {
+  await mockCommon(page);
+  await page.goto("/");
+
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
+  await expect(page.getByText("Hej Nova!")).toBeVisible();
+
+  const box = await page.locator(".child-dashboard").boundingBox();
+  if (!box) throw new Error("Dashboard hittades inte");
+  // Events dispatchas på den STABILA svep-wrappern (data-testid, samma nod
+  // hela gesten) — INTE på .child-dashboard, som beginPeel byter ut mitt i
+  // (key={member.id} tvingar React att montera om HELA .child-dashboard-
+  // subträdet vid ett medlemsbyte, se MemberShellContent.tsx). Ett tidigare
+  // försök som fångade .child-dashboard direkt tappade resten av draget
+  // eftersom den noden hann bli frånkopplad (detached) så fort första
+  // pointermove-eventet triggade det optimistiska bytet.
+  const wrapperHandle = await page.getByTestId("member-swipe-area").elementHandle();
+  if (!wrapperHandle) throw new Error("Svep-wrapper hittades inte");
+  const startX = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await wrapperHandle.dispatchEvent("pointerdown", {
+    pointerId: 1, pointerType: "touch", clientX: startX, clientY: y, bubbles: true
+  });
+  // Stigande vågrät förflyttning åt vänster — kryssar både axel-tröskeln
+  // (8px, påbörjar peelen) och sedan SWIPE_COMMIT_RATIO (30% av bredden).
+  for (const fraction of [0.05, 0.2, 0.4, 0.65]) {
+    await wrapperHandle.dispatchEvent("pointermove", {
+      pointerId: 1, pointerType: "touch", clientX: startX - box.width * fraction, clientY: y, bubbles: true
+    });
+  }
+  await wrapperHandle.dispatchEvent("pointerup", {
+    pointerId: 1, pointerType: "touch", clientX: startX - box.width * 0.65, clientY: y, bubbles: true
+  });
+
+  // Samma generösa timeout som marginal-drag-testet ovan (PersonalDashboard
+  // lazy-laddas första gången). getByRole (inte getByText) eftersom
+  // ögonblicksbilden är en FULL klon av samma rubrik-DOM — bara aria-hidden
+  // skiljer dem åt, och getByRole utesluter (till skillnad från getByText)
+  // aria-hidden-innehåll ur tillgänglighetsträdet, så assertionen inte
+  // flakar under den korta stunden innan städningen (snapshot.remove())
+  // hunnit köras.
+  await expect(page.getByRole("heading", { name: "Hej Testförälder!" })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: "Hej Nova!" })).toHaveCount(0);
+});
+
+test("touch-svep: ett kort drag under tröskeln fjädrar tillbaka och byter INTE medlem", async ({ page }) => {
+  await mockCommon(page);
+  await page.goto("/");
+
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
+  await expect(page.getByText("Hej Nova!")).toBeVisible();
+
+  const box = await page.locator(".child-dashboard").boundingBox();
+  if (!box) throw new Error("Dashboard hittades inte");
+  // Se kommentaren i föregående test — samma resonemang om varför events
+  // dispatchas på den stabila svep-wrappern, inte på .child-dashboard.
+  const wrapperHandle = await page.getByTestId("member-swipe-area").elementHandle();
+  if (!wrapperHandle) throw new Error("Svep-wrapper hittades inte");
+  const startX = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await wrapperHandle.dispatchEvent("pointerdown", {
+    pointerId: 1, pointerType: "touch", clientX: startX, clientY: y, bubbles: true
+  });
+  // Bara 10% av bredden — förbi axel-tröskeln (så en peel FAKTISKT
+  // påbörjas, medlemmen byts redan här bakom ögonblicksbilden, se
+  // beginPeel) men långt under SWIPE_COMMIT_RATIO (30%).
+  for (const fraction of [0.03, 0.06, 0.1]) {
+    await wrapperHandle.dispatchEvent("pointermove", {
+      pointerId: 1, pointerType: "touch", clientX: startX - box.width * fraction, clientY: y, bubbles: true
+    });
+  }
+  await wrapperHandle.dispatchEvent("pointerup", {
+    pointerId: 1, pointerType: "touch", clientX: startX - box.width * 0.1, clientY: y, bubbles: true
+  });
+
+  // settlePeel fjädrar tillbaka och ångrar det tidiga bytet (osynligt
+  // bakom den återställda ögonblicksbilden) — den KRITISKA delen att
+  // verifiera, eftersom mus-testerna ovan aldrig byter medlem tidigt.
+  // getByRole, inte getByText — se kommentaren i föregående test.
+  await expect(page.getByRole("heading", { name: "Hej Nova!" })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: "Hej Testförälder!" })).toHaveCount(0);
+});

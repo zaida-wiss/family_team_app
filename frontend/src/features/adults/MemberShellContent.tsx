@@ -739,7 +739,7 @@ export function MemberShellContent({
 
     if (selectedMemberIsChild) {
       return (
-        <div ref={memberSwipeNavRef}>
+        <div ref={memberSwipeNavRef} data-testid="member-swipe-area">
           <Suspense fallback={null}>
             <ChildDashboard
               key={selectedDashboardMember.id}
@@ -773,7 +773,7 @@ export function MemberShellContent({
     const editingSelfTodo = editingSelfTodoId ? todos.find((t) => t.id === editingSelfTodoId) ?? null : null;
 
     return (
-      <div ref={memberSwipeNavRef}>
+      <div ref={memberSwipeNavRef} data-testid="member-swipe-area">
         <Suspense fallback={null}>
         <PersonalDashboard
           key={selectedDashboardMember.id}
