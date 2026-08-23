@@ -155,8 +155,11 @@
      eftersom barn saknar mörkt-läge-växeln — helt frikopplad från vilken
      polaritet --on-c4 råkar välja för just DET temat). --c4/--on-c4 är
      samma källa och därför ALLTID korrekt parade, för både riktiga
-     barnteman OCH bas-fallbacken nedan (.child-dashboard { --c4:
-     var(--background) }, matchar samma --foreground-fallback som on-c4). */
+     barnteman OCH bas-fallbacken (.child-dashboard { --c4: var(--primary-dark);
+     --on-c4: var(--white) } — bytt 2026-08-16 från --background/--foreground
+     efter Zaidas uppföljning "är det möjligt att få dem i färgtemat
+     istället?", se themes.css för hela resonemanget bakom valet av
+     --primary-dark). */
   background: var(--c4, var(--card, var(--white, #fff)));
   box-shadow: 0 4px 14px color-mix(in srgb, var(--black, #000) 18%, transparent);
 }

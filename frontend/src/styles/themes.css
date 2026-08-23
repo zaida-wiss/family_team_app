@@ -755,10 +755,39 @@
    bakgrund (den svatch --on-c4 handplockades för att kontrastera mot,
    se den filens kommentar) — utan denna rad hade --c4 haft SAMMA
    arvsläcka som --on-c4 hade (adult-temats egen --c4, en helt annan
-   färg, oparad med --foreground). */
+   färg, oparad med --foreground).
+
+   2026-08-16, ÄNNU en uppföljning — Zaida: "nu är dom vita... är det
+   möjligt att få dem i färgtemat istället?". --background är i LJUST
+   LÄGE alltid nästan vit (samma token .app-shell/:root redan använder för
+   hela sidans bakgrund) — helt frikopplat från vilken accentfärg den
+   vuxne faktiskt valt, så kortet såg ut som en blek, otematiserad yta
+   istället för att bära temats färg.
+
+   Första försöket bytte till --primary/--primary-fg — FEL VAL, hittat
+   under samma dags verifiering: `.child-dashboard[class*="theme-"]`
+   (längre ner i filen, högre specificitet: en klass + ett attribut) sätter
+   REDAN OM --primary/--primary-fg till var(--c0)/var(--on-c0) för att
+   ge riktiga barntemans EGNA UI-element (t.ex. .child-shop-card) rätt
+   märkesfärg — men c0 för ett vanligt VUXENTEMA (som "dusk") ärvs i sin
+   tur in från .app-shell.theme-dusk, en tredje, ännu en gång orelaterad
+   färgkälla som dessutom SKILJER SIG mellan ljust/mörkt läge (till
+   skillnad från primary/primary-dark) — resultat: en fungerande lila
+   färg i ljust läge, men en obesläktad gul/beige med SVART text i mörkt
+   läge, samma bugklass som redan hittats två gånger tidigare samma dag.
+
+   --primary-dark istället — den ENDA av de fyra märkesfärg-tokens som
+   INTE rörs av .child-dashboard[class*="theme-"]-omdefinieringen ovan
+   (bara --primary/--primary-fg pekas om där), och som redan är
+   dokumenterat (navbar-historiken tidigare i filen) "alltid mörk, aldrig
+   ljus, i båda lägena" OCH WCAG-verifierad mot vit text i ALLA teman
+   ("Bara c0/c1 (=primary-dark/primary) är kontrastverifierade mot vit
+   ikonfärg i ALLA teman"). Paras därför direkt med --white (en känd,
+   garanterat vit konstant) istället för --primary-fg, som ärver samma
+   omdefinierings-problem. */
 .child-dashboard {
-  --on-c4: var(--foreground);
-  --c4: var(--background);
+  --on-c4: var(--white);
+  --c4: var(--primary-dark);
 }
 
 /* Cosmic Cobalt */

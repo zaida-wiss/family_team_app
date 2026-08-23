@@ -158,12 +158,16 @@ test("vuxen ser ett uppdragskort för ett delmoment tilldelat DEM, med emojin so
 // — PersonalDashboard.tsx återanvänder .child-dashboard theme-${dashboardTheme},
 // men en vuxens dashboardTheme är ett VANLIGT VUXENTEMA (t.ex. "dusk"), inte
 // ett av de tio riktiga barntemana i themes.css:s CHILD THEME TOKENS-block.
-// --on-c4 ÄRVDES tidigare in från .app-shell.theme-dusk (en HELT ANNAN,
-// felaktig färgpar för det här sammanhanget) istället för att falla tillbaka
-// på --foreground, se themes.css:s nya bas-regel `.child-dashboard { --on-c4:
-// var(--foreground); }`. Verifierar att kortets text/kant matchar den
-// vuxnes EGET dark/light-läge (--foreground), inte ett hårdkodat svart.
-test("delmoment-kortets text/kant på en vuxens PersonalDashboard matchar --foreground, inte ett hårdkodat svart som ärvts från vuxentemat", async ({ page }) => {
+// Två senare uppföljningar samma dag ändrade den slutgiltiga lösningen: en
+// solid kortbakgrund (istället för en för subtil halo), och sedan (Zaida:
+// "är det möjligt att få dem i färgtemat istället?") en riktig temafärg
+// (--primary-dark, den enda av märkesfärgs-tokenerna som varken rörs av
+// .child-dashboard[class*="theme-"]-omdefinieringen eller skiljer sig
+// mellan ljust/mörkt läge) istället för den tidigare bleka --background.
+// Verifierar att kortets bakgrund matchar temats --primary-dark och att
+// texten är vit — inte ett hårdkodat svart, och inte den gamla, otematiserade
+// --background/--foreground-kombinationen.
+test("delmoment-kortets bakgrund/text på en vuxens PersonalDashboard bär temats --primary-dark/vit, inte ett hårdkodat svart eller en otematiserad bakgrund", async ({ page }) => {
   const larsTodoWithSubtask = {
     ...LARS_TODO,
     subtasks: [{ id: "sub-1", title: "🧺Diska", done: false, assignedTo: "mem-1" }]
@@ -183,26 +187,24 @@ test("delmoment-kortets text/kant på en vuxens PersonalDashboard matchar --fore
 
   const card = page.locator(".child-task-card--subtask");
   await expect(card).toBeVisible();
-  const { cardColor, expectedForeground } = await card.evaluate((el) => {
+  const { cardColor, cardBg, expectedPrimaryDark } = await card.evaluate((el) => {
     const name = el.querySelector(".child-task-name")!;
     return {
       cardColor: getComputedStyle(name).color,
-      expectedForeground: getComputedStyle(document.querySelector(".app-shell")!).getPropertyValue("--foreground"),
+      cardBg: getComputedStyle(el).backgroundColor,
+      expectedPrimaryDark: getComputedStyle(document.querySelector(".app-shell")!).getPropertyValue("--primary-dark"),
     };
   });
-  // --foreground är ett color-mix()-uttryck, inte en färdig färg — jämför
-  // mot en riktig DOM-nod som resolvar det, precis som webbläsaren gör för
-  // kortets text.
-  const resolvedForeground = await page.evaluate((v) => {
+  const resolvedPrimaryDark = await page.evaluate((v) => {
     const el = document.createElement("div");
     el.style.color = v;
     document.body.appendChild(el);
     const resolved = getComputedStyle(el).color;
     el.remove();
     return resolved;
-  }, expectedForeground);
-  expect(cardColor).toBe(resolvedForeground);
-  expect(cardColor).not.toBe("rgb(0, 0, 0)");
+  }, expectedPrimaryDark);
+  expect(cardBg).toBe(resolvedPrimaryDark);
+  expect(cardColor).toBe("rgb(255, 255, 255)");
 });
 
 // 2026-08-15, Zaida: "oavsett delmoment eller uppgift så vill jag ha en ikon
