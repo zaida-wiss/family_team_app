@@ -587,7 +587,6 @@ function buildFamilyWideTodo(accountId: string, createdBy: string, title: string
     title,
     createdBy,
     assignedTo: null,
-    isShared: false,
     status: "pending",
     starValue: 0,
     visual: { type: "lucide-icon", value: visualValue || "⭐" },

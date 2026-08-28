@@ -86,7 +86,6 @@ export function TodoThreadToolbar({
           title: task.title,
           createdBy: currentMember.id,
           assignedTo: currentMember.id,
-          isShared: false,
           status: "pending",
           starValue: task.starValue,
           visual: task.visual,

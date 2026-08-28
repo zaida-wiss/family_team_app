@@ -510,7 +510,6 @@ export function MemberOverview({
                   title: taskTitle,
                   createdBy: currentMember.id,
                   assignedTo: null,
-                  isShared: false,
                   status: "pending",
                   starValue: 0,
                   visual: { type: "lucide-icon", value: "⭐" },

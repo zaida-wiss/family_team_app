@@ -60,7 +60,7 @@ export function getVisibleTodos(
 
   if (hasPermission(member, roles, "canSeeOwnTodos")) {
     return activeTodos.filter((todo) => {
-      return todo.assignedTo === member.id || todo.isShared === true || isOwnCreation(todo) || isFamilyTodo(todo);
+      return todo.assignedTo === member.id || isOwnCreation(todo) || isFamilyTodo(todo);
     });
   }
 

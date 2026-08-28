@@ -7,7 +7,6 @@ const todoSchema = new Schema<Todo>({
   title: { type: String, required: true },
   createdBy: { type: String, required: true },
   assignedTo: { type: String, default: null },
-  isShared: { type: Boolean, required: true },
   status: { type: String, enum: ["pending", "done", "approved", "rejected", "expired"], required: true },
   starValue: { type: Number, required: true },
   // Revisionsstämplar (2026-08-05) — createdAt sätts explicit i createTodo

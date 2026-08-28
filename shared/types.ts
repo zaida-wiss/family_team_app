@@ -774,7 +774,6 @@ export type Todo = {
   createdAt?: string;
   updatedAt?: string;
   assignedTo: Id | null;
-  isShared: boolean;
   status: TodoStatus;
   starValue: number;
   visual: TodoVisual;

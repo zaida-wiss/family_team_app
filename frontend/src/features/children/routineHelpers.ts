@@ -107,7 +107,6 @@ export function copyRoutineTemplate(source: Todo, targetChildId: Id, createdBy: 
     title: source.title,
     createdBy,
     assignedTo: targetChildId,
-    isShared: false,
     status: "pending",
     starValue: source.starValue,
     visual: source.visual,

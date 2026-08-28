@@ -69,7 +69,6 @@ export function CreateTodoFromRecipeModal({ recipe, currentMember, initialServin
       title: title.trim(),
       createdBy: currentMember.id,
       assignedTo: null,
-      isShared: false,
       status: "pending",
       starValue: 0,
       visual: { type: "lucide-icon", value: recipe.emoji || DEFAULT_EMOJI },

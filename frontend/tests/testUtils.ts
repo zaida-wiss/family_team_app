@@ -82,7 +82,6 @@ export function createTodo(overrides: Partial<Todo> = {}): Todo {
     title: "Testtodo",
     createdBy: "member-parent",
     assignedTo: "member-child",
-    isShared: false,
     status: "pending",
     starValue: 1,
     visual: { type: "lucide-icon", value: "Check" },

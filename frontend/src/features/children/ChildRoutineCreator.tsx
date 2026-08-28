@@ -130,7 +130,6 @@ export function ChildRoutineCreator({
       title: trimmedTitle,
       createdBy: currentMember.id,
       assignedTo: childId,
-      isShared: false,
       status: "pending",
       starValue: stars,
       visual: { type: "lucide-icon", value: emoji },

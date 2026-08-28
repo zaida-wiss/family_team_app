@@ -327,7 +327,6 @@ export const TodoSchema = z.object({
   title: z.string().min(1, "Uppgiftstitel krävs"),
   createdBy: IdSchema,
   assignedTo: IdSchema.nullable(),
-  isShared: z.boolean(),
   status: TodoStatusSchema,
   starValue: z.number().int().min(0),
   visual: TodoVisualSchema,
@@ -372,7 +371,6 @@ export const TodoSchema = z.object({
 export const TodoPatchSchema = TodoSchema.pick({
   title: true,
   assignedTo: true,
-  isShared: true,
   starValue: true,
   visual: true,
   recurrence: true,
