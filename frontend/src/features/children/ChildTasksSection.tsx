@@ -19,8 +19,16 @@ type TaskCardStyle = CSSProperties & {
 
 const KNOWN_CATEGORIES = ["hälsa", "trivsel", "skills", "pengar"] as const;
 
-function getTaskStyle(category: string): TaskCardStyle {
+export function getTaskStyle(category: string): TaskCardStyle {
   const norm = category.trim().toLocaleLowerCase("sv-SE");
+  // Todos utan kategori (personalCategoryId null, t.ex. Familjen-poolen eller
+  // barn-tilldelade uppgifter) ger en tom sträng här — utan denna tidiga
+  // retur föll den tomma strängen igenom till hash-grenen nedan, där
+  // [...""].reduce(...) alltid ger 0 och därmed alltid "hälsa"-färgen,
+  // oavsett att kortet inte har någon kategori alls.
+  if (!norm) {
+    return { "--task-accent": "var(--muted-fg)", "--task-bg": "var(--card)" };
+  }
   const key =
     KNOWN_CATEGORIES.find((k) => norm.includes(k)) ??
     KNOWN_CATEGORIES[[...norm].reduce((s, c) => s + c.charCodeAt(0), 0) % KNOWN_CATEGORIES.length];
