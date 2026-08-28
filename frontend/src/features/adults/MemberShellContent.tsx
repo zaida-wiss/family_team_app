@@ -37,11 +37,10 @@ const RecipesView = lazy(() =>
 import { HomePage } from "../../pages/HomePage";
 import { canViewResource, canSeeMembersPanel, hasPermission } from "../../utils/permissions";
 import {
-  compareTodosByEndThenStart,
+  getActiveChildTodos,
   getAssignedSubtaskCards,
   getFamilyViewTodos,
-  isDueWithinRange,
-  isTodoVisibleNow,
+  getRejectedTodosForMember,
 } from "../todos/selectors";
 import { useCrossAccountFamilyTodos, useCrossAccountMembers, useCrossAccountRecipes, useCrossAccountShoppingLists } from "../todos/useCrossAccountFamilyState";
 import { useConnectionTodos, useConnectionMembers, useConnectionShoppingLists } from "../accounts/useFamilyConnectionsState";
@@ -689,31 +688,18 @@ export function MemberShellContent({
     // nått sitt klockslag idag aldrig kunnat förhandsvisas för en vecka
     // framåt.
     const useRangeAwareVisibility = !selectedMemberIsChild && todoThreadRange !== "today";
-    // "expired" behandlas som "pending" (2026-08-08, Zaidas önskemål: "alla
-    // todos som inte markerats som slutförda skall visas om tiden är efter
-    // starttid, och före sluttid, oavsett när jag redigerar") — statusfältet
-    // är bara en ögonblicksbild, isTodoVisibleNow/isDueWithinRange (nedan)
-    // avgör redan om tidsfönstret faktiskt är aktuellt just nu.
-    const activeChildTodos = todos
-      .filter(
-        (t) =>
-          (t.assignedTo === selectedDashboardMember.id ||
-            (t.assignedTo === null && t.inProgressBy?.includes(selectedDashboardMember.id))) &&
-          (t.status === "pending" || t.status === "expired") &&
-          t.recurrence.type === "none" &&
-          t.deletedAt === null &&
-          (useRangeAwareVisibility
-            ? isDueWithinRange(t, new Date(now), todoThreadRange)
-            : isTodoVisibleNow(t, now)) &&
-          !(t.personalCategoryId && personalCategories.find((c) => c.id === t.personalCategoryId)?.hidden)
-      )
-      .sort(compareTodosByEndThenStart);
-    const rejectedTodos = todos.filter(
-      (t) =>
-        t.assignedTo === selectedDashboardMember.id &&
-        t.status === "rejected" &&
-        t.deletedAt === null
+    // Se getActiveChildTodos i selectors.ts för den fulla bakgrunden bakom
+    // rangeAware — delad med ChildShellContent.tsx:s motsvarande beräkning
+    // (som aldrig är rangeAware, ett riktigt barns egen dashboard förblir
+    // alltid exakt klockslags-gated).
+    const activeChildTodos = getActiveChildTodos(
+      selectedDashboardMember.id,
+      todos,
+      personalCategories,
+      now,
+      useRangeAwareVisibility ? { range: todoThreadRange, asOf: new Date(now) } : undefined
     );
+    const rejectedTodos = getRejectedTodosForMember(selectedDashboardMember.id, todos);
     const subtaskCards = getAssignedSubtaskCards(selectedDashboardMember.id, todos, personalCategories, now);
 
     // Rekord-sidan är inte längre bara för barn (2026-08-08) — en vuxens

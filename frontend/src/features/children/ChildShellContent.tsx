@@ -4,7 +4,7 @@ import { ChildDashboard } from "./ChildDashboard";
 import { ChildRecordsPage } from "./ChildRecordsPage";
 import type { Calendar, Id, Member, Role, Todo, TodoCategory, TimedTaskWithBest } from "@shared/types";
 import type { TimedAttemptListItem } from "../../api/timedTasks";
-import { compareTodosByEndThenStart, getAssignedSubtaskCards, isTodoVisibleNow } from "../todos/selectors";
+import { getActiveChildTodos, getAssignedSubtaskCards, getRejectedTodosForMember } from "../todos/selectors";
 
 type Props = {
   currentMember: Member;
@@ -67,31 +67,11 @@ export function ChildShellContent({
   // i barnvyn ens för vuxna, endast assignade 2do") — samma fix som
   // MemberShellContent.tsx:s motsvarande beräkning för en vuxen som tittar
   // på ett barns dashboard.
-  // 2026-07-24, Zaidas önskemål: skriver barnet upp sig ("håller på med",
-  // inProgressBy) på en otilldelad Familjen-uppgift ska den även dyka upp
-  // i barnets egen dashboard-lista, samma fix som MemberShellContent.tsx.
-  // "expired" behandlas som "pending" (2026-08-08, Zaidas önskemål: "alla
-  // todos som inte markerats som slutförda skall visas om tiden är efter
-  // starttid, och före sluttid, oavsett när jag redigerar") — samma fix som
-  // MemberShellContent.tsx:s motsvarande activeChildTodos-beräkning.
-  const activeChildTodos = todos
-    .filter(
-      (t) =>
-        (t.assignedTo === currentMember.id ||
-          (t.assignedTo === null && t.inProgressBy?.includes(currentMember.id))) &&
-        (t.status === "pending" || t.status === "expired") &&
-        t.recurrence.type === "none" &&
-        t.deletedAt === null &&
-        isTodoVisibleNow(t, now) &&
-        !(t.personalCategoryId && categories.find((c) => c.id === t.personalCategoryId)?.hidden)
-    )
-    .sort(compareTodosByEndThenStart);
-  const rejectedTodos = todos.filter(
-    (t) =>
-      t.assignedTo === currentMember.id &&
-      t.status === "rejected" &&
-      t.deletedAt === null
-  );
+  // Ett riktigt barns egen dashboard är alltid exakt klockslags-gated (ingen
+  // rangeAware — se getActiveChildTodos i selectors.ts för den fulla
+  // bakgrunden, delad med MemberShellContent.tsx:s motsvarande beräkning).
+  const activeChildTodos = getActiveChildTodos(currentMember.id, todos, categories, now);
+  const rejectedTodos = getRejectedTodosForMember(currentMember.id, todos);
   const subtaskCards = getAssignedSubtaskCards(currentMember.id, todos, categories, now);
 
   // Egen sida för Medaljer/Rekord (2026-07-06, Zaidas beslut) — nås via en

@@ -239,6 +239,39 @@ export function compareTodosByEndThenStart(
   return aStart - bStart;
 }
 
+// Ett medlems synliga, ej avklarade uppdrag på dashboarden (2026-08-28) —
+// var tidigare duplicerad nästan ord för ord i ChildShellContent.tsx och
+// MemberShellContent.tsx (den senare med ett extra, villkorligt tidsspann-
+// beteende för en VUXEN som tittar på en annan vuxens dashboard, se
+// `rangeAware` nedan). Skillnaden mellan de två anropsställena är bara VILKET
+// synlighetsvillkor som gäller — ett riktigt barns egen dashboard är alltid
+// exakt klockslags-gated (isTodoVisibleNow), en vuxens dashboard breddas till
+// dag-baserad isDueWithinRange för alla spann utom "idag" (se historiken i
+// MemberShellContent.tsx för den fulla bakgrunden).
+export function getActiveChildTodos(
+  memberId: Id,
+  todos: Todo[],
+  categories: TodoCategory[],
+  now: number,
+  rangeAware?: { range: TodoThreadRange; asOf: Date }
+): Todo[] {
+  return todos
+    .filter(
+      (t) =>
+        (t.assignedTo === memberId || (t.assignedTo === null && t.inProgressBy?.includes(memberId))) &&
+        (t.status === "pending" || t.status === "expired") &&
+        t.recurrence.type === "none" &&
+        t.deletedAt === null &&
+        (rangeAware ? isDueWithinRange(t, rangeAware.asOf, rangeAware.range) : isTodoVisibleNow(t, now)) &&
+        !(t.personalCategoryId && categories.find((c) => c.id === t.personalCategoryId)?.hidden)
+    )
+    .sort(compareTodosByEndThenStart);
+}
+
+export function getRejectedTodosForMember(memberId: Id, todos: Todo[]): Todo[] {
+  return todos.filter((t) => t.assignedTo === memberId && t.status === "rejected" && t.deletedAt === null);
+}
+
 // Avklarade delmoment längst ner i checklistan (2026-08-04, Zaidas önskemål)
 // — bara för LÄS-/bock-av-vyer (TodoDetailView.tsx), inte för redigera-
 // modalernas egen delmoment-editor (TodoCreatorModal.tsx/TodoEditModal.tsx),
