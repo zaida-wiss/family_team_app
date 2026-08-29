@@ -7,6 +7,7 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import type { ErrorRequestHandler, Request, Response } from "express";
+import { ZodError } from "zod";
 import { logger } from "./utils/logger.js";
 import { authRouter } from "./routes/auth.js";
 import { accountsRouter } from "./routes/accounts.js";
@@ -143,8 +144,20 @@ app.use("/api/household-pin", householdPinRouter);
 app.use("/api/meal-plan", mealPlanRouter);
 app.use("/api/birthdays", birthdaysRouter);
 
+// ZodError-gren (2026-08-30, hittat av rewardsSecurity.integration.test.ts,
+// se ADR-0037) — ett kastat .parse()-fel saknar en egen .status, föll
+// tidigare igenom till den generella 500-grenen nedan även när felet i
+// själva verket var en ogiltig KLIENT-indata (rätt kod är 400). Gäller
+// varje route i appen som redan validerar med Zod .parse() direkt (inte
+// bara rewards.ts) — ingen av dem hade tidigare korrekt statuskod vid
+// ogiltig indata. err.issues ger en användbar, fältspecifik felbeskrivning
+// istället för Zods egna, mindre läsbara .message.
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);
+  if (err instanceof ZodError) {
+    response.status(400).json({ error: "Ogiltig indata", issues: err.issues });
+    return;
+  }
   const status = (err as { status?: number }).status ?? 500;
   const message = err instanceof Error ? err.message : "Okänt fel";
   response.status(status).json({ error: message });
