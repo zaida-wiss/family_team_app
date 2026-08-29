@@ -132,7 +132,7 @@ describe.skipIf(!RUN)("Överför ett barn permanent till en annan familj (2026-0
       .set("x-member-id", familyA.parentMemberId)
       .send({
         id: rewardItemId, title: "Gratis kram", symbol: null, starCost: 0,
-        timerMinutes: null, availability: null, requiredCategories: [], createdBy: familyA.parentMemberId, deletedAt: null
+        timerMinutes: null, availability: null, purchaseLimit: null, requiredCategories: [], createdBy: familyA.parentMemberId, deletedAt: null
       });
     await request(app)
       .post(`/api/reward-shop/purchase/${rewardItemId}`)

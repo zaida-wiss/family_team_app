@@ -128,6 +128,7 @@ describe.skipIf(!RUN)("Audit-logg", () => {
         starCost: 5,
         timerMinutes: null,
         availability: null,
+        purchaseLimit: null,
         requiredCategories: [],
         createdBy: parentMemberId,
         deletedAt: null,

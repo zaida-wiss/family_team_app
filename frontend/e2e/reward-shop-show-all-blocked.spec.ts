@@ -58,6 +58,25 @@ const LIMITED_ITEM = {
   availability: null, purchaseLimit: { max: 1, period: "day" }, requiredCategories: [], createdBy: "mem-parent", deletedAt: null,
 };
 
+// Både tid OCH kategori spärrar samtidigt — startdatum långt fram i tiden
+// (deterministiskt, oberoende av vilken veckodag testet råkar köras) OCH ett
+// obligatoriskt kategori-uppdrag. Ska visa BÅDA delarna (2026-08-29, Zaidas
+// önskemål: "NÄR belöningen är möjlig att köpa, samt vad som krävs").
+const FUTURE_AND_BLOCKED_ITEM = {
+  id: "rsi-future-blocked", title: "Nyårsfest", symbol: "🎉", starCost: 5, timerMinutes: null,
+  availability: { startDate: "2099-01-01", endDate: null, windows: [] },
+  purchaseLimit: null, requiredCategories: ["cat-1"], createdBy: "mem-parent", deletedAt: null,
+};
+
+// Har ett fönster (alltid tillgänglig tidsmässigt, "alla dagar" oavsett
+// veckodag) men spärras ändå av kategorin — schemat ska visas som KONTEXT
+// trots att tiden i sig inte är det som blockerar just nu.
+const SCHEDULED_AND_BLOCKED_ITEM = {
+  id: "rsi-scheduled-blocked", title: "Pyjamaskväll", symbol: "🛌", starCost: 5, timerMinutes: null,
+  availability: { startDate: null, endDate: null, windows: [{ daysOfWeek: [], timeIntervals: [] }] },
+  purchaseLimit: null, requiredCategories: ["cat-1"], createdBy: "mem-parent", deletedAt: null,
+};
+
 // Barnets EGEN, ej godkända kvällsrutin-uppgift — det som blockerar BLOCKED_ITEM.
 const PENDING_TODO = {
   id: "todo-1", accountId: "acc-1", title: "Borsta tänderna", createdBy: "mem-parent",
@@ -77,7 +96,12 @@ async function mockChildSession(page: Page) {
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
   await page.route("**/api/todos", (route) => route.fulfill({ json: [PENDING_TODO] }));
   await page.route(/\/api\/reward-shop$/, (route) =>
-    route.fulfill({ json: { items: [BLOCKED_ITEM, AVAILABLE_ITEM, LIMITED_ITEM], requireApprovalForCategories: false } })
+    route.fulfill({
+      json: {
+        items: [BLOCKED_ITEM, AVAILABLE_ITEM, LIMITED_ITEM, FUTURE_AND_BLOCKED_ITEM, SCHEDULED_AND_BLOCKED_ITEM],
+        requireApprovalForCategories: false
+      }
+    })
   );
   await page.route(/\/api\/reward-shop\/purchase-limits\/mem-child/, (route) =>
     route.fulfill({ json: { "rsi-limited": { count: 1, max: 1, period: "day", reached: true } } })
@@ -114,6 +138,24 @@ test("Tillgängliga belöningar hamnar överst, spärrade längst ner", async ({
 
   const titles = await page.locator(".reward-shop-card__title").allTextContents();
   // Tillgänglig (Biobiljett) först, sedan de spärrade sorterade billigast
-  // först sinsemellan (Extra godis 5 kr, Skärmtid 10 kr).
-  expect(titles).toEqual(["Biobiljett", "Extra godis", "Skärmtid"]);
+  // först sinsemellan (Extra godis/Nyårsfest/Pyjamaskväll 5 kr — stabil
+  // sortering behåller ursprunglig ordning vid oavgjort, sedan Skärmtid 10 kr).
+  expect(titles).toEqual(["Biobiljett", "Extra godis", "Nyårsfest", "Pyjamaskväll", "Skärmtid"]);
+});
+
+test("Belöningsbutiken visar BÅDE NÄR belöningen går att köpa och VAD som krävs, samtidigt", async ({ page }) => {
+  await mockChildSession(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Shop" }).click();
+
+  // Tiden är den aktiva spärren (startdatum 2099) OCH kategorin krävs — båda ska synas.
+  const futureCard = page.locator(".reward-shop-card", { hasText: "Nyårsfest" });
+  await expect(futureCard.locator(".reward-shop-card__unavailable-label"))
+    .toHaveText(/dagar kvar · När du gjort Kvällsrutiner/);
+
+  // Tiden blockerar INTE just nu (fönstret gäller alla dagar/hela dagen),
+  // men schemat ska ändå visas som kontext bredvid kategorikravet.
+  const scheduledCard = page.locator(".reward-shop-card", { hasText: "Pyjamaskväll" });
+  await expect(scheduledCard.locator(".reward-shop-card__unavailable-label"))
+    .toHaveText("Tillgänglig: alla dagar · När du gjort Kvällsrutiner");
 });

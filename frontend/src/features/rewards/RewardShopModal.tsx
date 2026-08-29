@@ -9,7 +9,7 @@ import type { PurchaseLimitStatus } from "../../api/rewardShop";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 import { useAutoPurchase } from "./useAutoPurchase";
 import { ReturningBill } from "./ReturningBill";
-import { isExpired, isAvailableNow, unavailableLabel, blockingCategories } from "./shopAvailability";
+import { isExpired, isAvailableNow, unavailableLabel, describeAvailabilityWindow, blockingCategories } from "./shopAvailability";
 import { useRewardShopContext } from "./RewardShopContext";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useModalA11y } from "../../hooks/useModalA11y";
@@ -81,22 +81,32 @@ export function RewardShopModal({ childId, items, todos, categories, availableSt
     return true;
   }
 
-  // Prioritetsordning för förklaringstexten: kategorispärr (mest pedagogiskt
-  // — visar barnet exakt vad som krävs) → köpgräns nådd → tidsfönster.
+  // Kombinerar BÅDA delarna Zaida efterfrågat (2026-08-29): NÄR belöningen är
+  // möjlig att köpa (schemat, oavsett vad som ANNARS blockerar just nu) och
+  // VAD som krävs (kategorispärr/köpgräns) — inte bara en av dem.
   function reasonLabel(item: RewardShopItem): string | null {
+    const parts: string[] = [];
+
+    // Tiden är den aktiva spärren just nu → exakt "nästa tillfälle"-text.
+    // Annars (tiden är redan ok, eller varan saknar tidsbegränsning) → visa
+    // schemat deklarativt som kontext, om ett sådant finns.
+    const whenText = !isAvailableNow(item) ? unavailableLabel(item) : describeAvailabilityWindow(item);
+    if (whenText) parts.push(whenText);
+
     const blocking = blockingCategories(item, todos, childId, requireApprovalForCategories);
     if (blocking.length > 0) {
       const names = blocking
         .map((id) => categories.find((c) => c.id === id)?.name)
         .filter((name): name is string => Boolean(name));
-      if (names.length > 0) return blockingReasonLabel(names);
+      if (names.length > 0) parts.push(blockingReasonLabel(names));
     }
+
     const limit = limitStatus[item.id];
     if (limit?.reached) {
-      return `Max ${limit.max} st ${PURCHASE_LIMIT_PERIOD_LABEL[limit.period]} — redan hämtat`;
+      parts.push(`Max ${limit.max} st ${PURCHASE_LIMIT_PERIOD_LABEL[limit.period]} — redan hämtat`);
     }
-    if (!isAvailableNow(item)) return unavailableLabel(item);
-    return null;
+
+    return parts.length > 0 ? parts.join(" · ") : null;
   }
 
   // Självläkande — om det valda kortet hinner köpas/försvinna (t.ex. via auto-köp)

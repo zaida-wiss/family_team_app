@@ -134,7 +134,7 @@ describe.skipIf(!RUN)("ADR-0024: dela ett barns todos med en annan vuxen", () =>
       .set("x-member-id", familyA.parentMemberId)
       .send({
         id: rewardItemId, title: "Gratis kram", symbol: null, starCost: 0,
-        timerMinutes: null, availability: null, requiredCategories: [], createdBy: familyA.parentMemberId, deletedAt: null
+        timerMinutes: null, availability: null, purchaseLimit: null, requiredCategories: [], createdBy: familyA.parentMemberId, deletedAt: null
       });
     await request(app)
       .post(`/api/reward-shop/purchase/${rewardItemId}`)

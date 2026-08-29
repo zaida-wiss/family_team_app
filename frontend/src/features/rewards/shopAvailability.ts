@@ -90,6 +90,44 @@ function nextUsableIntervalStart(
   return upcoming[0]?.start ?? null;
 }
 
+/**
+ * Beskriver varans schema deklarativt — "NÄR är den möjlig att köpa" — oavsett
+ * om den råkar vara inom fönstret just nu eller inte (2026-08-29, Zaidas
+ * önskemål: en spärrad vara ska visa BÅDE när den går att köpa OCH vad som
+ * krävs, inte bara det senare). Skiljer sig från unavailableLabel() ovan, som
+ * bara ger en "nästa tillfälle om N minuter"-räkning när tiden FAKTISKT är
+ * den aktiva spärren just nu — den här funktionen svarar oavsett anledning.
+ * null om varan saknar tidsbegränsning helt (alltid tillgänglig tidsmässigt).
+ */
+export function describeAvailabilityWindow(item: RewardShopItem): string | null {
+  const { availability } = item;
+  if (!availability) return null;
+  const { windows, startDate, endDate } = availability;
+  if (windows.length === 0 && !startDate && !endDate) return null;
+
+  const parts: string[] = [];
+
+  if (windows.length > 0) {
+    parts.push(
+      windows
+        .map((w) => {
+          const days = w.daysOfWeek.length > 0
+            ? WEEKDAY_DISPLAY_ORDER.filter((d) => w.daysOfWeek.includes(d)).map((d) => WEEKDAY_SHORT[d]).join(", ")
+            : "alla dagar";
+          const times = w.timeIntervals.length > 0
+            ? w.timeIntervals.map((iv) => `${iv.start}–${iv.end}`).join(", ")
+            : null;
+          return times ? `${days} kl ${times}` : days;
+        })
+        .join(" · ")
+    );
+  }
+  if (startDate) parts.push(`från ${startDate}`);
+  if (endDate) parts.push(`till ${endDate}`);
+
+  return `Tillgänglig: ${parts.join(", ")}`;
+}
+
 /** Varans slutdatum har passerat → dölj den helt. */
 export function isExpired(item: RewardShopItem, now = new Date()): boolean {
   const { availability } = item;

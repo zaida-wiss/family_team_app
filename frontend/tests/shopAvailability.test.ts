@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAvailableNow, minutesUntilAvailable, unavailableLabel } from "../src/features/rewards/shopAvailability";
+import { describeAvailabilityWindow, isAvailableNow, minutesUntilAvailable, unavailableLabel } from "../src/features/rewards/shopAvailability";
 import type { RewardShopItem, ShopAvailability, ShopAvailabilityWindow } from "@shared/types";
 
 // Konstruerade via Date.UTC + mitt på dagen (inte lokal midnatt) så testet ger
@@ -98,5 +98,43 @@ describe("flera fönster (olika tider för olika dagar)", () => {
     // Måndag 20:00 i Stockholm — dagens intervall (08-09) redan passerat
     const mondayEvening = new Date(Date.UTC(2026, 7, 31, 18, 0, 0));
     expect(unavailableLabel(i, mondayEvening)).toBe("Tillgänglig kl 18:00 imorgon");
+  });
+});
+
+describe("describeAvailabilityWindow (deklarativ schema-text, oavsett aktuell spärr)", () => {
+  it("null utan tidsbegränsning alls", () => {
+    const i = item({ availability: availability() });
+    expect(describeAvailabilityWindow(i)).toBeNull();
+    expect(describeAvailabilityWindow(item({ availability: null }))).toBeNull();
+  });
+
+  it("beskriver ett enda fönster med dagar och tid", () => {
+    const i = item({
+      availability: availability({
+        windows: [window({ daysOfWeek: ["saturday", "sunday"], timeIntervals: [{ start: "10:00", end: "12:00" }] })]
+      })
+    });
+    expect(describeAvailabilityWindow(i)).toBe("Tillgänglig: lör, sön kl 10:00–12:00");
+  });
+
+  it("beskriver flera fönster tillsammans", () => {
+    const i = item({
+      availability: availability({
+        windows: [
+          window({ daysOfWeek: ["monday"], timeIntervals: [{ start: "15:00", end: "17:00" }] }),
+          window({ daysOfWeek: ["wednesday"], timeIntervals: [{ start: "18:00", end: "20:00" }] }),
+        ]
+      })
+    });
+    expect(describeAvailabilityWindow(i)).toBe("Tillgänglig: mån kl 15:00–17:00 · ons kl 18:00–20:00");
+  });
+
+  it("returnerar texten även när varan RÅKAR vara inom fönstret just nu (inte bara vid spärr)", () => {
+    const i = item({
+      availability: availability({ windows: [window({ daysOfWeek: ["monday"], timeIntervals: [{ start: "15:00", end: "17:00" }] })] })
+    });
+    const mondayAt16 = new Date(Date.UTC(2026, 7, 31, 14, 0, 0)); // måndag 16:00 i Stockholm — inom fönstret
+    expect(isAvailableNow(i, mondayAt16)).toBe(true);
+    expect(describeAvailabilityWindow(i)).toBe("Tillgänglig: mån kl 15:00–17:00");
   });
 });
