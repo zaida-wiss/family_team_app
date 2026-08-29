@@ -323,7 +323,12 @@
   border-radius: 8px;
   background: var(--bg-secondary, #f8f8f8);
   color: var(--text-primary, #111);
+  color-scheme: light;
   flex-shrink: 0;
+}
+
+.app-shell.dark-mode .reward-shop-settings__purchased-time {
+  color-scheme: dark;
 }
 
 .reward-shop-settings__pagination {

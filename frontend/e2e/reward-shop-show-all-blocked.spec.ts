@@ -106,6 +106,10 @@ async function mockChildSession(page: Page) {
   await page.route(/\/api\/reward-shop\/purchase-limits\/mem-child/, (route) =>
     route.fulfill({ json: { "rsi-limited": { count: 1, max: 1, period: "day", reached: true } } })
   );
+  // Ingen tidtagen belöning pågår som standard — enskilda test skriver över detta.
+  await page.route(/\/api\/reward-shop\/active-timed-reward\/mem-child/, (route) =>
+    route.fulfill({ json: null })
+  );
 }
 
 test("Belöningsbutiken visar en kategori-spärrad vara med förklarande text, inte dold", async ({ page }) => {
@@ -158,4 +162,27 @@ test("Belöningsbutiken visar BÅDE NÄR belöningen går att köpa och VAD som 
   const scheduledCard = page.locator(".reward-shop-card", { hasText: "Pyjamaskväll" });
   await expect(scheduledCard.locator(".reward-shop-card__unavailable-label"))
     .toHaveText("Tillgänglig: alla dagar · När du gjort Kvällsrutiner");
+});
+
+test("En pågående tidtagen belöning blockerar ALLA nya köp, även en annars fullt tillgänglig vara", async ({ page }) => {
+  await mockChildSession(page);
+  // Skriver över standardmockningen (ingen aktiv belöning) med en pågående — samma
+  // "specifik mockning registrerad EFTER den bredare"-mönster som resten av filen.
+  await page.route(/\/api\/reward-shop\/active-timed-reward\/mem-child/, (route) =>
+    route.fulfill({ json: { itemTitle: "Skärmtid", remainingMinutes: 12 } })
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Shop" }).click();
+
+  // Biobiljett skulle annars vara helt köpbar (ingen egen spärr) — men blockeras ändå.
+  const availableCard = page.locator(".reward-shop-card", { hasText: "Biobiljett" });
+  await expect(availableCard).toHaveClass(/reward-shop-card--unavailable/);
+  await expect(availableCard.locator(".reward-shop-card__unavailable-label"))
+    .toHaveText('Väntar på att "Skärmtid" blir klar (12 min kvar)');
+
+  // Även den redan kategori-spärrade varan visar NU den globala tid-spärren
+  // istället för sin egen kategoritext — den är den faktiska anledningen just nu.
+  const blockedCard = page.locator(".reward-shop-card", { hasText: "Extra godis" });
+  await expect(blockedCard.locator(".reward-shop-card__unavailable-label"))
+    .toHaveText('Väntar på att "Skärmtid" blir klar (12 min kvar)');
 });

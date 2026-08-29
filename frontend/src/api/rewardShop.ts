@@ -8,6 +8,8 @@ export type PurchaseLimitStatus = Record<
   { count: number; max: number; period: PurchaseLimitPeriod; reached: boolean }
 >;
 
+export type ActiveTimedReward = { itemTitle: string; remainingMinutes: number } | null;
+
 export const rewardShopApi = {
   getShop: () => request<ShopResponse>(api("reward-shop")),
   updateSettings: (patch: { requireApprovalForCategories?: boolean }) =>
@@ -38,6 +40,8 @@ export const rewardShopApi = {
     request<PaginatedPurchasedRewards>(api(`reward-shop/purchased?page=${page}`)),
   getPurchaseLimits: (memberId: string) =>
     request<PurchaseLimitStatus>(api(`reward-shop/purchase-limits/${memberId}`)),
+  getActiveTimedReward: (memberId: string) =>
+    request<ActiveTimedReward>(api(`reward-shop/active-timed-reward/${memberId}`)),
   movePurchased: (id: string, startsAt: string) =>
     request<{ ok: boolean }>(api(`reward-shop/purchased/${id}/move`), {
       method: "PATCH",

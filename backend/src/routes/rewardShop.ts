@@ -54,6 +54,10 @@ rewardShopRouter.get("/purchase-limits/:memberId", requireAuth, attachAccountId,
   res.json(await shop.getPurchaseLimitStatus(req.accountId!, req.params.memberId));
 });
 
+rewardShopRouter.get("/active-timed-reward/:memberId", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await shop.getActiveTimedReward(req.accountId!, req.params.memberId));
+});
+
 rewardShopRouter.get("/purchased", requireAuth, attachAccountId, async (req, res) => {
   const { date, page, pageSize } = PurchasedRewardsQuerySchema.parse(req.query);
 

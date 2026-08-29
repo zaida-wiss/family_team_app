@@ -171,6 +171,14 @@ export async function mockDataAPIs(page: Page) {
   await page.route(/\/api\/reward-shop$/, (route) =>
     route.fulfill({ json: { items: [], requireApprovalForCategories: false } })
   );
+  // purchase-limits/active-timed-reward (2026-08-29) — den bredare **/api/reward-shop**-
+  // stubben ovan svarar med en tom ARRAY för allt den inte specifikt känner igen, men
+  // dessa två är inte listor: purchase-limits är ett per-vara-record (en tom array som
+  // record ger bara undefined vid uppslag, ofarligt) och active-timed-reward är
+  // null|objekt — en tom array DÄR är sanningsvärd i JS och blockerade av misstag ALLA
+  // köp i varje test som inte specifikt mockar denna endpoint (RewardShopModal.tsx).
+  await page.route(/\/api\/reward-shop\/purchase-limits\//, (route) => route.fulfill({ json: {} }));
+  await page.route(/\/api\/reward-shop\/active-timed-reward\//, (route) => route.fulfill({ json: null }));
   await page.route(/\/api\/reward-shop\/purchased\?date=/, (route) => route.fulfill({ json: [] }));
   await page.route(/\/api\/reward-shop\/purchased\?page=/, (route) =>
     route.fulfill({ json: { items: [], page: 1, pageSize: 25, total: 0 } })

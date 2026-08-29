@@ -104,6 +104,7 @@ function PurchasedList({ purchasedItems, purchasedTotal, purchasedLoading, onLoa
             <input
               aria-label="Starttid för belöning"
               type="datetime-local"
+              step={60}
               className="reward-shop-settings__purchased-time"
               defaultValue={localStart}
               onBlur={(e) => {

@@ -7,6 +7,10 @@
  * kontrolleras server-side vid purchaseItem(), inte bara i shopAvailability.ts.
  * Utökad igen 2026-08-29 med ett test för köpgränsen (RewardShopItem.
  * purchaseLimit) — se countPurchasesInCurrentPeriod i rewardShopService.ts.
+ * Utökad ytterligare en gång samma dag med ett test för "en tidtagen
+ * belöning i taget" (getActiveTimedReward) — ett nytt köp (av VILKEN vara
+ * som helst) ska nekas medan en tidigare köpt tidtagen belöning fortfarande
+ * pågår.
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -281,5 +285,91 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
       .set("x-member-id", memberId)
       .send({});
     expect(secondPurchase.status).toBe(409);
+  });
+
+  it("nekar ETT NYTT köp (av VILKEN vara som helst) medan en tidigare tidtagen belöning fortfarande pågår", async () => {
+    // Ge medlemmen tillräckligt med stjärnor för två köp.
+    const starTodoId = `todo-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: starTodoId,
+        title: "Tjäna stjärnor",
+        createdBy: memberId,
+        assignedTo: memberId,
+        isShared: false,
+        status: "pending",
+        starValue: 10,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        recurringSourceId: null,
+        occurrenceDate: null,
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+      });
+    await request(app)
+      .patch(`/api/todos/${starTodoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    await request(app)
+      .patch(`/api/todos/${starTodoId}/approve`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+
+    const timedItemId = `item-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/reward-shop/items")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: timedItemId, title: "Skärmtid", symbol: null, starCost: 1, timerMinutes: 30,
+        availability: null, purchaseLimit: null, requiredCategories: [], createdBy: memberId, deletedAt: null,
+      });
+
+    const otherItemId = `item-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/reward-shop/items")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: otherItemId, title: "Godis", symbol: null, starCost: 1, timerMinutes: null,
+        availability: null, purchaseLimit: null, requiredCategories: [], createdBy: memberId, deletedAt: null,
+      });
+
+    const firstPurchase = await request(app)
+      .post(`/api/reward-shop/purchase/${timedItemId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(firstPurchase.status).toBe(200);
+
+    // En HELT ANNAN, otidsatt vara ska OCKSÅ blockeras — spärren gäller
+    // "en tidtagen belöning i taget" oavsett vad man försöker köpa härnäst.
+    const secondPurchase = await request(app)
+      .post(`/api/reward-shop/purchase/${otherItemId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(secondPurchase.status).toBe(409);
+    expect(secondPurchase.body.error).toContain("Skärmtid");
+
+    const status = await request(app)
+      .get(`/api/reward-shop/active-timed-reward/${memberId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId);
+    expect(status.status).toBe(200);
+    expect(status.body.itemTitle).toBe("Skärmtid");
+    expect(status.body.remainingMinutes).toBeGreaterThan(0);
   });
 });

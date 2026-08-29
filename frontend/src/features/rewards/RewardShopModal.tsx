@@ -5,7 +5,7 @@ import type { RewardShopItem, Todo, TodoCategory } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
 import { rewardShopApi } from "../../api";
-import type { PurchaseLimitStatus } from "../../api/rewardShop";
+import type { ActiveTimedReward, PurchaseLimitStatus } from "../../api/rewardShop";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 import { useAutoPurchase } from "./useAutoPurchase";
 import { ReturningBill } from "./ReturningBill";
@@ -62,6 +62,16 @@ export function RewardShopModal({ childId, items, todos, categories, availableSt
     rewardShopApi.getPurchaseLimits(childId).then(setLimitStatus).catch(console.error);
   }, [childId, purchaseVersion]);
 
+  // "En tidtagen belöning i taget" (2026-08-29, Zaidas önskemål: "det skall
+  // inte heller gå att hämta ut en ny belöning innan föregående belöning är
+  // klar tidsmässigt") — blockerar ALLA köp, inte bara samma vara, så länge
+  // en tidigare köpt TIDTAGEN belöning fortfarande pågår. Samma
+  // fetch-per-öppning-mönster som limitStatus ovan.
+  const [activeTimedReward, setActiveTimedReward] = useState<ActiveTimedReward>(null);
+  useEffect(() => {
+    rewardShopApi.getActiveTimedReward(childId).then(setActiveTimedReward).catch(console.error);
+  }, [childId, purchaseVersion]);
+
   // Visa ALLA icke-utgångna belöningar (2026-08-29, Zaidas önskemål) — döljer
   // inte längre kategori-spärrade eller tidsfönster-blockerade varor, visar
   // istället en förklarande text på det ospelbara kortet (se reasonLabel
@@ -75,6 +85,7 @@ export function RewardShopModal({ childId, items, todos, categories, availableSt
     });
 
   function isItemAvailable(item: RewardShopItem): boolean {
+    if (activeTimedReward) return false;
     if (!isAvailableNow(item)) return false;
     if (limitStatus[item.id]?.reached) return false;
     if (blockingCategories(item, todos, childId, requireApprovalForCategories).length > 0) return false;
@@ -85,6 +96,12 @@ export function RewardShopModal({ childId, items, todos, categories, availableSt
   // möjlig att köpa (schemat, oavsett vad som ANNARS blockerar just nu) och
   // VAD som krävs (kategorispärr/köpgräns) — inte bara en av dem.
   function reasonLabel(item: RewardShopItem): string | null {
+    // En tidigare tidtagen belöning pågår fortfarande — blockerar ALLA
+    // varor, oavsett deras egna regler, så den texten går före allt annat.
+    if (activeTimedReward) {
+      return `Väntar på att "${activeTimedReward.itemTitle}" blir klar (${activeTimedReward.remainingMinutes} min kvar)`;
+    }
+
     const parts: string[] = [];
 
     // Tiden är den aktiva spärren just nu → exakt "nästa tillfälle"-text.

@@ -99,7 +99,19 @@
   border-radius: 8px;
   font-size: 0.85rem;
   background: var(--card);
+  /* Saknades helt (2026-08-29-fynd, Zaida: dålig kontrast vid tidsval) —
+     ett <input type="time"> ärver ALDRIG textfärg från sina förfäder, bara
+     bakgrunden gjorde det (via --card). Utan en egen color blev den ifyllda
+     tiden webbläsarens svarta standardtext — osynlig mot --card:s mörka
+     värde i mörkt läge. color-scheme styr dessutom den NATIVA klock-ikonen/
+     spinnpilarna, som annars alltid ritas för ljust läge oavsett tema. */
+  color: var(--foreground);
+  color-scheme: light;
   width: 100px;
+}
+
+.app-shell.dark-mode .availability-editor__time {
+  color-scheme: dark;
 }
 
 .availability-editor__dash {

@@ -106,6 +106,34 @@ export async function removeItem(accountId: string, itemId: string, memberId: st
   broadcastRewardShopChanged();
 }
 
+// Blockerar ett NYTT köp så länge en tidigare TIDTAGEN belöning (item.timerMinutes,
+// t.ex. skärmtid) fortfarande pågår (2026-08-29, Zaidas önskemål: "det skall inte
+// heller gå att hämta ut en ny belöning innan föregående belöning är klar
+// tidsmässigt"). Rena epoch-ms-jämförelser (startsAt + durationMinutes), ingen
+// hemtidszon-hänsyn behövs — det är en löptid, inte ett kalenderdatum/veckodags-
+// koncept. Belöningar UTAN timer (durationMinutes: null) är omedelbart "klara"
+// vid köpet och blockerar aldrig. Om flera tidtagna belöningar råkar överlappa
+// (t.ex. en admin manuellt flyttat en belöning i Inställningar) returneras den
+// som slutar SIST — det är den som faktiskt avgör när nästa köp blir tillåtet.
+export async function getActiveTimedReward(accountId: string, memberId: string, now = new Date()) {
+  const timed = await PurchasedRewardModel.find(
+    { accountId, memberId, deletedAt: null, durationMinutes: { $ne: null } },
+    { _id: 0, itemTitle: 1, startsAt: 1, durationMinutes: 1 }
+  );
+
+  const nowMs = now.getTime();
+  const active = timed
+    .map((p) => ({
+      itemTitle: p.itemTitle as string,
+      endsAtMs: new Date(p.startsAt).getTime() + (p.durationMinutes as number) * 60_000,
+    }))
+    .filter((p) => p.endsAtMs > nowMs)
+    .sort((a, b) => b.endsAtMs - a.endsAtMs)[0];
+
+  if (!active) return null;
+  return { itemTitle: active.itemTitle, remainingMinutes: Math.ceil((active.endsAtMs - nowMs) / 60_000) };
+}
+
 export async function purchaseItem(itemId: string, callerId: string, forMemberId: string) {
   const [caller, forMember] = await Promise.all([
     MemberModel.findOne({ id: callerId }),
@@ -131,6 +159,16 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
   // genom att anropa denna endpoint direkt förbi UI:t.
   if (!isAvailableNow(item)) {
     throw new AppError(409, "Belöningen är inte tillgänglig just nu");
+  }
+
+  // Auktoritativ "en tidtagen belöning i taget"-spärr (2026-08-29) — se
+  // getActiveTimedReward() ovan.
+  const activeTimed = await getActiveTimedReward(forMember.accountId, forMemberId);
+  if (activeTimed) {
+    throw new AppError(
+      409,
+      `Väntar på att "${activeTimed.itemTitle}" blir klar (${activeTimed.remainingMinutes} min kvar)`
+    );
   }
 
   // Auktoritativ köpgränsspärr (2026-08-29) — samma "server är sanningen"-

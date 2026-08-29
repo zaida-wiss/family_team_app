@@ -514,6 +514,22 @@
   --card-foreground: var(--foreground);
   --secondary-fg: var(--foreground);
   --muted-fg: color-mix(in oklch, white 68%, var(--primary) 32%);
+
+  /* Alias-tokens (tokens.css, --text-primary/--bg-secondary m.fl.) MÅSTE
+     upprepas här (2026-08-29-fynd, dålig kontrast på tidsval i belönings-
+     butiken) — de deklareras bara en gång på :root som var(--foreground)/
+     var(--muted), och en ärvd custom property "fryser" sitt substituerade
+     värde VID DET ELEMENT där den deklareras, inte vid varje ärvande
+     ättling. Utan denna omdeklaration här fortsätter alias-tokens peka på
+     :root:s LJUSA --foreground/--muted även när denna regel gör de
+     UNDERLIGGANDE tokens mörka — exakt samma "dubbel-indirektion tappar
+     temat"-fälla, bara en nivå djupare än den redan lösta HeroBar/
+     .controlRow-bakgrundsbuggen (se historiken 2026-08-12).
+  */
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-fg);
+  --bg-hover: var(--muted);
+  --bg-secondary: var(--muted);
 }
 
 /* c0…c7/on-c0…on-c7 (mörk→ljus i ljust läge) speglas PER TEMA — c0 byter

@@ -156,6 +156,7 @@ export function AvailabilityEditor({ value, onChange }: Props) {
                     <div key={ii} className="availability-editor__interval-row">
                       <input
                         type="time"
+                        step={60}
                         aria-label={`Fönster ${i + 1}, intervall ${ii + 1} starttid`}
                         className="availability-editor__time"
                         value={iv.start}
@@ -164,6 +165,7 @@ export function AvailabilityEditor({ value, onChange }: Props) {
                       <span className="availability-editor__dash">–</span>
                       <input
                         type="time"
+                        step={60}
                         aria-label={`Fönster ${i + 1}, intervall ${ii + 1} sluttid`}
                         className="availability-editor__time"
                         value={iv.end}
