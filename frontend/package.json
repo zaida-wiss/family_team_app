@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint:css": "stylelint \"src/**/*.css\""
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
@@ -25,6 +26,7 @@
     "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
     "rollup-plugin-visualizer": "^7.0.1",
+    "stylelint": "^17.14.1",
     "typescript": "^5.6.3",
     "vitest": "^4.1.9"
   }

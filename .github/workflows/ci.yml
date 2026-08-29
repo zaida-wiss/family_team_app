@@ -28,6 +28,10 @@ jobs:
       - name: TypeScript
         run: npx tsc -b --noEmit
 
+      - name: Stylelint (rapport, ej blockerande — ADR-0036)
+        run: npm run lint:css
+        continue-on-error: true
+
       - name: Tests
         run: npm test
 
