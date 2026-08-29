@@ -70,16 +70,37 @@
   container-type: size;
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* Ikonkolumnen begränsad till en ANDEL av kortets EGEN bredd (procent,
+     alltid giltigt att slå upp mot en grid-cells redan beräknade bredd —
+     till skillnad från cqi/cqb-container-frågeenheter, som aldrig får
+     referera tillbaka mot det element som själv upprättar containment,
+     se .child-task-icon-circle) — inte, som tidigare, ikonens EGEN höjd
+     (aspect-ratio 1 mot kortets fulla höjd). På smala kort (2 kolumner på
+     en telefon) gjorde den gamla höjd-styrda formeln ikonen orimligt bred
+     ändå, eftersom höjden inte krymper bara för att bredden gör det
+     (2026-08-30, Zaidas fynd: "texten har för lite plats... minska
+     paddingen så att texten får ca 60% av ytan"). 44px-golvet är samma
+     WCAG-touch-target-minimum som resten av appen.
+  */
+  grid-template-columns: minmax(44px, min(30%, 78px)) 1fr;
   grid-template-rows: 1fr auto;
   align-items: center;
   width: 100%;
   height: 15cqh;
-  padding: clamp(6px, 1.4cqi, 12px);
-  column-gap: clamp(8px, 2cqi, 16px);
+  /* Golven sänkta 6→4px/8→6px (2026-08-30) — bara på de SMALASTE korten
+     (2-kolumnslayout på en telefon) satte clamp:en igen sitt golv, vilket
+     tog onödigt mycket av just den bredd texten annars fått (se
+     grid-template-columns-kommentaren ovan). Preferred/max-värdena rörda
+     inte — bredare kort (surfplatta/desktop) helt opåverkade. */
+  padding: clamp(3px, 1.4cqi, 12px);
+  column-gap: clamp(5px, 2cqi, 16px);
   row-gap: clamp(2px, 0.5cqi, 6px);
-  border: 2px solid color-mix(in srgb, var(--task-accent) 28%, var(--white, #fff));
+  border: 1.5px solid color-mix(in srgb, var(--task-accent) 28%, var(--white, #fff));
   border-radius: clamp(12px, 3cqi, 22px);
+  /* Själva emoji-teckenstorleken (.child-task-icon:s font-size nedan) —
+     helt oberoende av cirkelns storlek sedan grid-template-columns-fixet
+     ovan (cirkeln fyller nu bara sin egen, procentbegränsade kolumn). */
+  --task-icon-size: clamp(24px, 58cqb, 54px);
   background:
     linear-gradient(
       100deg,
@@ -228,10 +249,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: stretch;
-  height: 100cqb;
+  /* Fyller sin (nu procentbegränsade) kolumn exakt — height:100cqb;
+     aspect-ratio:1 tidigare gjorde cirkeln lika HÖG som hela kortet oavsett
+     bredd, se grid-template-columns-kommentaren ovan för varför det gjorde
+     ikonen orimligt bred på smala, tvåkolumns-kort. width:100% är alltid
+     giltigt (en vanlig procentsats mot grid-cellens redan beräknade bredd,
+     ingen container-query-självreferens inblandad) — aspect-ratio:1 härleder
+     sedan höjden från den bredden, precis tvärtom mot tidigare.
+  */
+  width: 100%;
   aspect-ratio: 1;
-  width: auto;
   border-radius: 50%;
   background:
     linear-gradient(
@@ -242,7 +269,7 @@
 }
 
 .child-task-icon {
-  font-size: clamp(24px, 58cqb, 54px);
+  font-size: var(--task-icon-size);
   line-height: 1;
 }
 
