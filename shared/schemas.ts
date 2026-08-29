@@ -493,11 +493,25 @@ export const ShopTimeIntervalSchema = z.object({
   end: z.string().regex(/^\d{2}:\d{2}$/)
 });
 
+// Ett fönster = egna veckodagar + tider (2026-08-29, flera olika tider för
+// olika dagar) — se ShopAvailabilityWindow i shared/types.ts.
+export const ShopAvailabilityWindowSchema = z.object({
+  daysOfWeek: z.array(WeekdaySchema),
+  timeIntervals: z.array(ShopTimeIntervalSchema)
+});
+
 export const ShopAvailabilitySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  daysOfWeek: z.array(WeekdaySchema).nullable(),
-  timeIntervals: z.array(ShopTimeIntervalSchema)
+  windows: z.array(ShopAvailabilityWindowSchema)
+});
+
+// Köpgräns per period (2026-08-29) — se PurchaseLimit i shared/types.ts.
+export const PurchaseLimitPeriodSchema = z.enum(["day", "week", "month"]);
+
+export const PurchaseLimitSchema = z.object({
+  max: z.number().int().min(1).max(99),
+  period: PurchaseLimitPeriodSchema
 });
 
 export const RewardShopItemSchema = z.object({
@@ -507,6 +521,7 @@ export const RewardShopItemSchema = z.object({
   starCost: z.number().int().min(0).max(999),
   timerMinutes: z.number().int().positive().max(480).nullable(),
   availability: ShopAvailabilitySchema.nullable(),
+  purchaseLimit: PurchaseLimitSchema.nullable(),
   requiredCategories: z.array(IdSchema),
   createdBy: IdSchema,
   deletedAt: z.string().nullable()
@@ -518,6 +533,7 @@ export const RewardShopItemPatchSchema = RewardShopItemSchema.pick({
   starCost: true,
   timerMinutes: true,
   availability: true,
+  purchaseLimit: true,
   requiredCategories: true
 }).partial();
 

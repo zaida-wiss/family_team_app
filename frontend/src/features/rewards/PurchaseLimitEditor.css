@@ -1,0 +1,45 @@
+.purchase-limit-editor {
+  margin-top: 8px;
+}
+
+.purchase-limit-editor__toggle {
+  background: none;
+  border: none;
+  color: var(--muted-fg);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.purchase-limit-editor__body {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--bg-secondary, #f8f8f8);
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e5e5);
+}
+
+.purchase-limit-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted-fg);
+  font-weight: 500;
+}
+
+.purchase-limit-editor__field input,
+.purchase-limit-editor__field select {
+  padding: 5px 8px;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--card);
+  color: var(--foreground);
+  min-height: 44px;
+}

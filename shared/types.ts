@@ -382,11 +382,30 @@ export type ShopTimeInterval = {
   end: string;   // "HH:MM"
 };
 
+// Ett "fönster" = en egen kombination av veckodagar + tider (2026-08-29,
+// Zaidas önskemål om flera olika tider för olika dagar, t.ex. måndag 15-17,
+// onsdag 18-20). Ett item kan ha flera fönster; tillgänglig om NÅGOT fönster
+// matchar (union). Tom daysOfWeek i ETT fönster = det fönstret gäller alla
+// dagar; tom timeIntervals = det fönstret gäller hela dagen.
+export type ShopAvailabilityWindow = {
+  daysOfWeek: Weekday[];
+  timeIntervals: ShopTimeInterval[];
+};
+
 export type ShopAvailability = {
-  startDate: string | null;      // "YYYY-MM-DD" — null = inga datumgränser
-  endDate: string | null;        // "YYYY-MM-DD" — null = inget slutdatum
-  daysOfWeek: Weekday[] | null;  // tom/null = alla veckodagar
-  timeIntervals: ShopTimeInterval[]; // tom = tillgänglig hela dagen
+  startDate: string | null; // "YYYY-MM-DD" — null = inga datumgränser
+  endDate: string | null;   // "YYYY-MM-DD" — null = inget slutdatum
+  windows: ShopAvailabilityWindow[]; // tom = inga dag-/tidsbegränsningar
+};
+
+// Begränsar hur många gånger en vara kan köpas per barn inom en period
+// (2026-08-29, Zaidas önskemål). Räknas server-side vid köp mot barnets EGNA
+// köphistorik för just denna vara — se shared/rewardShopAvailability.ts.
+export type PurchaseLimitPeriod = "day" | "week" | "month";
+
+export type PurchaseLimit = {
+  max: number;
+  period: PurchaseLimitPeriod;
 };
 
 export type RewardShopItem = {
@@ -396,6 +415,7 @@ export type RewardShopItem = {
   starCost: number;
   timerMinutes: number | null;
   availability: ShopAvailability | null; // null = alltid tillgänglig
+  purchaseLimit: PurchaseLimit | null; // null = obegränsat antal köp
   // TodoCategory-id:n (2026-07-08, ADR-0020 — ersätter det tidigare fasta
   // Hälsa/Trivsel/Pengar-namnbaserade settet). Föräldern väljer fritt bland
   // de riktiga kategorier som redan används på barnens uppgifter — samma
@@ -407,6 +427,11 @@ export type RewardShopItem = {
 
 export type PurchasedReward = {
   id: Id;
+  // Tillagt 2026-08-29 för köpgränsräkning (RewardShopItem.purchaseLimit) —
+  // null på köp gjorda innan fältet fanns, räknas då inte mot en gräns
+  // (ofarligt, samma "harmless orphaned data"-mönster som redan etablerat
+  // för completedAt/isShared, se CLAUDE.md-historiken).
+  itemId: Id | null;
   accountId: Id;
   memberId: Id;
   itemTitle: string;

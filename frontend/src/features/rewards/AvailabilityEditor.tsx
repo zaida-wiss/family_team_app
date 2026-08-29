@@ -1,6 +1,6 @@
 import "./AvailabilityEditor.css";
 import { useState } from "react";
-import type { ShopAvailability, ShopTimeInterval, Weekday } from "@shared/types";
+import type { ShopAvailability, ShopAvailabilityWindow, ShopTimeInterval, Weekday } from "@shared/types";
 import { DateInput } from "../../components/DateInput";
 
 type Props = {
@@ -17,13 +17,14 @@ const WEEKDAY_SHORT: Record<Weekday, string> = {
   friday: "fre", saturday: "lör", sunday: "sön"
 };
 
-const empty = (): ShopAvailability => ({
-  startDate: null,
-  endDate: null,
-  daysOfWeek: [],
-  timeIntervals: [],
-});
+const emptyWindow = (): ShopAvailabilityWindow => ({ daysOfWeek: [], timeIntervals: [] });
+const empty = (): ShopAvailability => ({ startDate: null, endDate: null, windows: [] });
 
+// Flera "tidsfönster" (2026-08-29, Zaidas önskemål om olika tider för olika
+// dagar, t.ex. måndag 15-17, onsdag 18-20) — varje fönster har egna
+// veckodagar + egna tidsintervall, varan är tillgänglig om NÅGOT fönster
+// matchar. Se ShopAvailabilityWindow i shared/types.ts och isAvailableNow i
+// shared/rewardShopAvailability.ts för den auktoritativa tolkningen.
 export function AvailabilityEditor({ value, onChange }: Props) {
   const [open, setOpen] = useState(value !== null);
   const av = value ?? empty();
@@ -42,24 +43,34 @@ export function AvailabilityEditor({ value, onChange }: Props) {
     onChange({ ...av, ...partial });
   }
 
-  function addInterval() {
-    patch({ timeIntervals: [...av.timeIntervals, { start: "08:00", end: "09:00" }] });
+  function patchWindow(i: number, partial: Partial<ShopAvailabilityWindow>) {
+    patch({ windows: av.windows.map((w, idx) => (idx === i ? { ...w, ...partial } : w)) });
   }
 
-  function updateInterval(i: number, field: keyof ShopTimeInterval, val: string) {
-    const updated = av.timeIntervals.map((iv, idx) =>
-      idx === i ? { ...iv, [field]: val } : iv
-    );
-    patch({ timeIntervals: updated });
+  function addWindow() {
+    patch({ windows: [...av.windows, emptyWindow()] });
   }
 
-  function removeInterval(i: number) {
-    patch({ timeIntervals: av.timeIntervals.filter((_, idx) => idx !== i) });
+  function removeWindow(i: number) {
+    patch({ windows: av.windows.filter((_, idx) => idx !== i) });
   }
 
-  function toggleDay(day: Weekday) {
-    const days = av.daysOfWeek ?? [];
-    patch({ daysOfWeek: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] });
+  function toggleWindowDay(i: number, day: Weekday) {
+    const days = av.windows[i].daysOfWeek;
+    patchWindow(i, { daysOfWeek: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] });
+  }
+
+  function addWindowInterval(i: number) {
+    patchWindow(i, { timeIntervals: [...av.windows[i].timeIntervals, { start: "08:00", end: "09:00" }] });
+  }
+
+  function updateWindowInterval(i: number, ii: number, field: keyof ShopTimeInterval, val: string) {
+    const updated = av.windows[i].timeIntervals.map((iv, idx) => (idx === ii ? { ...iv, [field]: val } : iv));
+    patchWindow(i, { timeIntervals: updated });
+  }
+
+  function removeWindowInterval(i: number, ii: number) {
+    patchWindow(i, { timeIntervals: av.windows[i].timeIntervals.filter((_, idx) => idx !== ii) });
   }
 
   return (
@@ -98,72 +109,99 @@ export function AvailabilityEditor({ value, onChange }: Props) {
             Lämna datum tomma för att gälla alla dagar.
           </p>
 
-          <div className="availability-editor__weekdays">
-            <p className="availability-editor__intervals-label">Veckodagar</p>
-            <div aria-label="Veckodagar" className="availability-editor__days" role="group">
-              {WEEKDAY_ORDER.map((day) => (
-                <button
-                  aria-pressed={av.daysOfWeek?.includes(day) ?? false}
-                  className={
-                    "availability-editor__day" +
-                    ((av.daysOfWeek?.includes(day) ?? false) ? " availability-editor__day--on" : "")
-                  }
-                  key={day}
-                  onClick={() => toggleDay(day)}
-                  type="button"
-                >
-                  {WEEKDAY_SHORT[day]}
-                </button>
-              ))}
-            </div>
-            {(av.daysOfWeek?.length ?? 0) === 0 && (
+          <div className="availability-editor__windows">
+            <p className="availability-editor__intervals-label">Tidsfönster</p>
+            {av.windows.length === 0 && (
               <p className="availability-editor__hint">
-                Inga veckodagar valda = tillgänglig alla dagar.
+                Inga tidsfönster = tillgänglig hela dagen, alla dagar.
               </p>
             )}
-          </div>
 
-          <div className="availability-editor__intervals">
-            <p className="availability-editor__intervals-label">Tidsintervall</p>
-            {av.timeIntervals.map((iv, i) => (
-              <div key={i} className="availability-editor__interval-row">
-                <input
-                  type="time"
-                  aria-label={`Intervall ${i + 1} starttid`}
-                  className="availability-editor__time"
-                  value={iv.start}
-                  onChange={(e) => updateInterval(i, "start", e.target.value)}
-                />
-                <span className="availability-editor__dash">–</span>
-                <input
-                  type="time"
-                  aria-label={`Intervall ${i + 1} sluttid`}
-                  className="availability-editor__time"
-                  value={iv.end}
-                  onChange={(e) => updateInterval(i, "end", e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="availability-editor__remove-interval"
-                  onClick={() => removeInterval(i)}
-                  aria-label={`Ta bort tidsintervall ${i + 1}`}
-                >✕</button>
+            {av.windows.map((w, i) => (
+              <div key={i} className="availability-editor__window">
+                <div className="availability-editor__window-header">
+                  <span className="availability-editor__window-label">Fönster {i + 1}</span>
+                  <button
+                    type="button"
+                    className="availability-editor__remove-interval"
+                    onClick={() => removeWindow(i)}
+                    aria-label={`Ta bort fönster ${i + 1}`}
+                  >✕</button>
+                </div>
+
+                <div aria-label={`Veckodagar för fönster ${i + 1}`} className="availability-editor__days" role="group">
+                  {WEEKDAY_ORDER.map((day) => (
+                    <button
+                      aria-pressed={w.daysOfWeek.includes(day)}
+                      className={
+                        "availability-editor__day" +
+                        (w.daysOfWeek.includes(day) ? " availability-editor__day--on" : "")
+                      }
+                      key={day}
+                      onClick={() => toggleWindowDay(i, day)}
+                      type="button"
+                    >
+                      {WEEKDAY_SHORT[day]}
+                    </button>
+                  ))}
+                </div>
+                {w.daysOfWeek.length === 0 && (
+                  <p className="availability-editor__hint">
+                    Inga veckodagar valda = alla dagar.
+                  </p>
+                )}
+
+                <div className="availability-editor__intervals">
+                  {w.timeIntervals.map((iv, ii) => (
+                    <div key={ii} className="availability-editor__interval-row">
+                      <input
+                        type="time"
+                        aria-label={`Fönster ${i + 1}, intervall ${ii + 1} starttid`}
+                        className="availability-editor__time"
+                        value={iv.start}
+                        onChange={(e) => updateWindowInterval(i, ii, "start", e.target.value)}
+                      />
+                      <span className="availability-editor__dash">–</span>
+                      <input
+                        type="time"
+                        aria-label={`Fönster ${i + 1}, intervall ${ii + 1} sluttid`}
+                        className="availability-editor__time"
+                        value={iv.end}
+                        onChange={(e) => updateWindowInterval(i, ii, "end", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="availability-editor__remove-interval"
+                        onClick={() => removeWindowInterval(i, ii)}
+                        aria-label={`Ta bort tidsintervall ${ii + 1} i fönster ${i + 1}`}
+                      >✕</button>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="availability-editor__add-interval"
+                    onClick={() => addWindowInterval(i)}
+                  >
+                    + Lägg till tid
+                  </button>
+
+                  {w.timeIntervals.length === 0 && (
+                    <p className="availability-editor__hint">
+                      Ingen tid vald = tillgänglig hela dagen.
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
 
             <button
               type="button"
               className="availability-editor__add-interval"
-              onClick={addInterval}
+              onClick={addWindow}
             >
-              + Lägg till tidsintervall
+              + Lägg till tidsfönster
             </button>
-
-            {av.timeIntervals.length === 0 && (
-              <p className="availability-editor__hint">
-                Inga tidsintervall = tillgänglig hela dagen.
-              </p>
-            )}
           </div>
         </div>
       )}

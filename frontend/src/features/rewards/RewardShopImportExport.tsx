@@ -71,6 +71,7 @@ export function RewardShopImportExport({ items, categories, currentMemberId, onA
               starCost: row.starCost,
               timerMinutes: row.timerMinutes,
               availability: null,
+              purchaseLimit: null,
               requiredCategories: ids,
               createdBy: currentMemberId,
               deletedAt: null

@@ -3,13 +3,51 @@ import { PurchasedRewardModel } from "../db/models/PurchasedReward.js";
 import { MemberModel } from "../db/models/Member.js";
 import { TodoModel } from "../db/models/Todo.js";
 import { TodoCategoryModel } from "../db/models/TodoCategory.js";
-import { blockingCategories, isAvailableNow } from "../../../shared/rewardShopAvailability.js";
+import { blockingCategories, isAvailableNow, isSamePurchasePeriod, toStockholmDateStr } from "../../../shared/rewardShopAvailability.js";
+import type { PurchaseLimitPeriod } from "../../../shared/types.js";
 import { RewardShopItemSchema, RewardShopItemPatchSchema } from "../../../shared/schemas.js";
 import { AppError } from "../utils/errors.js";
 import { validate } from "../utils/validate.js";
 import { broadcastRewardShopChanged } from "../realtime/rewardShopEvents.js";
 import { broadcastMembersChanged } from "../realtime/memberEvents.js";
 import { writeAuditLog } from "./auditLogService.js";
+
+// Räcker gott och väl för respektive periods eventuella veckogränser (t.ex.
+// en "week"-period räknad från söndag kväll till nästa måndag) — bara en
+// säker, generös nedre gräns för DB-frågan, den faktiska periodjämförelsen
+// sker exakt via isSamePurchasePeriod() nedan.
+const PURCHASE_LIMIT_LOOKBACK_DAYS: Record<PurchaseLimitPeriod, number> = {
+  day: 2,
+  week: 8,
+  month: 32,
+};
+
+const PURCHASE_LIMIT_PERIOD_LABEL: Record<PurchaseLimitPeriod, string> = {
+  day: "dag",
+  week: "vecka",
+  month: "månad",
+};
+
+// Auktoritativ köpgränsräkning (2026-08-29) — hur många gånger har DENNA
+// medlem redan köpt DENNA vara inom den period varans purchaseLimit anger,
+// utvärderat i familjens hemtidszon. Räknas live från PurchasedReward vid
+// varje anrop (ingen denormaliserad räknare) — samma "enkelt och auktoritativt"-
+// avvägning som resten av tillgänglighetsspärren.
+async function countPurchasesInCurrentPeriod(
+  accountId: string,
+  memberId: string,
+  itemId: string,
+  period: PurchaseLimitPeriod,
+  now: Date
+): Promise<number> {
+  const cutoff = new Date(now.getTime() - PURCHASE_LIMIT_LOOKBACK_DAYS[period] * 24 * 60 * 60 * 1000).toISOString();
+  const recent = await PurchasedRewardModel.find(
+    { accountId, memberId, itemId, deletedAt: null, purchasedAt: { $gte: cutoff } },
+    { _id: 0, purchasedAt: 1 }
+  );
+  const nowDateStr = toStockholmDateStr(now);
+  return recent.filter((r) => isSamePurchasePeriod(toStockholmDateStr(new Date(r.purchasedAt)), nowDateStr, period)).length;
+}
 
 export async function getShop(accountId: string) {
   const shop = await RewardShopModel.findOne({ accountId });
@@ -20,6 +58,7 @@ export async function getShop(accountId: string) {
     starCost: i.starCost,
     timerMinutes: i.timerMinutes,
     availability: i.availability,
+    purchaseLimit: i.purchaseLimit ?? null,
     requiredCategories: i.requiredCategories ?? [],
     createdBy: i.createdBy,
     deletedAt: i.deletedAt,
@@ -53,6 +92,7 @@ export async function updateItem(accountId: string, itemId: string, data: unknow
   if (patch.starCost !== undefined) update["items.$.starCost"] = patch.starCost;
   if ("timerMinutes" in patch) update["items.$.timerMinutes"] = patch.timerMinutes ?? null;
   if ("availability" in patch) update["items.$.availability"] = patch.availability ?? null;
+  if ("purchaseLimit" in patch) update["items.$.purchaseLimit"] = patch.purchaseLimit ?? null;
   if (patch.requiredCategories !== undefined) update["items.$.requiredCategories"] = patch.requiredCategories;
   await RewardShopModel.updateOne({ accountId, "items.id": itemId }, { $set: update });
   broadcastRewardShopChanged();
@@ -93,6 +133,20 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
     throw new AppError(409, "Belöningen är inte tillgänglig just nu");
   }
 
+  // Auktoritativ köpgränsspärr (2026-08-29) — samma "server är sanningen"-
+  // princip som tillgänglighetsspärren ovan.
+  if (item.purchaseLimit) {
+    const count = await countPurchasesInCurrentPeriod(
+      forMember.accountId, forMemberId, item.id, item.purchaseLimit.period, new Date()
+    );
+    if (count >= item.purchaseLimit.max) {
+      throw new AppError(
+        409,
+        `Köpgränsen är nådd (max ${item.purchaseLimit.max} per ${PURCHASE_LIMIT_PERIOD_LABEL[item.purchaseLimit.period]})`
+      );
+    }
+  }
+
   const availableStars = forMember.approvedStars - forMember.spentStars;
   if (availableStars < item.starCost) {
     throw new AppError(409, "Otillräckligt stjärnsaldo för köpet");
@@ -128,6 +182,7 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
     id: `pr-${crypto.randomUUID()}`,
     accountId: forMember.accountId,
     memberId: forMemberId,
+    itemId: item.id,
     itemTitle: item.title,
     itemSymbol: item.symbol ?? null,
     starCost: item.starCost,
@@ -147,6 +202,25 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
   broadcastRewardShopChanged();
   broadcastMembersChanged();
   return purchased;
+}
+
+// Köpgränsstatus per vara med purchaseLimit, för en given medlem (2026-08-29)
+// — konsumeras av RewardShopModal.tsx för att visa "gräns nådd"-texten och
+// tona kortet, utan att skicka hela köphistoriken till klienten.
+export async function getPurchaseLimitStatus(accountId: string, memberId: string) {
+  const shopDoc = await RewardShopModel.findOne({ accountId });
+  const limitedItems = (shopDoc?.items ?? []).filter((i) => i.deletedAt === null && i.purchaseLimit);
+  const now = new Date();
+
+  const entries = await Promise.all(
+    limitedItems.map(async (item) => {
+      const limit = item.purchaseLimit!;
+      const count = await countPurchasesInCurrentPeriod(accountId, memberId, item.id, limit.period, now);
+      return [item.id, { count, max: limit.max, period: limit.period, reached: count >= limit.max }] as const;
+    })
+  );
+
+  return Object.fromEntries(entries);
 }
 
 // Ett enskilt dygn (lokalt datum, YYYY-MM-DD) — används av barnets tidslinje, som bara visar en dag åt gången

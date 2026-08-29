@@ -1,31 +1,44 @@
 import "./RewardShopModal.css";
 import { createPortal } from "react-dom";
-import { useRef, useState } from "react";
-import type { RewardShopItem, Todo } from "@shared/types";
+import { useEffect, useRef, useState } from "react";
+import type { RewardShopItem, Todo, TodoCategory } from "@shared/types";
 import type { Id } from "@shared/types";
 import { MYNT } from "../children/bankDenoms";
+import { rewardShopApi } from "../../api";
+import type { PurchaseLimitStatus } from "../../api/rewardShop";
 import { useShopWalletDrag } from "./useShopWalletDrag";
 import { useAutoPurchase } from "./useAutoPurchase";
 import { ReturningBill } from "./ReturningBill";
-import { isExpired, isAvailableNow, minutesUntilAvailable, unavailableLabel, blockingCategories } from "./shopAvailability";
+import { isExpired, isAvailableNow, unavailableLabel, blockingCategories } from "./shopAvailability";
 import { useRewardShopContext } from "./RewardShopContext";
 import { useHoldToConfirm } from "../../hooks/useHoldToConfirm";
 import { useModalA11y } from "../../hooks/useModalA11y";
 
-const UPCOMING_WINDOW_MINUTES = 4 * 60;
 const FREE_HOLD_DURATION_MS = 2000;
+
+const PURCHASE_LIMIT_PERIOD_LABEL: Record<string, string> = {
+  day: "idag", week: "denna vecka", month: "denna månad"
+};
+
+// "När du gjort X" / "När du gjort X och Y" — matchar Zaidas önskade
+// fras (2026-08-29), istället för en torr "Kräver: X"-lista.
+function blockingReasonLabel(categoryNames: string[]): string {
+  if (categoryNames.length === 1) return `När du gjort ${categoryNames[0]}`;
+  return `När du gjort ${categoryNames.slice(0, -1).join(", ")} och ${categoryNames[categoryNames.length - 1]}`;
+}
 
 type Props = {
   childId: Id;
   items: RewardShopItem[];
   todos: Todo[];
+  categories: TodoCategory[];
   availableStars: number;
   onPurchase: (item: RewardShopItem) => void;
   onClose: () => void;
 };
 
-export function RewardShopModal({ childId, items, todos, availableStars, onPurchase, onClose }: Props) {
-  const { requireApprovalForCategories } = useRewardShopContext();
+export function RewardShopModal({ childId, items, todos, categories, availableStars, onPurchase, onClose }: Props) {
+  const { requireApprovalForCategories, purchaseVersion } = useRewardShopContext();
   const drag = useShopWalletDrag(childId, availableStars);
   const walletStripRef = useRef<HTMLDivElement>(null);
   const { flashingId, setFlashingId, returningBills } = useAutoPurchase(items, drag, walletStripRef, onPurchase);
@@ -41,25 +54,50 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
   const [mode, setMode] = useState<"drag" | "click">("drag");
   const [selectedCardIdRaw, setSelectedCardId] = useState<string | null>(null);
 
-  // Dölj varor vars slutdatum passerat och varor som är kategori-spärrade (ogjord
-  // uppgift). Varor som öppnar inom 4 timmar visas tonade så barnet ser att de är på
-  // väg; allt annat tidsfönster-blockerat döljs helt tills det är nära nog att spela roll.
-  // Sortering: tillgängliga överst, tonade (snart tillgängliga) längst ner; billigast
-  // först inom varje grupp.
+  // Köpgränsstatus (RewardShopItem.purchaseLimit, 2026-08-29) — hämtas separat
+  // istället för att bäras med i den delade katalogen, eftersom den är per
+  // BARN (samma vara kan ha olika kvarvarande antal för olika syskon).
+  const [limitStatus, setLimitStatus] = useState<PurchaseLimitStatus>({});
+  useEffect(() => {
+    rewardShopApi.getPurchaseLimits(childId).then(setLimitStatus).catch(console.error);
+  }, [childId, purchaseVersion]);
+
+  // Visa ALLA icke-utgångna belöningar (2026-08-29, Zaidas önskemål) — döljer
+  // inte längre kategori-spärrade eller tidsfönster-blockerade varor, visar
+  // istället en förklarande text på det ospelbara kortet (se reasonLabel
+  // nedan). Sortering: tillgängliga överst, billigast först inom varje grupp.
   const visibleItems = items
-    .filter((item) => {
-      if (isExpired(item)) return false;
-      const blocking = blockingCategories(item, todos, childId, requireApprovalForCategories);
-      if (blocking.length > 0) return false;
-      if (isAvailableNow(item)) return true;
-      const minutesLeft = minutesUntilAvailable(item);
-      return minutesLeft !== null && minutesLeft <= UPCOMING_WINDOW_MINUTES;
-    })
+    .filter((item) => !isExpired(item))
     .sort((a, b) => {
-      const availableDiff = Number(isAvailableNow(b)) - Number(isAvailableNow(a));
+      const availableDiff = Number(isItemAvailable(b)) - Number(isItemAvailable(a));
       if (availableDiff !== 0) return availableDiff;
       return a.starCost - b.starCost;
     });
+
+  function isItemAvailable(item: RewardShopItem): boolean {
+    if (!isAvailableNow(item)) return false;
+    if (limitStatus[item.id]?.reached) return false;
+    if (blockingCategories(item, todos, childId, requireApprovalForCategories).length > 0) return false;
+    return true;
+  }
+
+  // Prioritetsordning för förklaringstexten: kategorispärr (mest pedagogiskt
+  // — visar barnet exakt vad som krävs) → köpgräns nådd → tidsfönster.
+  function reasonLabel(item: RewardShopItem): string | null {
+    const blocking = blockingCategories(item, todos, childId, requireApprovalForCategories);
+    if (blocking.length > 0) {
+      const names = blocking
+        .map((id) => categories.find((c) => c.id === id)?.name)
+        .filter((name): name is string => Boolean(name));
+      if (names.length > 0) return blockingReasonLabel(names);
+    }
+    const limit = limitStatus[item.id];
+    if (limit?.reached) {
+      return `Max ${limit.max} st ${PURCHASE_LIMIT_PERIOD_LABEL[limit.period]} — redan hämtat`;
+    }
+    if (!isAvailableNow(item)) return unavailableLabel(item);
+    return null;
+  }
 
   // Självläkande — om det valda kortet hinner köpas/försvinna (t.ex. via auto-köp)
   // innan man hunnit avmarkera det, ska plånbokens klick-knappar inte fortsätta peka
@@ -125,8 +163,8 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
         ) : (
           <div className="reward-shop-modal__grid">
             {visibleItems.map((item) => {
-              const available = isAvailableNow(item);
-              const label = available ? null : unavailableLabel(item);
+              const available = isItemAvailable(item);
+              const label = available ? null : reasonLabel(item);
               const cardCounts = drag.pendingPayments[item.id] ?? {};
               const paid = drag.getCardTotal(item.id);
               const isFree = item.starCost === 0;
@@ -208,6 +246,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                               key={`${denom}-${i}`}
                               className="shop-card-coin-clip shop-card-money-item"
                               data-coin={denom}
+                              data-swipe-ignore
                               onPointerDown={(e) => drag.startCardDrag(Number(denom), item.id, e)}
                             >
                               <img src={`/pengar/mynt-${denom}.webp`} alt="" className="shop-card-coin-img" />
@@ -219,6 +258,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                               alt=""
                               className="shop-card-note-img shop-card-money-item"
                               data-note={denom}
+                              data-swipe-ignore
                               onPointerDown={(e) => drag.startCardDrag(Number(denom), item.id, e)}
                             />
                           )
@@ -259,6 +299,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                     return (
                       <div
                         key={v}
+                        data-swipe-ignore
                         className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}${clickDisabled ? " shop-wallet-denom--disabled" : ""}`}
                         {...(mode === "drag"
                           ? { onPointerDown: (e: React.PointerEvent) => drag.startDrag(v, e) }
@@ -298,6 +339,7 @@ export function RewardShopModal({ childId, items, todos, availableStars, onPurch
                     return (
                       <div
                         key={v}
+                        data-swipe-ignore
                         className={`shop-wallet-denom${drag.dragging === v ? " shop-wallet-denom--dragging" : ""}${clickDisabled ? " shop-wallet-denom--disabled" : ""}`}
                         {...(mode === "drag"
                           ? { onPointerDown: (e: React.PointerEvent) => drag.startDrag(v, e) }

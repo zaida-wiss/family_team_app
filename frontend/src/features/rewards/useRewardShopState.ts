@@ -91,7 +91,7 @@ export function useRewardShopState() {
     if (patch.requireApprovalForCategories !== undefined) setRequireApprovalForCategories(patch.requireApprovalForCategories);
   }
 
-  async function updateItem(itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes">>) {
+  async function updateItem(itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "purchaseLimit" | "requiredCategories">>) {
     await rewardShopApi.updateItem(itemId, patch);
     setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, ...patch } : i));
   }

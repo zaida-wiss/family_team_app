@@ -5,6 +5,8 @@
  * Utökad 2026-08-28 (Sprint 10 S1, samma ADR-0002-klass) med ett test för att
  * ett datum-/tids-/veckodagsfönster (RewardShopItem.availability) nu också
  * kontrolleras server-side vid purchaseItem(), inte bara i shopAvailability.ts.
+ * Utökad igen 2026-08-29 med ett test för köpgränsen (RewardShopItem.
+ * purchaseLimit) — se countPurchasesInCurrentPeriod i rewardShopService.ts.
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -60,6 +62,7 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         starCost: 100,
         timerMinutes: null,
         availability: null,
+        purchaseLimit: null,
         requiredCategories: [],
         createdBy: memberId,
         deletedAt: null,
@@ -165,6 +168,7 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         starCost: 5,
         timerMinutes: null,
         availability: null,
+        purchaseLimit: null,
         requiredCategories: [categoryId],
         createdBy: memberId,
         deletedAt: null,
@@ -190,7 +194,8 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         symbol: null,
         starCost: 1,
         timerMinutes: null,
-        availability: { startDate: "2099-01-01", endDate: null, daysOfWeek: [], timeIntervals: [] },
+        availability: { startDate: "2099-01-01", endDate: null, windows: [] },
+        purchaseLimit: null,
         requiredCategories: [],
         createdBy: memberId,
         deletedAt: null,
@@ -203,5 +208,78 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
       .set("x-member-id", memberId)
       .send({});
     expect(purchase.status).toBe(409);
+  });
+
+  it("nekar ett andra köp med 409 när köpgränsen (purchaseLimit) redan är nådd för perioden", async () => {
+    // Ge medlemmen tillräckligt med stjärnor för två köp.
+    const starTodoId = `todo-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/todos")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: starTodoId,
+        title: "Tjäna stjärnor",
+        createdBy: memberId,
+        assignedTo: memberId,
+        isShared: false,
+        status: "pending",
+        starValue: 10,
+        visual: { type: "lucide-icon", value: "Star" },
+        recurrence: { type: "none" },
+        recurringSourceId: null,
+        occurrenceDate: null,
+        visibleFrom: null,
+        expiresAt: null,
+        completedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        rejectedBy: null,
+        rejectedAt: null,
+        deletedAt: null,
+        deletedBy: null,
+      });
+    await request(app)
+      .patch(`/api/todos/${starTodoId}/complete`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    await request(app)
+      .patch(`/api/todos/${starTodoId}/approve`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+
+    const itemId = `item-${crypto.randomUUID()}`;
+    await request(app)
+      .post("/api/reward-shop/items")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: itemId,
+        title: "Max en gång per dag",
+        symbol: null,
+        starCost: 1,
+        timerMinutes: null,
+        availability: null,
+        purchaseLimit: { max: 1, period: "day" },
+        requiredCategories: [],
+        createdBy: memberId,
+        deletedAt: null,
+      });
+
+    const firstPurchase = await request(app)
+      .post(`/api/reward-shop/purchase/${itemId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(firstPurchase.status).toBe(200);
+
+    const secondPurchase = await request(app)
+      .post(`/api/reward-shop/purchase/${itemId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(secondPurchase.status).toBe(409);
   });
 });

@@ -135,3 +135,31 @@
   border-color: var(--primary);
   color: var(--primary);
 }
+
+.availability-editor__windows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.availability-editor__window {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--card);
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e5e5);
+}
+
+.availability-editor__window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.availability-editor__window-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+}

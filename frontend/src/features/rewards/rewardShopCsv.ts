@@ -6,12 +6,14 @@ import { generateId } from "../../utils/uuid";
 // av Zaidas önskemål "all data ska gå att importera och exportera i de
 // olika kategorierna i inställningar") — samma minimala RFC4180-parser som
 // todos/recept/inköpslistor redan skrivit, återanvänd rakt av. En rad = en
-// belöning. `Tillgänglighet` (datumfönster + tidsintervaller,
-// RewardShopItem.availability) är MEDVETET UTESLUTEN — för komplext för en
+// belöning. `Tillgänglighet` (datumfönster + tidsfönster, RewardShopItem.
+// availability) och `Köpgräns` (max antal per period, RewardShopItem.
+// purchaseLimit, 2026-08-29) är MEDVETET UTESLUTNA — för komplexa för en
 // kalkylarksrad, samma avvägning som redan gjorts för todos flera
 // tidsintervall/recepts bilder. En importerad/uppdaterad vara får därför
-// alltid `availability: null` (alltid tillgänglig) — måste sättas separat
-// i Belöningsbutiken-inställningarna om en tidsbegränsning behövs.
+// alltid `availability: null`/`purchaseLimit: null` (alltid tillgänglig,
+// obegränsat antal) — måste sättas separat i Belöningsbutiken-
+// inställningarna om en begränsning behövs.
 export const REWARD_CSV_HEADERS = ["Titel", "Emoji", "Stjärnkostnad", "Timer (min)", "Kategorier", "Id"] as const;
 
 const EMOJI_PATTERN = /\p{Extended_Pictographic}/u;

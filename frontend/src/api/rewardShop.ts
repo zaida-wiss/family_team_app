@@ -1,7 +1,12 @@
-import type { PaginatedPurchasedRewards, PurchasedReward, RewardShopItem } from "@shared/types";
+import type { PaginatedPurchasedRewards, PurchaseLimitPeriod, PurchasedReward, RewardShopItem } from "@shared/types";
 import { api, request, subscribeToServerEvents } from "./client";
 
 export type ShopResponse = { items: RewardShopItem[]; requireApprovalForCategories: boolean };
+
+export type PurchaseLimitStatus = Record<
+  string,
+  { count: number; max: number; period: PurchaseLimitPeriod; reached: boolean }
+>;
 
 export const rewardShopApi = {
   getShop: () => request<ShopResponse>(api("reward-shop")),
@@ -15,7 +20,7 @@ export const rewardShopApi = {
       method: "POST",
       body: JSON.stringify(item),
     }),
-  updateItem: (itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) =>
+  updateItem: (itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "purchaseLimit" | "requiredCategories">>) =>
     request<{ ok: boolean }>(api(`reward-shop/items/${itemId}`), {
       method: "PATCH",
       body: JSON.stringify(patch),
@@ -31,6 +36,8 @@ export const rewardShopApi = {
     request<PurchasedReward[]>(api(`reward-shop/purchased?date=${date}`)),
   getPurchasedPage: (page: number) =>
     request<PaginatedPurchasedRewards>(api(`reward-shop/purchased?page=${page}`)),
+  getPurchaseLimits: (memberId: string) =>
+    request<PurchaseLimitStatus>(api(`reward-shop/purchase-limits/${memberId}`)),
   movePurchased: (id: string, startsAt: string) =>
     request<{ ok: boolean }>(api(`reward-shop/purchased/${id}/move`), {
       method: "PATCH",

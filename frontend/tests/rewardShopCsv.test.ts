@@ -15,6 +15,7 @@ function item(overrides: Partial<RewardShopItem> = {}): RewardShopItem {
     starCost: 10,
     timerMinutes: null,
     availability: null,
+    purchaseLimit: null,
     requiredCategories: [],
     createdBy: "mem-1",
     deletedAt: null,

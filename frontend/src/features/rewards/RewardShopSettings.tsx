@@ -1,12 +1,13 @@
 import "./RewardShopSettings.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Id, Member, PurchasedReward, RewardShopItem, ShopAvailability, Todo, TodoCategory } from "@shared/types";
+import type { Id, Member, PurchaseLimit, PurchasedReward, RewardShopItem, ShopAvailability, Todo, TodoCategory } from "@shared/types";
 import { EmojiPickerPortal } from "../../components/EmojiPickerPortal";
 import { useRewardShopContext } from "./RewardShopContext";
 import { AvailabilityEditor } from "./AvailabilityEditor";
+import { PurchaseLimitEditor } from "./PurchaseLimitEditor";
 import { RequiredCategoriesEditor } from "./RequiredCategoriesEditor";
 
-type ItemPatch = Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>;
+type ItemPatch = Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "purchaseLimit" | "requiredCategories">>;
 
 type Props = {
   items: RewardShopItem[];
@@ -31,10 +32,18 @@ type FormState = {
   starCost: number;
   timerMinutes: number | null;
   availability: ShopAvailability | null;
+  purchaseLimit: PurchaseLimit | null;
   requiredCategories: Id[];
 };
 
-const blank = (): FormState => ({ title: "", symbol: "", starCost: 10, timerMinutes: null, availability: null, requiredCategories: [] });
+const PURCHASE_LIMIT_PERIOD_SHORT: Record<PurchaseLimit["period"], string> = {
+  day: "/dag", week: "/vecka", month: "/månad"
+};
+
+const blank = (): FormState => ({
+  title: "", symbol: "", starCost: 10, timerMinutes: null,
+  availability: null, purchaseLimit: null, requiredCategories: []
+});
 
 // Konverterar ISO-sträng till lokalt datetime-input-format (respekterar enhetens tidszon)
 function toLocalDateTimeInput(iso: string): string {
@@ -156,12 +165,12 @@ export function RewardShopSettings({ items, currentMemberId, children, todos, ca
 
   function startEdit(item: RewardShopItem) {
     setEditingId(item.id);
-    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes, availability: item.availability, requiredCategories: item.requiredCategories ?? [] });
+    setEditForm({ title: item.title, symbol: item.symbol ?? "", starCost: item.starCost, timerMinutes: item.timerMinutes, availability: item.availability, purchaseLimit: item.purchaseLimit ?? null, requiredCategories: item.requiredCategories ?? [] });
   }
 
   function saveEdit(itemId: string) {
     if (!editForm.title.trim()) return;
-    onUpdate(itemId, { title: editForm.title.trim(), symbol: editForm.symbol || null, starCost: editForm.starCost, timerMinutes: editForm.timerMinutes, availability: editForm.availability, requiredCategories: editForm.requiredCategories });
+    onUpdate(itemId, { title: editForm.title.trim(), symbol: editForm.symbol || null, starCost: editForm.starCost, timerMinutes: editForm.timerMinutes, availability: editForm.availability, purchaseLimit: editForm.purchaseLimit, requiredCategories: editForm.requiredCategories });
     setEditingId(null);
   }
 
@@ -175,6 +184,7 @@ export function RewardShopSettings({ items, currentMemberId, children, todos, ca
       starCost: form.starCost,
       timerMinutes: form.timerMinutes,
       availability: form.availability,
+      purchaseLimit: form.purchaseLimit,
       requiredCategories: form.requiredCategories,
       createdBy: currentMemberId,
       deletedAt: null,
@@ -253,6 +263,11 @@ export function RewardShopSettings({ items, currentMemberId, children, todos, ca
           onChange={(v) => setForm((f) => ({ ...f, availability: v }))}
         />
 
+        <PurchaseLimitEditor
+          value={form.purchaseLimit}
+          onChange={(v) => setForm((f) => ({ ...f, purchaseLimit: v }))}
+        />
+
         <RequiredCategoriesEditor
           availableCategories={availableCategories}
           value={form.requiredCategories}
@@ -304,6 +319,10 @@ export function RewardShopSettings({ items, currentMemberId, children, todos, ca
                   value={editForm.availability}
                   onChange={(v) => setEditForm((f) => ({ ...f, availability: v }))}
                 />
+                <PurchaseLimitEditor
+                  value={editForm.purchaseLimit}
+                  onChange={(v) => setEditForm((f) => ({ ...f, purchaseLimit: v }))}
+                />
                 <RequiredCategoriesEditor
                   availableCategories={availableCategories}
                   value={editForm.requiredCategories}
@@ -319,6 +338,7 @@ export function RewardShopSettings({ items, currentMemberId, children, todos, ca
                 <span className="reward-shop-settings__item-meta">
                   ⭐ {item.starCost}
                   {item.timerMinutes !== null && ` · ⏱ ${item.timerMinutes} min`}
+                  {item.purchaseLimit && ` · 🔁 max ${item.purchaseLimit.max} ${PURCHASE_LIMIT_PERIOD_SHORT[item.purchaseLimit.period]}`}
                 </span>
                 <button
                   aria-label={`Redigera ${item.title}`}

@@ -517,6 +517,7 @@ export function useShellState(
           starCost: wish.starsNeeded,
           timerMinutes: null,
           availability: null,
+          purchaseLimit: null,
           requiredCategories: [],
           createdBy: currentMember.id,
           deletedAt: null,

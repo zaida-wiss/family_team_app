@@ -50,6 +50,10 @@ rewardShopRouter.post("/purchase/:itemId", requireAuth, async (req, res) => {
   res.json(purchased);
 });
 
+rewardShopRouter.get("/purchase-limits/:memberId", requireAuth, attachAccountId, async (req, res) => {
+  res.json(await shop.getPurchaseLimitStatus(req.accountId!, req.params.memberId));
+});
+
 rewardShopRouter.get("/purchased", requireAuth, attachAccountId, async (req, res) => {
   const { date, page, pageSize } = PurchasedRewardsQuerySchema.parse(req.query);
 

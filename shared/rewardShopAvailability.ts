@@ -1,4 +1,4 @@
-import type { Id, RewardShopItem, ShopTimeInterval, Todo, Weekday } from "./types.js";
+import type { Id, PurchaseLimitPeriod, RewardShopItem, ShopAvailabilityWindow, ShopTimeInterval, Todo, Weekday } from "./types.js";
 
 // Familjens hemtidszon (samma konstant som frontend/src/utils/fixedTimeZone.ts,
 // duplicerad hellre än importerad — shared/ ska inte bero på frontend-kod).
@@ -36,10 +36,19 @@ function inTimeInterval(interval: ShopTimeInterval, timeStr: string): boolean {
   return timeStr >= interval.start && timeStr <= interval.end;
 }
 
+function windowMatchesWeekday(window: ShopAvailabilityWindow, weekday: Weekday): boolean {
+  return window.daysOfWeek.length === 0 || window.daysOfWeek.includes(weekday);
+}
+
 /**
  * Är varan tillgänglig just nu — datum, veckodag och tidsintervall, alltid
  * utvärderat i familjens hemtidszon (se HOME_TIME_ZONE ovan), oavsett vilken
  * tidszon den anropande processen själv befinner sig i.
+ *
+ * `availability.windows` (2026-08-29) — varan är tillgänglig om NÅGOT fönster
+ * matchar dagens veckodag OCH (om fönstret har tidsintervall) nuvarande tid.
+ * Ett tomt daysOfWeek i ett fönster betyder "alla dagar" för just det
+ * fönstret; ett tomt timeIntervals betyder "hela dagen".
  *
  * Den AUKTORITATIVA spärren — anropas server-side i purchaseItem()
  * (rewardShopService.ts) så att ett köp inte längre kan kringgås genom att
@@ -58,12 +67,16 @@ export function isAvailableNow(item: RewardShopItem, now = new Date()): boolean 
   if (availability.startDate && today < availability.startDate) return false;
   if (availability.endDate && today > availability.endDate) return false;
 
-  const days = availability.daysOfWeek;
-  if (days && days.length > 0 && !days.includes(weekday)) return false;
+  if (availability.windows.length === 0) return true;
 
-  if (availability.timeIntervals.length === 0) return true;
+  const matching = availability.windows.filter((w) => windowMatchesWeekday(w, weekday));
+  if (matching.length === 0) return false;
 
-  const activeInterval = availability.timeIntervals.find((iv) => inTimeInterval(iv, nowTime));
+  // Ett fönster utan egna tidsintervall täcker hela dagen — inget att räkna ut.
+  if (matching.some((w) => w.timeIntervals.length === 0)) return true;
+
+  const intervals = matching.flatMap((w) => w.timeIntervals);
+  const activeInterval = intervals.find((iv) => inTimeInterval(iv, nowTime));
   if (!activeInterval) return false;
 
   // Timer-kontroll: finns det tillräckligt med tid kvar i intervallet?
@@ -73,6 +86,32 @@ export function isAvailableNow(item: RewardShopItem, now = new Date()): boolean 
   }
 
   return true;
+}
+
+/** Dagens datum i familjens hemtidszon, "YYYY-MM-DD" — se HOME_TIME_ZONE ovan. */
+export function toStockholmDateStr(date: Date): string {
+  return stockholmParts(date).dateStr;
+}
+
+function mondayOfIsoWeek(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  const day = d.getUTCDay(); // 0=sön..6=lör
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + diffToMonday);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Räknas två (redan hemtidszon-uttryckta) "YYYY-MM-DD"-datum till samma
+ * period för en köpgräns (RewardShopItem.purchaseLimit)? "week" räknas
+ * måndag–söndag. Ren kalenderjämförelse, ingen tidszonsomräkning kvar här —
+ * anroparen (rewardShopService.ts) förväntas redan ha omvandlat varje
+ * purchasedAt-tidsstämpel via toStockholmDateStr().
+ */
+export function isSamePurchasePeriod(dateStrA: string, dateStrB: string, period: PurchaseLimitPeriod): boolean {
+  if (period === "day") return dateStrA === dateStrB;
+  if (period === "month") return dateStrA.slice(0, 7) === dateStrB.slice(0, 7);
+  return mondayOfIsoWeek(dateStrA) === mondayOfIsoWeek(dateStrB);
 }
 
 /**
