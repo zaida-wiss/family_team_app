@@ -118,7 +118,7 @@ test("Novas dashboard visar egna + dashboard-godkända kalendrar, men INTE en ka
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Medlemslistan ligger sedan 2026-08-29 i Hem-panelens standardvy.
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 

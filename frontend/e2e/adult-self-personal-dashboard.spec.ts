@@ -56,11 +56,10 @@ test("vuxen som klickar sin egen profil ser sina uppgifter+kalender, inte Familj
   await mockCommon(page);
   await page.goto("/");
 
-  // Hem-vyns egen "Visa medlemmar"-popup (ersätter sedan 2026-08-09
-  // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
-  // document.body, scopad via role="group"-behållaren för att undvika en
-  // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Medlemslistan ligger sedan 2026-08-29 i Hem-panelens standardvy (visas
+  // direkt, ingen egen "Visa medlemmar"-flik längre) — scopad via
+  // role="group"-behållaren för att undvika en strict-mode-krock med andra
+  // "Testförälder"-förekomster på sidan.
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Hej Testförälder!")).toBeVisible();
@@ -72,7 +71,6 @@ test("vuxen som klickar en ANNAN vuxens profil ser NU den personens uppgifter+ka
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   await expect(page.getByText("Hej Lars!")).toBeVisible();
@@ -91,7 +89,6 @@ test("vuxen ser en redigera-knapp på sin EGEN dashboard, öppnar redigeringsmod
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Handla mat")).toBeVisible();
@@ -108,7 +105,6 @@ test("vuxen ser INGEN redigera-knapp på en ANNAN vuxens dashboard", async ({ pa
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   await expect(page.getByText("Klippa gräset")).toBeVisible();
@@ -139,7 +135,6 @@ test("vuxen ser ett uppdragskort för ett delmoment tilldelat DEM, med emojin so
   });
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   // "Klippa gräset" (hela todon) tillhör Lars och ska INTE synas — bara
@@ -182,7 +177,6 @@ test("delmoment-kortets bakgrund/text på en vuxens PersonalDashboard bär temat
   });
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   const card = page.locator(".child-task-card--subtask");
@@ -225,7 +219,6 @@ test("kategorilöst uppdragskorts titel är läsbar (vit) på en vuxens Personal
   });
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   const card = page.locator(".child-task-card").filter({ hasText: "Handla mat" });
@@ -254,7 +247,6 @@ test("vuxen ser en tidslinje-ikon för både en avklarad hel uppgift och ett avk
   );
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   const donePins = page.locator(".child-tl-reward-pin--done");
@@ -294,7 +286,6 @@ test("Rekord-sidans tidtagningskort får en ljus bakgrund (blandad mot --white) 
   await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [TIMED_TASK] }));
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
   await page.getByRole("button", { name: "Rekord" }).click();
 

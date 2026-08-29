@@ -37,7 +37,10 @@ function shoppingList(overrides: Record<string, unknown>) {
 }
 
 async function selectFamily(page: import("@playwright/test").Page, tab: import("@playwright/test").Locator, label: string) {
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
+  // (ingen egen "Visa medlemmar"-flik längre) — ett klick på Hem landar
+  // alltid där, oavsett aktiv Hem-flik.
+  await page.getByRole("button", { name: "Hem", exact: true }).click();
   await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
   await tab.click();
 }
@@ -172,7 +175,7 @@ test("Hem-vyns Inköp-flik: en annan familjs delade lista (ADR-0026) döljs när
   await expect(page.getByText("wiss Kolmodins lista")).toHaveCount(0);
 
   // Tillbaka till "Alla familjer" — listan syns igen.
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("button", { name: "Hem", exact: true }).click();
   await page.getByLabel("Familjeval").getByRole("button", { name: "Alla familjer" }).click();
   await shoppingTab.click();
   await expect(page.getByText("wiss Kolmodins lista")).toBeVisible();

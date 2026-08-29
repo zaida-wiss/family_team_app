@@ -100,11 +100,10 @@ test("Mörkt läge: växeln finns bara för vuxenteman, sätter dark-mode-klasse
   await expect(shell).toHaveClass(/theme-clear/);
 
   // Ett barns dashboard (space-temat) har ingen mörkt läge-växel alls —
-  // ren barnvy, opåverkad av vuxnas mörka-läge-val. "Visa medlemmar" (Hem-
-  // vyns egen navbar, ersätter sedan 2026-08-09 HeroBar.tsx:s borttagna
-  // Medlemmar-ikon) kräver att man är på Hem-panelen först.
+  // ren barnvy, opåverkad av vuxnas mörka-läge-val. Medlemslistan ligger
+  // sedan 2026-08-29 i Hem-panelens nya standardvy (ingen egen "Visa
+  // medlemmar"-flik längre) — ett klick på Hem räcker.
   await page.getByRole("button", { name: "Hem", exact: true }).click();
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(shell).toHaveClass(/theme-space/);
   await expect(shell).not.toHaveClass(/dark-mode/);

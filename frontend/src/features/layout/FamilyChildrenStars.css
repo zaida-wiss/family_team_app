@@ -1,0 +1,61 @@
+/* Ingen egen kortbakgrund (2026-08-29) — samma "flyter ihop med sidan"-
+   princip som FamilyWeekRoutines.css/FamilyCompletedTimeline.css redan
+   etablerat, se deras filhuvudkommentarer. */
+.family-children-stars {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5vw, 12px);
+  margin: 0;
+  padding: clamp(10px, 1.5vw, 16px) 0;
+  list-style: none;
+}
+
+.family-children-stars .empty-note {
+  margin: 0;
+  color: var(--muted-fg);
+}
+
+.family-children-stars__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.family-children-stars__row:last-child {
+  border-bottom: none;
+}
+
+.family-children-stars__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.family-children-stars__info strong {
+  font-size: 0.95rem;
+  color: var(--foreground);
+}
+
+.family-children-stars__info span {
+  font-size: 0.8rem;
+  color: var(--muted-fg);
+}
+
+.family-children-stars__count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.family-children-stars__count svg {
+  color: #f5b400;
+}

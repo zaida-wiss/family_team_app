@@ -92,9 +92,21 @@ export function useAppState(initialMembership: ActiveMembership) {
     // URL:en synkront HÄR istället, bara i just detta specialfall — en
     // vanlig panelväxling (activePanel FAKTISKT ändras) lämnas oförändrad åt
     // usePanelUrlSync.ts:s effekt, som redan hanterar den korrekt.
+    //
+    // Jämför HELA pathname+search, inte bara pathname (2026-08-29, fynd
+    // under Hem-vyns nya "overview"-standardflik) — Hem-panelens eget
+    // flikval (useHomeTabNavSync.ts) kodas som en ?tab=-query-parameter på
+    // SAMMA pathname ("/"), som därför alltid var lika med basePath oavsett
+    // vald flik — ett omklick på Hem medan man stod på t.ex. Todos-fliken
+    // rensade då ALDRIG "?tab=todos", och den efterföljande remounten läste
+    // tillbaka samma gamla flik istället för Hem-panelens grundläge
+    // ("overview"). Fungerade av en slump för Inställningar (som kodar sitt
+    // djup i SJÄLVA pathname, t.ex. "/installningar/utseende" — redan skilt
+    // från basePath "/installningar" utan denna ändring).
     if (panel === activePanel) {
       const basePath = buildPanelPath({ panel, memberId: null });
-      if (window.location.pathname !== basePath) {
+      const currentFullPath = window.location.pathname + window.location.search;
+      if (currentFullPath !== basePath) {
         window.history.pushState({}, "", basePath);
       }
     }

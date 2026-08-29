@@ -62,14 +62,15 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
 
   await page.goto("/");
 
-  // Medlemmar OCH familjeväljaren ligger sedan 2026-08-12 i en gemensam,
-  // riktig "Medlemmar"-flik (MemberOverview.tsx, Zaidas beslut: "ta bort
-  // drop down och gå tillbaka till en sida man kommer till") — ersätter de
-  // tidigare två separata ikon+popup-mönstren. Att kolla medlemmar/familjer
-  // innebär nu ett riktigt flikbyte, inte en overlay ovanpå Todos-fliken —
-  // helpers-funktionerna växlar därför alltid tillbaka till "Visa todos"
-  // efteråt så resten av testflödet är opåverkat.
-  const membersTab = page.getByRole("tab", { name: "Visa medlemmar" });
+  // Medlemmar OCH familjeväljaren ligger sedan 2026-08-29 i Hem-panelens
+  // nya standardvy (MemberOverview.tsx, Zaidas beslut efter en mockup-bild:
+  // "behöver då inte en egen ikon i navbaren") — ett klick på Hem (HeroBar)
+  // landar alltid där, oavsett aktiv Hem-flik (se useAppState.ts:s
+  // setActivePanel för samma-panel-specialfallet). helpers-funktionerna
+  // växlar därför alltid tillbaka till "Visa todos" efteråt så resten av
+  // testflödet är opåverkat. Samma variabelnamn (membersTab) behållet trots
+  // att den nu pekar mot Hem-knappen, för att minimera diffen nedan.
+  const membersTab = page.getByRole("button", { name: "Hem", exact: true });
   const todosTab = page.getByRole("tab", { name: "Visa todos" });
   const membersList = page.getByLabel("Medlemslista");
   const familyGroup = page.getByLabel("Familjeval");
@@ -138,6 +139,6 @@ test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", a
 
   await page.getByRole("tab", { name: "Visa todos" }).click();
   await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("button", { name: "Hem", exact: true }).click();
   await expect(page.getByLabel("Familjeval")).toHaveCount(0);
 });

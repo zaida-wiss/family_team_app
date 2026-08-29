@@ -5,6 +5,7 @@ import {
   getAssignedSubtaskCards,
   getFamilyCompletedTimelineItems,
   getFamilyViewTodos,
+  getFamilyWeekRoutines,
   getMyTodosViewTodos,
   isTodoVisibleNow
 } from "../src/features/todos/selectors";
@@ -325,5 +326,78 @@ describe("bucketCompletedStatsByDay", () => {
   test("en tidsstämpel utanför fönstret räknas fortfarande om den råkar matcha en av bucketarnas dagsträng (inget filter i sig — anroparen ansvarar för att bara skicka in tidsstämplar inom fönstret)", () => {
     const result = bucketCompletedStatsByDay(["2020-01-01T00:00:00.000Z"], TODAY, 3);
     expect(result.every((b) => b.count === 0)).toBe(true);
+  });
+});
+
+// 2026-08-29, Zaidas önskemål (efter en mockup-bild av ett nytt
+// "familjeläge"): "ikoner på rutinerna, en liten rad per familjemedlem, de
+// uppgifter som blivit gjorda skall markeras och de som inte blev gjorda
+// skall dämpas" — FamilyWeekRoutines.tsx (Hem-vyns nya standardvy).
+describe("getFamilyWeekRoutines", () => {
+  // 2026-08-24 är en måndag (svensk veckostart, se startOfWeek i recurringTodos.ts).
+  const MONDAY = new Date(2026, 7, 24);
+
+  test("en mall due en given veckodag visas som en odämpad, ogjord ikon om ingen occurrence finns", () => {
+    const template = createTodo({
+      id: "template-1",
+      assignedTo: "member-child",
+      recurringSourceId: null,
+      recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: ["monday"] },
+      visibleFrom: "2026-08-01T00:00:00.000Z",
+      visual: { type: "lucide-icon", value: "🦷" }
+    });
+    const days = getFamilyWeekRoutines([{ id: "member-child" }], [template], MONDAY);
+    expect(days[0].dateStr).toBe("2026-08-24");
+    expect(days[0].memberRows).toEqual([
+      { memberId: "member-child", icons: [{ id: "template-1-2026-08-24", emoji: "🦷", title: "Testtodo", done: false }] }
+    ]);
+  });
+
+  test("en dag utan matchande veckodag ger ingen medlemsrad alls", () => {
+    const template = createTodo({
+      id: "template-1",
+      assignedTo: "member-child",
+      recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: ["wednesday"] },
+      visibleFrom: "2026-08-01T00:00:00.000Z"
+    });
+    const days = getFamilyWeekRoutines([{ id: "member-child" }], [template], MONDAY);
+    expect(days[0].memberRows).toEqual([]);
+    expect(days[2].dateStr).toBe("2026-08-26");
+    expect(days[2].memberRows).toHaveLength(1);
+  });
+
+  test("en redan godkänd/klar occurrence markeras done, annars inte trots att den finns", () => {
+    const template = createTodo({
+      id: "template-1",
+      assignedTo: "member-child",
+      recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: ["monday"] },
+      visibleFrom: "2026-08-01T00:00:00.000Z"
+    });
+    const doneOccurrence = createTodo({
+      id: "template-1-occurrence-2026-08-24",
+      assignedTo: "member-child",
+      recurringSourceId: "template-1",
+      occurrenceDate: "2026-08-24",
+      status: "approved"
+    });
+    const days = getFamilyWeekRoutines([{ id: "member-child" }], [template, doneOccurrence], MONDAY);
+    expect(days[0].memberRows[0].icons[0]).toMatchObject({ id: "template-1-occurrence-2026-08-24", done: true });
+  });
+
+  test("en uppgift utan återkommelse (recurrence: none) räknas aldrig som en rutin", () => {
+    const oneOff = createTodo({ id: "one-off", assignedTo: "member-child", recurrence: { type: "none" } });
+    const days = getFamilyWeekRoutines([{ id: "member-child" }], [oneOff], MONDAY);
+    expect(days.every((d) => d.memberRows.length === 0)).toBe(true);
+  });
+
+  test("en Familjen-uppgift (assignedTo: null) räknas inte som någon medlems personliga rutin", () => {
+    const familyTemplate = createTodo({
+      id: "template-1",
+      assignedTo: null,
+      recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: ["monday"] },
+      visibleFrom: "2026-08-01T00:00:00.000Z"
+    });
+    const days = getFamilyWeekRoutines([{ id: "member-child" }], [familyTemplate], MONDAY);
+    expect(days[0].memberRows).toEqual([]);
   });
 });

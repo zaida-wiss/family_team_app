@@ -83,7 +83,7 @@ test("Lars dashboard (visad av föräldern) visar INTE förälderns egen kalende
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Medlemslistan ligger sedan 2026-08-29 i Hem-panelens standardvy.
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   await expect(page.getByText("Förälderns egen händelse")).toHaveCount(0);

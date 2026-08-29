@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
-export type HomeTab = "calendar" | "shopping" | "todos" | "mealplan" | "members";
+export type HomeTab = "overview" | "calendar" | "shopping" | "todos" | "mealplan";
 
-const HOME_TABS: readonly HomeTab[] = ["calendar", "shopping", "todos", "mealplan", "members"];
-const DEFAULT_TAB: HomeTab = "calendar";
+const HOME_TABS: readonly HomeTab[] = ["overview", "calendar", "shopping", "todos", "mealplan"];
+// "overview" (2026-08-29, Zaidas önskemål efter en mockup-bild: familjens
+// medlemmar + veckans rutiner + barnens stjärnor) ersätter den tidigare
+// "members"-fliken/-ikonen som standardvyn — man kommer hit genom att
+// trycka på Hem (huset), inte via en egen ikon i navbaren (se
+// MemberOverview.tsx:s allTabs, som inte längre listar en Medlemmar-post).
+// En gammal bokmärkt/kvarsparad "?tab=members"-URL faller tyst tillbaka hit
+// via parseHomeTab nedan (HOME_TABS innehåller inte längre "members").
+const DEFAULT_TAB: HomeTab = "overview";
 
 function parseHomeTab(search: string): HomeTab {
   const value = new URLSearchParams(search).get("tab");

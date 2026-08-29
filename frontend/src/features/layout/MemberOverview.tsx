@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ClipboardEvent } from "react";
-import { CalendarDays, Check, CheckSquare, Plus, Settings, ShoppingCart, Trash2, Upload, User, UtensilsCrossed, Users } from "lucide-react";
+import { CalendarDays, Check, CheckSquare, Plus, Settings, ShoppingCart, Trash2, Upload, User, UtensilsCrossed } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -15,6 +15,8 @@ import { splitPastedShoppingItems } from "../shopping/parseShoppingPaste";
 import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { FamilyCompletedTimeline } from "../todos/FamilyCompletedTimeline";
+import { FamilyWeekRoutines } from "../todos/FamilyWeekRoutines";
+import { FamilyChildrenStars } from "./FamilyChildrenStars";
 import { generateId } from "../../utils/uuid";
 import { useHomeTabNavSync } from "./useHomeTabNavSync";
 import type { HomeTab } from "./useHomeTabNavSync";
@@ -334,15 +336,14 @@ export function MemberOverview({
   // aria-label prefixad "Visa..." (2026-07-31) — huvudnavigeringen (HeroBar)
   // har egna knappar med samma korta namn ("Kalender"/"Inköp"/"Todos"), en
   // krock annars för både skärmläsare och tester.
+  // Medlemmar/familjeväljaren har INGEN egen ikon längre (2026-08-29, Zaidas
+  // beslut efter en mockup-bild: "det blir som att medlemmarna finns där och
+  // behöver då inte en egen ikon i navbaren") — de flyttade in i en ny
+  // "overview"-flik (familjens medlemmar + veckans rutiner + barnens
+  // stjärnor) som man bara når genom att trycka på Hem (huset), inte via en
+  // klickbar ikon här. Se DEFAULT_TAB i useHomeTabNavSync.ts och
+  // renderingen av effectiveTab === "overview" nedan.
   const allTabs: { key: HomeTab; label: string; icon: LucideIcon; enabled: boolean }[] = [
-    // Medlemmar flyttad överst (2026-08-12, Zaidas önskemål: "sätt
-    // medlemsikonen bredvid ensam gubbe ikonen (personliga)") — ligger nu
-    // direkt intill onShowAppNav-knappen (User-ikonen) i DOM-ordningen
-    // istället för sist, före Inställningar. Ersätter sedan tidigare samma
-    // dag de två separata ikon+popup-mönstren (familjeväljaren och "Visa
-    // medlemmar") med EN riktig flik: familjeval + medlemslista, ingen
-    // popup. Se renderingen av effectiveTab === "members" nedan.
-    { key: "members", label: "Visa medlemmar", icon: Users, enabled: canSeeMembers },
     { key: "calendar", label: "Visa kalender", icon: CalendarDays, enabled: canSeeCalendar },
     { key: "shopping", label: "Visa inköpslista", icon: ShoppingCart, enabled: canSeeShopping },
     { key: "todos", label: "Visa todos", icon: CheckSquare, enabled: canSeeTodos },
@@ -351,39 +352,40 @@ export function MemberOverview({
   const tabs = allTabs.filter((t) => t.enabled);
   // "vald vuxen"-vyn (enableTabs=false) visar alltid bara kalendern, oavsett
   // vilken flik som råkar ligga i state sedan tidigare (samma instans kan
-  // återanvändas, se `key`-propen i MemberShellContent.tsx).
-  const effectiveTab = enableTabs ? activeTab : "calendar";
+  // återanvändas, se `key`-propen i MemberShellContent.tsx). En roll utan
+  // canSeeMembers faller tillbaka på kalendern istället för den nya
+  // overview-fliken (som visar just medlemmarna denna roll inte får se).
+  const effectiveTab = !enableTabs ? "calendar" : activeTab === "overview" && !canSeeMembers ? "calendar" : activeTab;
 
   return (
     <div
-      className={styles.home}
+      className={`${styles.home}${enableTabs && !homeShowFamilyNav ? ` ${styles.appNavShowing}` : ""}`}
       // --modal-bottom-reserve (2026-08-09, Zaidas fynd: "när jag är inne på
       // min egen todo och familjebaren inte finns så skall modalen fylla
       // skärmen hela vägen ner till första navbaren") — uppgiftsmodalerna
       // (TodoDetailModal.css/TodoCreatorModal.css/ParentTodoThreadView.css:s
-      // reuse-overlay) reserverade tidigare ALLTID 124px under sig på mobil
-      // (HeroBar 64px + Hem-vyns egen .controlRow ~60px, staplade), oavsett
-      // om .controlRow faktiskt fanns i vyn eller inte — samma delade
-      // CSS-klasser används av modaler öppnade från BÅDE Hem (där raden
-      // finns) och den personliga Todos-panelen/Inställningar (där den
-      // aldrig gör det), och en ren CSS-media-query kan inte se om en
-      // fixed-positionerad rad råkar finnas i DOM:en. Löst genom att bara
-      // Hem-vyn (och bara när dess egen controlRow faktiskt RENDERAS, se
-      // enableTabs nedan) sätter en CSS-variabel på sin rot — modalerna är
-      // vanliga (icke-porterade) DOM-barn till den här komponenten när de
-      // öppnas härifrån, så variabeln ärvs ner till dem via vanlig CSS-
-      // cascade. Ingen variabel satt (TodosView.tsx/Inställningar m.fl.) ger
-      // CSS:ns egna, mindre default (4rem) — HeroBar ensam.
+      // reuse-overlay) reserverar plats under sig för en fast BOTTENnav, om
+      // en sådan faktiskt finns. Ingen variabel satt (TodosView.tsx/
+      // Inställningar m.fl.) ger CSS:ns egna, mindre default (4rem) —
+      // HeroBar ensam.
+      // Familjenavbaren (.controlRow) flyttades till TOPPEN 2026-08-30
+      // (Zaida: "familjenavbaren bör hoppa högst upp på skärmen") — den
+      // upptar därför inte längre någon plats i BOTTEN alls. Reserven
+      // beror nu på vilken av de två navbarerna som faktiskt visas
+      // (homeShowFamilyNav, se Shell.tsx:s hideHeroBarOnMobile): "0px" när
+      // controlRow (topp) visas — ingen bottennav finns då på Hem-panelen
+      // — annars "4rem" när HeroBar (botten, oförändrad) tar över.
       // rem, inte px (2026-08-11, Zaidas fynd: "familjens navbar döljs nu
       // av den första navbaren på surfplattan") — HeroBars bottennav
       // VÄXER förbi 16px-antagandet på en bred mobil-brytpunkts-skärm
       // (surfplatta i portrait, root-typsnittet skalar via
       // clamp(15px,13px+0.6vw,22px), se Shell.tsx), samma calc() håller
-      // reserven i synk. Bara 4rem nu (2026-08-12, inte längre "HeroBar +
-      // controlRow staplade") — de två navbarerna delar samma fysiska plats
-      // istället för att ligga ovanpå varandra, se Shell.tsx:s
-      // hideHeroBarOnMobile.
-      style={enableTabs ? ({ "--modal-bottom-reserve": "4rem" } as React.CSSProperties) : undefined}
+      // reserven i synk.
+      style={
+        enableTabs
+          ? ({ "--modal-bottom-reserve": homeShowFamilyNav ? "0px" : "4rem" } as React.CSSProperties)
+          : undefined
+      }
     >
       {enableTabs && (
         // Två navbarer, en i taget (2026-08-12) — homeShowFamilyNav styr
@@ -817,18 +819,21 @@ export function MemberOverview({
         )
       )}
 
-      {/* Medlemmar-fliken (2026-08-12, Zaidas beslut: "Under medlemmar
-          skall man kunna styra vilka familjer som skall visas och se
-          medlemmarna i dessa, samt trycka på dem för att komma till
-          dashboarden. så ta bort drop down och gå tillbaka till en sida man
-          kommer till") — ersätter de tidigare två separata ikon+popup-
-          mönstren (familjeväljaren och "Visa medlemmar") med en riktig
-          sida: familjeval (om fler än en familj bidrar) + medlemslista.
-          Radstilen (.memberPopupRow/.familyPopupRow) återanvänds oförändrad
-          från de gamla popuperna — bara containern är ny (.membersTabList,
-          ingen popup-storleksbegränsning). */}
-      {effectiveTab === "members" && canSeeMembers && (
-        <article aria-labelledby="home-tab-members" className="dashboard" id="home-panel-members" key={`members-${tabResetKey}`} role="tabpanel" tabIndex={0}>
+      {/* Hem-vyns nya standardvy, "familjeläge" (2026-08-29, Zaidas
+          önskemål efter en mockup-bild) — ersätter den tidigare fristående
+          Medlemmar-fliken/-ikonen (2026-08-12) som Hem-panelens standardvy:
+          familjeval (om fler än en familj bidrar) + medlemslista (oförändrad
+          logik/radstil, .memberPopupRow/.familyPopupRow/.memberCardList
+          återanvänds rakt av) + två nya sektioner därunder, veckans rutiner
+          och barnens stjärnor. Nås bara genom att trycka på Hem (huset) —
+          ingen egen klickbar ikon i navbaren längre, se allTabs ovan och
+          DEFAULT_TAB i useHomeTabNavSync.ts. */}
+      {effectiveTab === "overview" && canSeeMembers && (
+        // Ingen role="tabpanel"/aria-labelledby mot en tab (till skillnad
+        // från övriga sektioner nedan) — "overview" är medvetet INTE en del
+        // av tablistan (se kommentaren ovan), ett sådant attribut hade
+        // pekat mot ett icke-existerande element.
+        <article aria-label="Familj" className="dashboard" id="home-panel-overview" key={`overview-${tabResetKey}`}>
           {showFamilyFilter && (
             <>
               <header className="section-header">
@@ -879,13 +884,22 @@ export function MemberOverview({
                     type="button"
                   >
                     <MemberAvatar member={m} size="small" />
-                    <span className={styles.memberCardName}>{m.name}</span>
+                    <span className={styles.memberCardName}>
+                      {m.name}
+                      {/* Rollnamn (2026-08-29, mockup-referens) — egna
+                          medlemmar har en riktig, ev. anpassad rollnamn
+                          (roleId slår upp mot roles), en anslutens
+                          medlemssammanfattning saknar roleId helt, se
+                          else-grenen nedan. */}
+                      <small>{roles.find((r) => r.id === m.roleId)?.name ?? (m.isChild ? "Barn" : "Vuxen")}</small>
+                    </span>
                   </button>
                 ) : (
                   <div className={`${styles.memberCard} ${styles["memberCard--static"]}`} key={`${m.accountId}-${m.id}`}>
                     <MemberAvatar member={m} size="small" />
                     <span className={styles.memberCardName}>
                       {m.name}
+                      <small>{m.isChild ? "Barn" : "Vuxen"}</small>
                       {selectedFamilyId === "all" && (
                         <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
                       )}
@@ -894,6 +908,25 @@ export function MemberOverview({
                 )
               )}
             </div>
+          )}
+
+          {/* Veckans rutiner + barnens stjärnor (2026-08-29) — kräver
+              allTodos/activeFamilyMembers för MITT EGET konto, ingen
+              motsvarande data finns tillgänglig för en annan familj jag
+              bara tittar på via filtret ovan (samma isOwnFamilySelected-
+              avgränsning som Todos-flikens "+"-knapp/import-export). */}
+          {isOwnFamilySelected && (
+            <>
+              <header className="section-header">
+                <div><p className="eyebrow">Familj</p><h2>Veckans rutiner</h2></div>
+              </header>
+              <FamilyWeekRoutines members={activeFamilyMembers} todos={allTodos} />
+
+              <header className="section-header">
+                <div><p className="eyebrow">Familj</p><h2>Barnens stjärnor</h2></div>
+              </header>
+              <FamilyChildrenStars members={activeFamilyMembers} roles={roles} />
+            </>
           )}
         </article>
       )}

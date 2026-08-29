@@ -60,9 +60,9 @@ test("marginal-drag: nedtryck i vänster marginal + drag till höger sida byter 
   await mockCommon(page);
   await page.goto("/");
 
-  // Hem → Visa medlemmar → Nova (aktiveMembers-ordningen är vuxna-först-
-  // sedan-barn, alltså [Testförälder, Nova] — Nova är index 1).
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Hem-panelens standardvy visar medlemslistan direkt sedan 2026-08-29 →
+  // Nova (aktiveMembers-ordningen är vuxna-först-sedan-barn, alltså
+  // [Testförälder, Nova] — Nova är index 1).
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -92,7 +92,6 @@ test("marginal-drag: ett kort drag som inte når andra sidan byter INTE medlem",
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -113,7 +112,6 @@ test("marginal-drag: nedtryck MITT i vyn (inte i marginalen) triggar ingen växl
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -141,7 +139,6 @@ test("touch-svep: en fullbordad vändning följer fingret och byter medlem", asy
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -188,7 +185,6 @@ test("touch-svep: ett kort drag under tröskeln fjädrar tillbaka och byter INTE
   await mockCommon(page);
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -260,7 +256,6 @@ test("håll på ett uppdragskort med naturlig fingerdrift avklarar uppgiften, by
   });
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 
@@ -318,7 +313,6 @@ test("dra en sedel från plånboken till en belöning betalar kortet, byter INTE
   );
 
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 

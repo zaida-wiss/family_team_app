@@ -2,6 +2,7 @@ import type { Id, Member, Role, Todo, TodoCategory, TodoSubtask, TodoThreadRange
 import { hasPermission } from "../../utils/permissions";
 import { extractLeadingEmoji } from "../../utils/extractLeadingEmoji";
 import { toLocalDateStr } from "../calendars/calendarHelpers";
+import { isRecurrenceDue, isRecurringTemplate } from "./recurringTodos";
 
 // Delad mellan ParentTodoThreadView.tsx och TodoEditModal.tsx (2026-07-07) —
 // avgör om en medlem är ett barn, antingen via member.isChild direkt eller
@@ -406,6 +407,74 @@ export function getFamilyCompletedTimelineItems(todos: Todo[], day: Date): Famil
   }
 
   return items.sort((a, b) => a.completedAt.localeCompare(b.completedAt));
+}
+
+export type WeeklyRoutineIcon = {
+  id: string;
+  emoji: string | null;
+  title: string;
+  done: boolean;
+};
+
+export type WeeklyRoutineMemberRow = {
+  memberId: Id;
+  icons: WeeklyRoutineIcon[];
+};
+
+export type WeeklyRoutineDay = {
+  dateStr: string;
+  memberRows: WeeklyRoutineMemberRow[];
+};
+
+// Hem-vyns nya "familjeläge"-översikt (2026-08-29, Zaidas önskemål efter en
+// mockup-bild: "ikoner på rutinerna, en liten rad per familjemedlem, de
+// uppgifter som blivit gjorda skall markeras och de som inte blev gjorda
+// skall dämpas mot bakgrunden") — bara ÅTERKOMMANDE mallar
+// (isRecurringTemplate), en engångsuppgift hör inte hemma i en
+// rutinöversikt. Medvetet avgränsat till uppgifter tilldelade en SPECIFIK
+// medlem (assignedTo === member.id) — Familjen-poolens uppgifter
+// (assignedTo: null) räknas inte som någons personliga rutin här.
+//
+// Både förflutna/idag-dagar (där en riktig, materialiserad occurrence redan
+// kan finnas, se recurringTodos.ts) OCH framtida dagar i samma vecka
+// (där ingen occurrence genererats ännu) hanteras med SAMMA isRecurrenceDue-
+// koll mot mallens recurrence — en framtida dag kan per definition aldrig
+// vara "klar", så avsaknaden av en occurrence där ger automatiskt done:false,
+// utan något särskilt framtids-specialfall.
+export function getFamilyWeekRoutines(
+  members: { id: Id }[],
+  todos: Todo[],
+  weekStart: Date
+): WeeklyRoutineDay[] {
+  const templates = todos.filter(isRecurringTemplate);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(weekStart.getTime() + i * 86_400_000);
+    const dateStr = toLocalDateStr(date);
+
+    const memberRows: WeeklyRoutineMemberRow[] = members
+      .map((member) => {
+        const dueTemplates = templates.filter(
+          (t) => t.assignedTo === member.id && isRecurrenceDue(t.recurrence, t.visibleFrom, date)
+        );
+        const icons: WeeklyRoutineIcon[] = dueTemplates.map((template) => {
+          const occurrence = todos.find(
+            (t) => t.recurringSourceId === template.id && t.occurrenceDate === dateStr
+          );
+          const source = occurrence ?? template;
+          return {
+            id: occurrence?.id ?? `${template.id}-${dateStr}`,
+            emoji: source.visual.value || null,
+            title: source.title,
+            done: occurrence ? occurrence.status === "done" || occurrence.status === "approved" : false
+          };
+        });
+        return { memberId: member.id, icons };
+      })
+      .filter((row) => row.icons.length > 0);
+
+    return { dateStr, memberRows };
+  });
 }
 
 export type CompletedStatsDay = {

@@ -46,14 +46,11 @@ test("Hem-vyns familjefilter sparar senast valda familj och läser tillbaka den 
   );
 
   await page.goto("/");
-  // Familjeväljaren ligger sedan 2026-08-12 i en riktig "Medlemmar"-flik
-  // istället för en <select>/ikon+popup (Zaidas fynd: "familjenavbaren blir
-  // för smal... ta bort drop down och gå tillbaka till en sida man kommer
-  // till", MemberOverview.tsx) — bockmarkeringen (Check-ikonen) på den
-  // valda raden visar det aktuella valet.
-  const membersTab = page.getByRole("tab", { name: "Visa medlemmar" });
+  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
+  // (MemberOverview.tsx), synlig direkt efter en sidladdning — ingen egen
+  // "Visa medlemmar"-flik längre att klicka in i. Bockmarkeringen
+  // (Check-ikonen) på den valda raden visar det aktuella valet.
   const familyGroup = page.getByLabel("Familjeval");
-  await membersTab.click();
   await expect(familyGroup.getByRole("button", { name: "Alla familjer" }).locator("svg")).toBeVisible();
 
   // updateMemberNavigation (useMembersState.ts) är avsiktligt fire-and-forget
@@ -68,6 +65,5 @@ test("Hem-vyns familjefilter sparar senast valda familj och läser tillbaka den 
   // (MEMBER_A.homeSelectedFamilyId sattes av PATCH-anropet ovan) istället
   // för att återgå till "Alla familjer".
   await page.reload();
-  await membersTab.click();
   await expect(familyGroup.getByRole("button", { name: "Familjen B" }).locator("svg")).toBeVisible();
 });

@@ -58,11 +58,10 @@ test("uppdragskorten går att scrolla när fler uppgifter finns än vad som får
 
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/");
-  // Hem-vyns egen "Visa medlemmar"-popup (ersätter sedan 2026-08-09
-  // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
-  // document.body, scopad via role="group"-behållaren för att undvika en
-  // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Medlemslistan ligger sedan 2026-08-29 i Hem-panelens standardvy (visas
+  // direkt, ingen egen "Visa medlemmar"-flik längre) — scopad via
+  // role="group"-behållaren för att undvika en strict-mode-krock med andra
+  // "Testförälder"-förekomster på sidan.
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Uppgift 1", { exact: true })).toBeVisible();

@@ -23,6 +23,12 @@ import { mockDataAPIs } from "./helpers";
 // Recept/Inställningar) motsvarar längre "members"-panelen, så INGEN av
 // dem visas som aktiv medan man tittar på en vald medlems dashboard — de
 // två sista testen nedan omskrivna för detta.
+//
+// 2026-08-29 (Zaidas beslut, mockup-bild): "Visa medlemmar"-fliken/-popupen
+// togs i sin tur bort och ersattes av en riktig dashboard-standardvy på
+// Hem ("overview", MemberOverview.tsx) — medlemslistan visas nu direkt när
+// man landar på Hem, inget mellanklick krävs. selectChild() nedan behöver
+// därför inte längre klicka en flik innan medlemslistan syns.
 
 const ACCOUNT = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
 const ROLE = {
@@ -75,7 +81,6 @@ async function mockCommon(page: import("@playwright/test").Page) {
 
 async function selectChild(page: import("@playwright/test").Page) {
   await page.goto("/");
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
   await expect(page.getByText("Hej Nova!")).toBeVisible();
 }
@@ -104,14 +109,17 @@ test("Ingen nav-ikon i första navbaren är markerad så länge man tittar på e
   }
 });
 
-test("Ett klick på Hem tar tillbaka till den egna hemvyn (avväljer) och Visa medlemmar går att öppna igen", async ({ page }) => {
+test("Ett klick på Hem tar tillbaka till den egna hemvyn (avväljer) och medlemslistan visas igen", async ({ page }) => {
   await mockCommon(page);
   await selectChild(page);
 
   await page.getByRole("button", { name: "Hem", exact: true }).click();
 
   await expect(page.getByText("Hej Nova!")).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "Visa medlemmar" })).toBeVisible();
+  // Samma re-klick-på-redan-aktiv-panel-mekanism som Inställningar redan
+  // använder (panelNavResetKey, useAppState.ts) remountar Hem-panelen och
+  // nollställer den till sin standardvy — "overview" (medlemslistan m.m.).
+  await expect(page.getByRole("group", { name: "Medlemslista" })).toBeVisible();
 });
 
 // 2026-08-10, Zaidas fynd: "jag tappar navbarerna och blir fast på

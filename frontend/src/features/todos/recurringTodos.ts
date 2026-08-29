@@ -193,7 +193,11 @@ function occurrenceIndexForWeek(daysOfWeek: Weekday[], every: number, weeksElaps
 // samma dag-i-månaden (och för år: samma månad) som startDate. "day" är ett
 // enkelt dagsintervall, som tidigare. Ett valfritt slutvillkor (end) kan
 // stoppa serien efter ett datum eller ett antal gånger, se isWithinRecurrenceEnd.
-function isRecurrenceDue(
+// Exporterad (2026-08-29) för Hem-vyns nya veckoöversikt (FamilyWeekRoutines,
+// se todos/selectors.ts:s getFamilyWeekRoutines) — samma förfallologik
+// behövs där för att avgöra vilka mallar som är due en given (även framtida)
+// veckodag, utan att duplicera hela regelverket ovan.
+export function isRecurrenceDue(
   recurrence: RecurrenceRule,
   visibleFrom: string | null,
   now: Date
@@ -248,7 +252,10 @@ function isRecurrenceDue(
 }
 
 // Måndagsankrad vecka (svensk kalenderkonvention) — getDay(): 0=söndag.
-function startOfWeek(date: Date): Date {
+// Exporterad (2026-08-29) för samma nya veckoöversikt som isRecurrenceDue
+// ovan — undviker en tredje kopia av samma "måndag som veckostart"-logik
+// (useMealPlanState.ts har redan en egen, oberoende sådan).
+export function startOfWeek(date: Date): Date {
   const day = startOfLocalDay(date);
   const diffToMonday = (day.getDay() + 6) % 7;
   day.setDate(day.getDate() - diffToMonday);

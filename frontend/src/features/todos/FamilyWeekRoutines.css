@@ -1,0 +1,93 @@
+/* Ingen egen kortbakgrund (2026-08-29) — samma "flyter ihop med sidan"-
+   princip som FamilyCompletedTimeline.css redan etablerade (se dess egen
+   filhuvudkommentar för bakgrunden till det beslutet). */
+.family-week-routines {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2vw, 16px);
+  padding: clamp(10px, 1.5vw, 16px) 0;
+}
+
+.family-week-routines .empty-note {
+  margin: 0;
+  color: var(--muted-fg);
+}
+
+.family-week-routines__day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Dagens kolumn (2026-08-29, mockup-referensen ringade in "IDAG" med en
+     kant) — en vänsterkant istället för en hel inramad ruta, så dagen
+     fortfarande flyter ihop med resten av sidan i övrigt. */
+  padding-left: 10px;
+  border-left: 3px solid transparent;
+}
+
+.family-week-routines__day--today {
+  border-left-color: var(--primary);
+}
+
+.family-week-routines__day-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.family-week-routines__today-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.family-week-routines__member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.family-week-routines__member-name {
+  min-width: 4.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted-fg);
+}
+
+.family-week-routines__icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.family-week-routines__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: clamp(1.4rem, 2.2vw, 1.9rem);
+  height: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-size: clamp(0.9rem, 1.6vw, 1.2rem);
+  line-height: 1;
+  border-radius: 50%;
+  cursor: default;
+  /* Ogjort = dämpat mot bakgrunden (2026-08-29, Zaidas önskemål: "de som
+     inte blev gjorda skall dämpas mot bakgrunden"), klart = full styrka —
+     samma bakgrundsfärg (medlemmens egen, satt inline) i båda lägena,
+     bara opaciteten/gråtoningen skiljer. */
+  opacity: 0.35;
+  filter: grayscale(0.5);
+}
+
+.family-week-routines__icon--done {
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}

@@ -103,10 +103,9 @@ test("Klickar igenom Hem → Medlemmar → välj en vuxen → Kalender: visar mi
 
   await page.goto("/");
 
-  // Hem → "Visa medlemmar" (andra navbaren, ersätter sedan 2026-08-09 den
-  // borttagna Medlemmar-ikonen på första navbaren) → klicka på Lars — visas
-  // nu i Medlemmar-panelen själv, navigerar inte längre bort.
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Hem-panelens standardvy visar medlemslistan direkt sedan 2026-08-29
+  // (ingen egen "Visa medlemmar"-flik längre) → klicka på Lars — visas
+  // i samma vy, navigerar inte längre bort.
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Lars" }).click();
 
   // Klicket på Kalender-ikonen rensar valet (useAppState.ts:s setActivePanel)

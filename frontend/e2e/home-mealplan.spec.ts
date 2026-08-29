@@ -69,13 +69,15 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
 
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa måltidsplanering" }).click();
-  // Familjeväljaren ligger sedan 2026-08-12 i en riktig "Medlemmar"-flik,
-  // inte en <select>/ikon+popup (MemberOverview.tsx, Zaidas fynd om
-  // trångbodd familjenavbar) — att välja familj innebär nu ett riktigt
-  // flikbyte, så helper:n växlar alltid tillbaka till Måltidsplanering.
+  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
+  // (ingen egen "Visa medlemmar"-flik längre, se MemberOverview.tsx) —
+  // ett klick på Hem (HeroBar) landar alltid där, oavsett vilken Hem-flik
+  // som råkar vara aktiv sedan tidigare (se useAppState.ts:s setActivePanel
+  // för samma-panel-specialfallet). Helper:n växlar alltid tillbaka till
+  // Måltidsplanering efteråt.
   const mealplanTab = page.getByRole("tab", { name: "Visa måltidsplanering" });
   async function selectFamily(label: string) {
-    await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+    await page.getByRole("button", { name: "Hem", exact: true }).click();
     await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
     await mealplanTab.click();
   }

@@ -73,11 +73,10 @@ test("PersonalDashboard visar bara riktigt tilldelade, synliga uppgifter — int
   await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [VISIBLE_CATEGORY, HIDDEN_CATEGORY] }));
 
   await page.goto("/");
-  // Hem-vyns egen "Visa medlemmar"-popup (ersätter sedan 2026-08-09
-  // HeroBar.tsx:s borttagna Medlemmar-nav-ikon) — portalerad till
-  // document.body, scopad via role="group"-behållaren för att undvika en
-  // strict-mode-krock med andra "Testförälder"-förekomster på sidan.
-  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  // Medlemslistan ligger sedan 2026-08-29 i Hem-panelens nya standardvy
+  // (visas direkt, ingen egen "Visa medlemmar"-flik längre) — scopad via
+  // role="group"-behållaren för att undvika en strict-mode-krock med andra
+  // "Testförälder"-förekomster på sidan.
   await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
 
   await expect(page.getByText("Handla mat")).toBeVisible();
