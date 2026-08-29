@@ -16,6 +16,8 @@ import { ConnectionRecipesSection } from "../recipes/ConnectionRecipesSection";
 import { TodoImportExport } from "../todos/TodoImportExport";
 import { FamilyCompletedTimeline } from "../todos/FamilyCompletedTimeline";
 import { generateId } from "../../utils/uuid";
+import { useHomeTabNavSync } from "./useHomeTabNavSync";
+import type { HomeTab } from "./useHomeTabNavSync";
 import type { ImportResult, ImportUndo } from "../todos/useTodosState";
 import type { CrossAccountRecipes } from "../../api/recipes";
 import type {
@@ -40,8 +42,8 @@ type FamilyOption = { accountId: Id; accountName: string };
 // måltidsplanering") — ersätter det tidigare "visa allt staplat"-läget:
 // bara EN sektion visas åt gången. Medlemmar-kortet (inte en av de fyra
 // ikonerna Zaida räknade upp) förblir alltid synligt ovanför, oberoende av
-// vald flik.
-type HomeTab = "calendar" | "shopping" | "todos" | "mealplan" | "members";
+// vald flik. Typen lever i useHomeTabNavSync.ts (som synkar valet mot
+// webbläsarens URL/historik), importerad här som HomeTab nedan.
 
 type Props = {
   currentMember: Member;
@@ -211,7 +213,7 @@ export function MemberOverview({
 }: Props) {
   const ownAccountId = currentMember.accountId;
   const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
-  const [activeTab, setActiveTab] = useState<HomeTab>("calendar");
+  const { activeTab, selectTab } = useHomeTabNavSync();
   // Ökas vid VARJE flikklick, oavsett om fliken faktiskt bytte värde
   // (2026-08-09, Zaidas önskemål, samma mönster som huvudnavets
   // panelNavResetKey i useAppState.ts) — ett klick på en redan aktiv flik
@@ -224,7 +226,7 @@ export function MemberOverview({
   const [tabResetKey, setTabResetKey] = useState(0);
 
   function handleTabClick(tab: HomeTab) {
-    setActiveTab(tab);
+    selectTab(tab);
     setTabResetKey((k) => k + 1);
   }
   const [newListName, setNewListName] = useState("");
