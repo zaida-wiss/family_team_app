@@ -1,4 +1,5 @@
 import { RewardModel } from "../db/models/Reward.js";
+import { MemberModel } from "../db/models/Member.js";
 import { AppError } from "../utils/errors.js";
 import { decryptField, encryptField } from "../utils/fieldEncryption.js";
 
@@ -15,9 +16,40 @@ export async function getAllRewards(accountId: string) {
   return rewards.map((reward) => ({ ...reward, title: decryptField(accountId, reward.title) }));
 }
 
+// 2026-08-30, säkerhetsfynd — spreadade tidigare hela `data` (i praktiken
+// hela req.body, se routes/rewards.ts) rakt in i RewardModel utan att
+// begränsa VILKA fält som fick sättas. En klient kunde skicka
+// status:"redeemed"/approvedBy/approvedAt/redeemedAt direkt vid skapande
+// och hoppa förbi hela godkännande-flödet (samma mass-assignment-buggklass
+// som ADR-0035, fixad här på samma sätt: bygg dokumentet fält för fält).
+// CreateRewardBodySchema (shared/schemas.ts, validerad i routes/rewards.ts
+// innan denna funktion nås) begränsar redan indata till title/starsNeeded/
+// symbol/wishedBy/id — status/approvedBy/m.fl. sätts ALLTID här, oavsett
+// vad body innehöll.
 export async function createReward(data: unknown) {
-  const input = data as { accountId: string; title: string };
-  const reward = new RewardModel({ ...input, title: encryptField(input.accountId, input.title) });
+  const input = data as { accountId: string; id: string; title: string; starsNeeded: number; symbol?: string | null; wishedBy: string };
+
+  // wishedBy måste vara en riktig medlem i SAMMA konto — annars kan en
+  // önskning peka på ett godtyckligt/felaktigt id (ren dataintegritet, inte
+  // en åtkomstlucka i sig eftersom RewardModel redan är accountId-scopat,
+  // men förhindrar en trasig/oanvändbar önskning i approve-flödet).
+  const wisher = await MemberModel.findOne({ id: input.wishedBy, accountId: input.accountId, deletedAt: null });
+  if (!wisher) throw new AppError(400, "wishedBy måste vara en medlem i samma konto");
+
+  const reward = new RewardModel({
+    id: input.id,
+    accountId: input.accountId,
+    title: encryptField(input.accountId, input.title),
+    symbol: input.symbol ?? null,
+    wishedBy: input.wishedBy,
+    starsNeeded: input.starsNeeded,
+    status: "suggested",
+    approvedBy: null,
+    approvedAt: null,
+    redeemedAt: null,
+    deletedAt: null,
+    deletedBy: null,
+  });
   await reward.save();
   return { id: reward.id };
 }

@@ -80,8 +80,10 @@ const SYNC_INTERVAL_OPTIONS = [5, 15, 30, 60, 240];
 // Klämmer till närmaste tillåtna val istället för att avvisa okänd indata —
 // samma "var förlåtande, aldrig 500 på ett skrivfel"-princip som redan
 // gäller övriga fält i den här filen (ingen Zod-validering byggd för denna
-// route, se befintligt mönster ovan).
-function normalizeSyncInterval(value: unknown): number {
+// route, se befintligt mönster ovan). Exporterad (2026-08-30) — återanvänds
+// av appleCalDavService.ts:s updateCalDavConnectionInterval, som tidigare
+// satte syncIntervalMinutes helt obegränsat direkt från klienten.
+export function normalizeSyncInterval(value: unknown): number {
   if (typeof value === "number" && SYNC_INTERVAL_OPTIONS.includes(value)) return value;
   return 60;
 }

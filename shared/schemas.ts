@@ -549,6 +549,25 @@ export const TodosHistoryQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).optional()
 });
 
+// 2026-08-30, säkerhetsfynd under Zod-validerings-audit — POST /api/rewards
+// spreadade tidigare hela req.body rakt in i RewardModel utan schema, så en
+// klient kunde sätta status/approvedBy/approvedAt/redeemedAt/deletedAt
+// direkt vid skapande och hoppa förbi hela godkännande-flödet (samma
+// mass-assignment-buggklass som ADR-0035). Bara de fält en önskning FAKTISKT
+// får skapas med — id (klienten genererar sitt eget för optimistisk UI,
+// samma mönster som andra entiteter), title, starsNeeded, symbol, wishedBy
+// (vem önskningen gäller — inte nödvändigtvis den inloggade, en förälder kan
+// önska å ett barns vägnar, se ChildSettings.tsx). Status/approvedBy m.fl.
+// sätts alltid server-side i rewardsService.ts:s createReward, oavsett vad
+// body innehåller.
+export const CreateRewardBodySchema = z.object({
+  id: IdSchema,
+  title: z.string().min(1),
+  starsNeeded: z.number().int().min(1),
+  symbol: z.string().nullable().optional(),
+  wishedBy: IdSchema
+});
+
 export const RewardPatchSchema = z.object({
   title: z.string().min(1).optional(),
   starsNeeded: z.number().int().min(1).optional(),

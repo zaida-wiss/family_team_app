@@ -10,7 +10,9 @@ import {
   reconcileExistingEvents,
   insertNewEvents,
   subscriptionCutoffs,
+  normalizeSyncInterval,
 } from "./calendarSubscriptionsService.js";
+import { requireAdultMember } from "./todoCategoriesService.js";
 
 // ADR-0027 (2026-07-24, uppdaterad 2026-07-30) — tvåvägs CalDAV-anslutning
 // mot iCloud. Till skillnad från IcsSubscription (calendarSubscriptionsService.ts,
@@ -36,6 +38,21 @@ import {
 //   pushen blir då en ovillkorad PUT (skriver om precis det vi själva just
 //   hämtade sekunder/minuter tidigare, låg risk). Först DÄREFTER används
 //   ETag för att upptäcka en samtidig extern ändring.
+//
+// requireAdultMember (2026-08-30, säkerhetsfynd under Zod-validerings-
+// audit) — samtliga mutations-/listningsfunktioner nedan hade tidigare
+// BARA kontoscoping (routes/calendars.ts:s attachAccountId), ingen
+// roll-/behörighetskontroll alls. Till skillnad från ett vanligt
+// kalenderevent lagrar detta ett riktigt Apple-ID + app-specifikt lösenord
+// delat för HELA kontot (ADR-0027) — vilken kontomedlem som helst (även ett
+// barn med egen inloggning) kunde tidigare se att kontot finns, lägga till
+// ett NYTT Apple-konto, eller koppla bort en förälders redan aktiva
+// synk. Samma "servern är den auktoritativa gränsen, inte bara UI:t"-
+// princip som redan etablerad i calendarsService.ts (Story 3,
+// 2026-08-11) och ADR-0035 — gated bakom samma requireAdultMember som
+// redan skyddar recipes/mealPlan/birthdays/householdSecrets m.fl.
+// (todoCategoriesService.ts). Manuell synk (pullConnectionById) lämnad
+// UTANFÖR denna spärr — exponerar inga creds, bara en dataomhämtning.
 
 const APPLE_SERVER_URL = "https://caldav.icloud.com";
 
@@ -151,6 +168,7 @@ function maskAccount(accountId: string, acc: { id: string; accountEmailEnc: stri
 // ── Apple-konton (kontonivå, 2026-07-30) ────────────────────────────────────────
 
 export async function addAppleAccount(accountId: string, memberId: string, body: unknown) {
+  await requireAdultMember(memberId, accountId);
   const b = body as { accountEmail?: unknown; appSpecificPassword?: unknown };
   const accountEmail = typeof b.accountEmail === "string" ? b.accountEmail.trim() : "";
   const appSpecificPassword = typeof b.appSpecificPassword === "string" ? b.appSpecificPassword.trim() : "";
@@ -176,7 +194,8 @@ export async function addAppleAccount(accountId: string, memberId: string, body:
   return maskAccount(accountId, acc);
 }
 
-export async function listAppleAccounts(accountId: string) {
+export async function listAppleAccounts(accountId: string, memberId: string) {
+  await requireAdultMember(memberId, accountId);
   const accounts = await AppleCalDavAccountModel.find({ accountId });
   return accounts.map((a) => maskAccount(accountId, a));
 }
@@ -184,7 +203,8 @@ export async function listAppleAccounts(accountId: string) {
 // Listar kalendrarna på ett REDAN tillagt Apple-konto — använder de lagrade
 // creds:en, ingen ny inloggningsruta behövs när man kopplar ihop en ENSKILD
 // BMAD-kalender med kontot.
-export async function listCalendarsForAppleAccount(accountId: string, appleAccountId: string) {
+export async function listCalendarsForAppleAccount(accountId: string, memberId: string, appleAccountId: string) {
+  await requireAdultMember(memberId, accountId);
   const acc = await AppleCalDavAccountModel.findOne({ id: appleAccountId, accountId });
   if (!acc) throw new AppError(404, "Apple-konto hittades inte");
   return listAppleCalendars({
@@ -193,7 +213,8 @@ export async function listCalendarsForAppleAccount(accountId: string, appleAccou
   });
 }
 
-export async function removeAppleAccount(accountId: string, appleAccountId: string) {
+export async function removeAppleAccount(accountId: string, memberId: string, appleAccountId: string) {
+  await requireAdultMember(memberId, accountId);
   const acc = await AppleCalDavAccountModel.findOne({ id: appleAccountId, accountId });
   if (!acc) throw new AppError(404, "Apple-konto hittades inte");
 
@@ -238,6 +259,7 @@ async function buildClientForConnection(accountId: string, conn: CalDavConnectio
 // ── Anslut/koppla bort en enskild BMAD-kalender ─────────────────────────────────
 
 export async function connectAppleCalendar(calendarId: string, accountId: string, memberId: string, body: unknown) {
+  await requireAdultMember(memberId, accountId);
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
   if ((calendar.calDavConnections as unknown as CalDavConnection[]).length > 0) {
@@ -290,7 +312,8 @@ export async function connectAppleCalendar(calendarId: string, accountId: string
   return { ...connection, accountEmail: decryptField(accountId, acc.accountEmailEnc) };
 }
 
-export async function disconnectAppleCalendar(calendarId: string, accountId: string, connectionId: string) {
+export async function disconnectAppleCalendar(calendarId: string, accountId: string, memberId: string, connectionId: string) {
+  await requireAdultMember(memberId, accountId);
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
 
@@ -309,14 +332,16 @@ export async function disconnectAppleCalendar(calendarId: string, accountId: str
 export async function updateCalDavConnectionInterval(
   calendarId: string,
   accountId: string,
+  memberId: string,
   connectionId: string,
-  syncIntervalMinutes: number
+  syncIntervalMinutes: unknown
 ) {
+  await requireAdultMember(memberId, accountId);
   const calendar = await CalendarModel.findOne({ id: calendarId, accountId });
   if (!calendar) throw new AppError(404, "Kalender hittades inte");
   const conn = (calendar.calDavConnections as unknown as CalDavConnection[]).find((c) => c.id === connectionId);
   if (!conn) throw new AppError(404, "CalDAV-anslutning hittades inte");
-  conn.syncIntervalMinutes = syncIntervalMinutes;
+  conn.syncIntervalMinutes = normalizeSyncInterval(syncIntervalMinutes);
   calendar.markModified("calDavConnections");
   await calendar.save();
 }

@@ -102,18 +102,18 @@ calendarsRouter.post("/caldav/apple-accounts", requireAuth, attachAccountId, asy
 });
 
 calendarsRouter.get("/caldav/apple-accounts", requireAuth, attachAccountId, async (req, res) => {
-  res.json(await appleCalDav.listAppleAccounts(req.accountId!));
+  res.json(await appleCalDav.listAppleAccounts(req.accountId!, req.memberId!));
 });
 
 calendarsRouter.delete("/caldav/apple-accounts/:appleAccountId", requireAuth, attachAccountId, async (req, res) => {
-  await appleCalDav.removeAppleAccount(req.accountId!, req.params.appleAccountId);
+  await appleCalDav.removeAppleAccount(req.accountId!, req.memberId!, req.params.appleAccountId);
   res.json({ ok: true });
 });
 
 // Listar kalendrarna på ett redan tillagt Apple-konto (ingen ny inloggning
 // behövs) — anropas när man kopplar en ENSKILD BMAD-kalender till kontot.
 calendarsRouter.post("/caldav/apple-accounts/:appleAccountId/calendars", requireAuth, attachAccountId, async (req, res) => {
-  res.json(await appleCalDav.listCalendarsForAppleAccount(req.accountId!, req.params.appleAccountId));
+  res.json(await appleCalDav.listCalendarsForAppleAccount(req.accountId!, req.memberId!, req.params.appleAccountId));
 });
 
 calendarsRouter.post("/:id/caldav/apple", requireAuth, attachAccountId, async (req, res) => {
@@ -122,13 +122,13 @@ calendarsRouter.post("/:id/caldav/apple", requireAuth, attachAccountId, async (r
 });
 
 calendarsRouter.delete("/:id/caldav/:connectionId", requireAuth, attachAccountId, async (req, res) => {
-  await appleCalDav.disconnectAppleCalendar(req.params.id, req.accountId!, req.params.connectionId);
+  await appleCalDav.disconnectAppleCalendar(req.params.id, req.accountId!, req.memberId!, req.params.connectionId);
   res.json({ ok: true });
 });
 
 calendarsRouter.patch("/:id/caldav/:connectionId", requireAuth, attachAccountId, async (req, res) => {
-  const { syncIntervalMinutes } = req.body as { syncIntervalMinutes: number };
-  await appleCalDav.updateCalDavConnectionInterval(req.params.id, req.accountId!, req.params.connectionId, syncIntervalMinutes);
+  const syncIntervalMinutes = (req.body as { syncIntervalMinutes?: unknown })?.syncIntervalMinutes;
+  await appleCalDav.updateCalDavConnectionInterval(req.params.id, req.accountId!, req.memberId!, req.params.connectionId, syncIntervalMinutes);
   res.json({ ok: true });
 });
 

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { attachAccountId } from "../middleware/accountScope.js";
 import * as rewards from "../services/rewardsService.js";
-import { ApproveRewardBodySchema, RewardPatchSchema } from "../../../shared/schemas.js";
+import { ApproveRewardBodySchema, CreateRewardBodySchema, RewardPatchSchema } from "../../../shared/schemas.js";
 
 export const rewardsRouter = Router();
 rewardsRouter.use(requireAuth, attachAccountId);
@@ -12,7 +12,8 @@ rewardsRouter.get("/", async (req, res) => {
 });
 
 rewardsRouter.post("/", async (req, res) => {
-  res.status(201).json(await rewards.createReward({ ...req.body, accountId: req.accountId! }));
+  const body = CreateRewardBodySchema.parse(req.body);
+  res.status(201).json(await rewards.createReward({ ...body, accountId: req.accountId! }));
 });
 
 rewardsRouter.patch("/:id", async (req, res) => {
