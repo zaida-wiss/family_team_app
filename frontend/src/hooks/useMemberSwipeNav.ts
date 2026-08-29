@@ -93,6 +93,24 @@ const VERTICAL_DOMINANCE_RATIO = 1.5;
 // swipe-distans. Gäller båda input-typerna.
 const SWIPE_COMMIT_RATIO = 0.3;
 const AXIS_DECIDE_THRESHOLD_PX = 8;
+// 2026-08-29, Zaidas fynd: "mina barn har svårt att trycka på sina
+// uppgifter så de blir avklarade" — grundorsaken var INTE håll-in-gesten
+// själv (ChildTasksSection.tsx/useHoldToConfirm), utan att den här hooken
+// medvetet lyssnar VAR SOM HELST i vyn, även ovanpå uppgiftskorten
+// (uppföljning #9 ovan). AXIS_DECIDE_THRESHOLD_PX mättes tidigare mot TOTAL
+// förflyttning sedan gestens START — men ett barns finger som håller
+// stilla i hela 2 sekunder (håll-in-tiden) driver naturligt några pixlar
+// (darrning/tryckändring) och korsar då till slut samma tröskel som ett
+// riktigt svep. Så fort axeln blir "horizontal" anropas beginPeel() —
+// bytet av familjemedlem (om än osynligt bakom en ögonblicksbild) river ner
+// HELA dashboard-trädet via key={selectedDashboardMember.id}
+// (MemberShellContent.tsx), vilket avbryter den pågående håll-in-timern
+// mitt i (useHoldToConfirm rensar sin timeout vid unmount). Löst genom att
+// periodiskt nollställa referenspunkten (se AXIS_REANCHOR_MS/onPointerMove
+// nedan) SÅ LÄNGE axeln ännu inte avgjorts — ett riktigt, avsiktligt svep
+// rör sig hundratals px/s och korsar tröskeln inom detta korta fönster med
+// bred marginal ändå, så en genuin svepgest påverkas inte alls.
+const AXIS_REANCHOR_MS = 200;
 const DESKTOP_MARGIN_PX = 48;
 // 2026-08-23, samma Zaida-fynd: kortad från 260ms för en snabbare, mer
 // direkt "sidan vänds"-känsla — halverar samtidigt tiden innan nästa svep
@@ -112,6 +130,27 @@ const MIN_SETTLE_MS = 80;
 // gränsen (svep-wrappern) — returnerar själva ELEMENTET (2026-08-09,
 // uppföljning #11, var tidigare bara en boolean) så vi kan driva dess
 // scrollTop manuellt istället för att förlita oss på nativ panorering.
+// 2026-08-29, Zaidas fynd: "liknande bugg i belöningsbutiken när man ska
+// dra pengar till belöningen". En första fix i useShopWalletDrag.ts
+// (e.stopPropagation() på startDrag(), matchande den redan existerande
+// startCardDrag()) visade sig INTE räcka — bevisat av ett e2e-test som
+// fortsatte fela även med den fixen. Grundorsaken: e.stopPropagation() i en
+// REACT-händelsehanterare kan ALDRIG hindra en NATIV addEventListener på en
+// förfader-DOM-nod (som onPointerDown nedan) från att köras — native
+// bubbling når förfadern medan eventet fortfarande är på väg UPP mot Reacts
+// egen rot-lyssnare, alltså LÅNGT INNAN React ens hunnit anropa den
+// synthetiska handlern (och dess stopPropagation()) på plånboks-elementet.
+// Enda robusta lösningen: låt onPointerDown nedan själv känna igen och
+// avstå från element som redan äger sin egen dra-gest, via ett explicit
+// data-attribut — samma "opt-out"-mönster som redan finns för mus-
+// varianten (se DESKTOP_MARGIN_PX). Sätts på RewardShopModal.tsx:s
+// plånboks-sedlar/mynt OCH kortens betalda pengar (startDrag/startCardDrag
+// i useShopWalletDrag.ts) — INTE på uppdragskorten, som medvetet ska
+// fortsätta gå att svepa över (se uppföljning #9 ovan).
+function isSwipeIgnored(target: Element | null): boolean {
+  return Boolean(target?.closest("[data-swipe-ignore]"));
+}
+
 function findScrollableAncestor(node: Element | null, boundary: Element): Element | null {
   let cur: Element | null = node;
   while (cur && cur !== boundary.parentElement) {
@@ -141,6 +180,11 @@ type GestureState = {
   pointerId: number;
   x: number;
   y: number;
+  // Tidsstämpel (e.timeStamp) för NÄR x/y senast nollställdes — se
+  // AXIS_REANCHOR_MS. Skild från gestens faktiska starttid: nollställs om
+  // och om igen så länge axeln är "unknown", till skillnad från x/y som
+  // bara betyder "referenspunkt för aktuell mätning".
+  anchorTime: number;
   // Y-koordinaten vid FÖRRA rörelseeventet (2026-08-09, uppföljning #11) —
   // skild från y (gestens STARTposition, används för axel-/tröskel-
   // bedömning) — används för att driva scrollTarget.scrollTop med
@@ -370,6 +414,9 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
       // Ett spårat svep pågår redan, eller en övergång spelar — ignorera
       // ytterligare fingrar/knappar tills den är klar.
       if (gestureRef.current || animating) return;
+      // Se isSwipeIgnored ovan — ett element som redan äger sin egen
+      // dra-gest (t.ex. belöningsbutikens plånbok) opt-outar explicit.
+      if (isSwipeIgnored(e.target as Element | null)) return;
       const isMouse = e.pointerType === "mouse";
       if (isMouse) {
         const rect = el!.getBoundingClientRect();
@@ -386,6 +433,7 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         pointerId: e.pointerId,
         x: e.clientX,
         y: e.clientY,
+        anchorTime: e.timeStamp,
         lastY: e.clientY,
         isMouse,
         axis: "unknown",
@@ -398,8 +446,6 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
     function onPointerMove(e: PointerEvent) {
       const g = gestureRef.current;
       if (!g || g.pointerId !== e.pointerId) return;
-      const dx = e.clientX - g.x;
-      const dy = e.clientY - g.y;
 
       if (g.isMouse) {
         // Redan godkänd att svepa (start i marginalen, pointer capture
@@ -409,6 +455,22 @@ export function useMemberSwipeNav<T extends HTMLElement>({ onNext, onPrev }: Opt
         g.everHorizontal = true;
         return;
       }
+
+      // Nollställ referenspunkten periodiskt SÅ LÄNGE axeln ännu inte
+      // avgjorts (se AXIS_REANCHOR_MS ovan) — mäter därmed rörelse inom ETT
+      // kort tidsfönster istället för TOTALT sedan gestens start, så att
+      // långsam ackumulerad drift under ett stillastående 2-sekunders håll
+      // aldrig hinner korsa AXIS_DECIDE_THRESHOLD_PX. Ett riktigt svep rör
+      // sig så mycket snabbare att det korsar tröskeln långt innan denna
+      // tidsruta ens hinner löpa ut, oavsett var i vyn det startar.
+      if (g.axis === "unknown" && e.timeStamp - g.anchorTime > AXIS_REANCHOR_MS) {
+        g.x = e.clientX;
+        g.y = e.clientY;
+        g.anchorTime = e.timeStamp;
+      }
+
+      const dx = e.clientX - g.x;
+      const dy = e.clientY - g.y;
 
       // Fingrets STEGVISA lodräta förflyttning sedan FÖRRA eventet (inte
       // sedan gestens start) — uppdateras varje event oavsett axel, så att

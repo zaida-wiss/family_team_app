@@ -129,6 +129,19 @@ export function useShopWalletDrag(childId: Id, availableStars: number) {
   function startDrag(value: number, e: ReactPointerEvent) {
     if ((walletCounts[value] ?? 0) < 1) return;
     e.preventDefault();
+    // 2026-08-29, Zaidas fynd: "liknande bugg i belöningsbutiken när man
+    // ska dra pengar till belöningen" — saknades här, till skillnad från
+    // startCardDrag() nedan (samma fil, samma mönster, redan korrekt).
+    // RewardShopModal.tsx renderas inline i ChildDashboard.tsx, som ligger
+    // INUTI useMemberSwipeNav.ts:s svep-wrapper (MemberShellContent.tsx) —
+    // utan detta bubblar pointerdown hela vägen upp dit och registrerar en
+    // KONKURRERANDE svep-gest parallellt med draget. En sedel/mynt som dras
+    // till ett kort är typiskt en stor, snabb, ofta mer vågrät än lodrät
+    // rörelse — precis den rörelsetyp svep-hooken är byggd att tolka som
+    // ett avsiktligt svep, vilket bytte familjemedlem (och rev ner hela
+    // dashboard-trädet) mitt i draget. Samma buggklass som CLAUDE.md
+    // 2026-08-29 (håll-in-gesten på uppdragskorten), annan konkret orsak.
+    e.stopPropagation();
     setDragging(value);
 
     requestAnimationFrame(() => {

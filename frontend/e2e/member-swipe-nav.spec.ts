@@ -223,3 +223,154 @@ test("touch-svep: ett kort drag under tröskeln fjädrar tillbaka och byter INTE
   await expect(page.getByRole("heading", { name: "Hej Nova!" })).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole("heading", { name: "Hej Testförälder!" })).toHaveCount(0);
 });
+
+// 2026-08-29, Zaidas fynd: "mina barn har svårt att trycka på sina
+// uppgifter så de blir avklarade". Grundorsak: den här hooken lyssnar
+// medvetet VAR SOM HELST i vyn, även ovanpå uppgiftskorten (uppföljning #9
+// ovan) — och mätte tidigare axeln mot TOTAL förflyttning sedan gestens
+// START. Ett barns finger som håller stilla i hela håll-in-tiden (2s,
+// useChildCompleteHold.ts) driver ändå naturligt några pixlar (darrning/
+// tryckändring) och korsade till slut samma tröskel som ett riktigt svep —
+// vilket triggade beginPeel() (byter familjemedlem, om än osynligt bakom en
+// ögonblicksbild) och därmed river ner HELA dashboard-trädet via
+// key={selectedDashboardMember.id} (MemberShellContent.tsx), vilket
+// avbryter håll-in-timeouten mitt i (useHoldToConfirm rensar sin timeout
+// vid unmount). Detta test simulerar exakt det scenariot: ett håll på ett
+// RIKTIGT uppdragskort med långsam, ren horisontell drift (1px var 150:e
+// ms, 16 steg — 16px total drift över 2,4s, långt förbi
+// AXIS_DECIDE_THRESHOLD_PX på 8px, men aldrig mer än 1px inom något enskilt
+// AXIS_REANCHOR_MS-fönster) och verifierar att uppgiften ändå avklaras,
+// utan att medlemsvyn någonsin byts under tiden.
+test("håll på ett uppdragskort med naturlig fingerdrift avklarar uppgiften, byter INTE medlem mitt i", async ({ page }) => {
+  const TODO = {
+    id: "todo-hold-1", accountId: "acc-1", title: "Diska", createdBy: "mem-1", assignedTo: "mem-child",
+    isShared: false, status: "pending", starValue: 1, visual: { type: "lucide-icon", value: "🍽️" },
+    recurrence: { type: "none" }, recurringSourceId: null, occurrenceDate: null,
+    visibleFrom: null, expiresAt: null, completedAt: null,
+    approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null, rejectedReason: null,
+    deletedAt: null, deletedBy: null, timerEnabled: false, elapsedMs: null,
+  };
+
+  let completed = false;
+  await mockCommon(page);
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO] }));
+  await page.route("**/api/todos/todo-hold-1/complete", (route) => {
+    completed = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
+  await expect(page.getByText("Hej Nova!")).toBeVisible();
+
+  const card = page.getByRole("button", { name: /Diska/ });
+  await expect(card).toBeVisible();
+  const box = await card.boundingBox();
+  if (!box) throw new Error("Kortet hittades inte");
+  const startX = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await card.dispatchEvent("pointerdown", {
+    pointerId: 1, pointerType: "touch", clientX: startX, clientY: y, bubbles: true
+  });
+  for (let i = 1; i <= 16; i++) {
+    await page.waitForTimeout(150);
+    await card.dispatchEvent("pointermove", {
+      pointerId: 1, pointerType: "touch", clientX: startX + i, clientY: y, bubbles: true
+    });
+  }
+
+  // Håll-in-timeouten (2000ms) har haft gott om tid att lösa ut, trots att
+  // drift-simuleringen ovan (16×150ms = 2400ms) sträcker sig längre än så.
+  await expect.poll(() => completed, { timeout: 3000 }).toBe(true);
+  await expect(page.getByText("Hej Nova!")).toBeVisible();
+  await expect(page.getByText("Hej Testförälder!")).toHaveCount(0);
+});
+
+// 2026-08-29, Zaidas fynd (samma dag som håll-in-buggen ovan): "liknande
+// bugg i belöningsbutiken när man ska dra pengar till belöningen". Skild
+// konkret orsak, samma grundklass: RewardShopModal.tsx renderas INLINE i
+// ChildDashboard.tsx (bara draggnosten/retur-animationen portalas, se
+// createPortal-anropen i RewardShopModal.tsx) — alltså en vanlig DOM-
+// ättling till svep-wrappern i MemberShellContent.tsx. useShopWalletDrag.ts:s
+// startDrag() (dra en sedel FRÅN plånboken) saknade e.stopPropagation() på
+// sitt pointerdown, till skillnad från systerfunktionen startCardDrag()
+// (dra en sedel TILLBAKA från ett kort) som redan hade den — utan den
+// bubblar pointerdown hela vägen upp till svep-wrappern och registrerar en
+// KONKURRERANDE gest. Ett drag från plånboken till ett kort är en genuin,
+// ofta vågrät rörelse — precis den typ som useMemberSwipeNav.ts:s
+// AXIS_REANCHOR_MS-fix (ovan) INTE filtrerar bort (den filtrerar bara
+// LÅNGSAM drift, inte en snabb avsiktlig rörelse) — så utan
+// stopPropagation hade betalningen kunnat avbrytas av ett medlemsbyte mitt
+// i draget.
+test("dra en sedel från plånboken till en belöning betalar kortet, byter INTE medlem mitt i", async ({ page }) => {
+  const CHILD_WITH_STARS = { ...CHILD, approvedStars: 50 };
+  const REWARD_ITEM = {
+    id: "reward-item-1", title: "Biobiljett", symbol: "🎬", starCost: 20, timerMinutes: null,
+    availability: null, requiredCategories: [], createdBy: "mem-1", deletedAt: null,
+  };
+
+  await mockCommon(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [PARENT, CHILD_WITH_STARS] }));
+  await page.route(/\/api\/reward-shop$/, (route) =>
+    route.fulfill({ json: { items: [REWARD_ITEM], requireApprovalForCategories: false } })
+  );
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Nova" }).click();
+  await expect(page.getByText("Hej Nova!")).toBeVisible();
+
+  await page.getByRole("button", { name: /Shop/ }).click();
+  const card = page.locator('[data-item-id="reward-item-1"]');
+  await expect(card).toBeVisible();
+  const bill = page.locator(".shop-wallet-denom").first();
+  await expect(bill).toBeVisible();
+
+  const billBox = await bill.boundingBox();
+  const cardBox = await card.boundingBox();
+  if (!billBox || !cardBox) throw new Error("Sedel eller kort hittades inte");
+  const startX = billBox.x + billBox.width / 2;
+  const startY = billBox.y + billBox.height / 2;
+  const endX = cardBox.x + cardBox.width / 2;
+  const endY = cardBox.y + cardBox.height / 2;
+
+  const billHandle = await bill.elementHandle();
+  if (!billHandle) throw new Error("Sedel-handle hittades inte");
+
+  await billHandle.dispatchEvent("pointerdown", {
+    pointerId: 1, pointerType: "touch", clientX: startX, clientY: startY, bubbles: true
+  });
+  // En tidig, medvetet sidledes "wobble" (stor dx, liten dy) INNAN den
+  // fortsätter mot kortets riktiga position — precis den ofrivilliga
+  // sidledes rörelse ett barns finger gör (se AXIS_REANCHOR_MS-kommentaren
+  // i useMemberSwipeNav.ts). Utan detta hamnar det direkta bill→kort-draget
+  // i den här testlayouten (plånboken under rutnätet, kortet ovanför)
+  // huvudsakligen LODRÄTT, vilket useMemberSwipeNav.ts redan korrekt
+  // klassar som "vertical" (skroll) — beginPeel triggas då aldrig oavsett
+  // stopPropagation, och testet skulle passera även UTAN fixen. Wobblen
+  // säkerställer att axeln avgörs "horizontal" precis som i det verkliga,
+  // rapporterade scenariot.
+  await billHandle.dispatchEvent("pointermove", {
+    pointerId: 1, pointerType: "touch",
+    clientX: startX + 60, clientY: startY + 5, bubbles: true
+  });
+  for (const fraction of [0.4, 0.7, 1]) {
+    await billHandle.dispatchEvent("pointermove", {
+      pointerId: 1, pointerType: "touch",
+      clientX: startX + (endX - startX) * fraction,
+      clientY: startY + (endY - startY) * fraction,
+      bubbles: true
+    });
+  }
+  await billHandle.dispatchEvent("pointerup", {
+    pointerId: 1, pointerType: "touch", clientX: endX, clientY: endY, bubbles: true
+  });
+
+  // Pengar-lagret med "Returnera"-knappen visas bara när kortet faktiskt
+  // fått en betalning (hasPayment) — beviset att draget landade korrekt.
+  await expect(page.getByRole("button", { name: "Returnera alla pengar till plånboken" })).toBeVisible();
+  await expect(page.getByText("Hej Nova!")).toBeVisible();
+  await expect(page.getByText("Hej Testförälder!")).toHaveCount(0);
+});
