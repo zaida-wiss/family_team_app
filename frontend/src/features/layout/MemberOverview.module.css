@@ -35,10 +35,13 @@
    scrollat innehåll aldrig hamnar bakom den.
    Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
    två navbarerna, personlig och familjer... visa bara en navbar åt
-   gången") — ligger numera i HeroBars EGEN plats (bottom:0), inte
-   staplad ovanför den som tidigare (bottom:4rem) — de två visas aldrig
-   samtidigt på mobil, se Shell.tsx:s hideHeroBarOnMobile och
-   .appNavShowing nedan.
+   gången") — de två visas aldrig samtidigt på mobil, se Shell.tsx:s
+   hideHeroBarOnMobile och .appNavShowing nedan (oförändrad logik).
+   Flyttad till TOPPEN (2026-08-30, Zaida: "familjenavbaren bör hoppa
+   högst upp på skärmen") — låg tidigare i HeroBars EGEN plats (bottom:0);
+   HeroBar ligger fortfarande kvar i botten oförändrat, bara controlRow
+   själv bytte sida. .home:s egen padding (ovan, nu padding-top) kompenserar
+   så scrollat innehåll aldrig hamnar bakom den.
    Bugg fixad (2026-08-10, Zaidas fynd: "familjenavbarens bakgrund är
    hårdkodad") — textfärgen (color: var(--theme-nav-bg)) läste tidigare
    RAKT AV --theme-nav-bg, som är en linear-gradient() för 10 av 11
@@ -94,26 +97,40 @@
 
 @media (max-width: 1023px) {
   .home {
-    /* Rymmer den fasta bottennaven (se nedan) — vilken av de två
-       navbarerna det än råkar vara, båda är 4rem höga. rem, inte px
-       (2026-08-11/12, se .controlRow nedan) — skalar med
-       clamp(15px,13px+0.6vw,22px) på <html>, Shell.tsx. */
+    /* Familjenavbaren ligger numera fast i TOPPEN (2026-08-30, Zaida:
+       "familjenavbaren bör hoppa högst upp på skärmen") — motsatt håll mot
+       tidigare (se .controlRow nedan för historiken om varför den en gång
+       flyttades till botten, 2026-08-04/08-12). Reservationen följer med
+       hit uppåt i grundläget; .appNavShowing nedan byter till en
+       bottenreservation istället för de tillfällen HeroBar tar över
+       (person-ikonen, se Shell.tsx) — HeroBar självt ligger oförändrat kvar
+       i botten. rem, inte px, skalar med clamp(15px,13px+0.6vw,22px) på
+       <html>, Shell.tsx. */
+    padding-top: 4rem;
+  }
+
+  /* Samma .appNavShowing-klass som redan sätts på .controlRow (se nedan) —
+     återanvänd här på .home, eftersom reservationens PLACERING (topp mot
+     botten) beror på samma tillstånd som avgör vilken av de två navbarerna
+     som visas. */
+  .home.appNavShowing {
+    padding-top: 0;
     padding-bottom: 4rem;
   }
 
   /* Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
      två navbarerna, personlig och familjer... visa bara en navbar åt
-     gången") — controlRow tar nu HeroBars EXAKTA plats (bottom:0) istället
-     för att ligga staplad ovanför den (tidigare bottom:4rem) — de två
-     konkurrerar inte längre om olika delar av samma yta, de delar samma
-     yta och visar bara en i taget (se Shell.tsx:s hideHeroBarOnMobile och
-     .appNavShowing nedan). */
+     gången") — HeroBar ligger oförändrat fast i BOTTEN (se
+     HeroBar.module.css), controlRow ligger nu fast i TOPPEN istället
+     (2026-08-30) — de två delar alltså inte längre samma fysiska plats,
+     men visar fortfarande bara en åt gången (se Shell.tsx:s
+     hideHeroBarOnMobile och .appNavShowing nedan, oförändrad logik). */
   .controlRow {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    top: auto;
+    top: 0;
+    bottom: auto;
     z-index: 900;
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -160,7 +177,10 @@
       var(--primary-dark);
     background: var(--control-row-glow);
     color: var(--primary-fg);
-    box-shadow: 0 -1px 0 var(--border);
+    /* 0 1px (skugga UNDER baren), inte 0 -1px — den satt tidigare ovanför
+       en bottenfast bar, nu ska den separera en toppfast bar från
+       innehållet under den (2026-08-30). */
+    box-shadow: 0 1px 0 var(--border);
   }
 
   /* Familjenavbarens person-ikon (2026-08-12) satte homeShowFamilyNav till
