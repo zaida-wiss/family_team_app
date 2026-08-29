@@ -86,7 +86,10 @@
       color-mix(in srgb, var(--task-bg) 88%, var(--task-accent) 12%),
       color-mix(in srgb, var(--task-bg) 58%, var(--task-accent) 42%)
     );
-  color: var(--black, #000);
+  /* Basfärg för allt textinnehåll i kortet (rubriken har sin egen --task-fg-
+     regel nedan, men t.ex. tidsangivelser ärver denna) — se samma --task-fg-
+     resonemang där. */
+  color: var(--task-fg, var(--black, #000));
   overflow: hidden;
   cursor: pointer;
   touch-action: none;
@@ -261,7 +264,14 @@
 .child-task-name {
   max-width: 100%;
   margin: 0;
-  color: var(--black, #000);
+  /* --task-fg (2026-08-29-fynd) — kategoriserade kort har en alltid-ljus
+     --cat-*-bg-bakgrund (fast svart text funkar), men det kategorilösa
+     fallback-kortet (getTaskStyle, ChildTasksSection.tsx) har en läge-/
+     temaberoende bakgrund; utan denna variabel blev texten där hårdkodat
+     svart oavsett bakgrund. Fallbacken (svart) bevarar alla andra kort som
+     inte själva sätter --task-fg (t.ex. delmoment-korten, som redan har sin
+     egen högre-specificitet-regel längre ner). */
+  color: var(--task-fg, var(--black, #000));
   font-family: var(--font-display);
   font-size: clamp(0.72rem, 6.5cqi, 1.25rem);
   font-weight: 500;
@@ -367,7 +377,7 @@
   border: none;
   border-radius: 50%;
   background: color-mix(in srgb, var(--task-bg, var(--card)) 55%, transparent);
-  color: var(--black, #000);
+  color: var(--task-fg, var(--black, #000));
   cursor: pointer;
   touch-action: manipulation;
 }

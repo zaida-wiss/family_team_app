@@ -207,6 +207,33 @@ test("delmoment-kortets bakgrund/text på en vuxens PersonalDashboard bär temat
   expect(cardColor).toBe("rgb(255, 255, 255)");
 });
 
+// 2026-08-29, Zaida: "vissa av todo korten fått låg kontrast, jag kan inte
+// läsa" — samma bugklass som delmoment-kortstestet ovan, men för det VANLIGA
+// kategorilösa uppdragskortet (getTaskStyle(), ChildTasksSection.tsx):
+// --task-bg blev --card (läge-/temaberoende, mörk i mörkt läge) men
+// .child-task-name hade fortfarande hårdkodad svart text — osynlig här.
+// Verifierar att titeln nu är VIT (--on-c4), inte det gamla hårdkodade
+// svarta, på ett kategorilöst kort i mörkt läge.
+test("kategorilöst uppdragskorts titel är läsbar (vit) på en vuxens PersonalDashboard i mörkt läge, inte hårdkodat svart", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) =>
+    route.fulfill({ json: [{ ...PARENT, dashboardTheme: "dusk", darkMode: true }, OTHER_ADULT] })
+  );
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TODO] });
+    return route.fulfill({ json: {} });
+  });
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
+
+  const card = page.locator(".child-task-card").filter({ hasText: "Handla mat" });
+  await expect(card).toBeVisible();
+  const titleColor = await card.locator(".child-task-name").evaluate((el) => getComputedStyle(el).color);
+  expect(titleColor).toBe("rgb(255, 255, 255)");
+});
+
 // 2026-08-15, Zaida: "oavsett delmoment eller uppgift så vill jag ha en ikon
 // som visar att jag klarat av den på min tidslinje" — den lodräta
 // tidslinjen (ChildTimeline.tsx, delad med barnens dashboard) kände

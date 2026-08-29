@@ -14,6 +14,7 @@ import "./ChildTasks.css";
 type TaskCardStyle = CSSProperties & {
   "--task-accent"?: string;
   "--task-bg"?: string;
+  "--task-fg"?: string;
   "--task-time-fraction"?: number;
 };
 
@@ -27,12 +28,27 @@ export function getTaskStyle(category: string): TaskCardStyle {
   // [...""].reduce(...) alltid ger 0 och därmed alltid "hälsa"-färgen,
   // oavsett att kortet inte har någon kategori alls.
   if (!norm) {
-    return { "--task-accent": "var(--muted-fg)", "--task-bg": "var(--card)" };
+    // --card (2026-08-29-fynd, Zaida: "vissa av todo korten fått låg
+    // kontrast") är LÄGE-/temaberoende — mörk i mörkt läge, till skillnad
+    // från de riktiga kategoriernas --cat-*-bg som ALLTID är blandade mot
+    // vitt (KNOWN_CATEGORIES nedan). Kortets titel hade fortfarande hård-
+    // kodad svart text (.child-task-name), osynlig mot en mörk --card på
+    // t.ex. PersonalDashboard i mörkt läge. Bytt till samma redan säkra
+    // "dashboard-theme-token-bridge"-par (--c4/--on-c4) som delmoment-
+    // kortens kontrastfix redan etablerade (2026-08-16, se
+    // docs/engineering-os/02-architecture/dashboard-theme-token-bridge.md)
+    // — mörk/ljus i EXAKT samma mönster oavsett vuxentema/barntema/läge,
+    // och --task-fg följer nu med istället för att vara hårdkodad.
+    return { "--task-accent": "var(--muted-fg)", "--task-bg": "var(--c4)", "--task-fg": "var(--on-c4)" };
   }
   const key =
     KNOWN_CATEGORIES.find((k) => norm.includes(k)) ??
     KNOWN_CATEGORIES[[...norm].reduce((s, c) => s + c.charCodeAt(0), 0) % KNOWN_CATEGORIES.length];
-  return { "--task-accent": `var(--cat-${key}-accent)`, "--task-bg": `var(--cat-${key}-bg)` };
+  return {
+    "--task-accent": `var(--cat-${key}-accent)`,
+    "--task-bg": `var(--cat-${key}-bg)`,
+    "--task-fg": "var(--black, #000)",
+  };
 }
 
 function getTimeLeftPercent(todo: Todo, now: number): number | null {
