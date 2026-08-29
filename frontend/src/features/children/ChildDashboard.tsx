@@ -78,6 +78,16 @@ export function ChildDashboard({
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [localSpentStars, setLocalSpentStars] = useState(() => child.spentStars ?? 0);
 
+  // Synka om servern rättar spentStars (t.ex. en förälder tar bort/ångrar ett
+  // köp i Inställningar, se rewardShopService.ts:s deletePurchasedReward) —
+  // annars visar barnets EGEN, redan öppna dashboard fel saldo tills sidan
+  // laddas om igen. child.spentStars kommer redan i realtid via SSE
+  // (membersChanged, useMembersState.ts), men localSpentStars initierades
+  // bara EN gång vid mount och saknade tidigare all vidare synk.
+  useEffect(() => {
+    setLocalSpentStars(child.spentStars ?? 0);
+  }, [child.spentStars]);
+
   const { items: shopItems, purchaseVersion, onPurchaseReward } = useRewardShopContext();
   const { heldTodoId, startHold, clearHold } = useChildCompleteHold(
     activeChildTodos,
