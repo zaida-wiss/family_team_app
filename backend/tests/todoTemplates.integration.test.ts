@@ -152,19 +152,22 @@ describe.skipIf(!RUN)("Mallbiblioteket (TodoTemplate/TodoCategoryTemplate)", () 
     expect(doc?.tasks[0]?.subtasks[1]?.title.startsWith("v1:")).toBe(true);
   });
 
-  // 500, inte 400: samma som övriga routes i kodbasen som anropar ett Zod-
-  // schemas .parse() direkt utan egen try/catch (t.ex. timedTasks.ts/
-  // rewards.ts/analytics.ts) — den generella felhanteraren i app.ts läser
-  // bara err.status (saknas på ett ZodError) och default:ar till 500. Ett
-  // redan existerande, bredare fynd (Zod-fel borde ge 400 överallt), inte
-  // något att ändra isolerat här.
+  // 400, inte längre 500 (2026-08-30, ADR-0037-uppföljning) — den här
+  // testens tidigare kommentar dokumenterade uttryckligen exakt det fynd
+  // som senare faktiskt fixades: app.ts:s generella felhanterare saknade en
+  // ZodError-gren och gav alltid 500 för ett kastat .parse()-fel, oavsett
+  // route. Fixat globalt (strukturell `isZodError()`-koll i app.ts, inte
+  // `instanceof` — se app.ts:s egen kommentar om varför `instanceof`
+  // misslyckas mot shared/:s separata zod-modulinstans) — den här testens
+  // förväntan var pinnad mot den gamla, felaktiga 500:an och behövde
+  // uppdateras i samma veva.
   it("en kategori-mall utan uppgifter avvisas", async () => {
     const res = await request(app)
       .post("/api/todo-templates/categories")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", memberId)
       .send({ name: "Tom", tasks: [] });
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
   });
 
   it("listar kontots kategori-mallar", async () => {
