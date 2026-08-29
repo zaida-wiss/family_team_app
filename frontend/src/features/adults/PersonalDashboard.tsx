@@ -137,9 +137,20 @@ export function PersonalDashboard({
               avatarUrl={member.avatarUrl}
               today={today}
             />
+            {/* data-swipe-ignore (2026-08-30, hittat under verifiering av en
+                helt annan kontrastbugg) — knappen ligger fast top:0;right:0,
+                i praktiken alltid innanför useMemberSwipeNav.ts:s
+                DESKTOP_MARGIN_PX (48px, mus-varianten av svepnavigeringen).
+                Ett musklick där startar setPointerCapture() på wrapper-diven
+                innan uppklicket hinner nå knappen — click-eventet sväljs
+                tyst, knappen gick inte att trycka på med mus på desktop.
+                Samma redan etablerade opt-out som belöningsbutikens
+                plånbokssedlar/kortpengar (2026-08-29) löser det, se
+                isSwipeIgnored i useMemberSwipeNav.ts. */}
             <button
               aria-label="Rekord"
               className="child-theme-button child-records-button personal-dashboard__records-btn"
+              data-swipe-ignore
               onClick={onOpenRecords}
               title="Rekord"
               type="button"

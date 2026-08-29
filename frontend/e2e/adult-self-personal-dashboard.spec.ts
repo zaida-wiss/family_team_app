@@ -262,3 +262,59 @@ test("vuxen ser en tidslinje-ikon för både en avklarad hel uppgift och ett avk
   await expect(page.locator(".child-tl-reward-pin--done[title='Handla mat']")).toBeVisible();
   await expect(page.locator(".child-tl-reward-pin--done[title='Diska']")).toBeVisible();
 });
+
+// 2026-08-30, backlogg-fynd (2026-08-29): Rekord-sidan (ChildRecordsPage.tsx,
+// delar .child-dashboard-klassen med både riktiga barn OCH en vuxens
+// PersonalDashboard, se Rekord-testet ovan om samma delade komponentyta)
+// hade samma "hårdkodad textfärg mot en läge-beroende bakgrund"-buggklass
+// som redan hittats och fixats två gånger för uppdragskorten (delmoment
+// 2026-08-16, kategorilöst kort 2026-08-29): .child-timed-tasks__card
+// blandade --card (mörk i mörkt läge) i sin bakgrund men
+// .child-timed-tasks__name/__status hade fortfarande hårdkodad svart text.
+// Fixat genom att blanda --white istället för --card (samma mönster som de
+// RIKTIGA kategoriserade uppdragskortens --cat-*-bg, themes.css, redan
+// alltid blandade mot --white) — kortet förblir en ljus pastellyta oavsett
+// läge, ingen egen läge-medveten textfärg behövs. Verifierar den FAKTISKA
+// getComputedStyle-bakgrunden mot en riktigt DOM-resolvad "vit blandad med
+// temats accentfärg", inte en gissad hex.
+const TIMED_TASK = {
+  id: "tt-1", accountId: "acc-1", title: "Springa ett varv", symbol: "🏃",
+  assignedTo: "mem-1", createdBy: "mem-1", deletedAt: null, deletedBy: null,
+  bestDurationMs: null, bestAchievedAt: null, attemptCount: 0,
+};
+test("Rekord-sidans tidtagningskort får en ljus bakgrund (blandad mot --white) i mörkt läge, inte den mörka --card", async ({ page }) => {
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) =>
+    route.fulfill({ json: [{ ...PARENT, dashboardTheme: "dusk", darkMode: true }, OTHER_ADULT] })
+  );
+  await page.route("**/api/todos", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: [TODO] });
+    return route.fulfill({ json: {} });
+  });
+  await page.route("**/api/timed-tasks**", (route) => route.fulfill({ json: [TIMED_TASK] }));
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Visa medlemmar" }).click();
+  await page.getByRole("group", { name: "Medlemslista" }).getByRole("button", { name: "Testförälder" }).click();
+  await page.getByRole("button", { name: "Rekord" }).click();
+
+  const card = page.locator(".child-timed-tasks__card").filter({ hasText: "Springa ett varv" });
+  await expect(card).toBeVisible();
+
+  const { cardBg, nameColor, resolvedExpectedBg } = await card.evaluate((el) => {
+    const name = el.querySelector(".child-timed-tasks__name")!;
+    const probe = document.createElement("div");
+    probe.style.background =
+      "linear-gradient(100deg, color-mix(in srgb, var(--white, #fff) 88%, var(--task-accent, var(--c1)) 12%), color-mix(in srgb, var(--white, #fff) 58%, var(--task-accent, var(--c1)) 42%))";
+    el.appendChild(probe);
+    const resolved = getComputedStyle(probe).backgroundImage;
+    probe.remove();
+    return {
+      cardBg: getComputedStyle(el).backgroundImage,
+      nameColor: getComputedStyle(name).color,
+      resolvedExpectedBg: resolved,
+    };
+  });
+  expect(cardBg).toBe(resolvedExpectedBg);
+  expect(nameColor).toBe("rgb(0, 0, 0)");
+});
