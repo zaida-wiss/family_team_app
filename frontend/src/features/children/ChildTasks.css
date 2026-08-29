@@ -284,6 +284,24 @@
   min-width: 0;
 }
 
+/* Höger marginal när kortet har en redigera-penna (2026-08-30, uppföljning
+   av breddfixet ovan — Zaidas skärmdumpar visade pennan täcka sista
+   bokstäverna på korta titlar som "Drick kaffe"/"Ät lunch" på smala
+   mobilkort, bekräftat förexisterande redan innan breddfixet). .child-task-
+   edit-btn är absolut-positionerad i kortets övre högra hörn, ritas SIST i
+   DOM-ordningen (vinner därför målningsordningen inom samma z-index) och
+   titelraden är vertikalt CENTRERAD över hela ikonradens höjd (row1: 1fr) —
+   på ett kort med lite höjd kan textens centrerade rad därför ligga inom
+   pennans 44px-yta oavsett hur kort själva titeln är. :has() väljer bara ut
+   kort som FAKTISKT har pennan (onEditTodo är opt-in, aldrig satt för ett
+   riktigt barns egen dashboard, se ChildTasksSection.tsx) — kort utan
+   pennan (det vanliga fallet) helt opåverkade. Padding krymper bara det
+   utrymme texten radbryter inom, så sista bokstäverna hamnar på en ny rad
+   istället för bakom pennan. */
+.child-task-card:has(.child-task-edit-btn) .child-task-copy {
+  padding-right: clamp(30px, 11cqi, 44px);
+}
+
 .child-task-copy small {
   display: none;
 }
