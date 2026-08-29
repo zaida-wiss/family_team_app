@@ -2,6 +2,9 @@
  * Integrationstester för att köp av belöningar valideras på servern —
  * inte bara i frontend. Regressionsskydd mot ADR-0002 (broken access control:
  * kategorispärr + stjärnsaldo kontrollerades tidigare enbart i klienten).
+ * Utökad 2026-08-28 (Sprint 10 S1, samma ADR-0002-klass) med ett test för att
+ * ett datum-/tids-/veckodagsfönster (RewardShopItem.availability) nu också
+ * kontrolleras server-side vid purchaseItem(), inte bara i shopAvailability.ts.
  *
  * Kräver MONGODB_URI=mongodb://... (ej Atlas) — körs automatiskt i CI,
  * hoppas över lokalt om MONGODB_URI saknas eller pekar mot Atlas.
@@ -166,6 +169,33 @@ describe.skipIf(!RUN)("Belöningsköp valideras server-side", () => {
         createdBy: memberId,
         deletedAt: null,
       });
+
+    const purchase = await request(app)
+      .post(`/api/reward-shop/purchase/${itemId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({});
+    expect(purchase.status).toBe(409);
+  });
+
+  it("nekar köp med 409 om varans tillgänglighetsfönster inte har startat än — trots att frontend inte frågats", async () => {
+    const itemId = `item-${crypto.randomUUID()}`;
+    const addItem = await request(app)
+      .post("/api/reward-shop/items")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("x-member-id", memberId)
+      .send({
+        id: itemId,
+        title: "Framtida belöning",
+        symbol: null,
+        starCost: 1,
+        timerMinutes: null,
+        availability: { startDate: "2099-01-01", endDate: null, daysOfWeek: [], timeIntervals: [] },
+        requiredCategories: [],
+        createdBy: memberId,
+        deletedAt: null,
+      });
+    expect(addItem.status).toBe(201);
 
     const purchase = await request(app)
       .post(`/api/reward-shop/purchase/${itemId}`)

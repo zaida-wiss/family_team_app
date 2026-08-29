@@ -16,6 +16,7 @@ const availabilitySchema = new Schema(
   {
     startDate:     { type: String, default: null },
     endDate:       { type: String, default: null },
+    daysOfWeek:    { type: [String], default: [] },
     timeIntervals: { type: [timeIntervalSchema], default: [] },
   },
   { _id: false }

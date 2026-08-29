@@ -385,6 +385,7 @@ export type ShopTimeInterval = {
 export type ShopAvailability = {
   startDate: string | null;      // "YYYY-MM-DD" — null = inga datumgränser
   endDate: string | null;        // "YYYY-MM-DD" — null = inget slutdatum
+  daysOfWeek: Weekday[] | null;  // tom/null = alla veckodagar
   timeIntervals: ShopTimeInterval[]; // tom = tillgänglig hela dagen
 };
 

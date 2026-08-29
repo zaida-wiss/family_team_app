@@ -3,9 +3,10 @@ import { PurchasedRewardModel } from "../db/models/PurchasedReward.js";
 import { MemberModel } from "../db/models/Member.js";
 import { TodoModel } from "../db/models/Todo.js";
 import { TodoCategoryModel } from "../db/models/TodoCategory.js";
-import type { RewardShopItem } from "../../../shared/types.js";
-import { blockingCategories } from "../../../shared/rewardShopAvailability.js";
+import { blockingCategories, isAvailableNow } from "../../../shared/rewardShopAvailability.js";
+import { RewardShopItemSchema, RewardShopItemPatchSchema } from "../../../shared/schemas.js";
 import { AppError } from "../utils/errors.js";
+import { validate } from "../utils/validate.js";
 import { broadcastRewardShopChanged } from "../realtime/rewardShopEvents.js";
 import { broadcastMembersChanged } from "../realtime/memberEvents.js";
 import { writeAuditLog } from "./auditLogService.js";
@@ -34,7 +35,8 @@ export async function updateSettings(accountId: string, patch: { requireApproval
   broadcastRewardShopChanged();
 }
 
-export async function addItem(accountId: string, item: RewardShopItem) {
+export async function addItem(accountId: string, data: unknown) {
+  const item = validate(RewardShopItemSchema, data);
   await RewardShopModel.findOneAndUpdate(
     { accountId },
     { $push: { items: item } },
@@ -43,7 +45,8 @@ export async function addItem(accountId: string, item: RewardShopItem) {
   broadcastRewardShopChanged();
 }
 
-export async function updateItem(accountId: string, itemId: string, patch: Partial<Pick<RewardShopItem, "title" | "symbol" | "starCost" | "timerMinutes" | "availability" | "requiredCategories">>) {
+export async function updateItem(accountId: string, itemId: string, data: unknown) {
+  const patch = validate(RewardShopItemPatchSchema, data);
   const update: Record<string, unknown> = {};
   if (patch.title !== undefined) update["items.$.title"] = patch.title;
   if (patch.symbol !== undefined) update["items.$.symbol"] = patch.symbol;
@@ -81,6 +84,14 @@ export async function purchaseItem(itemId: string, callerId: string, forMemberId
   const shop = await RewardShopModel.findOne({ accountId: forMember.accountId });
   const item = shop?.items.find((i) => i.id === itemId && i.deletedAt === null);
   if (!item) throw new AppError(404, "Vara hittades inte");
+
+  // Auktoritativ tillgänglighetsspärr (2026-08-28, Sprint 10 S1) — samma
+  // funktion som frontend använder för att dimma/dölja köp-knappen, men körd
+  // här så ett datum-/tids-/veckodagsfönster inte längre går att kringgå
+  // genom att anropa denna endpoint direkt förbi UI:t.
+  if (!isAvailableNow(item)) {
+    throw new AppError(409, "Belöningen är inte tillgänglig just nu");
+  }
 
   const availableStars = forMember.approvedStars - forMember.spentStars;
   if (availableStars < item.starCost) {

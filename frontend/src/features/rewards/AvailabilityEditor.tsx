@@ -1,6 +1,6 @@
 import "./AvailabilityEditor.css";
 import { useState } from "react";
-import type { ShopAvailability, ShopTimeInterval } from "@shared/types";
+import type { ShopAvailability, ShopTimeInterval, Weekday } from "@shared/types";
 import { DateInput } from "../../components/DateInput";
 
 type Props = {
@@ -8,9 +8,19 @@ type Props = {
   onChange: (v: ShopAvailability | null) => void;
 };
 
+const WEEKDAY_ORDER: Weekday[] = [
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+];
+
+const WEEKDAY_SHORT: Record<Weekday, string> = {
+  monday: "mån", tuesday: "tis", wednesday: "ons", thursday: "tors",
+  friday: "fre", saturday: "lör", sunday: "sön"
+};
+
 const empty = (): ShopAvailability => ({
   startDate: null,
   endDate: null,
+  daysOfWeek: [],
   timeIntervals: [],
 });
 
@@ -45,6 +55,11 @@ export function AvailabilityEditor({ value, onChange }: Props) {
 
   function removeInterval(i: number) {
     patch({ timeIntervals: av.timeIntervals.filter((_, idx) => idx !== i) });
+  }
+
+  function toggleDay(day: Weekday) {
+    const days = av.daysOfWeek ?? [];
+    patch({ daysOfWeek: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] });
   }
 
   return (
@@ -82,6 +97,31 @@ export function AvailabilityEditor({ value, onChange }: Props) {
           <p className="availability-editor__hint">
             Lämna datum tomma för att gälla alla dagar.
           </p>
+
+          <div className="availability-editor__weekdays">
+            <p className="availability-editor__intervals-label">Veckodagar</p>
+            <div aria-label="Veckodagar" className="availability-editor__days" role="group">
+              {WEEKDAY_ORDER.map((day) => (
+                <button
+                  aria-pressed={av.daysOfWeek?.includes(day) ?? false}
+                  className={
+                    "availability-editor__day" +
+                    ((av.daysOfWeek?.includes(day) ?? false) ? " availability-editor__day--on" : "")
+                  }
+                  key={day}
+                  onClick={() => toggleDay(day)}
+                  type="button"
+                >
+                  {WEEKDAY_SHORT[day]}
+                </button>
+              ))}
+            </div>
+            {(av.daysOfWeek?.length ?? 0) === 0 && (
+              <p className="availability-editor__hint">
+                Inga veckodagar valda = tillgänglig alla dagar.
+              </p>
+            )}
+          </div>
 
           <div className="availability-editor__intervals">
             <p className="availability-editor__intervals-label">Tidsintervall</p>

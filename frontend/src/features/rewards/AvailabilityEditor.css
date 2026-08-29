@@ -56,6 +56,37 @@
   margin: 0;
 }
 
+.availability-editor__weekdays {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.availability-editor__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.availability-editor__day {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border, #e5e5e5);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.availability-editor__day--on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg);
+}
+
 .availability-editor__interval-row {
   display: flex;
   align-items: center;

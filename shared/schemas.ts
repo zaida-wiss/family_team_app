@@ -485,6 +485,42 @@ export const PurchasedRewardsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).optional()
 });
 
+// Belöningsbutikens varor (2026-08-28, Sprint 10 S1) — hade tidigare ingen
+// Zod-validering alls, till skillnad från TodoSchema/MemberSchema m.fl.; se
+// backend/src/services/rewardShopService.ts.
+export const ShopTimeIntervalSchema = z.object({
+  start: z.string().regex(/^\d{2}:\d{2}$/),
+  end: z.string().regex(/^\d{2}:\d{2}$/)
+});
+
+export const ShopAvailabilitySchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  daysOfWeek: z.array(WeekdaySchema).nullable(),
+  timeIntervals: z.array(ShopTimeIntervalSchema)
+});
+
+export const RewardShopItemSchema = z.object({
+  id: IdSchema,
+  title: z.string().trim().min(1, "Belöningens namn krävs").max(200),
+  symbol: z.string().nullable(),
+  starCost: z.number().int().min(0).max(999),
+  timerMinutes: z.number().int().positive().max(480).nullable(),
+  availability: ShopAvailabilitySchema.nullable(),
+  requiredCategories: z.array(IdSchema),
+  createdBy: IdSchema,
+  deletedAt: z.string().nullable()
+});
+
+export const RewardShopItemPatchSchema = RewardShopItemSchema.pick({
+  title: true,
+  symbol: true,
+  starCost: true,
+  timerMinutes: true,
+  availability: true,
+  requiredCategories: true
+}).partial();
+
 export const AuditLogQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).optional()

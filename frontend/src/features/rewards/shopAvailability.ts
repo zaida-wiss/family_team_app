@@ -1,7 +1,39 @@
-import type { RewardShopItem, ShopTimeInterval } from "@shared/types";
-import { blockingCategories } from "@shared/rewardShopAvailability";
+import type { RewardShopItem, ShopTimeInterval, Weekday } from "@shared/types";
+import { blockingCategories, isAvailableNow } from "@shared/rewardShopAvailability";
 
-export { blockingCategories };
+// isAvailableNow (den faktiska ja/nej-spärren, hemtidszon-baserad) flyttades
+// 2026-08-28 till shared/ så EXAKT samma funktion kan köras server-side vid
+// köp (purchaseItem, rewardShopService.ts) — se den filens kommentar.
+// Re-exporteras här så alla befintliga importer (`from "../rewards/
+// shopAvailability"`) i resten av rewards-featuren förblir oförändrade.
+export { blockingCategories, isAvailableNow };
+
+// isAllowedWeekday/WEEKDAY_BY_DAY_INDEX nedan används BARA av de förklarande
+// texterna (unavailableLabel/minutesUntilAvailable) — enhetens egen lokala
+// tid, inte hemtidszonen. Ren UI-kosmetik (t.ex. "Tillgänglig: lör, sön"),
+// skiljer sig medvetet från den delade, hemtidszon-baserade isAvailableNow()
+// ovan som avgör den FAKTISKA spärren — kan i sällsynta fall (familjen
+// reser) ge en text som inte stämmer millimeterexakt med spärren, men det är
+// bara en kosmetisk avvikelse, ingen säkerhets-/dataintegritetsfråga.
+const WEEKDAY_BY_DAY_INDEX: Weekday[] = [
+  "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
+];
+
+// Visningsordning (måndag först) + korta svenska etiketter för veckodags-hintar.
+const WEEKDAY_DISPLAY_ORDER: Weekday[] = [
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+];
+
+const WEEKDAY_SHORT: Record<Weekday, string> = {
+  monday: "mån", tuesday: "tis", wednesday: "ons", thursday: "tors",
+  friday: "fre", saturday: "lör", sunday: "sön"
+};
+
+function isAllowedWeekday(item: RewardShopItem, now: Date): boolean {
+  const days = item.availability?.daysOfWeek;
+  if (!days || days.length === 0) return true;
+  return days.includes(WEEKDAY_BY_DAY_INDEX[now.getDay()]);
+}
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
@@ -54,39 +86,6 @@ export function isExpired(item: RewardShopItem, now = new Date()): boolean {
 }
 
 /**
- * Varan är tillgänglig just nu — kontrollerar:
- * 1. Datum (startDate / endDate)
- * 2. Att vi befinner oss i ett tidsintervall
- * 3. Att det finns tillräckligt med tid kvar i intervallet för varans timer
- *
- * Regel: om timer = 60 min och intervallet stänger om 31 min → INTE tillgänglig,
- * för barnet hinner inte använda hela belöningen inom utsatt tid.
- */
-export function isAvailableNow(item: RewardShopItem, now = new Date()): boolean {
-  const { availability, timerMinutes } = item;
-  if (!availability) return true;
-
-  const today = toDateStr(now);
-
-  if (availability.startDate && today < availability.startDate) return false;
-  if (availability.endDate && today > availability.endDate) return false;
-
-  if (availability.timeIntervals.length === 0) return true;
-
-  const nowTime = toTimeStr(now);
-  const activeInterval = availability.timeIntervals.find((iv) => inTimeInterval(iv, nowTime));
-  if (!activeInterval) return false;
-
-  // Timer-kontroll: finns det tillräckligt med tid kvar i intervallet?
-  if (timerMinutes !== null) {
-    const minutesLeft = minutesLeftInInterval(activeInterval, now);
-    if (minutesLeft < timerMinutes) return false;
-  }
-
-  return true;
-}
-
-/**
  * Förklarande text när varan INTE är tillgänglig just nu.
  * Täcker fyra fall:
  * - Startdatum i framtiden → "5 dagar kvar"
@@ -105,6 +104,13 @@ export function unavailableLabel(item: RewardShopItem, now = new Date()): string
   if (availability.startDate && today < availability.startDate) {
     const days = daysUntil(availability.startDate, now);
     return days === 1 ? "1 dag kvar" : `${days} dagar kvar`;
+  }
+
+  if (!isAllowedWeekday(item, now)) {
+    const labels = WEEKDAY_DISPLAY_ORDER
+      .filter((d) => availability.daysOfWeek?.includes(d))
+      .map((d) => WEEKDAY_SHORT[d]);
+    return `Tillgänglig: ${labels.join(", ")}`;
   }
 
   if (availability.timeIntervals.length > 0) {
@@ -149,6 +155,10 @@ export function minutesUntilAvailable(item: RewardShopItem, now = new Date()): n
     const startOfDay = new Date(`${availability.startDate}T00:00:00`);
     return Math.round((startOfDay.getTime() - now.getTime()) / 60_000);
   }
+
+  // Veckodagsspärr har ingen enkel "nästa tillfälle om N minuter"-beräkning
+  // (kan vara flera dagar bort) — visas bara som textlabel, ingen mjuk toning.
+  if (!isAllowedWeekday(item, now)) return null;
 
   if (availability.timeIntervals.length === 0) return null;
 
