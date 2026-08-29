@@ -7,7 +7,6 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import type { ErrorRequestHandler, Request, Response } from "express";
-import { ZodError } from "zod";
 import { logger } from "./utils/logger.js";
 import { authRouter } from "./routes/auth.js";
 import { accountsRouter } from "./routes/accounts.js";
@@ -144,17 +143,32 @@ app.use("/api/household-pin", householdPinRouter);
 app.use("/api/meal-plan", mealPlanRouter);
 app.use("/api/birthdays", birthdaysRouter);
 
-// ZodError-gren (2026-08-30, hittat av rewardsSecurity.integration.test.ts,
-// se ADR-0037) — ett kastat .parse()-fel saknar en egen .status, föll
-// tidigare igenom till den generella 500-grenen nedan även när felet i
-// själva verket var en ogiltig KLIENT-indata (rätt kod är 400). Gäller
-// varje route i appen som redan validerar med Zod .parse() direkt (inte
-// bara rewards.ts) — ingen av dem hade tidigare korrekt statuskod vid
-// ogiltig indata. err.issues ger en användbar, fältspecifik felbeskrivning
-// istället för Zods egna, mindre läsbara .message.
+// Strukturell ZodError-koll, INTE `instanceof ZodError` (2026-08-30,
+// uppföljning — se ADR-0037). Ett första försök importerade ZodError direkt
+// från "zod" och gjorde `err instanceof ZodError` — föll fortfarande igenom
+// till 500 i CI, eftersom `shared/`s egen `zod`-installation (separat
+// node_modules, se package-anteckningen i CLAUDE.md om shared/s egna zod-
+// beroende) ger en ANNAN ZodError-klass än den backend/node_modules/zod
+// app.ts själv importerar — trots samma versionsnummer är de två skilda
+// modulinstanser, och en `.parse()`-anrop mot ett schema definierat i
+// shared/schemas.ts (t.ex. CreateRewardBodySchema) kastar shared:s klass,
+// aldrig backend:s. `instanceof` mot fel modulinstans är alltid `false`.
+// En strukturell koll (namn + issues-array) fungerar oavsett VILKEN av de
+// flera zod-kopiorna i repot (shared/, backend, och några backend-filer som
+// importerar "zod" direkt för lokala scheman, t.ex. accountsService.ts) som
+// faktiskt kastade felet.
+function isZodError(err: unknown): err is { issues: unknown[] } {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { name?: unknown }).name === "ZodError" &&
+    Array.isArray((err as { issues?: unknown }).issues)
+  );
+}
+
 const errorHandler: ErrorRequestHandler = (err, _request, response, _next) => {
   logger.error(err);
-  if (err instanceof ZodError) {
+  if (isZodError(err)) {
     response.status(400).json({ error: "Ogiltig indata", issues: err.issues });
     return;
   }
