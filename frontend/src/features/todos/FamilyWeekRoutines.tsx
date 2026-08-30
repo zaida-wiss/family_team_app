@@ -1,7 +1,8 @@
-import type { Member, Todo } from "@shared/types";
+import type { Calendar, Member, Todo } from "@shared/types";
 import { getFamilyWeekRoutines } from "./selectors";
 import { startOfWeek } from "./recurringTodos";
-import { toLocalDateStr } from "../calendars/calendarHelpers";
+import { getFamilyWeekCalendarEvents, toLocalDateStr } from "../calendars/calendarHelpers";
+import { isoToTimeInput } from "../../utils/fixedTimeZone";
 import "./FamilyWeekRoutines.css";
 
 const WEEKDAY_LABELS = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
@@ -9,6 +10,7 @@ const WEEKDAY_LABELS = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lö
 type Props = {
   members: Member[];
   todos: Todo[];
+  calendars: Calendar[];
 };
 
 // Hem-vyns nya "familjeläge"-standardvy (2026-08-29, Zaidas önskemål efter
@@ -20,19 +22,23 @@ type Props = {
 // veckans PLANERADE rutiner — en ogjord ikon dämpas mot bakgrunden istället
 // för att döljas, en klar/godkänd ikon visas i full styrka. Se
 // getFamilyWeekRoutines (selectors.ts) för hela urvalslogiken.
-export function FamilyWeekRoutines({ members, todos }: Props) {
+export function FamilyWeekRoutines({ members, todos, calendars }: Props) {
   const todayStr = toLocalDateStr(new Date());
-  const days = getFamilyWeekRoutines(members, todos, startOfWeek(new Date()));
+  const weekStart = startOfWeek(new Date());
+  const days = getFamilyWeekRoutines(members, todos, weekStart);
+  const calendarDays = getFamilyWeekCalendarEvents(calendars, weekStart);
   const hasAnyRoutines = days.some((d) => d.memberRows.length > 0);
+  const hasAnyEvents = calendarDays.some((d) => d.events.length > 0);
 
-  if (!hasAnyRoutines) {
-    return <p className="empty-note">Inga återkommande rutiner den här veckan ännu.</p>;
+  if (!hasAnyRoutines && !hasAnyEvents) {
+    return <p className="empty-note">Inga återkommande rutiner eller händelser den här veckan ännu.</p>;
   }
 
   return (
     <div aria-label="Veckans rutiner" className="family-week-routines">
       {days.map((day, i) => {
         const isToday = day.dateStr === todayStr;
+        const dayEvents = calendarDays[i]?.events ?? [];
         return (
           <div
             className={`family-week-routines__day${isToday ? " family-week-routines__day--today" : ""}`}
@@ -42,6 +48,22 @@ export function FamilyWeekRoutines({ members, todos }: Props) {
               <span>{WEEKDAY_LABELS[i]}</span>
               {isToday && <span className="family-week-routines__today-badge">Idag</span>}
             </div>
+            {dayEvents.length > 0 && (
+              <ul className="family-week-routines__events" aria-label={`Kalenderhändelser ${WEEKDAY_LABELS[i]}`}>
+                {dayEvents.map((ev) => (
+                  <li
+                    className="family-week-routines__event"
+                    key={ev.id}
+                    style={{ borderLeftColor: ev.color }}
+                  >
+                    {!ev.isAllDay && (
+                      <span className="family-week-routines__event-time">{isoToTimeInput(ev.startsAt)}</span>
+                    )}
+                    <span className="family-week-routines__event-title">{ev.title}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {day.memberRows.length === 0 ? (
               <p className="empty-note">Inga rutiner denna dag.</p>
             ) : (

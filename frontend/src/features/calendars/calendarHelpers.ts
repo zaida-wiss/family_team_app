@@ -1,4 +1,4 @@
-import type { EventRecurrence } from "@shared/types";
+import type { Calendar, EventRecurrence } from "@shared/types";
 import { isoToTimeInput } from "../../utils/fixedTimeZone";
 
 // Vilken symbol en händelse ska visas med (2026-07-27 fix, Zaidas fynd: "om
@@ -171,6 +171,48 @@ export function getMonthCells(year: number, month: number) {
   const trailing = cells.length % 7 === 0 ? 0 : 7 - (cells.length % 7);
   for (let d = 1; d <= trailing; d++) cells.push({ date: new Date(year, month + 1, d), isCurrentMonth: false });
   return cells;
+}
+
+export type WeekCalendarDay = {
+  dateStr: string;
+  events: { id: string; title: string; startsAt: string; endsAt: string; isAllDay: boolean; color: string }[];
+};
+
+// Hem-vyns familjedashboards "veckans kalender" (2026-08-30, Zaida: "just
+// nu finns inte veckans kalender med, den vågräta tidslinjen för varje
+// dag") — en kompakt, LÄSBAR-ENDAST händelseöversikt per veckodag, renderad
+// av FamilyWeekRoutines.tsx ovanför dess redan befintliga rutin-ikonrader.
+// Återanvänder expandForRange (samma återkommelse-expansion som Kalender-
+// panelens egen vecko-/månadsvy redan gör, se useCalendarView.ts) men en
+// betydligt enklare enrichment än den filens calendarDisplayColor-
+// uppslagning (ingen de-dup mellan överlappande medlemsfärger behövs för en
+// passiv, icke-klickbar översikt) — Zaidas val: händelsens EGEN färg, annars
+// kalenderns, aldrig en medlemsfärg.
+export function getFamilyWeekCalendarEvents(calendars: Calendar[], weekStart: Date): WeekCalendarDay[] {
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86_400_000);
+  const enriched = calendars.flatMap((cal) =>
+    cal.events
+      .filter((ev) => ev.deletedAt === null)
+      .map((ev) => ({ ...ev, calendarColor: cal.color, calendarName: cal.name }))
+  );
+  const expanded = expandForRange(enriched, weekStart, weekEnd);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(weekStart.getTime() + i * 86_400_000);
+    const dateStr = toLocalDateStr(date);
+    const events = expanded
+      .filter((ev) => toLocalDateStr(new Date(ev.startsAt)) === dateStr)
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+      .map((ev) => ({
+        id: ev.id,
+        title: ev.title,
+        startsAt: ev.startsAt,
+        endsAt: ev.endsAt,
+        isAllDay: ev.isAllDay,
+        color: ev.color ?? ev.calendarColor,
+      }));
+    return { dateStr, events };
+  });
 }
 
 export function expandForMonth<T extends { id: string; startsAt: string; endsAt: string; calendarColor: string; calendarName: string; recurrence?: { type: EventRecurrence["type"]; interval: number; until: string | null } | null }>(events: T[], year: number, month: number): T[] {

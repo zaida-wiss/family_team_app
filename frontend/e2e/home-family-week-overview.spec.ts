@@ -91,6 +91,41 @@ test("Hem-panelens standardvy (ingen flik klickad) visar medlemmar, veckans ruti
   await expect(undoneIcon.filter({ hasText: "🧥" })).toHaveCount(1);
 });
 
+test("Veckans rutiner visar även veckans kalenderhändelser, en rad per dag med tid + titel", async ({ page }) => {
+  const today = new Date();
+  const todayStr = toLocalDateStr(today);
+
+  const CALENDAR = {
+    id: "cal-1", name: "Familjekalender", ownerId: "mem-1", color: "#2f7d6d",
+    sharedWith: [], deletedAt: null, deletedBy: null, keepAllHistory: false,
+    importedSources: [], subscriptions: [],
+    events: [
+      {
+        id: "ev-1", calendarId: "cal-1", title: "Tandläkare",
+        startsAt: `${todayStr}T14:30:00.000Z`, endsAt: `${todayStr}T15:00:00.000Z`,
+        isAllDay: false, color: null, uid: null, location: null, notes: null,
+        recurrence: { type: "none" }, attendees: [], symbol: null,
+        createdBy: "mem-1", deletedAt: null, deletedBy: null,
+      },
+    ],
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars**", (route) => route.fulfill({ json: [CALENDAR] }));
+  await page.route("**/api/calendars/cross-account**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/calendars/connections**", (route) => route.fulfill({ json: [] }));
+
+  await page.goto("/");
+
+  const routines = page.locator(".family-week-routines");
+  await expect(routines).toBeVisible();
+  const eventRow = routines.locator(".family-week-routines__event", { hasText: "Tandläkare" });
+  await expect(eventRow).toBeVisible();
+  await expect(eventRow.locator(".family-week-routines__event-time")).not.toHaveText("");
+});
+
 test("Hem-panelen: klick på Kalender och sedan Hem igen landar tillbaka på standardvyn (overview), inte kvar på Kalender", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD] }));

@@ -920,7 +920,7 @@ export function MemberOverview({
               <header className="section-header">
                 <div><p className="eyebrow">Familj</p><h2>Veckans rutiner</h2></div>
               </header>
-              <FamilyWeekRoutines members={activeFamilyMembers} todos={allTodos} />
+              <FamilyWeekRoutines members={activeFamilyMembers} todos={allTodos} calendars={filteredCalendars} />
 
               <header className="section-header">
                 <div><p className="eyebrow">Familj</p><h2>Barnens stjärnor</h2></div>
