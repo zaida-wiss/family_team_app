@@ -296,7 +296,7 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
   const memberDocs = await MemberModel.find({ userId: callerUserId, deletedAt: null });
   const results = [];
   for (const m of memberDocs) {
-    if (!m.accountId || m.accountId === currentAccountId || hidden.has(m.accountId)) continue;
+    if (!m.accountId || m.accountId === currentAccountId) continue;
     const account = await AccountModel.findOne({ id: m.accountId, deletedAt: null });
     // type:"personal" exkluderat (2026-08-10, ADR-0033) — denna funktion
     // pushar OVILLKORLIGT en post per konto (även med tomma todos), så
@@ -305,6 +305,16 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
     // som membersService.ts:s getCrossAccountMembers.
     if (!account || account.type === "personal") continue;
     const accountTodos = await getAllTodos(m.accountId);
+    // Familjevyn avaktiverad för detta konto (2026-08-30, Zaidas önskemål:
+    // "du ska fortfarande kunna bli tilldelad todos i de familjer du är med
+    // i även om du valt att inte visa den familjen i familjevyn... dessa
+    // todos kommer till dina egna todos i herobaren") — den delade poolen
+    // (assignedTo:null) döljs helt, men personligt tilldelade todos
+    // (assignedTo===m.id) tas ändå med, taggade med hidden:true så frontend
+    // vet att routa dem till mina EGNA todos istället för familjetråden
+    // (se homeFamilyThreadSources/personalSignedUpThreadSources i
+    // MemberShellContent.tsx).
+    const isHidden = hidden.has(m.accountId);
     // Inkluderar även todos jag redan är tilldelad ELLER signat upp på DÄR
     // (assignedTo===m.id eller inProgressBy innehåller m.id) — inte bara det
     // otagna poolen (assignedTo:null). m.id (min egen medlemspost i det
@@ -314,7 +324,7 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
     // istället visas i todovyn") utan att gissa.
     const familyTodos = accountTodos.filter(
       (t) =>
-        (t.assignedTo === null || t.assignedTo === m.id) &&
+        (isHidden ? t.assignedTo === m.id : t.assignedTo === null || t.assignedTo === m.id) &&
         t.status === "pending" &&
         t.deletedAt === null &&
         t.recurrence.type === "none"
@@ -327,7 +337,14 @@ export async function getCrossAccountFamilyTodos(callerUserId: string, currentAc
     // skicka med hela kategoriobjekt (mindre svar, samma info frontend behöver).
     const categories = await getAllCategories(m.accountId);
     const categoryNames = Object.fromEntries(categories.map((c) => [c.id, c.name]));
-    results.push({ accountId: m.accountId, accountName: account.name, myMemberId: m.id, todos: familyTodos, categoryNames });
+    results.push({
+      accountId: m.accountId,
+      accountName: account.name,
+      myMemberId: m.id,
+      todos: familyTodos,
+      categoryNames,
+      hidden: isHidden
+    });
   }
   return results;
 }
@@ -540,7 +557,13 @@ export async function completeSharedChildTodo(
 // barn) och till FLERA konton samtidigt (findAcceptedConnectionFrom, en
 // post per konto som exponerar till mig).
 export async function getConnectionTodos(callerAccountId: string, callerMemberId: string | null) {
-  await requireMember(callerMemberId, callerAccountId);
+  const currentMember = await requireMember(callerMemberId, callerAccountId);
+  // Familjevyn avaktiverad för denna anslutning (2026-08-30, se
+  // Member.hiddenConnectionAccountIds) — ingen personlig-tilldelning-
+  // carve-out behövs här (till skillnad från hiddenCrossAccountIds/
+  // getCrossAccountFamilyTodos), jag har ingen egen medlemsidentitet i det
+  // exponerande kontot att bli tilldelad något i.
+  const hiddenConnections = new Set(currentMember?.hiddenConnectionAccountIds ?? []);
   const accountsExposingToMe = await AccountModel.find({
     deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
@@ -548,6 +571,7 @@ export async function getConnectionTodos(callerAccountId: string, callerMemberId
 
   const results = [];
   for (const account of accountsExposingToMe) {
+    if (hiddenConnections.has(account.id)) continue;
     const conn = findAcceptedConnectionFrom(callerAccountId, account);
     if (!conn || !conn.dataScope.todos || conn.exposedMemberIds.length === 0) continue;
     const accountTodos = await getAllTodos(account.id);

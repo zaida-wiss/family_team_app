@@ -157,6 +157,23 @@ export function useMembersState() {
     );
   }
 
+  // Familjeanslutningar (2026-08-30, Zaidas önskemål: "jag ska kunna vara
+  // ansluten till flera familjer, men själv aktivera och avaktivera") —
+  // samma idé/mönster som updateMemberHiddenCrossAccountIds ovan, fast för
+  // ADR-0030-anslutningar istället för egna medlemskap.
+  function updateMemberHiddenConnectionAccountIds(memberId: Id, hiddenConnectionAccountIds: Id[]) {
+    setMembers((current) =>
+      current.map((member) => {
+        if (member.id !== memberId) {
+          return member;
+        }
+
+        membersApi.update(memberId, { hiddenConnectionAccountIds }).catch(console.error);
+        return { ...member, hiddenConnectionAccountIds };
+      })
+    );
+  }
+
   function updateMemberAvatar(memberId: Id, avatarUrl: string | null) {
     setMembers((current) =>
       current.map((member) => {
@@ -269,7 +286,6 @@ export function useMembersState() {
       todoThreadGap?: number;
       todoBubbleSize?: number;
       shoppingShowCompletedDefault?: boolean;
-      homeSelectedFamilyId?: Id | null;
       showChildTodosInOwnView?: boolean;
     }
   ) {
@@ -292,6 +308,7 @@ export function useMembersState() {
     updateMemberDarkMode,
     updateMemberTextSize,
     updateMemberHiddenCrossAccountIds,
+    updateMemberHiddenConnectionAccountIds,
     updateMemberAvatar,
     updateMemberColor,
     updateMemberName,

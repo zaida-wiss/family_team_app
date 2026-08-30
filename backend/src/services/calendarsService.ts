@@ -292,6 +292,7 @@ export async function getConnectionCalendars(
   if (!caller) {
     throw new AppError(403, "Åtkomst nekad");
   }
+  const hiddenConnections = new Set(caller.hiddenConnectionAccountIds ?? []);
   const { fromStr, untilStr } = defaultMonthRange(from, until);
 
   const accountsExposingToMe = await AccountModel.find({
@@ -301,6 +302,7 @@ export async function getConnectionCalendars(
 
   const results = [];
   for (const account of accountsExposingToMe) {
+    if (hiddenConnections.has(account.id)) continue;
     const conn = findAcceptedConnectionFrom(callerAccountId, account);
     if (!conn || !conn.dataScope.calendars || conn.exposedMemberIds.length === 0) continue;
     const exposedSet = new Set(conn.exposedMemberIds);

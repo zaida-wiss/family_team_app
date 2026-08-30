@@ -38,7 +38,7 @@ export function useShellState(
     activeAccount, setActiveAccount,
     roles, createRole, toggleRolePermission,
     members, createMember, softDeleteMember, restoreMember, purgeMembersTrash,
-    updateMemberTheme, updateMemberDarkMode, updateMemberTextSize, updateMemberHiddenCrossAccountIds, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
+    updateMemberTheme, updateMemberDarkMode, updateMemberTextSize, updateMemberHiddenCrossAccountIds, updateMemberHiddenConnectionAccountIds, updateMemberAvatar, updateMemberColor, updateMemberName, assignRole, clearMemberAvatar,
     setChildCredentials,
     updateCalendarFilterSettings, updateChildTimelineSettings, updateMemberNavigation,
     todosState, calendarsState, shoppingState, rewardsState,
@@ -352,12 +352,6 @@ export function useShellState(
     // Standardläge för "Visa avklarade" (2026-07-27, Zaidas önskemål) — väljs
     // i Inställningar, se settingsProps nedan.
     shoppingShowCompletedDefault: currentMember.shoppingShowCompletedDefault,
-    // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "jag vill att den
-    // sparar det jag senast valde") — samma updateMemberNavigation-mönster
-    // som todoThreadGap/todoBubbleSize ovan.
-    homeSelectedFamilyId: currentMember.homeSelectedFamilyId ?? null,
-    onUpdateHomeSelectedFamilyId: (id: Id | null) =>
-      updateMemberNavigation(currentMember.id, { homeSelectedFamilyId: id }),
     ...sharedChildProps
   };
 
@@ -429,6 +423,7 @@ export function useShellState(
     onSelectTextSize: (textSize: TextSize) => handleTextSizeSelect(currentMember.id, textSize),
     onToggleDeviceTextSize: handleToggleDeviceTextSize,
     onUpdateMemberHiddenCrossAccountIds: updateMemberHiddenCrossAccountIds,
+    onUpdateMemberHiddenConnectionAccountIds: updateMemberHiddenConnectionAccountIds,
     onSetChildCredentials: setChildCredentials,
     onUpdateCalendarFilterSettings: (filterKey: CalendarFilterKey, visibleCalendarIds: Id[]) =>
       updateCalendarFilterSettings(currentMember.id, filterKey, visibleCalendarIds),

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ClipboardEvent } from "react";
-import { CalendarDays, Check, CheckSquare, Plus, Settings, ShoppingCart, Trash2, Upload, User, UtensilsCrossed } from "lucide-react";
+import { CalendarDays, CheckSquare, Plus, Settings, ShoppingCart, Trash2, Upload, User, UtensilsCrossed } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CalendarView } from "../calendars/CalendarView";
 import type { CalendarFilter } from "../calendars/CalendarView";
@@ -29,12 +29,20 @@ import type {
 import styles from "./MemberOverview.module.css";
 import shoppingStyles from "../shopping/ShoppingLists.module.css";
 
-// Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "om jag väljer en
-// familj, då vill jag att endast den familjens kalenderhändelser, todos och
-// medlemmar visas, men möjlighet att välja samtliga familjer så att allt
-// visas i hemvyn") — en medlem från en annan familj (cross-account/
-// Familjeanslutning) kommer bara som en MembershipMemberSummary, aldrig en
-// fullständig Member, taggad med källfamiljens accountId.
+// Hem-vyns familjevy (2026-08-30, Zaidas önskemål: "jag ska kunna vara
+// ansluten till flera familjer, men själv aktivera och avaktivera och på så
+// sätt bestämma hur mycket jag vill se") — den tidigare "Välj familj"-
+// popupen (filtrera till EN familj i taget) är borttagen och flyttad till
+// Inställningar → Familj → Familjevy, som en persistent av/på-knapp per
+// familj (se hiddenCrossAccountIds/hiddenConnectionAccountIds i
+// shared/types.ts). Hem-vyn visar därför alltid ALLA icke-avaktiverade
+// familjer kombinerat (motsvarar den gamla "Alla familjer"-vyn) — calendars/
+// extraMembers/familyThreadSources är redan förfiltrerade av backend (döljer
+// avaktiverade konton helt, förutom personligt tilldelade todos som istället
+// dyker upp i mina egna todos, se MemberShellContent.tsx). En medlem från en
+// annan familj (cross-account/Familjeanslutning) kommer bara som en
+// MembershipMemberSummary, aldrig en fullständig Member, taggad med
+// källfamiljens accountId.
 type ExtraMember = MembershipMemberSummary & { accountId: Id };
 type FamilyOption = { accountId: Id; accountName: string };
 
@@ -81,10 +89,6 @@ type Props = {
   // familjer som medlemmar", ALDRIG en Familjeanslutning) — se WeeklyMealPlan.tsx.
   recipes?: Recipe[];
   crossAccountRecipeGroups?: CrossAccountRecipes[];
-  // Senast valda familj, sparad server-side (Zaidas önskemål: "jag vill att
-  // den sparar det jag senast valde"). null/osatt = "Alla familjer".
-  homeSelectedFamilyId?: Id | null;
-  onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
   // Hem-vyns familjetrådar (2026-08-01, Zaidas önskemål: "hemvyn skall vara
   // återanvändbara moduler med samma logik som i navbarens vyer... man skall
   // signa upp sig på en uppgift på samma sätt som i todovyn med bollar i
@@ -123,8 +127,8 @@ type Props = {
   // familjens uppgifter (2026-08-03, Zaidas önskemål: "en sökruta och en
   // plusknapp där jag kan lägga till kategorier och uppgifter... kunna
   // massimportera och exportera, samt kunna massradera") — bara relevant
-  // för MITT EGET konto (isOwnFamilySelected nedan), aldrig en annan familj
-  // jag bara tittar på.
+  // för MITT EGET konto, oberoende av vilka andra familjer som också visas
+  // kombinerat i Hem-vyn.
   members?: Member[];
   // Bara viewerns EGNA kategorier (2026-08-30) — läses av FamilyWeekRoutines.tsx
   // för att filtrera bort kategorier med excludeFromWeekOverview=true (togglas
@@ -185,8 +189,6 @@ export function MemberOverview({
   extraMembers = [],
   recipes = [],
   crossAccountRecipeGroups = [],
-  homeSelectedFamilyId,
-  onUpdateHomeSelectedFamilyId,
   familyThreadSources = [],
   todoBubbleOrder = {},
   onReorderBubbles = () => {},
@@ -217,7 +219,18 @@ export function MemberOverview({
   onNavigate,
 }: Props) {
   const ownAccountId = currentMember.accountId;
-  const [selectedFamilyId, setSelectedFamilyIdState] = useState<Id | "all">(() => homeSelectedFamilyId ?? "all");
+  // Vilken av mina RIKTIGA medlemskap (mitt eget konto eller Mina
+  // familjekonton) jag just nu agerar i — bara relevant för handlingar som
+  // kräver EN specifik målfamilj (skapa en inköpslista i, visa
+  // måltidsplanering för), till skillnad från den gamla globala
+  // "selectedFamilyId" som filtrerade HELA Hem-vyn till en familj i taget
+  // (borttagen 2026-08-30, se familjevy-kommentaren högst upp i filen).
+  // Två separata state-variabler (inte en delad) så ett val i Inköp-fliken
+  // inte oväntat följer med till Måltidsplanering-fliken. Bara en dropdown i
+  // taget behövs (inte en väljar-popup) eftersom antalet riktiga medlemskap
+  // (identityAccountIds) normalt är litet.
+  const [shoppingTargetFamilyId, setShoppingTargetFamilyId] = useState<Id>(ownAccountId);
+  const [mealplanFamilyId, setMealplanFamilyId] = useState<Id>(ownAccountId);
   const { activeTab, selectTab } = useHomeTabNavSync();
   // Ökas vid VARJE flikklick, oavsett om fliken faktiskt bytte värde
   // (2026-08-09, Zaidas önskemål, samma mönster som huvudnavets
@@ -256,50 +269,15 @@ export function MemberOverview({
   const [noFamilyCategory, setNoFamilyCategory] = useState(false);
   const [showFamilyImportExport, setShowFamilyImportExport] = useState(false);
 
-  function setSelectedFamilyId(id: Id | "all") {
-    setSelectedFamilyIdState(id);
-    onUpdateHomeSelectedFamilyId?.(id === "all" ? null : id);
-  }
-
-  // Medvetet INGET "återställ till Alla familjer om valet inte finns bland
-  // options"-säkerhetsnät här (ett tidigare försök togs bort igen samma
-  // dag) — familyOptions byggs upp asynkront av flera hookar (cross-account/
-  // Familjeanslutningar), så ett sådant nät triggade felaktigt på VARJE
-  // sidladdning under det korta fönstret innan de hunnit svara, och skrev
-  // därmed över en precis inläst, giltig persisterad familj (homeSelectedFamilyId)
-  // med "all" innan användaren ens hunnit se den. Väljer man en familj som
-  // sedan faktiskt tagits bort (en återkallad Familjeanslutning) visar
-  // <select> bara ett värde utan matchande <option> — ofarligt, användaren
-  // väljer om manuellt.
+  // familyOptions (mitt eget konto + Mina familjekonton + Familjeanslutningar)
+  // används fortfarande för att slå upp visningsnamn på "vilken familj äger
+  // det här"-etiketter nedan — bara VILKA familjer som bidrar styrs numera
+  // helt server-side (hidden*AccountIds), ingen egen väljar-UI kvar här.
   const familyNameById = useMemo(
     () => new Map(familyOptions.map((f) => [f.accountId, f.accountName])),
     [familyOptions]
   );
-  const showFamilyFilter = familyOptions.length > 1;
-  const isOwnFamilySelected = selectedFamilyId === "all" || selectedFamilyId === ownAccountId;
 
-  const filteredCalendars = useMemo(
-    () => (selectedFamilyId === "all" ? calendars : calendars.filter((c) => c.accountId === selectedFamilyId)),
-    [calendars, selectedFamilyId]
-  );
-
-  const filteredShoppingLists = useMemo(
-    () =>
-      selectedFamilyId === "all"
-        ? shoppingLists
-        : shoppingLists.filter((l) => (l.accountId ?? ownAccountId) === selectedFamilyId),
-    [shoppingLists, selectedFamilyId, ownAccountId]
-  );
-
-  // Familjetrådar filtrerade på vald familj (2026-08-01) — "Alla familjer"
-  // visar samtliga sida vid sida, precis som Todos-panelens egna trådar.
-  const filteredThreadSources = useMemo(
-    () =>
-      selectedFamilyId === "all"
-        ? familyThreadSources
-        : familyThreadSources.filter((s) => s.accountId === selectedFamilyId),
-    [familyThreadSources, selectedFamilyId]
-  );
   // Massimport/export (2026-08-03) — bara MITT EGET kontos familje-trådar
   // (Familjen-poolen + egna familjekategorier), oavsett vilket familjeval
   // som råkar vara aktivt i filtret ovan (own/familyCategoryThreads i
@@ -316,16 +294,16 @@ export function MemberOverview({
     () => new Set(familyThreadSources.filter((s) => s.onToggleInProgress).map((s) => s.accountId)),
     [familyThreadSources]
   );
-  const activeLists = filteredShoppingLists.filter((l) => l.deletedAt === null);
+  const activeLists = shoppingLists.filter((l) => l.deletedAt === null);
   const activeFamilyMembers = activeMembers.filter((m) => m.deletedAt === null);
 
+  // Alltid kombinerat, alla icke-avaktiverade familjer (motsvarar den gamla
+  // "Alla familjer"-vyn, se familjevy-kommentaren högst upp i filen).
   const filteredMembers = useMemo(() => {
     const own = activeFamilyMembers.map((m) => ({ ...m, accountId: ownAccountId, isOwn: true as const }));
     const extra = extraMembers.map((m) => ({ ...m, isOwn: false as const }));
-    if (selectedFamilyId === "all") return [...own, ...extra];
-    if (selectedFamilyId === ownAccountId) return own;
-    return extra.filter((m) => m.accountId === selectedFamilyId);
-  }, [activeFamilyMembers, extraMembers, ownAccountId, selectedFamilyId]);
+    return [...own, ...extra];
+  }, [activeFamilyMembers, extraMembers, ownAccountId]);
 
   // Föräldrar/vuxna överst, barn underst (2026-08-12, Zaidas önskemål) —
   // stabil sortering (Array.prototype.sort är garanterat stabil sedan
@@ -447,7 +425,7 @@ export function MemberOverview({
           </div>
           <CalendarView
             displayOnly
-            calendars={filteredCalendars}
+            calendars={calendars}
             currentMember={currentMember}
             activeMembers={activeMembers}
             roles={roles}
@@ -468,9 +446,8 @@ export function MemberOverview({
               titel/väntar-antal/Öppna-knapp borttagna 2026-08-04, Zaidas
               önskemål: "lägg ikonerna... och knapparna... bredvid varandra.
               Ta bort filtreringen och öppnasektionen") — bara för mitt EGET
-              konto, aldrig en annan familj jag bara tittar på via filtret
-              ovan. */}
-          {isOwnFamilySelected && onCreateCategory && (
+              konto, oberoende av vilka andra familjer som visas kombinerat. */}
+          {onCreateCategory && (
             // Ikonstorleken minimerad (2026-08-09, Zaidas önskemål: "Gör todo
             // listan så att den upptar mest plats... minimera resten av
             // texten... infoknapparna") — samma .icon-button-klickyta (44px,
@@ -579,7 +556,7 @@ export function MemberOverview({
             </form>
           )}
 
-          {isOwnFamilySelected && showFamilyImportExport && onCreateTodo && onUpdateTodo && onDeleteTodo && onCreateCategory && (
+          {showFamilyImportExport && onCreateTodo && onUpdateTodo && onDeleteTodo && onCreateCategory && (
             <TodoImportExport
               allTodosForMatching={allTodos}
               categories={categories}
@@ -599,14 +576,14 @@ export function MemberOverview({
             />
           )}
 
-          {filteredThreadSources.length === 0 ? (
+          {familyThreadSources.length === 0 ? (
             <p className="empty-note">Inget väntar just nu.</p>
           ) : (
             <FamilyTodoThreads
               onReorderBubbles={onReorderBubbles}
               onReorderThreads={onReorderFamilyThreads}
               range={todoThreadRange}
-              sources={filteredThreadSources}
+              sources={familyThreadSources}
               threadOrder={familyThreadOrder}
               todoBubbleOrder={todoBubbleOrder}
               todoBubbleSize={todoBubbleSize}
@@ -652,20 +629,36 @@ export function MemberOverview({
             )}
           </header>
 
-          {/* Ny lista, förinställd på den valda familjen (2026-08-01) —
-              ENDAST familjer jag är en riktig medlem av (mitt eget konto
-              eller Mina familjekonton), aldrig en Familjeanslutning. */}
-          {onCreateFamilyShoppingList && selectedFamilyId !== "all" && shoppingCreatableFamilyAccountIds?.has(selectedFamilyId) && (
+          {/* Ny lista, i valfri familj jag är en riktig medlem av (2026-08-01,
+              utökad 2026-08-30 med en egen liten familjeväljare — ersätter
+              den gamla globala Hem-filtret, se familjevy-kommentaren högst
+              upp i filen) — ENDAST mitt eget konto eller Mina familjekonton,
+              aldrig en Familjeanslutning. */}
+          {onCreateFamilyShoppingList && shoppingCreatableFamilyAccountIds?.has(shoppingTargetFamilyId) && (
             <form
               className={styles.homeQuickAdd}
               onSubmit={(e) => {
                 e.preventDefault();
                 const trimmed = newListName.trim();
                 if (!trimmed) return;
-                onCreateFamilyShoppingList(selectedFamilyId, trimmed);
+                onCreateFamilyShoppingList(shoppingTargetFamilyId, trimmed);
                 setNewListName("");
               }}
             >
+              {shoppingCreatableFamilyAccountIds.size > 1 && (
+                <select
+                  aria-label="Vilken familj ska listan tillhöra?"
+                  className="text-input"
+                  onChange={(e) => setShoppingTargetFamilyId(e.target.value)}
+                  value={shoppingTargetFamilyId}
+                >
+                  {[...shoppingCreatableFamilyAccountIds].map((accountId) => (
+                    <option key={accountId} value={accountId}>
+                      {accountId === ownAccountId ? "Min familj" : (familyNameById.get(accountId) ?? "Okänd familj")}
+                    </option>
+                  ))}
+                </select>
+              )}
               <input
                 aria-label="Lägg till en inköpslista"
                 className="text-input"
@@ -711,12 +704,12 @@ export function MemberOverview({
                 }
 
                 return (
-                  <div className={styles.shoppingList} key={l.id}>
+                  <div aria-label={l.name} className={styles.shoppingList} key={l.id} role="group">
                     <header>
                       <strong>{l.name}</strong>
                       <span>
                         {remaining} kvar
-                        {selectedFamilyId === "all" && l.accountId && l.accountId !== ownAccountId && (
+                        {l.accountId && l.accountId !== ownAccountId && (
                           <small> · {familyNameById.get(l.accountId) ?? "Okänd familj"}</small>
                         )}
                       </span>
@@ -775,96 +768,76 @@ export function MemberOverview({
           {/* En annan familjs delade lista (ADR-0026, externalSharedWith) —
               flyttad hit från Inköp-panelen (2026-08-01, Zaidas rättelse: "de
               skall endast synas i hemvyn"), oförändrad komponent/logik.
-              selectedFamilyId (2026-08-16, Zaidas fynd: "där ska inga andra
-              familjers listor synas om t.ex. det är 'wiss Kolmodin' som är
-              vald att visas") — visades tidigare ALLTID oavsett filtret. */}
-          <SharedShoppingLists currentMember={currentMember} selectedFamilyId={selectedFamilyId} />
+              "all" = ingen filtrering (2026-08-30, den gamla globala
+              familjeväljaren som en gång motiverade filtret här är borttagen
+              — Hem-vyn visar numera alltid alla icke-avaktiverade familjer
+              kombinerat, se familjevy-kommentaren högst upp i filen). */}
+          <SharedShoppingLists currentMember={currentMember} selectedFamilyId="all" />
         </article>
       )}
 
       {effectiveTab === "mealplan" && (
-        isOwnFamilySelected ? (
-          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
-            <header className="section-header">
-              <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
-            </header>
-            <WeeklyMealPlan recipes={recipes} />
-            {/* En ansluten familjs receptbok (ADR-0030, dataScope.recipes) —
-                flyttad hit från Recept-panelen (2026-08-01, Zaidas rättelse:
-                "de skall endast synas i hemvyn"), oförändrad komponent/logik. */}
-            <ConnectionRecipesSection />
-          </article>
-        ) : identityAccountIds.has(selectedFamilyId) ? (
-          // Ett av Mina familjekonton (2026-08-01, Zaidas önskemål) — ett
-          // genuint medlemskap, samma identityAccountIds-princip som
-          // Todos-flikens signa-upp-gest. ALDRIG en Familjeanslutning (Zaidas
-          // rättelse: "man måste först göra en familj med dessa familjer
-          // som medlemmar").
-          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
-            <header className="section-header">
-              <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
-            </header>
+        <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
+          <header className="section-header">
+            <div><p className="eyebrow">Måltidsplanering</p><h2>Den här veckan</h2></div>
+          </header>
+          {/* Egen liten familjeväljare (2026-08-30, ersätter den gamla
+              globala Hem-filtret, se familjevy-kommentaren högst upp i
+              filen) — bara mitt eget konto eller Mina familjekonton (ett
+              genuint medlemskap), aldrig en Familjeanslutning (Zaidas
+              rättelse 2026-08-01: "man måste först göra en familj med dessa
+              familjer som medlemmar"). Dropdownen erbjuder bara riktiga
+              medlemskap (identityAccountIds), så mealplanFamilyId pekar
+              alltid på en giltig målfamilj — inget "inte tillgängligt"-läge
+              behövs längre. */}
+          {identityAccountIds.size > 1 && (
+            <select
+              aria-label="Vilken familjs måltidsplanering?"
+              className="text-input"
+              onChange={(e) => setMealplanFamilyId(e.target.value)}
+              value={mealplanFamilyId}
+            >
+              {[...identityAccountIds].map((accountId) => (
+                <option key={accountId} value={accountId}>
+                  {accountId === ownAccountId ? "Min familj" : (familyNameById.get(accountId) ?? "Okänd familj")}
+                </option>
+              ))}
+            </select>
+          )}
+          {mealplanFamilyId === ownAccountId ? (
+            <>
+              <WeeklyMealPlan recipes={recipes} />
+              {/* En ansluten familjs receptbok (ADR-0030, dataScope.recipes) —
+                  flyttad hit från Recept-panelen (2026-08-01, Zaidas rättelse:
+                  "de skall endast synas i hemvyn"), oförändrad komponent/logik. */}
+              <ConnectionRecipesSection />
+            </>
+          ) : (
             <WeeklyMealPlan
-              recipes={crossAccountRecipeGroups.find((g) => g.accountId === selectedFamilyId)?.recipes ?? []}
-              targetAccountId={selectedFamilyId}
+              recipes={crossAccountRecipeGroups.find((g) => g.accountId === mealplanFamilyId)?.recipes ?? []}
+              targetAccountId={mealplanFamilyId}
             />
-          </article>
-        ) : (
-          <article aria-labelledby="home-tab-mealplan" className="dashboard" id="home-panel-mealplan" key={`mealplan-${tabResetKey}`} role="tabpanel" tabIndex={0}>
-            <header className="section-header">
-              <div><p className="eyebrow">Måltidsplanering</p><h2>Inte tillgängligt</h2></div>
-            </header>
-            <p className="empty-note">
-              Måltidsplanering kräver att du är en riktig medlem av familjen (Mina familjekonton) — en
-              Familjeanslutning räcker inte.
-            </p>
-          </article>
-        )
+          )}
+        </article>
       )}
 
       {/* Hem-vyns nya standardvy, "familjeläge" (2026-08-29, Zaidas
           önskemål efter en mockup-bild) — ersätter den tidigare fristående
           Medlemmar-fliken/-ikonen (2026-08-12) som Hem-panelens standardvy:
-          familjeval (om fler än en familj bidrar) + medlemslista (oförändrad
-          logik/radstil, .memberPopupRow/.familyPopupRow/.memberCardList
-          återanvänds rakt av) + två nya sektioner därunder, veckans rutiner
-          och barnens stjärnor. Nås bara genom att trycka på Hem (huset) —
-          ingen egen klickbar ikon i navbaren längre, se allTabs ovan och
-          DEFAULT_TAB i useHomeTabNavSync.ts. */}
+          medlemslista (.memberCardList) + två nya sektioner därunder,
+          veckans rutiner och barnens stjärnor. Nås bara genom att trycka på
+          Hem (huset) — ingen egen klickbar ikon i navbaren längre, se
+          allTabs ovan och DEFAULT_TAB i useHomeTabNavSync.ts.
+          "Välj familj"-popupen som tidigare låg här (filtrera Hem-vyn till
+          EN familj i taget) är borttagen 2026-08-30 och flyttad till
+          Inställningar → Familj → Familjevy, som en persistent av/på-knapp
+          per familj — se familjevy-kommentaren högst upp i filen. */}
       {effectiveTab === "overview" && canSeeMembers && (
         // Ingen role="tabpanel"/aria-labelledby mot en tab (till skillnad
         // från övriga sektioner nedan) — "overview" är medvetet INTE en del
         // av tablistan (se kommentaren ovan), ett sådant attribut hade
         // pekat mot ett icke-existerande element.
         <article aria-label="Familj" className="dashboard" id="home-panel-overview" key={`overview-${tabResetKey}`}>
-          {showFamilyFilter && (
-            <>
-              <header className="section-header">
-                <div><p className="eyebrow">Familj</p><h2>Välj familj</h2></div>
-              </header>
-              <div aria-label="Familjeval" className={styles.membersTabList} role="group">
-                <button
-                  className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
-                  onClick={() => setSelectedFamilyId("all")}
-                  type="button"
-                >
-                  <span>Alla familjer</span>
-                  {selectedFamilyId === "all" && <Check aria-hidden="true" size="1rem" />}
-                </button>
-                {familyOptions.map((f) => (
-                  <button
-                    className={`${styles.memberPopupRow} ${styles.familyPopupRow}`}
-                    key={f.accountId}
-                    onClick={() => setSelectedFamilyId(f.accountId)}
-                    type="button"
-                  >
-                    <span>{f.accountName}</span>
-                    {selectedFamilyId === f.accountId && <Check aria-hidden="true" size="1rem" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
           <header className="section-header">
             <div><p className="eyebrow">Familj</p><h2>Medlemmar</h2></div>
           </header>
@@ -903,9 +876,7 @@ export function MemberOverview({
                     <span className={styles.memberCardName}>
                       {m.name}
                       <small>{m.isChild ? "Barn" : "Vuxen"}</small>
-                      {selectedFamilyId === "all" && (
-                        <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
-                      )}
+                      <small>{familyNameById.get(m.accountId) ?? "Okänd familj"}</small>
                     </span>
                   </div>
                 )
@@ -914,28 +885,23 @@ export function MemberOverview({
           )}
 
           {/* Veckans rutiner + barnens stjärnor (2026-08-29) — kräver
-              allTodos/activeFamilyMembers för MITT EGET konto, ingen
-              motsvarande data finns tillgänglig för en annan familj jag
-              bara tittar på via filtret ovan (samma isOwnFamilySelected-
-              avgränsning som Todos-flikens "+"-knapp/import-export). */}
-          {isOwnFamilySelected && (
-            <>
-              <header className="section-header">
-                <div><p className="eyebrow">Familj</p><h2>Veckans rutiner</h2></div>
-              </header>
-              <FamilyWeekRoutines
-                calendars={filteredCalendars}
-                categories={categories}
-                members={activeFamilyMembers}
-                todos={allTodos}
-              />
+              allTodos/activeFamilyMembers, som alltid är MITT EGET kontos
+              data, oberoende av vilka andra familjer som också visas
+              kombinerat i Hem-vyn. */}
+          <header className="section-header">
+            <div><p className="eyebrow">Familj</p><h2>Veckans rutiner</h2></div>
+          </header>
+          <FamilyWeekRoutines
+            calendars={calendars}
+            categories={categories}
+            members={activeFamilyMembers}
+            todos={allTodos}
+          />
 
-              <header className="section-header">
-                <div><p className="eyebrow">Familj</p><h2>Barnens stjärnor</h2></div>
-              </header>
-              <FamilyChildrenStars members={activeFamilyMembers} roles={roles} />
-            </>
-          )}
+          <header className="section-header">
+            <div><p className="eyebrow">Familj</p><h2>Barnens stjärnor</h2></div>
+          </header>
+          <FamilyChildrenStars members={activeFamilyMembers} roles={roles} />
         </article>
       )}
     </div>

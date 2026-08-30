@@ -157,6 +157,13 @@ export type CrossAccountFamilyThread = {
   // uppgifts todo.personalCategoryId kan visas läsbart ("Städning") istället
   // för ett rått id, se MemberShellContent.tsx:s personalSignedUpThreadSources.
   categoryNames: Record<Id, string>;
+  // Familjevyn avaktiverad för detta konto (2026-08-30, se
+  // hiddenCrossAccountIds ovan) — todos innehåller då ENDAST personligt
+  // tilldelade uppgifter (aldrig den delade poolen), och frontend routar dem
+  // till mina egna todos i stället för en familjetråd, se
+  // homeFamilyThreadSources/personalSignedUpThreadSources i
+  // MemberShellContent.tsx.
+  hidden: boolean;
 };
 
 // Hur mycket som visas i "bollar i tråd" (2026-07-06, Zaidas begäran: "bara
@@ -262,13 +269,15 @@ export type Member = {
   // här är kontons EGNA, riktiga medlemskap). Standard: alla synliga
   // (tomt/osatt) om fältet saknas.
   hiddenCrossAccountIds?: Id[];
-  // Hem-vyns familjefilter (2026-07-31, Zaidas önskemål: "jag vill att den
-  // sparar det jag senast valde") — vilken familjs data "Visa familj"-
-  // väljaren (MemberOverview.tsx) senast var inställd på. null/osatt = "Alla
-  // familjer" (standard, oförändrat beteende). Ett accountId som inte
-  // längre finns bland de tillgängliga familjeoptionerna faller tyst
-  // tillbaka på "Alla familjer" i frontend, ingen validering behövs här.
-  homeSelectedFamilyId?: Id | null;
+  // Familjeanslutningar (2026-08-30, Zaidas önskemål: "jag ska kunna vara
+  // ansluten till flera familjer, men själv aktivera och avaktivera") —
+  // samma idé som hiddenCrossAccountIds men för ADR-0030-anslutningar (där
+  // jag INTE är medlem, bara har fått exponerad data delad till mig) i
+  // stället för egna medlemskap. En dold anslutning döljs helt (ingen
+  // motsvarighet till hiddenCrossAccountIds carve-out för personligt
+  // tilldelade todos — jag har ingen egen medlemsidentitet i det andra
+  // kontot att bli tilldelad något i). Standard: alla synliga om osatt.
+  hiddenConnectionAccountIds?: Id[];
   // Todos-panelen omdefinierad (2026-07-31, Zaidas önskemål: "i min egen
   // todo vy skall endast mina egna todos finnas... Barnens todon" ska bara
   // synas där om jag uttryckligen vill det) — Barn-tråden döljs som

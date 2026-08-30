@@ -14,9 +14,10 @@ const memberSchema = new Schema<Member>({
   darkMode: { type: Boolean, default: undefined },
   textSize: { type: String, default: undefined },
   hiddenCrossAccountIds: { type: [String], default: undefined },
-  // Hem-vyns familjefilter (2026-07-31) — tillagd i Zod OCH Mongoose
-  // SAMTIDIGT, samma "todoThreadGap-lärdom" som recurringTemplateOrder ovan.
-  homeSelectedFamilyId: { type: String, default: null },
+  // Familjeanslutningar (2026-08-30) — samma idé/mönster som
+  // hiddenCrossAccountIds, tillagd i Zod OCH Mongoose SAMTIDIGT (samma
+  // "todoThreadGap-lärdom" som recurringTemplateOrder nedan).
+  hiddenConnectionAccountIds: { type: [String], default: undefined },
   showChildTodosInOwnView: { type: Boolean, default: undefined },
   calendarFilterSettings: { type: Schema.Types.Mixed, default: undefined },
   childTimelineSettings: { type: Schema.Types.Mixed, default: undefined },

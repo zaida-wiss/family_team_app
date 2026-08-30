@@ -6,30 +6,29 @@ import type { Id, Member, MembershipMemberSummary, MyMembership } from "@shared/
 
 type Props = {
   currentMember: Member;
-  onUpdateHiddenCrossAccountIds: (memberId: Id, hiddenCrossAccountIds: Id[]) => void;
   onLogout: () => Promise<void>;
   onCreateFamily: (name: string) => Promise<void>;
 };
 
 // Mina familjekonton (2026-07-25, Zaidas önskemål: "du skall se vilka
-// familjer du är med i... kunna avmarkera dessa när de inte används").
-// Utökad 2026-07-29 (Zaidas önskemål: "jag behöver även kunna radera
-// familjer som jag skapat och se vilka som ingår i den, samt välja att
-// överlåta den till någon annan familjemedlem, samt gå ur familjen") — se
-// membersService.ts/accountsService.ts för behörighetsreglerna
-// (skaparen måste överlåta innan den kan gå ur, sista medlemmen får inte
-// gå ur, bara skaparen får radera).
-export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccountIds, onLogout, onCreateFamily }: Props) {
-  const hidden = currentMember.hiddenCrossAccountIds ?? [];
+// familjer du är med i"). Utökad 2026-07-29 (Zaidas önskemål: "jag behöver
+// även kunna radera familjer som jag skapat och se vilka som ingår i den,
+// samt välja att överlåta den till någon annan familjemedlem, samt gå ur
+// familjen") — se membersService.ts/accountsService.ts för
+// behörighetsreglerna (skaparen måste överlåta innan den kan gå ur, sista
+// medlemmen får inte gå ur, bara skaparen får radera). Rent administrativ
+// medlemskapshantering — visa/dölj-toggeln för familjevyn (2026-08-30)
+// flyttades till en egen underkategori, se FamilyViewSettings.tsx, så
+// samma checkbox inte kontrolleras från två olika ställen.
+export function MyMembershipsSettings({ currentMember, onLogout, onCreateFamily }: Props) {
   const {
     memberships,
-    toggleAccountVisible,
     membersByAccount,
     loadMembers,
     leaveAccount,
     transferOwnership,
     deleteCreatedAccount
-  } = useMyMemberships(currentMember.id, hidden, onUpdateHiddenCrossAccountIds);
+  } = useMyMemberships(currentMember.id, [], () => {});
   const [creatingFamily, setCreatingFamily] = useState(false);
 
   async function handleMutated(accountId: Id) {
@@ -41,9 +40,9 @@ export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccoun
   return (
     <div className="settings-sub">
       <p className="empty-note">
-        Alla familjekonton du är medlem i. Avmarkera ett konto för att dölja dess gemensamma
-        Familjen-uppgifter i todo-vyn tills du markerar det igen. Familjer du själv skapat kan du
-        också radera eller överlåta till någon annan — annars kan du gå ur.
+        Alla familjekonton du är medlem i. Familjer du själv skapat kan du radera eller överlåta
+        till någon annan — annars kan du gå ur. Vill du dölja en familjs uppgifter i familjevyn på
+        Hem-panelen, se Familjevy.
       </p>
       {memberships.length === 0 ? (
         <p className="empty-note">Du är inte medlem i något konto.</p>
@@ -52,7 +51,6 @@ export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccoun
           {memberships.map((m) => (
             <MembershipRow
               currentAccountId={currentMember.accountId}
-              hidden={hidden.includes(m.accountId)}
               key={m.accountId}
               loadedMembers={membersByAccount[m.accountId] ?? null}
               membership={m}
@@ -65,7 +63,6 @@ export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccoun
                 await handleMutated(m.accountId);
               }}
               onLoadMembers={() => loadMembers(m.accountId)}
-              onToggleVisible={(visible) => toggleAccountVisible(m.accountId, visible)}
               onTransfer={(newOwnerMemberId) => transferOwnership(m.accountId, newOwnerMemberId)}
             />
           ))}
@@ -100,9 +97,7 @@ export function MyMembershipsSettings({ currentMember, onUpdateHiddenCrossAccoun
 type RowProps = {
   membership: MyMembership;
   currentAccountId: Id;
-  hidden: boolean;
   loadedMembers: MembershipMemberSummary[] | null;
-  onToggleVisible: (visible: boolean) => void;
   onLoadMembers: () => Promise<MembershipMemberSummary[]>;
   onLeave: () => Promise<void>;
   onDelete: () => Promise<void>;
@@ -114,9 +109,7 @@ type Confirming = "leave" | "delete" | "transfer" | null;
 function MembershipRow({
   membership,
   currentAccountId,
-  hidden,
   loadedMembers,
-  onToggleVisible,
   onLoadMembers,
   onLeave,
   onDelete,
@@ -198,11 +191,6 @@ function MembershipRow({
     <li className="child-share-list__item child-share-list__item--confirmed">
       <div className="child-share-list__row">
         <div>
-          {membership.accountId !== currentAccountId && (
-            <label>
-              <input checked={!hidden} onChange={(e) => onToggleVisible(e.target.checked)} type="checkbox" />{" "}
-            </label>
-          )}
           <strong>{membership.accountName}</strong>
           {membership.isCreator && <small> · skapad av dig</small>}
           {membership.accountId === currentAccountId && <small> · ditt aktiva konto</small>}

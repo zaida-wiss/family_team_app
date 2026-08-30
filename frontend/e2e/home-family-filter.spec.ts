@@ -1,12 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { mockDataAPIs } from "./helpers";
 
-// 2026-07-31, Zaidas önskemål: "nu kan jag aktivera kalendrar från olika
-// familjer i min hem-vy, men om jag väljer en familj, då vill jag att
-// endast den familjens kalenderhändelser, todos och medlemmar visas, men
-// möjlighet att välja samtliga familjer så att allt visas i hemvyn" — ett
-// nytt "Visa familj"-filter ovanför Hem-översikten, bara synligt när minst
-// två familjer bidrar med data (egen + minst en delad/ansluten källa).
+// 2026-08-30, Zaidas önskemål: "Välj familj på dashboarden skall flyttas
+// till familj, där jag ska kunna välja vilka familjeanslutningar som skall
+// visas i familjevyn" — den tidigare "Visa familj"-väljaren (filtrera Hem-
+// vyn till EN familj i taget, se historiken 2026-07-31) är helt borttagen.
+// Hem-vyns familjevy visar numera alltid ALLA icke-avaktiverade familjer
+// kombinerat — vilka familjer som bidrar styrs istället i Inställningar →
+// Familj → Familjevy (se family-view-settings.spec.ts för den mekaniken).
 
 const ACCOUNT = { id: "acc-a", name: "Familjen A", type: "family", createdBy: "mem-a", deletedAt: null };
 const ROLE = {
@@ -28,7 +29,7 @@ const USER = { id: "user-1", email: "test@exempel.se", name: "Förälder A", cre
 
 const TODO_A = {
   id: "todo-a", accountId: "acc-a", title: "Handla mjölk", createdBy: "mem-a",
-  assignedTo: "mem-a", isShared: false, status: "pending", starValue: 0,
+  assignedTo: "mem-a", status: "pending", starValue: 0,
   visual: { type: "lucide-icon", value: "Star" }, recurrence: { type: "none" },
   recurringSourceId: null, occurrenceDate: null, completedAt: null,
   approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null,
@@ -37,7 +38,7 @@ const TODO_A = {
 };
 const TODO_B = { ...TODO_A, id: "todo-b", accountId: "acc-b", title: "Klippa gräset", createdBy: "mem-b", assignedTo: null };
 
-test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den familjens uppgifter/medlemmar", async ({ page }) => {
+test("Hem-vyns familjevy visar alla bidragande familjers uppgifter och medlemmar kombinerat, ingen väljare kvar", async ({ page }) => {
   await page.route("**/api/auth/refresh", (route) =>
     route.fulfill({ json: { accessToken: "fake-access-token", user: USER, memberships: [{ member: MEMBER_A, account: ACCOUNT }] } })
   );
@@ -47,9 +48,12 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
   await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO_A] }));
 
   // "Mina familjekonton" bidrar med en todo-tråd + medlem från Familjen B —
-  // ren cross-account-data (samma person, flera egna medlemskap).
+  // ren cross-account-data (samma person, flera egna medlemskap), ingen av
+  // dem avaktiverad (hidden:false).
   await page.route("**/api/todos/family-across-accounts", (route) =>
-    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", todos: [TODO_B] }] })
+    route.fulfill({
+      json: [{ accountId: "acc-b", accountName: "Familjen B", myMemberId: "mem-b", todos: [TODO_B], categoryNames: {}, hidden: false }]
+    })
   );
   await page.route("**/api/members/cross-account", (route) =>
     route.fulfill({
@@ -62,83 +66,22 @@ test("Hem-vyns familjefilter: Alla familjer visar allt, ett val visar bara den f
 
   await page.goto("/");
 
-  // Medlemmar OCH familjeväljaren ligger sedan 2026-08-29 i Hem-panelens
-  // nya standardvy (MemberOverview.tsx, Zaidas beslut efter en mockup-bild:
-  // "behöver då inte en egen ikon i navbaren") — ett klick på Hem (HeroBar)
-  // landar alltid där, oavsett aktiv Hem-flik (se useAppState.ts:s
-  // setActivePanel för samma-panel-specialfallet). helpers-funktionerna
-  // växlar därför alltid tillbaka till "Visa todos" efteråt så resten av
-  // testflödet är opåverkat. Samma variabelnamn (membersTab) behållet trots
-  // att den nu pekar mot Hem-knappen, för att minimera diffen nedan.
-  const membersTab = page.getByRole("button", { name: "Hem", exact: true });
+  // Medlemmar ligger i Hem-panelens standardvy (MemberOverview.tsx,
+  // Zaidas beslut 2026-08-29 efter en mockup-bild) — ett klick på Hem
+  // (HeroBar) landar alltid där, oavsett aktiv Hem-flik.
+  const homeButton = page.getByRole("button", { name: "Hem", exact: true });
   const todosTab = page.getByRole("tab", { name: "Visa todos" });
   const membersList = page.getByLabel("Medlemslista");
-  const familyGroup = page.getByLabel("Familjeval");
-  async function expectMemberVisible(name: string) {
-    await membersTab.click();
-    await expect(membersList.getByText(name)).toBeVisible();
-    await todosTab.click();
-  }
-  async function expectMemberHidden(name: string) {
-    await membersTab.click();
-    await expect(membersList.getByText(name)).not.toBeVisible();
-    await todosTab.click();
-  }
-  async function selectFamily(label: string) {
-    await membersTab.click();
-    await familyGroup.getByRole("button", { name: label }).click();
-    await todosTab.click();
-  }
 
-  // Todos ligger bakom en flik (2026-07-31) — inte synligt förrän man
-  // klickar ikonen bredvid familjeväljaren.
   await todosTab.click();
-
   await expect(page.getByText("Handla mjölk")).toBeVisible();
   await expect(page.getByText("Klippa gräset")).toBeVisible();
-  await expectMemberVisible("Förälder A");
-  await expectMemberVisible("Nova");
 
-  await membersTab.click();
-  await expect(familyGroup.getByText("Alla familjer")).toBeVisible();
-  await expect(familyGroup.getByText("Familjen A")).toBeVisible();
-  await expect(familyGroup.getByText("Familjen B")).toBeVisible();
-  await todosTab.click();
+  await homeButton.click();
+  await expect(membersList.getByText("Förälder A")).toBeVisible();
+  await expect(membersList.getByText("Nova")).toBeVisible();
 
-  // Bara Familjen B — Familjen A:s uppgift/medlem försvinner, Familjen B:s
-  // egna finns kvar.
-  await selectFamily("Familjen B");
-  await expect(page.getByText("Klippa gräset")).toBeVisible();
-  await expectMemberVisible("Nova");
-  await expect(page.getByText("Handla mjölk")).not.toBeVisible();
-  await expectMemberHidden("Förälder A");
-
-  // Bara Familjen A (mitt eget konto) — omvänt.
-  await selectFamily("Familjen A");
-  await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expectMemberVisible("Förälder A");
-  await expect(page.getByText("Klippa gräset")).not.toBeVisible();
-  await expectMemberHidden("Nova");
-
-  // Tillbaka till Alla familjer — allt syns igen.
-  await selectFamily("Alla familjer");
-  await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await expect(page.getByText("Klippa gräset")).toBeVisible();
-});
-
-test("Hem-vyns familjefilter döljs helt när bara en familj bidrar med data", async ({ page }) => {
-  await page.route("**/api/auth/refresh", (route) =>
-    route.fulfill({ json: { accessToken: "fake-access-token", user: USER, memberships: [{ member: MEMBER_A, account: ACCOUNT }] } })
-  );
-  await mockDataAPIs(page);
-  await page.route("**/api/roles", (route) => route.fulfill({ json: [ROLE] }));
-  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER_A] }));
-  await page.route("**/api/todos", (route) => route.fulfill({ json: [TODO_A] }));
-
-  await page.goto("/");
-
-  await page.getByRole("tab", { name: "Visa todos" }).click();
-  await expect(page.getByText("Handla mjölk")).toBeVisible();
-  await page.getByRole("button", { name: "Hem", exact: true }).click();
+  // Den gamla "Visa familj"-väljaren finns inte längre, oavsett hur många
+  // familjer som bidrar.
   await expect(page.getByLabel("Familjeval")).toHaveCount(0);
 });

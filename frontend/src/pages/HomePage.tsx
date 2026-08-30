@@ -35,8 +35,6 @@ type Props = {
   // Mina familjekonton (2026-08-01) — recept i en av mina andra genuina
   // medlemskap, för måltidsplaneringen. ALDRIG Familjeanslutningar.
   crossAccountRecipeGroups?: CrossAccountRecipes[];
-  homeSelectedFamilyId?: Id | null;
-  onUpdateHomeSelectedFamilyId?: (id: Id | null) => void;
   // Hem-vyns familjetrådar (2026-08-01, Zaidas önskemål: "hemvyn skall vara
   // återanvändbara moduler med samma logik som i navbarens vyer... man skall
   // signa upp sig på en uppgift på samma sätt som i todovyn med bollar i
@@ -86,7 +84,6 @@ export function HomePage({
   calendarSettings, calendarFilter, onSelectMember, onAddEvent, onUpdateEvent, onDeleteEvent,
   onLoadEventsForMonth, fixedCalendarTimes, canSeeTodos, shoppingLists, canSeeShopping,
   onOpenShopping, canSeeMembers, familyOptions, extraMembers, recipes, crossAccountRecipeGroups,
-  homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
   familyThreadSources, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
   todoThreadGap, todoBubbleSize, todoThreadRange,
   onCreateFamilyShoppingList, shoppingCreatableFamilyAccountIds,
@@ -120,8 +117,6 @@ export function HomePage({
       extraMembers={extraMembers}
       recipes={recipes}
       crossAccountRecipeGroups={crossAccountRecipeGroups}
-      homeSelectedFamilyId={homeSelectedFamilyId}
-      onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
       familyThreadSources={familyThreadSources}
       todoBubbleOrder={todoBubbleOrder}
       onReorderBubbles={onReorderBubbles}

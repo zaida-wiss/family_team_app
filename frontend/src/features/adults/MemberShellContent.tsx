@@ -92,10 +92,6 @@ type Props = {
   todoThreadRange: TodoThreadRange;
   todoThreadGap?: number;
   todoBubbleSize?: number;
-  // Hem-vyns familjefilter (2026-07-31) — senast valda familj, sparad
-  // server-side (samma updateMemberNavigation-mönster som ovan).
-  homeSelectedFamilyId?: Id | null;
-  onUpdateHomeSelectedFamilyId: (id: Id | null) => void;
   // Två navbarer, en i taget (2026-08-12) — se useShellState.ts:s
   // homeShowFamilyNav-kommentar för hela bakgrunden.
   homeShowFamilyNav: boolean;
@@ -185,7 +181,6 @@ export function MemberShellContent({
   wishStars, todoViewMode,
   todoThreadOrder, onReorderThreads, todoBubbleOrder, onReorderBubbles, familyThreadOrder, onReorderFamilyThreads,
   todoThreadRange, todoThreadGap, todoBubbleSize,
-  homeSelectedFamilyId, onUpdateHomeSelectedFamilyId,
   homeShowFamilyNav, onShowAppNav,
   onNavigate, onSelectMember, onCreateTodo, onToggleSubtask, onToggleTodoInProgress, onUpdateTodo, onRefreshRoutine, onSoftDeleteTodo,
   personalCategories, onCreateCategory, onRenameCategory, onRemoveCategory, onSetCategoryHidden,
@@ -319,7 +314,7 @@ export function MemberShellContent({
   const homeFamilyOptions = useMemo(() => {
     const map = new Map<Id, string>();
     map.set(currentMember.accountId, accountName);
-    for (const t of crossAccountFamilyThreads) map.set(t.accountId, t.accountName);
+    for (const t of crossAccountFamilyThreads) if (!t.hidden) map.set(t.accountId, t.accountName);
     for (const t of connectionTodoThreads) map.set(t.accountId, t.accountName);
     for (const g of crossAccountMemberGroups) map.set(g.accountId, g.accountName);
     for (const g of connectionMemberGroups) map.set(g.accountId, g.accountName);
@@ -420,16 +415,21 @@ export function MemberShellContent({
         onHideCategory: () => onSetCategoryHidden(category.id, true),
         onEdit: (todo: Todo) => setEditFamilyTodoId(todo.id)
       }));
-    const cross = crossAccountFamilyThreads.map((t) => ({
-      id: `crossAccount:${t.accountId}`,
-      accountId: t.accountId,
-      label: t.accountName,
-      todos: t.todos,
-      members: crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? [],
-      onComplete: (todoId: Id) => completeCrossAccountTodo(t.accountId, todoId),
-      onToggleInProgress: (todoId: Id, targetMemberId: Id) => toggleCrossAccountInProgress(t.accountId, todoId, targetMemberId),
-      onCreateTodo: (title: string, visual: string | null) => createCrossAccountTodo(t.accountId, title, visual)
-    }));
+    // Avaktiverade familjer (2026-08-30, se hiddenCrossAccountIds) bygger
+    // ingen egen tråd här — personligt tilldelade todos där hamnar istället
+    // i personalSignedUpThreadSources nedan ("mina egna todos").
+    const cross = crossAccountFamilyThreads
+      .filter((t) => !t.hidden)
+      .map((t) => ({
+        id: `crossAccount:${t.accountId}`,
+        accountId: t.accountId,
+        label: t.accountName,
+        todos: t.todos,
+        members: crossAccountMemberGroups.find((g) => g.accountId === t.accountId)?.members ?? [],
+        onComplete: (todoId: Id) => completeCrossAccountTodo(t.accountId, todoId),
+        onToggleInProgress: (todoId: Id, targetMemberId: Id) => toggleCrossAccountInProgress(t.accountId, todoId, targetMemberId),
+        onCreateTodo: (title: string, visual: string | null) => createCrossAccountTodo(t.accountId, title, visual)
+      }));
     // Familjeanslutningar (2026-08-01) — ingen egen identitet i målkontot,
     // så ingen "vem håller på med den här"-väljare (onToggleInProgress
     // utelämnad, members tom) — bara läsning + håll-in-för-att-klarmarkera
@@ -486,8 +486,18 @@ export function MemberShellContent({
     // den andra familjens EGNA namngivna kategorier (categoryNames,
     // uppslaget server-side, se getCrossAccountFamilyTodos) eller vara en
     // otagen Familjen-pool-uppgift (personalCategoryId===null).
+    // Avaktiverad familj (2026-08-30, Zaidas önskemål: "du ska fortfarande
+    // kunna bli tilldelad todos... dessa todos kommer till dina egna todos i
+    // herobaren") — t.todos innehåller där redan BARA personligt tilldelade
+    // uppgifter (aldrig poolen, se getCrossAccountFamilyTodos), så alla tas
+    // med oavsett inProgressBy. En SYNLIG familj filtreras som förut på
+    // signat-upp-på (inProgressBy), annars hade "mina todos" svämmat över
+    // med hela den andra familjens delade pool.
     const cross = crossAccountFamilyThreads
-      .map((t) => ({ ...t, todos: t.todos.filter((td) => td.inProgressBy?.includes(t.myMemberId)) }))
+      .map((t) => ({
+        ...t,
+        todos: t.hidden ? t.todos : t.todos.filter((td) => td.inProgressBy?.includes(t.myMemberId))
+      }))
       .filter((t) => t.todos.length > 0)
       .flatMap((t) => {
         const byCategory = new Map<string, Todo[]>();
@@ -1075,8 +1085,6 @@ export function MemberShellContent({
         extraMembers={homeExtraMembers}
         recipes={recipes}
         crossAccountRecipeGroups={crossAccountRecipeGroups}
-        homeSelectedFamilyId={homeSelectedFamilyId}
-        onUpdateHomeSelectedFamilyId={onUpdateHomeSelectedFamilyId}
         familyThreadSources={homeFamilyThreadSources}
         todoBubbleOrder={todoBubbleOrder}
         onReorderBubbles={onReorderBubbles}

@@ -136,12 +136,14 @@ export async function getCrossAccountMembers(callerUserId: string, currentAccoun
 export async function getConnectionMembers(callerAccountId: string, callerMemberId: string | null) {
   const caller = await MemberModel.findOne({ id: callerMemberId, accountId: callerAccountId, deletedAt: null });
   if (!caller) throw new AppError(403, "Åtkomst nekad");
+  const hiddenConnections = new Set(caller.hiddenConnectionAccountIds ?? []);
   const accountsExposingToMe = await AccountModel.find({
     deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
   for (const account of accountsExposingToMe) {
+    if (hiddenConnections.has(account.id)) continue;
     const conn = findAcceptedConnectionFrom(callerAccountId, account);
     if (!conn || conn.exposedMemberIds.length === 0) continue;
     const members = await MemberModel.find({
@@ -244,9 +246,9 @@ const SELF_NAV_FIELDS = new Set([
   // som ska döljas i cross-account-vyer, se todosService.ts:s
   // getCrossAccountFamilyTodos.
   "hiddenCrossAccountIds",
-  // Hem-vyns familjefilter (2026-07-31) — senast valda familj i "Visa
-  // familj"-väljaren, se MemberOverview.tsx.
-  "homeSelectedFamilyId",
+  // Familjeanslutningar (2026-08-30) — samma idé, fast för ADR-0030-
+  // anslutningar, se familyConnectionsService.ts.
+  "hiddenConnectionAccountIds",
   // Todos-panelens Barn-tråd, av som standard (2026-07-31) — se
   // ParentTodoThreadView.tsx.
   "showChildTodosInOwnView"

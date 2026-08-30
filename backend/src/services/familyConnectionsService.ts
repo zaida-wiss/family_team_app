@@ -297,13 +297,15 @@ export async function listMyConnections(accountId: string, callerMemberId: strin
 // filtrering behövs (till skillnad från todos ovan). Läsning, oavsett
 // access-nivå (view/edit) — "om man mest vill ha information", se ADR-0030.
 export async function getConnectionRecipes(callerAccountId: string, callerMemberId: string | null) {
-  await requireMember(callerAccountId, callerMemberId);
+  const currentMember = await requireMember(callerAccountId, callerMemberId);
+  const hiddenConnections = new Set(currentMember?.hiddenConnectionAccountIds ?? []);
   const accountsExposingToMe = await AccountModel.find({
     deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
   for (const account of accountsExposingToMe) {
+    if (hiddenConnections.has(account.id)) continue;
     const conn = findAcceptedConnectionFrom(callerAccountId, account);
     if (!conn || !conn.dataScope.recipes) continue;
     const recipes = await getAllRecipes(account.id);
@@ -313,13 +315,15 @@ export async function getConnectionRecipes(callerAccountId: string, callerMember
 }
 
 export async function getConnectionShoppingLists(callerAccountId: string, callerMemberId: string | null) {
-  await requireMember(callerAccountId, callerMemberId);
+  const currentMember = await requireMember(callerAccountId, callerMemberId);
+  const hiddenConnections = new Set(currentMember?.hiddenConnectionAccountIds ?? []);
   const accountsExposingToMe = await AccountModel.find({
     deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
   for (const account of accountsExposingToMe) {
+    if (hiddenConnections.has(account.id)) continue;
     const conn = findAcceptedConnectionFrom(callerAccountId, account);
     if (!conn || !conn.dataScope.shoppingLists) continue;
     const lists = await getAllLists(account.id);
@@ -332,13 +336,15 @@ export async function getConnectionShoppingLists(callerAccountId: string, caller
 // välja vilka familjer detta skall delas med") — samma kontobreda,
 // läsning-oavsett-access-nivå-princip som recipes/shoppingLists ovan.
 export async function getConnectionBirthdays(callerAccountId: string, callerMemberId: string | null) {
-  await requireMember(callerAccountId, callerMemberId);
+  const currentMember = await requireMember(callerAccountId, callerMemberId);
+  const hiddenConnections = new Set(currentMember?.hiddenConnectionAccountIds ?? []);
   const accountsExposingToMe = await AccountModel.find({
     deletedAt: null,
     familyConnections: { $elemMatch: { otherAccountId: callerAccountId, status: "accepted" } }
   });
   const results = [];
   for (const account of accountsExposingToMe) {
+    if (hiddenConnections.has(account.id)) continue;
     const conn = findAcceptedConnectionFrom(callerAccountId, account);
     if (!conn || !conn.dataScope.birthdays) continue;
     const birthdays = await getAllBirthdaysRaw(account.id);

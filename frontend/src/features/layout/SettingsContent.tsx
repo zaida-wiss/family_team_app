@@ -17,6 +17,7 @@ import { TodoImportExport } from "../todos/TodoImportExport";
 import { RecurringTodosSettings } from "../todos/RecurringTodosSettings";
 import { OneOffTodosSettings } from "../todos/OneOffTodosSettings";
 import { MyMembershipsSettings } from "../members/MyMembershipsSettings";
+import { FamilyViewSettings } from "../members/FamilyViewSettings";
 import { FamilyConnectionSettings } from "../accounts/FamilyConnectionSettings";
 import { HouseholdSecretsSettings } from "../settings/HouseholdSecretsSettings";
 import { BirthdaysSettings } from "../settings/BirthdaysSettings";
@@ -430,7 +431,6 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
                   <MyMembershipsSettings
                     currentMember={currentMember}
                     onCreateFamily={settingsProps.onCreateFamily}
-                    onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
                     onLogout={onLogout}
                   />
                 )
@@ -443,6 +443,27 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
                 id: "family-connections",
                 label: "Familjeanslutningar",
                 content: <FamilyConnectionSettings accountId={activeAccount.id} members={members} />
+              }
+            ]
+          : []),
+        // Familjevy (2026-08-30, Zaidas önskemål: "Välj familj på dashboarden
+        // skall flyttas till familj, där jag ska kunna välja vilka
+        // familjeanslutningar som skall visas i familjevyn") — ersätter den
+        // tidigare "Välj familj"-popupen i Hem-vyn (MemberOverview.tsx), se
+        // FamilyViewSettings.tsx. Samma canSeeMembers-gate som "Mina
+        // familjekonton" ovan, eftersom det är samma underliggande data.
+        ...(canSeeMembers
+          ? [
+              {
+                id: "family-view",
+                label: "Familjevy",
+                content: (
+                  <FamilyViewSettings
+                    currentMember={currentMember}
+                    onUpdateHiddenConnectionAccountIds={settingsProps.onUpdateMemberHiddenConnectionAccountIds}
+                    onUpdateHiddenCrossAccountIds={settingsProps.onUpdateMemberHiddenCrossAccountIds}
+                  />
+                )
               }
             ]
           : []),

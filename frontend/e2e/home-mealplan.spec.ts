@@ -45,11 +45,16 @@ test("Måltidsplanering: lägga till och ta bort ett recept för en dag+måltid"
 
 // 2026-08-01, Zaidas rättelse: "man ska inte heller kunna planera måltider
 // med andra familjer, utan då måste man först göra en familj med dessa
-// familjer som medlemmar" — måltidsplanering fungerar nu FÖR Mina
-// familjekonton (genuint medlemskap, family-across-accounts), men INTE för
-// en Familjeanslutning (todos/connections, ingen egen identitet där).
-test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Familjeanslutning", async ({ page }) => {
-  const ACCOUNT_A = { id: "acc-1", name: "Familjen Test", type: "family", createdBy: "mem-1", deletedAt: null };
+// familjer som medlemmar" — måltidsplanering fungerar FÖR Mina familjekonton
+// (genuint medlemskap, family-across-accounts), men INTE för en
+// Familjeanslutning (todos/connections, ingen egen identitet där). Sedan
+// 2026-08-30 (familjevy-ombygget, se CLAUDE.md) uttrycks detta genom att
+// måltidsplaneringens egen lilla familjeväljare (en dropdown, ersätter den
+// gamla globala "Visa familj"-väljaren) bara erbjuder identityAccountIds
+// (mitt eget konto + Mina familjekonton) som alternativ — en
+// Familjeanslutning dyker aldrig upp där, "inte tillgänglig"-läget behövs
+// därför inte längre.
+test("Måltidsplanering: familjeväljaren erbjuder bara Mina familjekonton, aldrig en Familjeanslutning", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/recipes", (route) => route.fulfill({ json: [RECIPE] }));
   await page.route("**/api/meal-plan**", (route) => route.fulfill({ json: [] }));
@@ -60,7 +65,7 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
     route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", recipes: [RECIPE] }] })
   );
   await page.route("**/api/todos/family-across-accounts", (route) =>
-    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", todos: [] }] })
+    route.fulfill({ json: [{ accountId: "acc-b", accountName: "Familjen B", myMemberId: "mem-b", todos: [], categoryNames: {}, hidden: false }] })
   );
   // Familjen C — bara en Familjeanslutning, ingen genuin identitet där.
   await page.route("**/api/todos/connections", (route) =>
@@ -69,29 +74,18 @@ test("Måltidsplanering: tillgänglig för Mina familjekonton, INTE för en Fami
 
   await page.goto("/");
   await page.getByRole("tab", { name: "Visa måltidsplanering" }).click();
-  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
-  // (ingen egen "Visa medlemmar"-flik längre, se MemberOverview.tsx) —
-  // ett klick på Hem (HeroBar) landar alltid där, oavsett vilken Hem-flik
-  // som råkar vara aktiv sedan tidigare (se useAppState.ts:s setActivePanel
-  // för samma-panel-specialfallet). Helper:n växlar alltid tillbaka till
-  // Måltidsplanering efteråt.
-  const mealplanTab = page.getByRole("tab", { name: "Visa måltidsplanering" });
-  async function selectFamily(label: string) {
-    await page.getByRole("button", { name: "Hem", exact: true }).click();
-    await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
-    await mealplanTab.click();
-  }
 
-  // Familjen B (Mina familjekonton) — riktig måltidsplan, ingen "inte
-  // tillgänglig"-text.
-  await selectFamily("Familjen B");
+  const familySelect = page.getByLabel("Vilken familjs måltidsplanering?");
+  await expect(familySelect).toBeVisible();
+  const optionLabels = await familySelect.locator("option").allTextContents();
+  expect(optionLabels).toEqual(["Min familj", "Familjen B"]);
+
+  // Standard: min egen familj, riktig måltidsplan direkt.
   await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toHaveCount(0);
   await expect(page.locator(".mealplan__grid")).toBeVisible();
 
-  // Familjen C (bara en Familjeanslutning) — fortsatt inte tillgänglig.
-  await selectFamily("Familjen C");
-  await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toBeVisible();
-
-  await selectFamily(ACCOUNT_A.name);
+  // Familjen B (Mina familjekonton) — också en riktig måltidsplan.
+  await familySelect.selectOption({ label: "Familjen B" });
   await expect(page.getByText("Måltidsplanering kräver att du är en riktig medlem")).toHaveCount(0);
+  await expect(page.locator(".mealplan__grid")).toBeVisible();
 });

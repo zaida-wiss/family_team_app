@@ -36,15 +36,10 @@ function shoppingList(overrides: Record<string, unknown>) {
   };
 }
 
-async function selectFamily(page: import("@playwright/test").Page, tab: import("@playwright/test").Locator, label: string) {
-  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
-  // (ingen egen "Visa medlemmar"-flik längre) — ett klick på Hem landar
-  // alltid där, oavsett aktiv Hem-flik.
-  await page.getByRole("button", { name: "Hem", exact: true }).click();
-  await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
-  await tab.click();
-}
-
+// Ingen egen familjeväljare kvar i Inköp-fliken (2026-08-30, se
+// familjevy-kommentaren i MemberOverview.tsx) — Hem-vyn visar numera alltid
+// ALLA icke-avaktiverade familjers listor kombinerat, ingen navigering
+// behövs för att nå en specifik familjs lista.
 test("Hem-vyns Inköp-flik: varor går att bocka av, lägga till och ta bort i egen familj och Mina familjekonton, men inte i en Familjeanslutning", async ({ page }) => {
   let ownToggleCalled = false;
   let ownAddedTitle: string | null = null;
@@ -102,41 +97,49 @@ test("Hem-vyns Inköp-flik: varor går att bocka av, lägga till och ta bort i e
   );
 
   await page.goto("/");
-  const shoppingTab = page.getByRole("tab", { name: "Visa inköpslista" });
-  await shoppingTab.click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
+
+  // Alla tre familjers listor visas kombinerat samtidigt (2026-08-30, ingen
+  // egen väljare kvar) — varje lista scopas via sin egen role="group"
+  // (aria-label=listans namn, se MemberOverview.tsx) istället för att
+  // navigera dit.
+  const ownList = page.getByRole("group", { name: "Familjen A-lista" });
+  const crossList = page.getByRole("group", { name: "Familjen B-lista" });
+  const connectionList = page.getByRole("group", { name: "Familjen C-lista" });
 
   // Egen familj — checkbox/lägg till/ta bort ska fungera.
-  await selectFamily(page, shoppingTab, "Familjen A");
-  const ownItem = page.getByRole("listitem").filter({ hasText: "Mjölk" });
+  const ownItem = ownList.getByRole("listitem").filter({ hasText: "Mjölk" });
   await ownItem.getByRole("checkbox").click();
   await expect.poll(() => ownToggleCalled).toBe(true);
-  await page.getByPlaceholder("Lägg till vara").fill("Bröd");
-  await page.getByPlaceholder("Lägg till vara").press("Enter");
+  await ownList.getByPlaceholder("Lägg till vara").fill("Bröd");
+  await ownList.getByPlaceholder("Lägg till vara").press("Enter");
   await expect.poll(() => ownAddedTitle).toBe("Bröd");
   await ownItem.getByRole("button", { name: "Ta bort Mjölk" }).click();
   await expect.poll(() => ownDeletedItemId).toBe("item-1");
 
   // Mina familjekonton (Familjen B) — samma funktioner, egen cross-account-väg.
-  await selectFamily(page, shoppingTab, "Familjen B");
-  const crossItem = page.getByRole("listitem").filter({ hasText: "Mjölk" });
+  const crossItem = crossList.getByRole("listitem").filter({ hasText: "Mjölk" });
   await crossItem.getByRole("checkbox").click();
   await expect.poll(() => crossToggleCalled).toBe(true);
-  await page.getByPlaceholder("Lägg till vara").fill("Ost");
-  await page.getByPlaceholder("Lägg till vara").press("Enter");
+  await crossList.getByPlaceholder("Lägg till vara").fill("Ost");
+  await crossList.getByPlaceholder("Lägg till vara").press("Enter");
   await expect.poll(() => crossAddedTitle).toBe("Ost");
   await crossItem.getByRole("button", { name: "Ta bort Mjölk" }).click();
   await expect.poll(() => crossDeletedItemId).toBe("item-1");
 
   // Familjen C — bara en Familjeanslutning: checkboxen är inaktiverad,
   // ingen ta bort-knapp eller lägg till-formulär.
-  await selectFamily(page, shoppingTab, "Familjen C");
-  const connectionItem = page.getByRole("listitem").filter({ hasText: "Mjölk" });
+  const connectionItem = connectionList.getByRole("listitem").filter({ hasText: "Mjölk" });
   await expect(connectionItem.getByRole("checkbox")).toBeDisabled();
   await expect(connectionItem.getByRole("button", { name: "Ta bort Mjölk" })).toHaveCount(0);
-  await expect(page.getByPlaceholder("Lägg till vara")).toHaveCount(0);
+  await expect(connectionList.getByPlaceholder("Lägg till vara")).toHaveCount(0);
 });
 
-test("Hem-vyns Inköp-flik: en annan familjs delade lista (ADR-0026) döljs när en specifik familj är vald i filtret", async ({ page }) => {
+// Den gamla "Visa familj"-väljaren (borttagen 2026-08-30) filtrerade
+// tidigare även bort ADR-0026-listan när en annan specifik familj var vald
+// — den mekaniken finns inte längre alls (Hem-vyn visar numera alltid allt
+// kombinerat), så testet reducerat till en enkel synlighetskontroll.
+test("Hem-vyns Inköp-flik: en annan familjs delade lista (ADR-0026) syns i familjevyn", async ({ page }) => {
   await page.route("**/api/auth/refresh", (route) =>
     route.fulfill({ json: { accessToken: "fake-access-token", user: USER, memberships: [{ member: MEMBER_A, account: ACCOUNT }] } })
   );
@@ -159,24 +162,7 @@ test("Hem-vyns Inköp-flik: en annan familjs delade lista (ADR-0026) döljs när
   );
 
   await page.goto("/");
-  const shoppingTab = page.getByRole("tab", { name: "Visa inköpslista" });
-  await shoppingTab.click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
-  // "Alla familjer" (standard) — den delade listan syns.
-  await expect(page.getByText("wiss Kolmodins lista")).toBeVisible();
-
-  // En SPECIFIK familj vald (varken ägaren till den delade listan eller
-  // min egen) — listan ska försvinna helt, inte läcka in oavsett vad som
-  // är valt.
-  await selectFamily(page, shoppingTab, "Familjen A");
-  await expect(page.getByText("wiss Kolmodins lista")).toHaveCount(0);
-
-  await selectFamily(page, shoppingTab, "Familjen B");
-  await expect(page.getByText("wiss Kolmodins lista")).toHaveCount(0);
-
-  // Tillbaka till "Alla familjer" — listan syns igen.
-  await page.getByRole("button", { name: "Hem", exact: true }).click();
-  await page.getByLabel("Familjeval").getByRole("button", { name: "Alla familjer" }).click();
-  await shoppingTab.click();
   await expect(page.getByText("wiss Kolmodins lista")).toBeVisible();
 });

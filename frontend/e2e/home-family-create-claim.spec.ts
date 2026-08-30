@@ -83,22 +83,13 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   const todosTab = page.getByRole("tab", { name: "Visa todos" });
   await todosTab.click();
 
-  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
-  // (ingen egen "Visa medlemmar"-flik längre) — ett klick på Hem landar
-  // alltid där, oavsett aktiv Hem-flik (se useAppState.ts:s setActivePanel
-  // för samma-panel-specialfallet). Helper:n växlar alltid tillbaka till
-  // Todos efteråt.
-  async function selectFamily(label: string) {
-    await page.getByRole("button", { name: "Hem", exact: true }).click();
-    await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
-    await todosTab.click();
-  }
+  // Ingen egen familjeväljare kvar (2026-08-30) — Familjen A:s pool OCH
+  // Familjen B:s tråd visas alltid kombinerat, sida vid sida.
 
-  // Min egen familj vald (default) — Familjen-poolen är tom vid start och
-  // därför dold (2026-08-07, hideWhenEmpty) — lägg till den FÖRSTA
-  // okategoriserade uppgiften via "+"-knappens "Ingen kategori"-genväg
-  // istället för trådens egen (i det här läget onåbara) kategorimeny.
-  await selectFamily("Familjen A");
+  // Min egen familj — Familjen-poolen är tom vid start och därför dold
+  // (2026-08-07, hideWhenEmpty) — lägg till den FÖRSTA okategoriserade
+  // uppgiften via "+"-knappens "Ingen kategori"-genväg istället för trådens
+  // egen (i det här läget onåbara) kategorimeny.
   await page.getByRole("button", { name: "Ny familjekategori" }).click();
   await page.getByLabel("Ingen kategori").check();
   await page.getByLabel("Namn på uppgiften").fill("Handla mjölk");
@@ -107,8 +98,8 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   expect(lastOwnTodoPost?.assignedTo).toBeNull();
   expect(lastOwnTodoPost?.personalCategoryId).toBeNull();
 
-  // Familjen B (Mina familjekonton) — Lägg till en uppgift DÄR istället.
-  await selectFamily("Familjen B");
+  // Familjen B (Mina familjekonton) — redan synlig som en egen tråd, lägg
+  // till en uppgift DÄR istället.
   const familyBThreadHeader = page.getByRole("button", { name: /^Familjen B\./ });
   await familyBThreadHeader.click();
   await page.getByRole("button", { name: "Lägg till uppgift" }).click();
@@ -116,11 +107,15 @@ test("Hem-vyns Todos-flik: bollar + Lägg till uppgift via kategorimenyn (egen f
   await page.getByRole("button", { name: "Lägg till", exact: true }).click();
 
   // Bollen syns i familjevyn (samma stil som Todos-panelen, se
-  // .todo-thread__ball--home). Dubbeltryck öppnar "vem håller på med den
-  // här"-väljaren (samma gest som lokalt) — klick på sig själv signar upp.
-  const todosCard = page.locator("article.dashboard").filter({ has: page.locator(".todo-thread-view") });
-  const bubble = todosCard.locator(".todo-thread__ball--home");
+  // .todo-thread__ball--home). Egen familjs "Handla mjölk"-boll finns nu
+  // ALLTID kvar bredvid (2026-08-30, ingen filtrering längre) — skopar
+  // därför till Familjen B:s egen tråd (section[aria-label="Tråd: ..."],
+  // se FamilyTodoThreads.tsx) istället för att söka bollen i hela panelen.
+  const familyBThread = page.getByRole("region", { name: "Tråd: Familjen B" });
+  const bubble = familyBThread.locator(".todo-thread__ball--home");
   await expect(bubble).toBeVisible();
+  // Dubbeltryck öppnar "vem håller på med den här"-väljaren (samma gest
+  // som lokalt) — klick på sig själv signar upp.
   await bubble.dblclick();
   // Väljaren portaleras till document.body med role="menu" (samma mönster
   // som ParentTodoThreadView.tsx) — skopad hit eftersom Hem-vyns egen
@@ -160,31 +155,22 @@ test("Hem-vyns Inköp-flik: ny lista, förinställd på vald familj — bara ege
   );
 
   await page.goto("/");
-  const shoppingTab = page.getByRole("tab", { name: "Visa inköpslista" });
-  await shoppingTab.click();
+  await page.getByRole("tab", { name: "Visa inköpslista" }).click();
 
-  // Familjeväljaren ligger sedan 2026-08-29 i Hem-panelens nya standardvy
-  // (ingen egen "Visa medlemmar"-flik längre) — ett klick på Hem landar
-  // alltid där, se motsvarande kommentar ovan. Helper:n växlar alltid
-  // tillbaka till Inköp efteråt.
-  async function selectFamily(label: string) {
-    await page.getByRole("button", { name: "Hem", exact: true }).click();
-    await page.getByLabel("Familjeval").getByRole("button", { name: label }).click();
-    await shoppingTab.click();
-  }
+  // "Ny lista"-formuläret har sedan 2026-08-30 en egen liten
+  // familjeväljare (dropdown, ersätter den gamla globala "Visa familj"-
+  // väljaren) — erbjuder bara mitt eget konto + Mina familjekonton, aldrig
+  // en Familjeanslutning (Familjen C dyker aldrig upp här).
+  const familySelect = page.getByLabel("Vilken familj ska listan tillhöra?");
+  const optionLabels = await familySelect.locator("option").allTextContents();
+  expect(optionLabels).toEqual(["Min familj", "Familjen B"]);
 
-  await selectFamily("Familjen A");
   await page.getByLabel("Lägg till en inköpslista").fill("Veckohandling");
   await page.getByLabel("Lägg till inköpslista").click();
   await expect.poll(() => lastOwnListPost?.name).toBe("Veckohandling");
 
-  await selectFamily("Familjen B");
-  await expect(page.getByLabel("Lägg till en inköpslista")).toBeVisible();
+  await familySelect.selectOption({ label: "Familjen B" });
   await page.getByLabel("Lägg till en inköpslista").fill("Handling i B");
   await page.getByLabel("Lägg till inköpslista").click();
   await expect.poll(() => crossAccountListPosted).toBe(true);
-
-  // Familjen C (bara en Familjeanslutning) — ingen "lägg till lista"-form alls.
-  await selectFamily("Familjen C");
-  await expect(page.getByLabel("Lägg till en inköpslista")).toHaveCount(0);
 });

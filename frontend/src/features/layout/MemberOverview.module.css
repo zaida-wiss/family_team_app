@@ -361,66 +361,12 @@
   color: var(--muted-fg);
 }
 
-/* Medlemmar-flikens familje-/medlemslistor (2026-08-12, ersätter de
-   tidigare två ikon+popup-mönstren — se MemberOverview.tsx:s "members"-
-   flikinnehåll för hela bakgrunden). Rad-stilen härunder (.memberPopupRow/
-   .familyPopupRow, namnen bevarade oförändrade) återanvänds oförändrad
-   från den gamla popupen — bara containern är ny, ingen popup-
-   storleksbegränsning (min/max-width, max-height, skugga) behövs längre
-   eftersom detta nu är vanligt sidinnehåll, inte en flytande overlay. */
-.membersTabList {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.memberPopupRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  font: inherit;
-  color: var(--foreground);
-  text-align: left;
-  cursor: pointer;
-}
-
-.memberPopupRow:hover {
-  background: var(--muted);
-}
-
-/* Familjeväljarens popup-rader (2026-08-12) — bockmarkering för den redan
-   valda familjen ska sitta längst till höger, inte klistrad direkt efter
-   namnet (.memberPopup är redan flex-column med align-items:stretch, så
-   raden fyller bredden — bara justify-content saknades). */
-.familyPopupRow {
-  justify-content: space-between;
-}
-
-.memberPopupRow span {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.memberPopupRow small {
-  color: var(--muted-fg);
-  font-size: 0.75rem;
-}
-
-/* En annan familjs medlem går inte att klicka på (ingen dashboard att växla
-   till), samma layout men utan pekar-affordance. */
-.memberPopupRow--static {
-  cursor: default;
-}
-
 /* Medlemslistans kort (2026-08-12, Zaidas önskemål: "Låt medlemmarna få
    små cards som är lättare att klicka rätt i") — en grid av kvadratiska
-   klickytor istället för tunna fullbredds-rader (som fortfarande används
-   för familjeväljaren ovan, .memberPopupRow/.familyPopupRow, oförändrade).
+   klickytor istället för tunna fullbredds-rader. Den tidigare
+   .membersTabList/.memberPopupRow/.familyPopupRow-radstilen (Familjeval-
+   popupen) togs bort 2026-08-30 tillsammans med popupen själv (flyttad till
+   Inställningar → Familj → Familjevy) — ingen konsument kvar.
    minmax(4.5rem,1fr) håller korten kompakta men ger fler kolumner på breda
    skärmar, auto-fill radbryter naturligt. min-height 44px (WCAG 2.5.5/2.5.8
    touch-target), i praktiken betydligt högre här (avatar+namn). */
