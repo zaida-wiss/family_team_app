@@ -22,23 +22,6 @@ function getWeekMonday(offset: number): Date {
   return d;
 }
 
-// Rullande vecka (2026-08-30, Zaidas önskemål: "dagens datum först och en
-// vecka framåt" — samma princip som Hem-vyns "Veckans rutiner",
-// FamilyWeekRoutines.tsx) — MEDVETET bara för Hem-vyns dashboard-inbäddade
-// kalender (Zaidas rättelse samma dag: "endast i familjens dashboard
-// alltså... kalendrarna i övrigt skall vara oförändrade"). Den fristående
-// Kalender-panelen (CalendarPage.tsx, HeroBar → Kalender) behåller den
-// vanliga måndag-ankrade getWeekMonday ovan — se rollingWeek-parametern
-// nedan, satt till CalendarView.tsx:s displayOnly-prop (den enda skillnaden
-// mellan de två anropsställena, se CalendarView.tsx:s kommentar).
-function getRollingWeekStart(offset: number): Date {
-  const today = new Date();
-  const d = new Date(today);
-  d.setDate(today.getDate() + offset * 7);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 function getEventStartDay(ev: EnrichedEvent) {
   return ev.isAllDay ? ev.startsAt.slice(0, 10) : toLocalDateStr(new Date(ev.startsAt));
 }
@@ -86,11 +69,6 @@ export function useCalendarView(
   // submitForm nedan) — se utils/fixedTimeZone.ts:s filhuvud för den kända
   // begränsningen kring återkommande händelsers framtida förekomster.
   fixedCalendarTimes = false,
-  // Rullande vecka (2026-08-30) — bara Hem-vyns dashboard-inbäddade kalender
-  // (CalendarView.tsx:s displayOnly-prop) ska ha "dagens datum först och en
-  // vecka framåt", den fristående Kalender-panelen ska vara oförändrad
-  // (måndag-ankrad). Se getRollingWeekStart ovan.
-  rollingWeek = false,
 ) {
   const now = new Date();
   const todayStr = toLocalDateStr(now);
@@ -213,7 +191,7 @@ export function useCalendarView(
         .filter((ev) => isNotPast(ev) && getEventStartDay(ev) <= monthLastDay && getEventEndDay(ev) >= monthFirstDay)
         .sort(sortEvents);
 
-  const weekStart = rollingWeek ? getRollingWeekStart(weekOffset) : getWeekMonday(weekOffset);
+  const weekStart = getWeekMonday(weekOffset);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);

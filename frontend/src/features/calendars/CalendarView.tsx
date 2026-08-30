@@ -65,17 +65,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
     setField, toggleAttendee, weeks,
     showWeekNumbers, showHolidays, holidayBgColor, holidayTextColor,
     calendarDisplayColor, isEditing, eventIsEditable, otherMembers,
-  } = useCalendarView(
-    calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds,
-    onAddEvent, onUpdateEvent, onDeleteEvent, onMonthChange, focusMemberId, fixedCalendarTimes,
-    // Rullande veckovy (2026-08-30, Zaidas önskemål: "dagens datum först och
-    // en vecka framåt... endast i familjens dashboard... kalendrarna i
-    // övrigt skall vara oförändrade") — displayOnly är redan den enda
-    // signalen som skiljer Hem-vyns dashboard-inbäddade kalender
-    // (MemberOverview.tsx) från den fristående Kalender-panelen
-    // (CalendarPage.tsx, som aldrig sätter displayOnly).
-    displayOnly
-  );
+  } = useCalendarView(calendars, currentMember, activeMembers, roles, calendarSettings, searchQuery, hiddenCalendarIds, onAddEvent, onUpdateEvent, onDeleteEvent, onMonthChange, focusMemberId, fixedCalendarTimes);
 
   const sharedListProps = { searchQuery, setSearchQuery, hiddenCalendarIds, setHiddenCalendarIds, currentMemberId: currentMember.id };
   const filteredVisible = visible.filter((calendar) => !hiddenCalendarIds.has(calendar.id));
