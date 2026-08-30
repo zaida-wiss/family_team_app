@@ -118,6 +118,7 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
     personalCategories,
     onCreateCategory,
     onSetCategoryHidden,
+    onSetCategoryExcludeFromWeekOverview,
     taskTemplates,
     categoryTemplates,
     onCreateTaskTemplate,
@@ -444,7 +445,48 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
                 content: <FamilyConnectionSettings accountId={activeAccount.id} members={members} />
               }
             ]
-          : [])
+          : []),
+        // Dashboard (2026-08-30, Zaidas önskemål: "jag vill kunna välja
+        // vilka kategorier som inte skall synas där i dashboarden" — Hem-
+        // vyns kompakta veckoöversikt, FamilyWeekRoutines.tsx, flödar ihop
+        // om en kategori vars uppgifter återkommer VARJE dag (t.ex. en egen
+        // "Rutiner"-kategori) visas där). Bara VIEWERNS EGNA, icke-gömda
+        // kategorier — en redan gömd kategori (hidden=true) syns ändå
+        // ingenstans, ingen poäng att erbjuda en till toggle för den.
+        {
+          id: "dashboard",
+          label: "Dashboard",
+          content: (
+            <>
+              <p className="field-hint">
+                Välj vilka av dina kategorier som INTE ska synas i familjens veckoöversikt på Hem-panelen.
+                Kategorin och dess uppgifter påverkas inte i övrigt.
+              </p>
+              {personalCategories.filter((c) => !c.hidden).length === 0 ? (
+                <p className="empty-note">Du har inga kategorier än.</p>
+              ) : (
+                <ul className="settings-hidden-categories">
+                  {personalCategories
+                    .filter((c) => !c.hidden)
+                    .map((category) => (
+                      <li className="settings-hidden-categories__row" key={category.id}>
+                        <label>
+                          <input
+                            checked={!category.excludeFromWeekOverview}
+                            onChange={(e) =>
+                              onSetCategoryExcludeFromWeekOverview(category.id, !e.target.checked)
+                            }
+                            type="checkbox"
+                          />
+                          {" "}{category.name}
+                        </label>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </>
+          )
+        }
       ]
     },
     {

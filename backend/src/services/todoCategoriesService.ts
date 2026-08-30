@@ -90,6 +90,18 @@ export async function setCategoryHidden(id: string, accountId: string, memberId:
   return { ok: true };
 }
 
+// Dölj i familjens veckoöversikt (2026-08-30) — se shared/types.ts:s
+// kommentar för skillnaden mot setCategoryHidden ovan.
+export async function setCategoryExcludeFromWeekOverview(
+  id: string, accountId: string, memberId: string, exclude: boolean
+) {
+  await requireAdultMember(memberId, accountId);
+  const category = await findCategoryInAccount(id, accountId);
+  category.excludeFromWeekOverview = exclude;
+  await category.save();
+  return { ok: true };
+}
+
 // Auto-samlingskategori (2026-08-06, Zaidas önskemål: "detsamma gäller i
 // min egen todo-vy. Okategoriserade uppgifter skall skapa 'Mina
 // uppgifter'" — samma mekanism som familjevyns samlingskategori, bara

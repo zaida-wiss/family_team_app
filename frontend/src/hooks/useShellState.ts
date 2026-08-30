@@ -94,7 +94,8 @@ export function useShellState(
     createCategory: createTodoCategory,
     renameCategory: renameTodoCategory,
     removeCategory: removeTodoCategory,
-    setCategoryHidden: setTodoCategoryHidden
+    setCategoryHidden: setTodoCategoryHidden,
+    setCategoryExcludeFromWeekOverview: setTodoCategoryExcludeFromWeekOverview
   } = useTodoCategoriesState();
 
   const {
@@ -497,6 +498,7 @@ export function useShellState(
     personalCategories: personalTodoCategories,
     onCreateCategory: createTodoCategory,
     onSetCategoryHidden: setTodoCategoryHidden,
+    onSetCategoryExcludeFromWeekOverview: setTodoCategoryExcludeFromWeekOverview,
     taskTemplates,
     categoryTemplates,
     onCreateTaskTemplate: createTaskTemplate,

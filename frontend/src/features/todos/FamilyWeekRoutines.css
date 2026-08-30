@@ -20,21 +20,44 @@
   /* Dagens kolumn (2026-08-29, mockup-referensen ringade in "IDAG" med en
      kant) — en vänsterkant istället för en hel inramad ruta, så dagen
      fortfarande flyter ihop med resten av sidan i övrigt. */
-  padding-left: 10px;
+  padding: 6px 0 6px 10px;
   border-left: 3px solid transparent;
+  /* Tydlig dagsavdelare (2026-08-30, Zaidas fynd: "nu flyter veckan ihop")
+     — en tunn linje ÖVER varje dag utom den första räcker för att ögat ska
+     kunna följa var en dag slutar och nästa börjar, utan att lägga till
+     extra höjd som en tjockare kortram hade gjort (målet är att pressa ihop
+     hela veckan så alla sju dagar syns samtidigt, se ikon-halveringen
+     nedan). */
+  border-top: 1px solid var(--border);
+}
+
+.family-week-routines__day:first-child {
+  border-top: none;
+  padding-top: 0;
 }
 
 .family-week-routines__day--today {
   border-left-color: var(--primary);
+  /* Starkare särskiljning än bara kantlinjen (2026-08-30) — en svag
+     bakgrundston hela raden igenom, samma color-mix-mönster som redan
+     används för hover-tillstånd på andra ställen i appen. */
+  background: color-mix(in oklch, var(--primary) 7%, transparent);
+  border-radius: 0 6px 6px 0;
 }
 
 .family-week-routines__day-header {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--foreground);
+}
+
+.family-week-routines__day-date {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-fg);
 }
 
 .family-week-routines__today-badge {
@@ -107,9 +130,12 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: clamp(1.4rem, 2.2vw, 1.9rem);
-  height: clamp(1.4rem, 2.2vw, 1.9rem);
-  font-size: clamp(0.9rem, 1.6vw, 1.2rem);
+  /* Halverad storlek (2026-08-30, Zaidas önskemål: "ikonerna skall vara
+     halva storleken där inne mot nuläget" — för att få plats med alla sju
+     dagar samtidigt utan att skrolla). */
+  width: clamp(0.7rem, 1.1vw, 0.95rem);
+  height: clamp(0.7rem, 1.1vw, 0.95rem);
+  font-size: clamp(0.45rem, 0.8vw, 0.6rem);
   line-height: 1;
   border-radius: 50%;
   cursor: default;

@@ -1,4 +1,4 @@
-import type { Calendar, Member, Todo } from "@shared/types";
+import type { Calendar, Member, TodoCategory, Todo } from "@shared/types";
 import { getFamilyWeekRoutines } from "./selectors";
 import { startOfWeek } from "./recurringTodos";
 import { getFamilyWeekCalendarEvents, toLocalDateStr } from "../calendars/calendarHelpers";
@@ -6,11 +6,13 @@ import { isoToTimeInput } from "../../utils/fixedTimeZone";
 import "./FamilyWeekRoutines.css";
 
 const WEEKDAY_LABELS = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
+const DATE_LABEL_FORMAT = new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short" });
 
 type Props = {
   members: Member[];
   todos: Todo[];
   calendars: Calendar[];
+  categories?: TodoCategory[];
 };
 
 // Hem-vyns nya "familjeläge"-standardvy (2026-08-29, Zaidas önskemål efter
@@ -22,10 +24,21 @@ type Props = {
 // veckans PLANERADE rutiner — en ogjord ikon dämpas mot bakgrunden istället
 // för att döljas, en klar/godkänd ikon visas i full styrka. Se
 // getFamilyWeekRoutines (selectors.ts) för hela urvalslogiken.
-export function FamilyWeekRoutines({ members, todos, calendars }: Props) {
+//
+// 2026-08-30, tre uppföljande Zaida-önskemål i samma runda: (1) en kategori
+// vars uppgifter återkommer VARJE dag (t.ex. en egen "Rutiner"-kategori)
+// flödar ihop och tar onödig plats — TodoCategory.excludeFromWeekOverview
+// togglas i Inställningar → Familj → Dashboard (ny underkategori,
+// SettingsContent.tsx), inte här inline; den här komponenten läser bara
+// redan-filtrerade `categories` via getFamilyWeekRoutines (selectors.ts).
+// (2) "nu flyter veckan ihop" — dagarna fick en tydlig avdelare + kort
+// datum bredvid veckodagsnamnet, och dagens rad en egen bakgrundston (inte
+// bara en kantlinje som tidigare). (3) ikonerna halverade i storlek,
+// uttryckligt för att få plats med alla sju dagar samtidigt utan skroll.
+export function FamilyWeekRoutines({ members, todos, calendars, categories = [] }: Props) {
   const todayStr = toLocalDateStr(new Date());
   const weekStart = startOfWeek(new Date());
-  const days = getFamilyWeekRoutines(members, todos, weekStart);
+  const days = getFamilyWeekRoutines(members, todos, weekStart, categories);
   const calendarDays = getFamilyWeekCalendarEvents(calendars, weekStart);
   const hasAnyRoutines = days.some((d) => d.memberRows.length > 0);
   const hasAnyEvents = calendarDays.some((d) => d.events.length > 0);
@@ -46,6 +59,9 @@ export function FamilyWeekRoutines({ members, todos, calendars }: Props) {
           >
             <div className="family-week-routines__day-header">
               <span>{WEEKDAY_LABELS[i]}</span>
+              <span className="family-week-routines__day-date">
+                {DATE_LABEL_FORMAT.format(new Date(`${day.dateStr}T12:00:00`))}
+              </span>
               {isToday && <span className="family-week-routines__today-badge">Idag</span>}
             </div>
             {dayEvents.length > 0 && (

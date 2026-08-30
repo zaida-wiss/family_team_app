@@ -44,5 +44,15 @@ export function useTodoCategoriesState() {
     setCategories((current) => current.map((c) => (c.id === id ? { ...c, hidden } : c)));
   }
 
-  return { categories, createCategory, renameCategory, removeCategory, setCategoryHidden };
+  function setCategoryExcludeFromWeekOverview(id: Id, exclude: boolean) {
+    todoCategoriesApi.setExcludeFromWeekOverview(id, exclude).catch(console.error);
+    setCategories((current) =>
+      current.map((c) => (c.id === id ? { ...c, excludeFromWeekOverview: exclude } : c))
+    );
+  }
+
+  return {
+    categories, createCategory, renameCategory, removeCategory, setCategoryHidden,
+    setCategoryExcludeFromWeekOverview
+  };
 }

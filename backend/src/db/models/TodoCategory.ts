@@ -12,6 +12,10 @@ const todoCategorySchema = new Schema<TodoCategory>({
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
   hidden: { type: Boolean, default: false },
+  // Dölj i familjens veckoöversikt (2026-08-30) — måste läggas till HÄR
+  // samma dag som fältet införs i shared/types.ts, annars strippas det tyst
+  // av Mongoose strict-läge (samma bugklass som todoThreadGap-incidenten).
+  excludeFromWeekOverview: { type: Boolean, default: false },
   // Familjekategori (2026-08-03) — se shared/types.ts:s kommentar.
   isFamily: { type: Boolean, default: false },
   // Auto-samlingskategori (2026-08-06) — måste läggas till HÄR samma dag

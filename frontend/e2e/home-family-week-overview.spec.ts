@@ -126,6 +126,76 @@ test("Veckans rutiner visar även veckans kalenderhändelser, en rad per dag med
   await expect(eventRow.locator(".family-week-routines__event-time")).not.toHaveText("");
 });
 
+test("Veckans rutiner döljer en kategori märkt excludeFromWeekOverview och visar dagens datum bredvid veckodagsnamnet", async ({ page }) => {
+  const today = new Date();
+  const todayWeekday = WEEKDAY_NAMES[today.getDay()];
+
+  const CATEGORY_ROUTINES = {
+    id: "cat-routines", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
+    createdAt: "2026-01-01T00:00:00.000Z", excludeFromWeekOverview: true
+  };
+  const CATEGORY_OTHER = {
+    id: "cat-other", accountId: "acc-1", memberId: "mem-1", name: "Läxor",
+    createdAt: "2026-01-01T00:00:00.000Z", excludeFromWeekOverview: false
+  };
+  const TEMPLATE_EXCLUDED = todo({
+    id: "template-excluded", title: "Bädda sängen", personalCategoryId: "cat-routines",
+    recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: [todayWeekday] },
+    visibleFrom: "2026-01-01T00:00:00.000Z", visual: { type: "lucide-icon", value: "🛏️" }
+  });
+  const TEMPLATE_VISIBLE = todo({
+    id: "template-visible", title: "Läs läxa", personalCategoryId: "cat-other",
+    recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: [todayWeekday] },
+    visibleFrom: "2026-01-01T00:00:00.000Z", visual: { type: "lucide-icon", value: "📚" }
+  });
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD] }));
+  await page.route("**/api/roles", (route) => route.fulfill({ json: [{ id: "role-1", name: "Förälder", isChildRole: false, permissions: {} }, CHILD_ROLE] }));
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY_ROUTINES, CATEGORY_OTHER] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE_EXCLUDED, TEMPLATE_VISIBLE] }));
+
+  await page.goto("/");
+
+  const routines = page.locator(".family-week-routines");
+  await expect(routines).toBeVisible();
+  await expect(routines.getByText("📚")).toBeVisible();
+  await expect(routines.getByText("🛏️")).toHaveCount(0);
+
+  // Dagens datum syns bredvid veckodagsnamnet — inte längre bara "Måndag" etc.
+  const todayLabel = routines.locator(".family-week-routines__day--today .family-week-routines__day-date");
+  await expect(todayLabel).toBeVisible();
+  await expect(todayLabel).not.toHaveText("");
+});
+
+test("Inställningar → Familj → Dashboard: avmarkera en kategori sätter excludeFromWeekOverview via PATCH", async ({ page }) => {
+  const CATEGORY = {
+    id: "cat-routines", accountId: "acc-1", memberId: "mem-1", name: "Rutiner",
+    createdAt: "2026-01-01T00:00:00.000Z", excludeFromWeekOverview: false
+  };
+
+  await mockAuthAndData(page);
+  await page.route("**/api/todo-categories", (route) => route.fulfill({ json: [CATEGORY] }));
+
+  let patchBody: unknown = null;
+  await page.route("**/api/todo-categories/cat-routines/exclude-from-week-overview", (route) => {
+    patchBody = route.request().postDataJSON();
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inställningar" }).click();
+  await page.getByRole("button", { name: "Familj", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+
+  const row = page.getByText("Rutiner", { exact: false }).locator("..");
+  const checkbox = row.getByRole("checkbox");
+  await expect(checkbox).toBeChecked();
+  await checkbox.uncheck();
+
+  await expect.poll(() => patchBody).toEqual({ exclude: true });
+});
+
 test("Hem-panelen: klick på Kalender och sedan Hem igen landar tillbaka på standardvyn (overview), inte kvar på Kalender", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD] }));

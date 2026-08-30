@@ -49,6 +49,13 @@ todoCategoriesRouter.patch("/:id/hidden", async (req, res) => {
   res.json(await todoCategories.setCategoryHidden(req.params.id, req.accountId!, memberId, Boolean(req.body?.hidden)));
 });
 
+todoCategoriesRouter.patch("/:id/exclude-from-week-overview", async (req, res) => {
+  const memberId = requireMemberId(req.memberId);
+  res.json(await todoCategories.setCategoryExcludeFromWeekOverview(
+    req.params.id, req.accountId!, memberId, Boolean(req.body?.exclude)
+  ));
+});
+
 // Dela EN kategori med en annan familj, icke-transitivt (2026-08-06, samma
 // mönster som shopping.ts:s /:id/external-share, ADR-0026).
 todoCategoriesRouter.get("/:id/external-share", async (req, res) => {

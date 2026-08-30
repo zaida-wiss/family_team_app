@@ -126,6 +126,9 @@ type Props = {
   // för MITT EGET konto (isOwnFamilySelected nedan), aldrig en annan familj
   // jag bara tittar på.
   members?: Member[];
+  // Bara viewerns EGNA kategorier (2026-08-30) — läses av FamilyWeekRoutines.tsx
+  // för att filtrera bort kategorier med excludeFromWeekOverview=true (togglas
+  // i Inställningar → Familj → Dashboard, inte här).
   categories?: TodoCategory[];
   // Kontots HELA, ofiltrerade todo-lista (2026-08-06, Zaidas fynd: "en
   // uppgift som ändras via importera eller via modalen skall inte rendera
@@ -920,7 +923,12 @@ export function MemberOverview({
               <header className="section-header">
                 <div><p className="eyebrow">Familj</p><h2>Veckans rutiner</h2></div>
               </header>
-              <FamilyWeekRoutines members={activeFamilyMembers} todos={allTodos} calendars={filteredCalendars} />
+              <FamilyWeekRoutines
+                calendars={filteredCalendars}
+                categories={categories}
+                members={activeFamilyMembers}
+                todos={allTodos}
+              />
 
               <header className="section-header">
                 <div><p className="eyebrow">Familj</p><h2>Barnens stjärnor</h2></div>

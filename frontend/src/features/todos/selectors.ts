@@ -444,9 +444,22 @@ export type WeeklyRoutineDay = {
 export function getFamilyWeekRoutines(
   members: { id: Id }[],
   todos: Todo[],
-  weekStart: Date
+  weekStart: Date,
+  categories: TodoCategory[] = []
 ): WeeklyRoutineDay[] {
-  const templates = todos.filter(isRecurringTemplate);
+  // Exkluderade kategorier (2026-08-30, Zaidas önskemål: "jag vill kunna
+  // välja vilka kategorier som inte skall synas där i dashboarden") — en
+  // kategori vars uppgifter återkommer varje dag (t.ex. en egen "Rutiner"-
+  // kategori) flödar annars ihop i den redan kompakta veckoöversikten. Skild
+  // från `hidden` (som gömmer kategorin HELT, även i tråd-vyn) — se
+  // shared/types.ts. Bara VIEWERNS EGNA kategorier kan väljas bort (samma
+  // scope som `categories`-propen redan har överallt annars i denna vy).
+  const excludedCategoryIds = new Set(
+    categories.filter((c) => c.excludeFromWeekOverview).map((c) => c.id)
+  );
+  const templates = todos
+    .filter(isRecurringTemplate)
+    .filter((t) => !t.personalCategoryId || !excludedCategoryIds.has(t.personalCategoryId));
 
   return Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart.getTime() + i * 86_400_000);

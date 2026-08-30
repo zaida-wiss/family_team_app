@@ -1097,6 +1097,15 @@ export type TodoCategory = {
   // helst via Inställningar. Valfritt/saknas = inte gömd (bakåtkompatibelt,
   // ingen migrering av befintliga kategorier behövs).
   hidden?: boolean;
+  // Dölj i familjens veckoöversikt (2026-08-30, Zaidas önskemål: "jag vill
+  // kunna välja vilka kategorier som inte skall synas där i dashboarden" —
+  // en kategori vars uppgifter återkommer varje dag (t.ex. en egen "Rutiner"-
+  // kategori) flödar annars ihop i Hem-vyns kompakta veckoöversikt,
+  // FamilyWeekRoutines.tsx). Skild från `hidden` ovan — den gömmer kategorin
+  // HELT, även från tråd-vyn, vilket inte är avsikten här; kategorin ska
+  // fortfarande fungera normalt överallt annars. Valfritt/saknas = visas
+  // (bakåtkompatibelt).
+  excludeFromWeekOverview?: boolean;
   // Familjekategori (2026-08-03, Zaidas önskemål: "lägga till kategorier...
   // dela den hooken med todo i min personliga vy") — samma TodoCategory-
   // modell/CRUD-hook återanvänd rakt av, `memberId` förblir alltid skaparen

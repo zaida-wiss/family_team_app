@@ -41,6 +41,11 @@ export const todoCategoriesApi = {
       method: "PATCH",
       body: JSON.stringify({ hidden })
     }),
+  setExcludeFromWeekOverview: (id: Id, exclude: boolean) =>
+    request<{ ok: boolean }>(api(`todo-categories/${id}/exclude-from-week-overview`), {
+      method: "PATCH",
+      body: JSON.stringify({ exclude })
+    }),
   // Delning mellan FAMILJER (2026-08-06).
   listExternalShares: (categoryId: Id) =>
     request<TodoCategoryShare[]>(api(`todo-categories/${categoryId}/external-share`)),
