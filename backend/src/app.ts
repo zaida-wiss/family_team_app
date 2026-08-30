@@ -71,16 +71,31 @@ const authLimiter = rateLimit({
 export const app = express();
 
 app.set("trust proxy", 1);
-// Express genererar annars en ETag per svar (baserat på innehållet) — kombinerat
-// med Vercels/Cloudflares standard-cachepolicy för proxade svar utan eget
-// Cache-Control-huvud gjorde det möjligt för ett delat mellanlager att lagra och
-// återanvända ett /api-svar. Upptäckt live 2026-07-04: ett godkänt uppdrag
-// sparades korrekt i databasen, men en efterföljande hämtning kunde ändå visa
-// den gamla, inaktuella statusen. Autentiserad, per-konto-data ska aldrig kunna
-// cachelagras av ett delat mellanlager.
-app.set("etag", false);
+// 2026-07-04: /api-svar saknade ett eget Cache-Control-huvud, vilket lät
+// Vercels/Cloudflares standardcachepolicy (public, med Express egen
+// innehålls-ETag) ta över — ett DELAT mellanlager (Vercels rewrite-proxy till
+// Render, se frontend/vercel.json, ligger fortfarande i vägen för varje
+// /api-anrop i produktion) kunde då lagra och återanvända ett autentiserat,
+// per-konto-svar åt vem som helst som träffade samma cachenod. Då fixat med
+// `etag:false` + `Cache-Control:no-store` — säkert, men kastade bort ALL
+// cachning, inklusive den ofarliga sorten.
+//
+// 2026-08-30: bandbreddsutredning (Render Hobby-planens 5GB/månad-tak nått)
+// visade att flera datahookar (todos m.fl.) hämtar om HELA listan vid varje
+// `visibilitychange`/SSE-broadcast, oavsett om något faktiskt ändrats — en
+// enda todos-hämtning mätt till ~59kB komprimerad i produktion. `no-store`
+// stod i vägen för den enda ofarliga optimeringen: `private`+`no-cache`
+// (ETag på) löser BÅDA problemen samtidigt. `private` förbjuder varje delat
+// mellanlager (Vercel/Cloudflare) att lagra svaret alls — striktare än
+// tidigare, inte svagare, ursprungsincidenten kan inte återuppstå. `no-cache`
+// tvingar webbläsarens EGEN, per-enhet-cache att alltid fråga servern om
+// friskhet (aldrig återanvända tyst) — men om ETag:en matchar (`If-None-
+// Match`) svarar Express automatiskt med ett tomt `304` istället för att
+// skicka hela JSON-kroppen igen. Ingen egen kod behövs för själva 304-
+// hanteringen — inbyggt i Express `res.send()`/`res.json()` via `fresh()`.
+app.set("etag", "weak");
 app.use((_req, res, next) => {
-  res.set("Cache-Control", "no-store");
+  res.set("Cache-Control", "private, no-cache");
   next();
 });
 app.use(helmet());
