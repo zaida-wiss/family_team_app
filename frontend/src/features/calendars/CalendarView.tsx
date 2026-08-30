@@ -313,7 +313,7 @@ export function CalendarView({ calendars, currentMember, activeMembers, roles, d
               <div className="cal-event-row-info">
                 <span className="cal-event-row-title">{ev.title}</span>
                 <span className="cal-event-row-meta">
-                  {ev.isAllDay ? fmtFullDate(ev.startsAt.slice(0, 10)) : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt, fixedCalendarTimes)}`}
+                  {ev.isAllDay ? fmtFullDate(ev.startsAt.slice(0, 10)) : `${fmtFullDate(ev.startsAt)} · ${fmtTime(ev.startsAt, fixedCalendarTimes)}–${fmtTime(ev.endsAt, fixedCalendarTimes)}`}
                   {ev.location && (<> · <LocationLink location={ev.location} /></>)}
                 </span>
               </div>

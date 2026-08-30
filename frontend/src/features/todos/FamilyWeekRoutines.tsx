@@ -57,7 +57,9 @@ export function FamilyWeekRoutines({ members, todos, calendars }: Props) {
                     style={{ borderLeftColor: ev.color }}
                   >
                     {!ev.isAllDay && (
-                      <span className="family-week-routines__event-time">{isoToTimeInput(ev.startsAt)}</span>
+                      <span className="family-week-routines__event-time">
+                        {isoToTimeInput(ev.startsAt)}–{isoToTimeInput(ev.endsAt)}
+                      </span>
                     )}
                     <span className="family-week-routines__event-title">{ev.title}</span>
                   </li>

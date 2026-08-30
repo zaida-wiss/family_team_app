@@ -100,11 +100,11 @@ export function CalendarWeekView({ weekEvents, weekStart, weekEnd, todayStr, sho
                         className="cal-week-col-event"
                         style={{ "--event-color": color } as CalendarCssVars}
                         onClick={() => onEventClick?.(ev)}
-                        title={ev.isAllDay ? ev.title : `${fmtTime(ev.startsAt, fixedCalendarTimes)} ${ev.title}`}
+                        title={ev.isAllDay ? ev.title : `${fmtTime(ev.startsAt, fixedCalendarTimes)}–${fmtTime(ev.endsAt, fixedCalendarTimes)} ${ev.title}`}
                       >
                         {ev.displaySymbol && <span>{ev.displaySymbol} </span>}
                         {!ev.isAllDay && (
-                          <span className="cal-week-col-event-time">{fmtTime(ev.startsAt, fixedCalendarTimes)}</span>
+                          <span className="cal-week-col-event-time">{fmtTime(ev.startsAt, fixedCalendarTimes)}–{fmtTime(ev.endsAt, fixedCalendarTimes)}</span>
                         )}
                         {ev.title}
                       </div>
