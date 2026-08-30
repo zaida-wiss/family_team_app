@@ -271,6 +271,33 @@ export function Shell({
     document.documentElement.style.fontSize = `calc(clamp(15px, 13px + 0.6vw, 22px) * ${scale})`;
   }, [effectiveTextSize]);
 
+  // iOS' notch/statusfält-yta (2026-08-30, Zaida: "toppen på skärmen i
+  // telefonen är vit, det skall vara samma färg och flyta ihop med resten
+  // av bakgrunden") — viewport-fit=cover (index.html, 2026-08-23) låter
+  // webbsidan rita ÄNDA UT under notchen istället för att OS:et lägger en
+  // egen opak statusfältremsa där, men den ytan visar bara det som FAKTISKT
+  // är målat där i DOM:en. .app-shell.theme-X/.dark-mode sätter en riktig,
+  // temaanpassad --background (themes.css) — men BARA skopat till just DET
+  // elementet, ett barn av <body>. CSS-variabler kaskaderar bara NEDÅT, så
+  // <body>/<html> (FÖRÄLDRAR till .app-shell) kan aldrig se den — de
+  // fastnar därför alltid på :root:s helt otemarelaterade, generiska
+  // fallback-värde, vilket i praktiken är nära-vitt oavsett vilket tema
+  // eller ljust/mörkt läge man faktiskt valt (samma "samtliga teman"-
+  // symptom Zaida beskrev). Samma "läs ut ett CSS-värde och applicera
+  // direkt på document.documentElement"-mönster som textstorleken ovan,
+  // inte en CSS-omskrivning — undviker att röra themes.css:s redan många
+  // gånger sköra kaskad (se historiken) för en enda rads riktig fix. Körs
+  // EFTER att .app-shell hunnit få sin theme-/dark-mode-klass i samma
+  // render (React committar className synkront före effects).
+  useEffect(() => {
+    const shell = document.querySelector<HTMLElement>(".app-shell");
+    if (!shell) return;
+    const bg = getComputedStyle(shell).getPropertyValue("--background").trim();
+    if (!bg) return;
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+  }, [shellTheme, shellDarkMode]);
+
   // Två navbarer, en i taget (2026-08-12, Zaidas beslut: "Växla mellan de
   // två navbarerna, personlig och familjer... visa bara en navbar åt
   // gången") — HeroBar ("personlig") och Hem-vyns egen familjenavbar
