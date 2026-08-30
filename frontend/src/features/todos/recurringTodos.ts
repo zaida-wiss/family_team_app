@@ -317,7 +317,11 @@ function createOccurrenceExpiresAt(
   return withWallClockOnDate(templateExpiresAt, dateKey, fixedTodoTimes);
 }
 
-function startOfLocalDay(date: Date) {
+// Exporterad (2026-08-30) för FamilyWeekRoutines.tsx — Hem-vyns veckoöversikt
+// visar numera en rullande vecka som alltid BÖRJAR på dagens datum (Zaida:
+// "dagens datum skall alltid vara högst upp"), inte en fast måndag-söndag-
+// vecka som `startOfWeek` ovan ger.
+export function startOfLocalDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 

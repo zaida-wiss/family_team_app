@@ -1,12 +1,16 @@
 import type { Calendar, Member, TodoCategory, Todo } from "@shared/types";
 import { getFamilyWeekRoutines } from "./selectors";
-import { startOfWeek } from "./recurringTodos";
+import { startOfLocalDay } from "./recurringTodos";
 import { getFamilyWeekCalendarEvents, toLocalDateStr } from "../calendars/calendarHelpers";
 import { isoToTimeInput } from "../../utils/fixedTimeZone";
 import "./FamilyWeekRoutines.css";
 
-const WEEKDAY_LABELS = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"];
+const WEEKDAY_LABEL_FORMAT = new Intl.DateTimeFormat("sv-SE", { weekday: "long" });
 const DATE_LABEL_FORMAT = new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short" });
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 type Props = {
   members: Member[];
@@ -35,9 +39,21 @@ type Props = {
 // datum bredvid veckodagsnamnet, och dagens rad en egen bakgrundston (inte
 // bara en kantlinje som tidigare). (3) ikonerna halverade i storlek,
 // uttryckligt för att få plats med alla sju dagar samtidigt utan skroll.
+//
+// 2026-08-30, ytterligare ett Zaida-önskemål samma dag: "dagens datum skall
+// alltid vara högst upp" — vyn visade tidigare en FAST måndag-söndag-vecka
+// (weekStart = startOfWeek(nu)) med dagens datum bara MARKERAT någonstans i
+// listan, ofta långt ner om det råkade vara t.ex. fredag. Bytt till en
+// RULLANDE vecka som alltid börjar på dagens datum (weekStart =
+// startOfLocalDay(nu)) — dag 0 är alltid idag, dag 6 alltid en vecka framåt.
+// Veckodagsnamnet kan därför inte längre slås upp i ett fast
+// måndag-först-index (WEEKDAY_LABELS), utan beräknas per faktiskt datum via
+// Intl.DateTimeFormat. getFamilyWeekRoutines/getFamilyWeekCalendarEvents
+// själva är oförändrade — de genererar redan bara "7 dagar framåt från
+// weekStart", oavsett vilken veckodag weekStart råkar vara.
 export function FamilyWeekRoutines({ members, todos, calendars, categories = [] }: Props) {
   const todayStr = toLocalDateStr(new Date());
-  const weekStart = startOfWeek(new Date());
+  const weekStart = startOfLocalDay(new Date());
   const days = getFamilyWeekRoutines(members, todos, weekStart, categories);
   const calendarDays = getFamilyWeekCalendarEvents(calendars, weekStart);
   const hasAnyRoutines = days.some((d) => d.memberRows.length > 0);
@@ -52,20 +68,22 @@ export function FamilyWeekRoutines({ members, todos, calendars, categories = [] 
       {days.map((day, i) => {
         const isToday = day.dateStr === todayStr;
         const dayEvents = calendarDays[i]?.events ?? [];
+        const dayDate = new Date(`${day.dateStr}T12:00:00`);
+        const weekdayLabel = capitalize(WEEKDAY_LABEL_FORMAT.format(dayDate));
         return (
           <div
             className={`family-week-routines__day${isToday ? " family-week-routines__day--today" : ""}`}
             key={day.dateStr}
           >
             <div className="family-week-routines__day-header">
-              <span>{WEEKDAY_LABELS[i]}</span>
+              <span>{weekdayLabel}</span>
               <span className="family-week-routines__day-date">
-                {DATE_LABEL_FORMAT.format(new Date(`${day.dateStr}T12:00:00`))}
+                {DATE_LABEL_FORMAT.format(dayDate)}
               </span>
               {isToday && <span className="family-week-routines__today-badge">Idag</span>}
             </div>
             {dayEvents.length > 0 && (
-              <ul className="family-week-routines__events" aria-label={`Kalenderhändelser ${WEEKDAY_LABELS[i]}`}>
+              <ul className="family-week-routines__events" aria-label={`Kalenderhändelser ${weekdayLabel}`}>
                 {dayEvents.map((ev) => (
                   <li
                     className="family-week-routines__event"
