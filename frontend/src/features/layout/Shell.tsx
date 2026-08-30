@@ -4,6 +4,7 @@ import { ThemePicker } from "../../components/ThemePicker";
 import { RecordCelebration } from "../../components/RecordCelebration";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useShellState } from "../../hooks/useShellState";
+import { useDoubleTapZoomReset } from "../../hooks/useDoubleTapZoomReset";
 import { primeTimerAudio } from "../../utils/timerSound";
 import { RewardShopContext } from "../rewards/RewardShopContext";
 import type { Membership, User } from "@shared/types";
@@ -149,6 +150,11 @@ export function Shell({
     recordCelebration,
     dismissRecordCelebration,
   } = useShellState(activeMembership, onLogout, memberships, onSelectMembership, onMembershipsUpdated, user, onUpdateMyAvatar);
+
+  // Dubbeltryck återställer oavsiktlig inzoomning (2026-08-30, Zaidas fynd)
+  // — app-brett, oavsett barn/vuxen, eftersom pinch-zoom (som ska förbli
+  // möjligt, WCAG) kan triggas av vem som helst. Se useDoubleTapZoomReset.ts.
+  useDoubleTapZoomReset();
 
   // Låser upp ljuduppspelning (nedräkningens "klar"-signal, timerSound.ts,
   // 2026-08-10) redan vid FÖRSTA riktiga tryck/klick i appen — mobila

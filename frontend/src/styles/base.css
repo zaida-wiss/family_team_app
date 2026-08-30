@@ -2,6 +2,21 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  /* Stänger av webbläsarens NATIVA dubbeltryck-zoom (2026-08-30, Zaida:
+     "jag hamnar ofta i ett störande inzoomningsläge") — manipulation tillåter
+     fortfarande pan-x/pan-y/pinch-zoom (WCAG 1.4.4/1.4.10 kräver att äkta
+     pinch-zoom förblir möjligt), den enda skillnaden mot standardläget "auto"
+     är att dubbeltryck aldrig längre tolkas som en zoom-gest. "Snävast
+     vinner"-regeln (se ChildDashboard.css/useMemberSwipeNav.ts) gör att alla
+     redan befintliga, snävare touch-action-deklarationer i kodbasen
+     (none/pan-y/pinch-zoom) förblir helt opåverkade av detta. Komplement till
+     useDoubleTapZoomReset.ts, som ger en egen väg TILLBAKA om man ändå
+     hamnat inzoomad via pinch. */
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   min-width: 320px;
