@@ -196,6 +196,59 @@ test("Inställningar → Familj → Dashboard: avmarkera en kategori sätter exc
   await expect.poll(() => patchBody).toEqual({ exclude: true });
 });
 
+// 2026-08-30, uppföljning samma dag: "Lördagar och söndagar skall få en
+// färg som sticker ut lite lätt för att visa att det är helg då" — en egen
+// bakgrundston (fast bärnstensfärg, oberoende av tema/mörkt läge, se
+// FamilyWeekRoutines.css:s kommentar om varför ett första försök med
+// --secondary var näst intill osynligt i mörkt läge) på lördag/söndag,
+// skild från "idag"-markeringen (grön/primary).
+//
+// 2026-08-31: fönstret krympte från 7 till 3 dagar (idag + 2, se
+// getFamilyWeekRoutines) — att som tidigare LETA efter en helgdag bland
+// dagens faktiska datum är därför inte längre garanterat att lyckas (kan
+// t.ex. vara måndag, dag 1/2 blir då tisdag/onsdag, ingen helg alls i
+// fönstret). "Idag" pinnas istället till en känd lördag via page.clock
+// (samma mönster som redan används i home-todos-claim.spec.ts) — ger
+// deterministiskt dag0=lördag(idag+helg), dag1=söndag(helg, inte idag),
+// dag2=måndag(vardag) i samma körning, utan att gissa på det verkliga datumet.
+test("Veckans rutiner: lördag/söndag får en egen bakgrundsfärg, skild från en vanlig veckodag", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-05T12:00:00") }); // lördag
+  const TEMPLATE = todo({
+    id: "template-1", title: "Diska", assignedTo: MEMBER.id,
+    recurrence: { type: "recurring", unit: "week", every: 1, daysOfWeek: WEEKDAY_NAMES },
+    visibleFrom: "2026-01-01T00:00:00.000Z", visual: { type: "lucide-icon", value: "🍽️" }
+  });
+
+  await mockAuthAndData(page);
+  await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER] }));
+  await page.route("**/api/todos", (route) => route.fulfill({ json: [TEMPLATE] }));
+
+  await page.goto("/");
+  const routines = page.locator(".family-week-routines");
+  await expect(routines).toBeVisible();
+
+  const days = routines.locator(".family-week-routines__day");
+  const todayEl = days.nth(0); // lördag, idag
+  const weekendEl = days.nth(1); // söndag, helg men inte idag
+  const weekdayEl = days.nth(2); // måndag, vanlig veckodag
+
+  const weekendBg = await weekendEl.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const weekdayBg = await weekdayEl.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(weekendBg).not.toBe(weekdayBg);
+  // Ren transparent bakgrund (samma som en overiden vardag) hade också
+  // räknats som "not toBe" om helgfärgen aldrig applicerats — kolla explicit
+  // att helgdagen faktiskt fått en egen klass också.
+  await expect(weekendEl).toHaveClass(/family-week-routines__day--weekend/);
+  await expect(weekdayEl).not.toHaveClass(/family-week-routines__day--weekend/);
+
+  // Dagens datum (lördag) är BÅDE helg och idag — "idag"-färgen (grön/
+  // primary) ska vinna över helgfärgen, inte krocka.
+  await expect(todayEl).toHaveClass(/family-week-routines__day--today/);
+  await expect(todayEl).toHaveClass(/family-week-routines__day--weekend/);
+  const todayBg = await todayEl.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(todayBg).not.toBe(weekendBg);
+});
+
 test("Hem-panelen: klick på Kalender och sedan Hem igen landar tillbaka på standardvyn (overview), inte kvar på Kalender", async ({ page }) => {
   await mockAuthAndData(page);
   await page.route("**/api/members", (route) => route.fulfill({ json: [MEMBER, CHILD] }));

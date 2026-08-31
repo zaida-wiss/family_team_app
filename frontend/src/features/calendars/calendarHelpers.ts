@@ -188,8 +188,11 @@ export type WeekCalendarDay = {
 // uppslagning (ingen de-dup mellan överlappande medlemsfärger behövs för en
 // passiv, icke-klickbar översikt) — Zaidas val: händelsens EGEN färg, annars
 // kalenderns, aldrig en medlemsfärg.
-export function getFamilyWeekCalendarEvents(calendars: Calendar[], weekStart: Date): WeekCalendarDay[] {
-  const weekEnd = new Date(weekStart.getTime() + 7 * 86_400_000);
+//
+// `days` (2026-08-31): default 3 (idag + 2 dagar fram), inte en hel vecka —
+// se motsvarande kommentar på getFamilyWeekRoutines (selectors.ts).
+export function getFamilyWeekCalendarEvents(calendars: Calendar[], weekStart: Date, days = 3): WeekCalendarDay[] {
+  const weekEnd = new Date(weekStart.getTime() + days * 86_400_000);
   const enriched = calendars.flatMap((cal) =>
     cal.events
       .filter((ev) => ev.deletedAt === null)
@@ -197,7 +200,7 @@ export function getFamilyWeekCalendarEvents(calendars: Calendar[], weekStart: Da
   );
   const expanded = expandForRange(enriched, weekStart, weekEnd);
 
-  return Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: days }, (_, i) => {
     const date = new Date(weekStart.getTime() + i * 86_400_000);
     const dateStr = toLocalDateStr(date);
     const events = expanded

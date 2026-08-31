@@ -480,8 +480,8 @@ export function SettingsContent({ settingsProps, memberContentProps, onLogout, o
           content: (
             <>
               <p className="field-hint">
-                Välj vilka av dina kategorier som INTE ska synas i familjens veckoöversikt på Hem-panelen.
-                Kategorin och dess uppgifter påverkas inte i övrigt.
+                Välj vilka av dina kategorier som INTE ska synas i familjens dagsöversikt (idag + kommande
+                dagar) på Hem-panelen. Kategorin och dess uppgifter påverkas inte i övrigt.
               </p>
               {personalCategories.filter((c) => !c.hidden).length === 0 ? (
                 <p className="empty-note">Du har inga kategorier än.</p>

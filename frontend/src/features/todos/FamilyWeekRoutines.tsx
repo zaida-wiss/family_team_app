@@ -43,14 +43,16 @@ type Props = {
 // 2026-08-30, ytterligare ett Zaida-önskemål samma dag: "dagens datum skall
 // alltid vara högst upp" — vyn visade tidigare en FAST måndag-söndag-vecka
 // (weekStart = startOfWeek(nu)) med dagens datum bara MARKERAT någonstans i
-// listan, ofta långt ner om det råkade vara t.ex. fredag. Bytt till en
-// RULLANDE vecka som alltid börjar på dagens datum (weekStart =
-// startOfLocalDay(nu)) — dag 0 är alltid idag, dag 6 alltid en vecka framåt.
-// Veckodagsnamnet kan därför inte längre slås upp i ett fast
-// måndag-först-index (WEEKDAY_LABELS), utan beräknas per faktiskt datum via
-// Intl.DateTimeFormat. getFamilyWeekRoutines/getFamilyWeekCalendarEvents
-// själva är oförändrade — de genererar redan bara "7 dagar framåt från
-// weekStart", oavsett vilken veckodag weekStart råkar vara.
+// listan, ofta långt ner om det råkade vara t.ex. fredag. Bytt till ett
+// rullande fönster som alltid börjar på dagens datum (weekStart =
+// startOfLocalDay(nu)) — dag 0 är alltid idag. Veckodagsnamnet kan därför
+// inte längre slås upp i ett fast måndag-först-index (WEEKDAY_LABELS), utan
+// beräknas per faktiskt datum via Intl.DateTimeFormat.
+//
+// 2026-08-31, Zaida: "istället för kommande vecka vill jag se idag och
+// ytterligare två dagar fram" — getFamilyWeekRoutines/getFamilyWeekCalendarEvents
+// fick båda ett `days`-defaultvärde på 3 (var 7), anropas här oförändrat
+// utan ett explicit tredje/fjärde argument.
 export function FamilyWeekRoutines({ members, todos, calendars, categories = [] }: Props) {
   const todayStr = toLocalDateStr(new Date());
   const weekStart = startOfLocalDay(new Date());
@@ -60,19 +62,30 @@ export function FamilyWeekRoutines({ members, todos, calendars, categories = [] 
   const hasAnyEvents = calendarDays.some((d) => d.events.length > 0);
 
   if (!hasAnyRoutines && !hasAnyEvents) {
-    return <p className="empty-note">Inga återkommande rutiner eller händelser den här veckan ännu.</p>;
+    return <p className="empty-note">Inga återkommande rutiner eller händelser de närmaste dagarna ännu.</p>;
   }
 
   return (
-    <div aria-label="Veckans rutiner" className="family-week-routines">
+    <div aria-label="Kommande dagars rutiner" className="family-week-routines">
       {days.map((day, i) => {
         const isToday = day.dateStr === todayStr;
         const dayEvents = calendarDays[i]?.events ?? [];
         const dayDate = new Date(`${day.dateStr}T12:00:00`);
         const weekdayLabel = capitalize(WEEKDAY_LABEL_FORMAT.format(dayDate));
+        // Helgmarkering (2026-08-30, Zaidas önskemål: "Lördagar och söndagar
+        // skall få en färg som sticker ut lite lätt för att visa att det är
+        // helg då") — getDay() 0=söndag, 6=lördag. Egen klass, inte samma
+        // som --today (en lördag/söndag som RÅKAR vara idag ska fortsatt
+        // visa dagens egen, starkare markering — se CSS:ens :not()-regel).
+        const dow = dayDate.getDay();
+        const isWeekend = dow === 0 || dow === 6;
         return (
           <div
-            className={`family-week-routines__day${isToday ? " family-week-routines__day--today" : ""}`}
+            className={
+              "family-week-routines__day" +
+              (isToday ? " family-week-routines__day--today" : "") +
+              (isWeekend ? " family-week-routines__day--weekend" : "")
+            }
             key={day.dateStr}
           >
             <div className="family-week-routines__day-header">

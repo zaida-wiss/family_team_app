@@ -45,6 +45,30 @@
   border-radius: 0 6px 6px 0;
 }
 
+/* Helg (2026-08-30, Zaidas önskemål: "Lördagar och söndagar skall få en
+   färg som sticker ut lite lätt"). Ett första försök med --secondary
+   (tokens.css) syntes fint i ljust läge men blev näst intill osynligt i
+   mörkt läge — --secondary görs OM PER LÄGE (themes.css:s
+   .app-shell.dark-mode-block blandar den mot nästan svart), till skillnad
+   från --primary (som --today ovan redan äger, medvetet OFÖRÄNDRAD mellan
+   lägena, se navbar-historiken i CLAUDE.md) — 45% av en redan mörk
+   sekundärfärg mot transparent gav i praktiken ingen synlig skillnad mot en
+   redan mörk bakgrund. Löst med samma teknik som --today: en egen, FAST
+   (aldrig läges-/temaomdefinierad) bärnstensfärg, blandad mot var(--background)
+   istället för transparent — ger alltid en synlig, varm ton oavsett hur
+   mörk/ljus den aktuella bakgrunden råkar vara just nu, verifierat med
+   skärmdumpar i båda lägena. Inte --destructive (samma "fara/radera"-
+   betydelse på andra håll i appen — fel signal för en helgdag). :not(--today)
+   låter dagens egen, starkare markering vinna om båda råkar gälla samma dag. */
+.family-week-routines__day--weekend:not(.family-week-routines__day--today) {
+  background: color-mix(in oklch, oklch(0.75 0.13 60) 30%, var(--background) 70%);
+  border-radius: 0 6px 6px 0;
+}
+
+.family-week-routines__day--weekend:not(.family-week-routines__day--today) .family-week-routines__day-header span:first-child {
+  color: color-mix(in oklch, oklch(0.6 0.16 55) 60%, var(--foreground) 40%);
+}
+
 .family-week-routines__day-header {
   display: flex;
   align-items: baseline;

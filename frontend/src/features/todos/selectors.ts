@@ -435,17 +435,23 @@ export type WeeklyRoutineDay = {
 // medlem (assignedTo === member.id) — Familjen-poolens uppgifter
 // (assignedTo: null) räknas inte som någons personliga rutin här.
 //
-// Både förflutna/idag-dagar (där en riktig, materialiserad occurrence redan
-// kan finnas, se recurringTodos.ts) OCH framtida dagar i samma vecka
-// (där ingen occurrence genererats ännu) hanteras med SAMMA isRecurrenceDue-
+// Både idag-dagen (där en riktig, materialiserad occurrence redan kan
+// finnas, se recurringTodos.ts) OCH framtida dagar i samma fönster (där
+// ingen occurrence genererats ännu) hanteras med SAMMA isRecurrenceDue-
 // koll mot mallens recurrence — en framtida dag kan per definition aldrig
 // vara "klar", så avsaknaden av en occurrence där ger automatiskt done:false,
 // utan något särskilt framtids-specialfall.
+//
+// `days` (2026-08-31, Zaida: "istället för kommande vecka vill jag se idag
+// och ytterligare två dagar fram") — default 3 (idag + 2), inte en hel
+// vecka. weekStart är alltid dagens datum (startOfLocalDay, se
+// FamilyWeekRoutines.tsx), så fönstret blir idag/imorgon/i övermorgon.
 export function getFamilyWeekRoutines(
   members: { id: Id }[],
   todos: Todo[],
   weekStart: Date,
-  categories: TodoCategory[] = []
+  categories: TodoCategory[] = [],
+  days = 3
 ): WeeklyRoutineDay[] {
   // Exkluderade kategorier (2026-08-30, Zaidas önskemål: "jag vill kunna
   // välja vilka kategorier som inte skall synas där i dashboarden") — en
@@ -461,7 +467,7 @@ export function getFamilyWeekRoutines(
     .filter(isRecurringTemplate)
     .filter((t) => !t.personalCategoryId || !excludedCategoryIds.has(t.personalCategoryId));
 
-  return Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: days }, (_, i) => {
     const date = new Date(weekStart.getTime() + i * 86_400_000);
     const dateStr = toLocalDateStr(date);
 
