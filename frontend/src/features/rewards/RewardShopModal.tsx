@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import type { RewardShopItem, Todo, TodoCategory } from "@shared/types";
 import type { Id } from "@shared/types";
-import { MYNT } from "../children/bankDenoms";
+import { MYNT, stackDisplayGroups } from "../children/bankDenoms";
 import { rewardShopApi } from "../../api";
 import type { ActiveTimedReward, PurchaseLimitStatus } from "../../api/rewardShop";
 import { useShopWalletDrag } from "./useShopWalletDrag";
@@ -345,16 +345,30 @@ export function RewardShopModal({ childId, items, todos, categories, availableSt
                             })}
                       >
                         <div className="shop-note-stack">
-                          {Array.from({ length: count }).map((_, i) => (
-                            <img
-                              key={i}
-                              src={`/pengar/sedel-${v}.webp`}
-                              alt={i === 0 ? `${v}-kronorssedel` : ""}
-                              className={`shop-note-img${i > 0 ? " shop-note-stacked" : ""}`}
-                              data-note={v}
-                              draggable={false}
-                            />
-                          ))}
+                          {(() => {
+                            const { tens, remainder } = stackDisplayGroups(count);
+                            return (
+                              <>
+                                {Array.from({ length: tens }).map((_, t) => (
+                                  <div key={`ten-${t}`} className="shop-note-tenstack" data-note={v}>
+                                    <div className="shop-note-tenstack__body" aria-hidden="true" />
+                                    <div className="shop-note-tenstack__ground" aria-hidden="true" />
+                                    <span className="shop-note-tenstack__badge">10</span>
+                                  </div>
+                                ))}
+                                {Array.from({ length: remainder }).map((_, i) => (
+                                  <img
+                                    key={i}
+                                    src={`/pengar/sedel-${v}.webp`}
+                                    alt={i === 0 && tens === 0 ? `${v}-kronorssedel` : ""}
+                                    className={`shop-note-img${i > 0 ? (i % 5 === 0 ? " shop-note-seam" : " shop-note-stacked") : ""}`}
+                                    data-note={v}
+                                    draggable={false}
+                                  />
+                                ))}
+                              </>
+                            );
+                          })()}
                         </div>
                         <span className="shop-wallet-denom-label">{v} kr</span>
                       </div>
@@ -385,20 +399,35 @@ export function RewardShopModal({ childId, items, todos, categories, availableSt
                             })}
                       >
                         <div className="shop-coin-stack">
-                          {Array.from({ length: count }).map((_, i) => (
-                            <div
-                              key={i}
-                              className={`shop-coin-clip${i > 0 ? " shop-coin-stacked" : ""}`}
-                              data-coin={v}
-                            >
-                              <img
-                                src={`/pengar/mynt-${v}.webp`}
-                                alt={i === 0 ? `${v}-krona` : ""}
-                                className="shop-coin-img"
-                                draggable={false}
-                              />
-                            </div>
-                          ))}
+                          {(() => {
+                            const { tens, remainder } = stackDisplayGroups(count);
+                            return (
+                              <>
+                                {Array.from({ length: tens }).map((_, t) => (
+                                  <div key={`ten-${t}`} className="shop-coin-tenstack" data-coin={v}>
+                                    <div className="shop-coin-tenstack__rim" aria-hidden="true" />
+                                    <div className="shop-coin-tenstack__body" aria-hidden="true" />
+                                    <div className="shop-coin-tenstack__ground" aria-hidden="true" />
+                                    <span className="shop-coin-tenstack__badge">10</span>
+                                  </div>
+                                ))}
+                                {Array.from({ length: remainder }).map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className={`shop-coin-clip${i > 0 ? (i % 5 === 0 ? " shop-coin-seam" : " shop-coin-stacked") : ""}`}
+                                    data-coin={v}
+                                  >
+                                    <img
+                                      src={`/pengar/mynt-${v}.webp`}
+                                      alt={i === 0 && tens === 0 ? `${v}-krona` : ""}
+                                      className="shop-coin-img"
+                                      draggable={false}
+                                    />
+                                  </div>
+                                ))}
+                              </>
+                            );
+                          })()}
                         </div>
                         <span className="shop-wallet-denom-label">{v} kr</span>
                       </div>

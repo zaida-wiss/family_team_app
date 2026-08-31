@@ -530,6 +530,67 @@
   box-shadow: -3px 1px 7px rgba(0, 0, 0, 0.2);
 }
 
+/* Luftig lucka var femte sedel — gör det möjligt att räkna i femtal utan att bredda staplingen nämnvärt */
+.shop-note-seam {
+  margin-left: 14px;
+  box-shadow: -3px 1px 7px rgba(0, 0, 0, 0.2);
+}
+
+/* En hel tia sedlar: visas som en enda smal "sedelbunt" sedd från kanten (pappershöjden),
+   inte tio separata, mest dolda sedelbilder — sparar plats och går att räkna i ett svep. */
+.shop-note-tenstack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  margin: 0 3px;
+  filter: drop-shadow(1px 3px 3px rgba(0, 0, 0, 0.22));
+}
+
+.shop-note-tenstack[data-note="20"]   { width: 26px; }
+.shop-note-tenstack[data-note="50"]   { width: 27px; }
+.shop-note-tenstack[data-note="100"]  { width: 28px; }
+.shop-note-tenstack[data-note="200"]  { width: 29px; }
+.shop-note-tenstack[data-note="500"]  { width: 30px; }
+.shop-note-tenstack[data-note="1000"] { width: 31px; }
+
+.shop-note-tenstack__body {
+  width: 100%;
+  height: 40px;
+  border-radius: 3px;
+  border: 1px solid #a68a5b;
+  background:
+    linear-gradient(to right, rgba(255, 255, 255, 0.5) 0%, transparent 20%),
+    repeating-linear-gradient(to right, #e8cf9a 0px, #e8cf9a 2px, #b9945a 2px, #b9945a 3px);
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Skugga mot "bordet" — förankrar bunten så den inte ser ut att sväva */
+.shop-note-tenstack__ground {
+  width: 80%;
+  height: 5px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.32), transparent 72%);
+}
+
+.shop-note-tenstack__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--foreground, #1a1a1a);
+  color: var(--background, #fff);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 /* Mynt-stack */
 .shop-coin-stack {
   display: flex;
@@ -553,10 +614,79 @@
 .shop-coin-stacked[data-coin="5"]  { margin-left: -16px; }
 .shop-coin-stacked[data-coin="10"] { margin-left: -14px; }
 
+/* Luftig lucka var femte mynt — gör det möjligt att räkna i femtal utan att bredda staplingen nämnvärt */
+.shop-coin-seam {
+  margin-left: 10px;
+}
+
 .shop-coin-img {
   height: 100%;
   width: auto;
   display: block;
+}
+
+/* Ett helt tiotal mynt: visas som EN kompakt myntstapel sedd från sidan (kanten/höjden
+   på mynten, inte myntsidan) — som en trave mynt liggande på ett bord, inte tio separata,
+   mest dolda cirklar. Ren CSS, inga nya bildtillgångar. */
+.shop-coin-tenstack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  margin: 0 3px;
+}
+
+.shop-coin-tenstack[data-coin="1"]  { width: 34px; }
+.shop-coin-tenstack[data-coin="2"]  { width: 38px; }
+.shop-coin-tenstack[data-coin="5"]  { width: 42px; }
+.shop-coin-tenstack[data-coin="10"] { width: 36px; }
+
+/* Toppmyntets kant, sedd lätt uppifrån — inte myntsidan */
+.shop-coin-tenstack__rim {
+  width: 94%;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #fdf3d0, #c99a1e);
+  border: 1px solid #8a6512;
+  z-index: 2;
+}
+
+/* Kanten/höjden på den staplade myntraden — tydliga, mörka ränder istället för svaga
+   gråtoner, så det läses som en hög av mynt och inte en suddig klump */
+.shop-coin-tenstack__body {
+  width: 100%;
+  height: 26px;
+  margin-top: -3px;
+  border-radius: 0 0 3px 3px;
+  border: 1px solid #8a6512;
+  border-top: none;
+  background:
+    linear-gradient(to right, rgba(255, 255, 255, 0.35) 0%, transparent 22%),
+    repeating-linear-gradient(to bottom, #f1d478 0px, #f1d478 3px, #a9791f 3px, #a9791f 5px);
+}
+
+/* Skugga mot "bordet" — förankrar traven så den inte ser ut att sväva */
+.shop-coin-tenstack__ground {
+  width: 82%;
+  height: 5px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.35), transparent 72%);
+}
+
+.shop-coin-tenstack__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--foreground, #1a1a1a);
+  color: var(--background, #fff);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Drag ghost ── */

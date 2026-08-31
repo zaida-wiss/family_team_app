@@ -52,6 +52,15 @@ export function reconcileCounts(
   return denomCounts(totalKronor);
 }
 
+// Delar upp antalet sedlar/mynt av EN valör i visningsgrupper för plånboken: hela tior
+// (visas som en enda kompakt "kant/höjd"-stapelmarkör istället för tio separata, mest
+// dolda bilder) plus en rest på 0-9 (visas som vanliga, tätt överlappande enskilda
+// sedlar/mynt). Delad mellan plånboken (ChildBanknotesModal/BankWallet) och shopen
+// (RewardShopModal) så båda vyerna räknar likadant.
+export function stackDisplayGroups(count: number): { tens: number; remainder: number } {
+  return { tens: Math.floor(count / 10), remainder: count % 10 };
+}
+
 export function countsDiffer(a: Record<number, number>, b: Record<number, number>): boolean {
   const ka = Object.keys(a).sort().join(",");
   const kb = Object.keys(b).sort().join(",");
