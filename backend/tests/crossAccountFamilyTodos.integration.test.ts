@@ -140,7 +140,20 @@ describe.skipIf(!RUN)("Mina familjekonton — todo utan tilldelad mottagare öve
       .get("/api/todos/family-across-accounts")
       .set("Authorization", `Bearer ${accessToken}`)
       .set("x-member-id", accountA.memberId);
-    expect(hidden.body).toEqual([]);
+    // 2026-08-30 (Zaidas önskemål, se todosService.ts:s getCrossAccountFamilyTodos-
+    // kommentar): ett avmarkerat konto försvinner inte längre helt ur svaret — kontot
+    // listas fortfarande (taggat hidden:true) så frontend kan routa en EVENTUELL
+    // personligt tilldelad todo dit istället för att den tyst försvinner. Den delade,
+    // otagna Familjen-poolen (assignedTo:null, som familyTodoId är) filtreras dock
+    // fortfarande bort helt när kontot är dolt — todos-arrayen är därför tom här.
+    expect(hidden.body).toEqual([{
+      accountId: accountB.accountId,
+      accountName: "Familj B",
+      myMemberId: expect.any(String),
+      todos: [],
+      categoryNames: {},
+      hidden: true,
+    }]);
 
     // Jag är fortfarande medlem — my-memberships-listan opåverkad (Familj A,
     // Familj B, plus det automatiskt skapade personliga kontot, ADR-0033).
