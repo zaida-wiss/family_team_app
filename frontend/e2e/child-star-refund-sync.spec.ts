@@ -76,9 +76,23 @@ test("Ett barns tillgängliga stjärnor/plånbok uppdateras direkt när en för�
   // members/events-SSE-strömmen: "connected" (hoppas över av initialConnect,
   // se members.ts) följt av ett enda members-changed — simulerar att
   // deletePurchasedReward() på en förälders enhet broadcastat återbetalningen.
+  // Svaret hålls medvetet kvar tills testet EXPLICIT släpper det (efter att
+  // 5 kr-mellanläget redan observerats i DOM:en) — useMembersState.ts:s
+  // mount-hämtning och dess SSE-prenumeration startar i två separata
+  // useEffect nästan samtidigt, och mockets OMEDELBARA (ingen riktig
+  // nätverksfördröjning) leverans kan annars race:a om och hinna trigga sin
+  // egen GET /api/members innan mount-hämtningens svar ens renderats — ett
+  // tidigare försök att bara vänta in ordningen på SJÄLVA GET-anropen (istället
+  // för att vänta in den FAKTISKA renderingen) minskade men eliminerade inte
+  // flakigheten (2/10 vid repeat-each). Att gate:a på en riktig DOM-assertion
+  // istället för antagen nätverksordning tar bort racet helt.
   let eventsRequested = 0;
-  await page.route("**/api/members/events", (route) => {
+  let releaseMembersChanged = false;
+  await page.route("**/api/members/events", async (route) => {
     eventsRequested++;
+    while (!releaseMembersChanged) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
     return route.fulfill({
       headers: { "content-type": "text/event-stream" },
       body: "event: connected\ndata: {}\n\nevent: members-changed\ndata: {}\n\n",
@@ -93,6 +107,9 @@ test("Ett barns tillgängliga stjärnor/plånbok uppdateras direkt när en för�
   // Innan återbetalningen: 20 - 15 = 5 tillgängliga stjärnor/kronor.
   await expect(totalStars).toHaveText(/5$/);
   await expect(wallet).toHaveAccessibleName("Plånbok — 5 kr");
+
+  // 5 kr-mellanläget är nu bevisat renderat — säkert att släppa SSE-eventet.
+  releaseMembersChanged = true;
 
   // Vänta in att SSE-strömmen faktiskt anropats (utlöser members-refetch #2).
   await expect.poll(() => eventsRequested).toBeGreaterThan(0);
